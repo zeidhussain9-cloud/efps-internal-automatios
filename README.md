@@ -28,7 +28,7 @@ The repository follows one simple operating model:
 
 ## Documentation rule
 
-Business and system documentation belongs in `docs/`. Do not create duplicate authoritative documents in the root or elsewhere. Each maintained document must have one clear role and one canonical subject.
+For every implementation, the agent must review all maintained root and `docs/` documentation and update every document whose content is affected by the resulting repository reality. Do not create duplicate authoritative documents.
 
 ## Current modules
 
@@ -39,8 +39,10 @@ Business and system documentation belongs in `docs/`. Do not create duplicate au
 
 ## Current shared capabilities
 
-- `shared/google_sheets/` — reusable Google Sheets capabilities.
+Only the Cloudinary shared capability is currently part of the active shared implementation scope:
+
 - `shared/cloudinary/` — reusable Cloudinary media capabilities.
-- `shared/whatsapp_whapi/` — reusable WhatsApp/WhAPI capabilities.
+
+Future shared capabilities must be explicitly established before being treated as active repository structure.
 
 This repository is currently a structural foundation. Implementation is added only when the corresponding capability is actually required.
