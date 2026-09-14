@@ -38,4 +38,5 @@ jobs:
           shared/google_sheets/test_schema.py
           modules/efps-inventory-mgmnt/src/test_inventory_pipeline.py
           modules/efps-inventory-mgmnt/src/test_batch.py
+          modules/efps-inventory-mgmnt/src/test_row_processing.py
           shared/slack/test_slack.py
