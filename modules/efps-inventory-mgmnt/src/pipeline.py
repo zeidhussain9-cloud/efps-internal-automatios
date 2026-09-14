@@ -13,6 +13,8 @@ FIXED = {
     "whatsapp_group_link": "https://chat.whatsapp.com/FxOPO0xAOsD6lNwPcIDdFM",
 }
 PANEL_FIELDS = tuple(name for name in schema.NAMES if schema.owner_of(name) == schema.PANEL)
+STAGE_3_PROTECTED = {"listing_state", "posted_url", "posted_at", "error_notes", "meta_catalog_id", "meta_catalog_status", "inventory_locked"}
+STAGE_1_2_WRITABLE = tuple(name for name in PANEL_FIELDS if name not in STAGE_3_PROTECTED)
 
 
 def empty_row() -> dict[str, str]:
@@ -66,7 +68,6 @@ def process_closed_session(raw_text: str, *, row: dict | None = None, maps_clien
         out["status"] = "Needs Review"
         issues.extend(errors)
 
-    # AI is advisory and wording-only. A deterministic failure is never hidden by AI.
     if out["status"] == "Pending":
         from .ai import apply
         out = apply(out, raw_text, ai_llm)
@@ -84,29 +85,21 @@ def write_new_property(client: GoogleSheetsClient, row: dict):
     validate_errors = validate.validate_raw(row)
     if validate_errors:
         raise ValueError("Refusing invalid raw inventory row: " + "; ".join(validate_errors))
-    schema.assert_writable(schema.PANEL, list(PANEL_FIELDS))
+    schema.assert_writable(schema.PANEL, list(STAGE_1_2_WRITABLE))
     return client.append_rows(schema.SHEET_ID, schema.WORKSHEET_NAME, [schema.mapping_to_row(row)])
 
 
 def write_phase1_update(client: GoogleSheetsClient, row_number: int, row: dict):
-    """Update panel-owned ranges only; never overwrite AP:AT downstream columns."""
-    schema.assert_writable(schema.PANEL, list(PANEL_FIELDS))
-    left_names = schema.NAMES[:41]   # A:AO
-    right_names = schema.NAMES[46:48]  # AU:AV
-    left = [row[name] for name in left_names]
-    right = [row[name] for name in right_names]
-    client.write_range(
-        schema.SHEET_ID,
-        schema.WORKSHEET_NAME,
-        schema.range_for("listing_id", "city", row_number),
-        [left],
-    )
-    client.write_range(
-        schema.SHEET_ID,
-        schema.WORKSHEET_NAME,
-        schema.range_for("source_group", "inventory_locked", row_number),
-        [right],
-    )
+    """Update Stage-1/2-owned fields only.
+
+    Explicitly protected: E `listing_state`, AP:AT downstream fields, and AV
+    `inventory_locked`. This prevents a late Stage-2 write from erasing lifecycle
+    or downstream state written by another module.
+    """
+    schema.assert_writable(schema.PANEL, list(STAGE_1_2_WRITABLE))
+    client.write_range(schema.SHEET_ID, schema.WORKSHEET_NAME, schema.range_for("listing_id", "intake_status", row_number), [[row[name] for name in schema.NAMES[0:3]]])
+    client.write_range(schema.SHEET_ID, schema.WORKSHEET_NAME, schema.range_for("onboarded_on", "city", row_number), [[row[name] for name in schema.NAMES[5:41]]])
+    client.write_range(schema.SHEET_ID, schema.WORKSHEET_NAME, schema.range_for("source_group", "source_group", row_number), [[row["source_group"]]])
 
 
 def next_listing_id(client: GoogleSheetsClient) -> str:
