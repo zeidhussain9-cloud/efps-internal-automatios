@@ -76,3 +76,27 @@ def test_duplicate_message_id_is_not_appended_twice():
     session = store.get(sender)
     assert session is not None
     assert session.raw_text.count("Rent 50000") == 1
+
+
+class FakeSheets:
+    def __init__(self):
+        self.writes = []
+
+    def write_range(self, spreadsheet_id, worksheet_name, range_name, values):
+        self.writes.append((range_name, values))
+
+
+def test_stage_two_writer_never_touches_lifecycle_or_downstream_columns():
+    client = FakeSheets()
+    row = pipeline.initial_row("EF-2609-0004", source_group="919902024973")
+    row["internal_property_type"] = "Standalone"
+    row["listing_state"] = "Rented Out"
+    row["posted_url"] = "https://housing.example/listing"
+    row["posted_at"] = "2026-09-15T00:00:00Z"
+    row["error_notes"] = "existing downstream state"
+    row["meta_catalog_id"] = "meta-1"
+    row["meta_catalog_status"] = "active"
+    row["inventory_locked"] = "locked"
+    pipeline.write_phase1_update(client, 12, row)
+    assert [x[0] for x in client.writes] == ["A12:D12", "F12:AO12", "AU12:AU12"]
+    assert all("E12" not in x[0] and "AP12" not in x[0] and "AV12" not in x[0] for x in client.writes)
