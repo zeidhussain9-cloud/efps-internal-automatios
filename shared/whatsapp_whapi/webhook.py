@@ -2,8 +2,7 @@
 
 This layer normalizes transport payloads and builds/validates webhook
 configuration. It does not decide whether a message is an inventory item or a
-lead; the owning business module makes that decision using integration hints
-such as the configured inventory-listener numbers.
+lead; the owning business module makes that decision.
 """
 
 from __future__ import annotations
@@ -39,8 +38,11 @@ class IncomingMessage:
 
     @property
     def is_inventory_listener(self) -> bool:
-        return (not self.is_group and not self.from_me
-                and config.is_inventory_listener(self.sender or self.chat_id))
+        return (
+            not self.is_group
+            and not self.from_me
+            and config.is_inventory_listener(self.sender or self.chat_id)
+        )
 
 
 def parse_message(raw: Mapping[str, Any]) -> IncomingMessage:
@@ -118,6 +120,6 @@ def authorize_query_token(query: Mapping[str, Any] | None, expected: str) -> boo
     return hmac.compare_digest(supplied, expected)
 
 
-def build_registration_payload(url: str) -> dict[str, Any]:
-    """Build the verified legacy `/settings` webhook payload without sending it."""
-    return config.webhook_registration_payload(url)
+def build_registration_payload(url: str, events: list[Mapping[str, str] | str]) -> dict[str, Any]:
+    """Build webhook settings without performing a live mutation."""
+    return config.webhook_registration_payload(url, events)
