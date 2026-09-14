@@ -34,9 +34,12 @@ Apply `docs/DOCUMENT_UPDATE_MATRIX.md` and `docs/DOCUMENT_GOVERNANCE.md` for det
 - `docs/` = canonical business/system truth.
 - `modules/` = business capabilities.
 - `shared/` = reusable technical capabilities.
-- Current active shared implementation scope: **only** `shared/cloudinary/`.
+- Established shared capability boundaries:
+  - `shared/cloudinary/`
+  - `shared/google_sheets/`
+  - `shared/whatsapp_whapi/`
 
-Do not treat another shared capability as active until it is explicitly established and verified.
+An established boundary does not prove every runtime feature is complete. Implementation status must be verified before calling a capability live or production-ready.
 
 ## Gemini-specific maintenance
 
