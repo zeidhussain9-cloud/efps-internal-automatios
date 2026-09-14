@@ -47,10 +47,13 @@ Established shared capabilities include:
 - `COMMANDS.md` — supported `/efps` command surface and removed commands.
 - `CHANNELS.md` — current and historical channel topology and routing.
 - `SLACK_APP_MANIFEST.md` — cleaned Slack app manifest specification.
-- `REVERIFY_PHOTOS.md` — temporary bulk photo collection and recovery procedure.
+- `REVERIFY_PHOTOS.md` — photo recovery/re-verification reference.
+- `PHASE1_BULK_PHOTOS.md` — exact current Phase-1 bulk-photo operator flow.
 - `PROPERTY_VERIFICATION.md` — human property verification workflow.
 - `BATCH_OPERATIONS.md` — batch controls, reports, review relationship and failure behavior.
 - `NEW_USER_GUIDE.md` — practical EFPS Slack operations guide.
+- `PHASE1_BOUNDARY.md` — Slack's Inventory Phase-1 scope and ownership boundary.
+- `RELEASE_GATE.md` — production acceptance criteria for Inventory Phase 1.
 - `IMPLEMENTATION_MAP.md` — legacy-to-new capability mapping and boundaries.
 - `HANDOFF.md` — migration status and remaining activation work.
 - `client.py` — reusable Slack Web API transport.
