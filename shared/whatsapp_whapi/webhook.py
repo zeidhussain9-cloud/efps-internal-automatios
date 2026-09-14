@@ -1,8 +1,7 @@
 """Reusable WhAPI webhook primitives.
 
-This layer normalizes transport payloads and builds/validates webhook
-configuration. It does not decide whether a message is an inventory item or a
-lead; the owning business module makes that decision.
+This layer normalizes transport payloads and identifies the repository-level
+inventory/lead listener path. It does not perform business actions.
 """
 
 from __future__ import annotations
@@ -37,12 +36,21 @@ class IncomingMessage:
         }
 
     @property
-    def is_inventory_listener(self) -> bool:
-        return (
-            not self.is_group
-            and not self.from_me
-            and config.is_inventory_listener(self.sender or self.chat_id)
+    def listener(self) -> str:
+        return config.classify_listener_source(
+            sender=self.sender or self.chat_id,
+            chat_id=self.chat_id,
+            from_me=self.from_me,
+            path="groups" if self.is_group else None,
         )
+
+    @property
+    def is_inventory_listener(self) -> bool:
+        return self.listener == config.INVENTORY_LISTENER_NAME
+
+    @property
+    def is_lead_listener(self) -> bool:
+        return self.listener == config.LEAD_LISTENER_NAME
 
 
 def parse_message(raw: Mapping[str, Any]) -> IncomingMessage:
