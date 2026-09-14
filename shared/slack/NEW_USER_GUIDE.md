@@ -1,115 +1,188 @@
 # EFPS Slack Guide
 
-This is the practical guide for using Slack as the EFPS operations panel. It is not a generic employee onboarding document.
+This is the operator guide for the EFPS Slack control surface used during Inventory Phase 1.
 
-## 1. Where to work
+## 1. Where Slack fits
 
-### Inventory
+Slack is the operational control and human-intervention surface. `Housing_Listings` remains the canonical inventory record.
 
-`#eps-wapi-pannel`
+The normal flow is:
 
-Use for property status, batch runs, field corrections and photo collection.
+`WhatsApp → Stage 1 raw row → Stage 2 deterministic processing → validation/AI gate → Slack report or review → canonical row ready`
+
+Slack does not replace deterministic extraction and does not become a second inventory database.
+
+## 2. Channels
+
+### `#eps-wapi-pannel`
+
+Use for inventory operations:
+
+- `/efps status`
+- `/efps run`
+- `/efps show <listing_id>`
+- `/efps fix <listing_id> <field> <value>`
+- `/efps photos start`
+- batch completion/error reports
+
+### `#epf-prop-aprovals`
+
+Use for **property verification only**. A `Needs Review` property is shown in a thread and the operator answers the missing/uncertain fields there.
+
+### `#eps-runtime-error-bugs-reporting`
+
+Use for runtime bug reports and bug closure.
+
+### `#efps-leads`
+
+Lead cards/dashboard. This is retained as part of the shared Slack capability, but it is not required to complete Inventory Phase-1 extraction.
+
+## 3. Main command
+
+Slack registers only one top-level slash command:
+
+```text
+/efps
+```
+
+The EFPS application routes the subcommand.
+
+### Inventory commands
+
+```text
+/efps help
+/efps status
+/efps run
+/efps show <listing_id>
+/efps fix <listing_id> <field> <value>
+/efps pause
+/efps resume
+```
 
 ### Property verification
 
-`#epf-prop-aprovals`
+```text
+/efps verify start
+```
 
-Use for human verification of inventory rows. The name is historical; this is **not** a society approval workflow.
+Inside the property thread use the bare words:
 
-### Leads
+```text
+submit
+skip
+next
+exit
+```
 
-`#efps-leads`
+### Bulk photos
 
-Use for lead cards, lead threads and the dashboard.
+```text
+/efps photos start
+```
 
-### Runtime bugs
+Inside the property thread use:
 
-`#eps-runtime-error-bugs-reporting`
+```text
+done
+skip
+next
+exit
+```
 
-Use for manual and automatic runtime defect tracking.
+### Bug handling
 
-## 2. First checks
+```text
+/efps bug report
+/efps bugs
+/efps bug show <BUG-ID>
+/efps bug fix <BUG-ID> <note>
+```
 
-Run `/efps status` in the inventory channel.
+## 4. Bulk photo procedure — current Phase-1 method
 
-Use `/efps help` to see the supported command surface.
+The WhatsApp webhook currently does not reliably provide a persisted photo-to-property association. Therefore the Phase-1 operator must associate photos through the Slack property thread.
 
-If the bot does not respond, do not assume the inventory pipeline is broken. Check Slack authentication/channel membership and runtime health separately.
+1. In `#eps-wapi-pannel`, run `/efps photos start`.
+2. EFPS selects the next processed inventory row with no Cloudinary URLs and posts a property message.
+3. Attach **all photos for that property** as replies in that exact thread. Multiple replies are allowed.
+4. When finished, send the bare word `done` in that thread.
+5. EFPS fetches the thread files, uploads them to Cloudinary, preserves existing URLs, and writes the URL list to the same inventory row.
+6. The queue is recalculated from the sheet.
+7. Continue with `next`, or let the session advance according to the implemented session flow.
+8. Use `skip` only when intentionally deferring a property.
+9. Use `exit` to end the session without changing the row merely because the session was closed.
 
-## 3. Process a batch now
+### Never do this
 
-Run:
+- Do not use time-window matching to guess which property a photo belongs to.
+- Do not post another property's photos in the current property thread.
+- Do not create another inventory row for a photo problem.
+- Do not delete existing Cloudinary URLs during recovery.
+- Do not treat photo contents as proof of property identity.
 
-`/efps run`
+## 5. Property verification during batch processing
 
-Then wait for the batch report. The report is a summary of pipeline activity; it is not the source of truth for individual row values.
+A batch can leave a property as `Needs Review` when deterministic validation or required location verification cannot safely complete.
 
-## 4. Inspect a property
+1. Run `/efps verify start` in the property-verification channel.
+2. EFPS presents one review property at a time.
+3. Answer the requested fields in the thread.
+4. Use `skip` to leave a field blank or pass the property according to the session control.
+5. When the answers are complete, reply `submit`.
+6. The inventory module applies the corrections to the same row.
+7. Deterministic dependencies are re-run.
+8. Validation runs again.
+9. Only a successfully validated correction is written as ready for the next step.
 
-Run:
+The verification flow does **not** create a society approval queue or society profile workflow.
 
-`/efps show <listing_id>`
+## 6. What a batch report means
 
-Use the linked sheet row for authoritative field values.
+A batch report is an operational summary. Use `/efps status` to inspect current queue/state and `/efps run` to trigger an on-demand run when the schedules are active.
 
-## 5. Correct a property
+A Slack report must never be treated as the canonical data source. When a report and the sheet disagree, inspect the canonical row and pipeline state.
 
-Run:
+## 7. Manual correction
 
-`/efps fix <listing_id> <field> <value>`
+Use:
 
-The correction is expected to re-run deterministic dependencies and validation before writing the same row.
+```text
+/efps fix <listing_id> <field> <value>
+```
 
-Do not use this command to bypass Maps-owned, system-owned, or downstream-owned fields.
+The command must respect ownership boundaries. Maps-owned, system-owned, and downstream-owned fields are not arbitrary manual-edit fields.
 
-## 6. Add photos in bulk — current method
+A correction must be re-normalized and validated before the same row is persisted.
 
-Because the current webhook does not extract/persist photo binaries, use Slack as the temporary photo collection interface.
+## 8. Session-thread rule
 
-1. Open `#eps-wapi-pannel`.
-2. Run `/efps photos start`.
-3. Wait for the property message.
-4. Reply in that exact property's thread.
-5. Attach all photos for that property.
-6. Type `done` as a bare thread reply.
-7. Wait for the save worker to process the attachments.
-8. Confirm the same listing row now contains Cloudinary URLs.
-9. Continue to the next property.
-10. Use `skip` for a property you cannot complete and `exit` to stop.
+Slack slash commands start workflows. Session controls are plain thread words because a slash command is not the mechanism used for the thread interaction.
 
-Do not attach photos to another property's thread. Do not create a duplicate listing to recover from a photo problem.
+For photo sessions:
 
-For detailed recovery, use `REVERIFY_PHOTOS.md`.
+`done / skip / next / exit`
 
-## 7. Verify properties after batch processing
+For verification sessions:
 
-When the batch reports review-required rows:
+`submit / skip / next / exit`
 
-1. Open `#epf-prop-aprovals`.
-2. Run `/efps verify start`.
-3. Answer the property's questions in its thread.
-4. Reply `submit` when complete.
-5. Confirm the canonical row after submission.
-6. Continue with `next`, `skip`, or `exit`.
+## 9. What is intentionally not part of current Slack behavior
 
-## 8. Bugs
+There is **no society approval workflow** in the new repository.
 
-Run `/efps bug report` to start a guided manual report.
+Do not add or revive:
 
-Use `/efps bugs` to inspect open/unannounced bug records.
+- `/efps societies`
+- `/efps society`
+- society approval queue
+- society approval card
+- society approval state
 
-Use `/efps bug fix <BUG-ID> <note>` after the fix is actually applied.
+These were contradictory legacy material and are explicitly obsolete.
 
-## 9. Leads
+## 10. Operational safety
 
-Lead operations use persistent cards and buttons rather than a command-heavy interface. Cards should be updated in place when possible; the thread holds the conversation context.
-
-## 10. Critical rules
-
-- Slack is an operational interface, not the canonical inventory database.
-- Do not invent fields, commands, channel purposes, or workflows.
-- Do not use obsolete society approval commands.
-- Do not manually overwrite downstream-owned values.
-- Do not treat a Slack success message as proof of Google Sheets/Cloudinary persistence.
-- Keep property photo attachments in the correct property thread.
-- Keep credentials out of Git.
+- Never place tokens or signing secrets in Slack messages or Git.
+- Treat Slack as an operational interface, not the source of truth.
+- When runtime behavior is uncertain, use `NOT VERIFIED` rather than guessing.
+- Preserve the canonical row and its ownership boundaries.
