@@ -2,18 +2,22 @@ from __future__ import annotations
 
 import pytest
 
-from client import GoogleSheetsClient, GoogleSheetsCredentials, MissingGoogleSheetsCredentials
+from . import schema
+from .client import GoogleSheetsClient, GoogleSheetsCredentials, MissingGoogleSheetsCredentials
 
 
-def test_missing_credentials() -> None:
+def test_missing_credentials(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("GOOGLE_APPLICATION_CREDENTIALS", raising=False)
+    monkeypatch.delenv("GOOGLE_SERVICE_ACCOUNT_JSON", raising=False)
     with pytest.raises(MissingGoogleSheetsCredentials):
         GoogleSheetsCredentials.from_environment()
 
 
-def test_read_and_write_delegate() -> None:
+def test_read_write_and_append_contract_rows() -> None:
     class Worksheet:
         def __init__(self) -> None:
             self.updated = None
+            self.appended = None
 
         def get(self, range_name: str):
             return [[range_name]]
@@ -23,6 +27,7 @@ def test_read_and_write_delegate() -> None:
             return {"ok": True}
 
         def append_rows(self, values, value_input_option: str):
+            self.appended = (values, value_input_option)
             return {"values": values, "value_input_option": value_input_option}
 
     class Spreadsheet:
@@ -44,6 +49,13 @@ def test_read_and_write_delegate() -> None:
         GoogleSheetsCredentials({"type": "service_account"}),
         client=fake,
     )
+    row = [f"v{i}" for i in range(schema.GRID_WIDTH)]
     assert client.read_range("sheet", "tab", "A1:B2") == [["A1:B2"]]
-    assert client.write_range("sheet", "tab", "A1", [["x"]]) == {"ok": True}
-    assert fake.ws.updated == ("A1", [["x"]], True)
+    assert client.write_row("sheet", "tab", 2, row) == {"ok": True}
+    assert fake.ws.updated == ("A2:AV2", [row], True)
+    assert client.append_rows("sheet", "tab", [row]) == {
+        "values": [row],
+        "value_input_option": "RAW",
+    }
+    with pytest.raises(ValueError):
+        client.write_row("sheet", "tab", 2, ["short"])
