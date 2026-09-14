@@ -13,34 +13,44 @@ This is the canonical registry for external systems and verified resource identi
 - `shared/google_sheets/` — technical Google Sheets connectivity and the canonical `Housing_Listings` schema/ownership contract.
 - `shared/whatsapp_whapi/` — technical WhAPI connectivity, authentication, webhook, messaging/media, and connection operations.
 
-## Verified legacy infrastructure references
+## Verified runtime credential map
 
-### Google Sheets
+| Shared capability | Verified AWS secret | Verified local/runtime name |
+|---|---|---|
+| Cloudinary | `efps-whapi-panel-cloudinary` | `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`, `CLOUDINARY_URL` |
+| Google Sheets | `efps-whapi-panel-sheet` | `GOOGLE_SERVICE_ACCOUNT_JSON` / `GOOGLE_APPLICATION_CREDENTIALS` |
+| WhAPI | `efps-whapi-panel-token` | `WHAPI_API_TOKEN` |
+
+Only names are recorded here; secret values are runtime-only.
+
+## Google Sheets
 
 - Spreadsheet ID: `1zdOLWklkWlnVECCtcH4SJj6vm6nEVjINpTT2U2UJEKc`
 - Worksheet: `Housing_Listings`
-- AWS Secrets Manager secret name: `efps-whapi-panel-sheet`
-- Local-development credential variables: `GOOGLE_SERVICE_ACCOUNT_JSON`, `GOOGLE_APPLICATION_CREDENTIALS`
+- Immutable row identity: `listing_id` in column `A`
 - Recorded service-account identity: `gcpnew@easyfind-automations.iam.gserviceaccount.com`
+- Canonical local schema: `shared/google_sheets/schema.py`
+- Verified physical contract: 48 columns, `A:AV`
 
-These identifiers are taken from the verified legacy implementation. fileciteturn315file0L2-L2 fileciteturn328file0L2-L2
+## WhatsApp / WhAPI
 
-### WhatsApp / WhAPI
-
-- AWS Secrets Manager secret name: `efps-whapi-panel-token`
-- Local-development token variable: `WHAPI_API_TOKEN`
+- AWS Secrets Manager secret: `efps-whapi-panel-token`
+- Local token variable: `WHAPI_API_TOKEN`
 - WhAPI base URL: `https://gate.whapi.cloud`
 - Live-traffic approval flag: `EFPS_WHAPI_LIVE=1`
+- Webhook shared-token variable: `EFPS_WEBHOOK_TOKEN`
+- Webhook query parameter: `t`
+- Inventory-listener sender numbers: `917975102130`, `919902024973`
 
-These are verified from the legacy implementation and guard. fileciteturn315file0L2-L2 fileciteturn316file0L2-L2 fileciteturn223file0L2-L2
+The legacy deployment uses one channel/token model; the two numbers above are the configured source numbers used by the webhook to identify inventory messages. The exact currently connected WhatsApp channel and live webhook URL still require runtime verification.
 
-### Cloudinary
+The legacy webhook registration shape is `PATCH /settings` with `webhooks[].url`, `mode: body`, and per-event `type`/`method` entries. The shared repository can construct this payload but does not silently mutate live WhAPI settings.
 
-- Legacy AWS Secrets Manager secret name: `efps-whapi-panel-cloudinary`
-- Runtime credential fields supported by the legacy implementation: Cloudinary cloud name, API key, API secret, or a `CLOUDINARY_URL` representation.
-- New shared runtime variable names: `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`
+## Cloudinary
 
-The legacy code confirms the secret name and credential-loading contract via its `SECRET_NAMES` and `cloudinary_creds()` implementation. fileciteturn315file0L2-L2 fileciteturn328file0L2-L2
+- AWS Secrets Manager secret: `efps-whapi-panel-cloudinary`
+- Local/runtime variables: `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`, `CLOUDINARY_URL`
+- The new shared client may also accept `CLOUDINARY_CLOUD_NAME` as an explicit runtime field when the deployment supplies it.
 
 ## Credential policy
 
