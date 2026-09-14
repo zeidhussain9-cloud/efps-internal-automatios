@@ -14,17 +14,22 @@ The legacy `efps-platform` repository was reviewed for naming convention, busine
 
 The legacy `efps-whapi-panel` provides verified reference behavior for the shared capability boundaries. Its Cloudinary media layer uses deterministic property paths and a separate lead-media namespace. Its configuration resolves credentials from AWS Secrets Manager with environment-variable fallback. Its WhAPI network traffic is explicitly gated before live calls. fileciteturn228file0L2-L2 fileciteturn229file0L2-L2 fileciteturn223file0L2-L2
 
-Legacy Slack-specific skills are not carried forward because they are not part of the new repository architecture. The legacy WhAPI skill remains relevant as source material for the repository-specific `.gemini/skills/whapi/` structure; technical details must be carried forward only after verification against current requirements/current integration truth.
+## Verified infrastructure references
 
-## Current architecture
+- Google Sheets spreadsheet: `1zdOLWklkWlnVECCtcH4SJj6vm6nEVjINpTT2U2UJEKc`
+- Google Sheets worksheet: `Housing_Listings`
+- Google Sheets AWS secret: `efps-whapi-panel-sheet`
+- WhAPI AWS secret: `efps-whapi-panel-token`
+- WhAPI base URL: `https://gate.whapi.cloud`
+- Cloudinary AWS secret: `efps-whapi-panel-cloudinary`
 
-- Root contains AI/repository operating entry points.
-- `CORE_STEERING.md` is the mandatory core AI operating protocol.
-- `docs/` is the single canonical home for business and system knowledge.
-- `modules/` contains EFPS business capabilities and business decisions.
-- `shared/` contains reusable technical capabilities.
-- Shared capabilities provide capabilities; modules decide when and why those capabilities are used.
-- `efps-website-mgmnt` is dedicated exclusively to EasyFind website management.
+Actual credential values remain outside version control.
+
+## Canonical Google Sheets contract
+
+`shared/google_sheets/schema.py` is the local source for the `Housing_Listings` physical schema and ownership contract. It is derived from the verified legacy `modules/efps-whapi-panel/src/schema.py` and `docs/SHEET_CONTRACT.json`.
+
+The verified legacy contract is a 48-column grid ending at `AV`, with immutable `listing_id` as row identity. The local representation is currently fail-fast until every one of the 48 fields is represented exactly; it must not silently use the older 47-column shape.
 
 ## Shared capability implementation state
 
@@ -34,27 +39,19 @@ Implemented as a reusable technical package boundary with credential loading, de
 
 ### `shared/google_sheets/`
 
-Restored as the canonical shared Google Sheets capability boundary. Its technical implementation is the next integration surface to complete from verified requirements; business ownership remains in modules.
+Restored and implemented with credential loading, authenticated client creation, spreadsheet/worksheet access, range reads/writes, row append capability, and the canonical sheet contract under `schema.py`. Exact production runtime wiring remains to be verified.
 
 ### `shared/whatsapp_whapi/`
 
-Restored as the canonical shared WhAPI capability boundary. Its implementation must follow the verified legacy safety pattern: live network traffic is explicitly gated and secrets remain outside the repository.
-
-## Current documentation model
-
-Root: `README.md`, `CORE_STEERING.md`, `GEMINI.md`, `AGENTS.md`, and `HANDOFF.md`.
-
-Canonical docs: `docs/BUSINESS_CONTEXT.md`, `docs/PROJECT_RULES.md`, `docs/ARCHITECTURE.md`, `docs/DATA_CONTRACTS.md`, `docs/INFRASTRUCTURE.md`, `docs/DOCUMENT_GOVERNANCE.md`, `docs/DOCUMENT_MAP.md`, `docs/DOCUMENT_UPDATE_MATRIX.md`, and `docs/OPEN_POINTERS.md`.
-
-`DOCUMENT_UPDATE_MATRIX.md` is the canonical routing baseline and also requires a full review of every maintained root and `docs/` document for every implementation.
-
-No duplicate architecture, business-context, project-rule, or documentation-policy files should be introduced.
+Restored and implemented with credential loading, Bearer authentication, configurable base URL, GET/POST transport, and an explicit `EFPS_WHAPI_LIVE=1` safety gate. Endpoint-specific messaging, group, media, webhook, and health operations must be implemented only from verified current WhAPI API references.
 
 ## Current AI skills
 
-Repository-wide Gemini operating skills include `session-start`, `session-end`, `core-steering`, `truth-verification`, `change-planning`, `change-verification`, `documentation-governance`, `handoff-update`, and `repository-audit`.
+Repository-specific shared capability skills now include:
 
-The repository-specific `whapi` custom skill is currently a placeholder/reference structure derived from the legacy skill; it is not treated as verified live integration behavior.
+- `.gemini/skills/cloudinary/`
+- `.gemini/skills/google-sheets/`
+- `.gemini/skills/whapi/`
 
 ## Current modules
 
@@ -65,4 +62,4 @@ The repository-specific `whapi` custom skill is currently a placeholder/referenc
 
 ## Next development rule
 
-Before implementing a capability, apply `CORE_STEERING.md`, read the root guidance, `HANDOFF.md`, the applicable documents in `docs/`, and the relevant module/shared guidance. Establish current source truth before making implementation changes. At the end of every implementation, review all maintained root and `docs/` documents, update every affected document, update `HANDOFF.md`, and validate the final repository state.
+Before implementing a capability, apply `CORE_STEERING.md`, read the root guidance, `HANDOFF.md`, applicable `docs/`, and relevant module/shared guidance. Establish current source truth before changes. At the end of every implementation, review all maintained root and `docs/` documents, update every affected document, update `HANDOFF.md`, and validate the final repository state.
