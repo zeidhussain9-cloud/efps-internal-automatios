@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import pytest
+
 from . import config
-from .webhook import authorize_query_token, parse_delivery, parse_message
+from .webhook import authorize_query_token, build_registration_payload, parse_delivery, parse_message
 
 
 def test_verified_inventory_listener_is_exposed():
@@ -14,6 +16,20 @@ def test_webhook_token_is_constant_time_validated():
     assert authorize_query_token({"t": "secret"}, "secret")
     assert not authorize_query_token({"t": "wrong"}, "secret")
     assert not authorize_query_token({}, "secret")
+
+
+def test_registration_requires_explicit_event_selection():
+    payload = build_registration_payload(
+        "https://example.test/hook/",
+        ["messages", {"type": "statuses", "method": "post"}],
+    )
+    assert payload["webhooks"][0]["url"] == "https://example.test/hook"
+    assert payload["webhooks"][0]["events"] == [
+        {"type": "messages", "method": "post"},
+        {"type": "statuses", "method": "post"},
+    ]
+    with pytest.raises(ValueError):
+        build_registration_payload("https://example.test/hook", [])
 
 
 def test_text_message_is_normalized():
