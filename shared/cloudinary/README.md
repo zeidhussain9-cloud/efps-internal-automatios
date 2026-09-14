@@ -4,7 +4,7 @@ Provides the reusable technical media-storage capability used by EFPS modules.
 
 ## What Cloudinary achieves
 
-This layer handles the technical storage of images/media after a module decides that media must be stored. It provides capabilities such as:
+This layer handles the technical storage of images/media after a module decides that media must be stored. It provides:
 
 - deterministic media storage paths
 - image upload
@@ -22,11 +22,21 @@ The legacy `efps-whapi-panel` uploaded WhatsApp property media to Cloudinary imm
 
 The same legacy implementation separated customer/enquiry images under a `leads/` namespace keyed by phone and message ID, preventing enquiry media from colliding with property media. fileciteturn228file0L2-L2
 
+## Implementation
+
+The shared package currently contains a dependency-injected Cloudinary client plus deterministic property/lead media helpers, catalogue URL limiting, image fingerprinting, offline tests, package metadata, and an explicit runtime credential contract.
+
 ## Credentials
 
 Cloudinary credentials are runtime secrets/configuration and must never be committed. The legacy implementation resolved Cloudinary credentials from AWS Secrets Manager with environment-variable fallback during local development. fileciteturn229file0L2-L2
 
-This repository may document variable names and secret references, but never secret values.
+The current shared package expects:
+
+- `CLOUDINARY_CLOUD_NAME`
+- `CLOUDINARY_API_KEY`
+- `CLOUDINARY_API_SECRET`
+
+The actual values must be supplied only at runtime through the approved secret/configuration mechanism.
 
 ## Boundary
 
