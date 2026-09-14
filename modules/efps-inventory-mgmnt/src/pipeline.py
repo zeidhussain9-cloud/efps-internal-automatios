@@ -15,6 +15,7 @@ FIXED = {
 PANEL_FIELDS = tuple(name for name in schema.NAMES if schema.owner_of(name) == schema.PANEL)
 STAGE_3_PROTECTED = {"listing_state", "posted_url", "posted_at", "error_notes", "meta_catalog_id", "meta_catalog_status", "inventory_locked"}
 STAGE_1_2_WRITABLE = tuple(name for name in PANEL_FIELDS if name not in STAGE_3_PROTECTED)
+STAGE_2_FIELDS = tuple(name for name in schema.NAMES if schema.stage_of(name) == schema.STAGE_2)
 
 
 def empty_row() -> dict[str, str]:
@@ -35,11 +36,24 @@ def initial_row(listing_id_value: str, raw_text: str = "", source_group: str = "
     return row
 
 
+def _stage2_input_row(row: dict) -> dict:
+    """Build Stage-2 input from raw source and immutable metadata, not old Stage-2 values."""
+    out = empty_row()
+    for name in ("listing_id", "status", "intake_status", "onboarded_on", "raw_message_text", "whatsapp_contact_link", "whatsapp_group_link", "transaction_type", "city", "source_group"):
+        out[name] = str(row.get(name, "") or "")
+    # Existing media associations are preserved; the current Phase-1 pass does not upload media.
+    out["cloudinary_image_urls"] = str(row.get("cloudinary_image_urls", "") or "")
+    for name in STAGE_3_PROTECTED:
+        out[name] = str(row.get(name, "") or "")
+    return out
+
+
 def deterministic(raw_text: str, row: dict | None = None) -> dict:
     """Stage 2 deterministic extraction + normalization/business rules."""
-    out = empty_row() if row is None else dict(row)
-    out.update(extract.scan(raw_text))
-    return normalize.normalize(out, raw_text)
+    base = _stage2_input_row(row) if row is not None else empty_row()
+    base["raw_message_text"] = raw_text or base.get("raw_message_text", "")
+    base.update(extract.scan(raw_text))
+    return normalize.normalize(base, raw_text)
 
 
 def process_closed_session(raw_text: str, *, row: dict | None = None, maps_client=None, ai_llm=None):
@@ -47,7 +61,6 @@ def process_closed_session(raw_text: str, *, row: dict | None = None, maps_clien
     out = deterministic(raw_text, row)
     issues: list[str] = []
     maps_unverified = False
-
     maps = maps_client or GoogleMapsClient()
     maps_url = out.get("google_maps_url", "") or maps.extract_url(raw_text)
     if maps_url:
@@ -64,7 +77,6 @@ def process_closed_session(raw_text: str, *, row: dict | None = None, maps_clien
         else:
             maps_unverified = True
             issues.append(f"Google Maps resolution returned an unrecognized verification state: {resolved.confidence}")
-
     out["status"] = "Pending"
     errors = validate.validate(out)
     if errors:
@@ -72,7 +84,6 @@ def process_closed_session(raw_text: str, *, row: dict | None = None, maps_clien
         issues.extend(errors)
     if maps_unverified:
         out["status"] = "Needs Review"
-
     if out["status"] == "Pending":
         from .ai import apply
         out = apply(out, raw_text, ai_llm)
@@ -80,7 +91,6 @@ def process_closed_session(raw_text: str, *, row: dict | None = None, maps_clien
             issues.extend(str(x) for x in out["_ai_conflicts"])
             out["status"] = "Needs Review"
             out.pop("_ai_conflicts", None)
-
     out["intake_status"] = "Processed"
     return out, issues
 
@@ -101,9 +111,6 @@ def write_phase1_update(client: GoogleSheetsClient, row_number: int, row: dict):
     if set(row) != set(schema.NAMES):
         raise ValueError("inventory row does not match canonical 48-field schema")
     schema.assert_writable(schema.PANEL, list(STAGE_1_2_WRITABLE))
-    # A:D are Stage-1/2. E listing_state is lifecycle-owned and protected.
-    # F:AO are Stage-1/2 property fields. AP:AT are downstream-owned.
-    # AU is Stage-1 source metadata. AV inventory_locked is lifecycle-owned.
     client.write_range(schema.SHEET_ID, schema.WORKSHEET_NAME, schema.range_for("listing_id", "internal_property_type", row_number), [[row[name] for name in schema.NAMES[0:4]]])
     client.write_range(schema.SHEET_ID, schema.WORKSHEET_NAME, schema.range_for("onboarded_on", "city", row_number), [[row[name] for name in schema.NAMES[5:41]]])
     client.write_range(schema.SHEET_ID, schema.WORKSHEET_NAME, schema.range_for("source_group", "source_group", row_number), [[row["source_group"]]])
