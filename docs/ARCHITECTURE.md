@@ -3,75 +3,27 @@
 This is the canonical cross-repository architecture reference.
 
 ## Core model
-
-The repository has two primary capability layers:
-
 - `shared/` — reusable technical capabilities and integrations.
 - `modules/` — EFPS business capabilities and business decisions.
 
-The governing boundary is:
-
 > Shared services provide capabilities; modules decide when and why those capabilities are used.
 
-Shared code must remain business-neutral. Business rules, publishing decisions, property decisions, and workflow decisions belong to the owning module.
+## Shared capabilities
+- `shared/cloudinary/` — reusable media storage; Phase 2 inventory media consumption.
+- `shared/google_sheets/` — Sheets transport and the canonical 48-column `Housing_Listings` contract.
+- `shared/google_maps/` — reusable Maps URL/geocoding capability. It must remain business-neutral; modules decide when a Maps lookup is required.
+- `shared/whatsapp_whapi/` — WhAPI transport, webhook normalization/verification, and the two-listener source boundary.
+- `shared/slack/` — reserved placeholder only; no Phase-1 implementation.
 
-## Established shared capabilities
+Verified inventory listener sender numbers are `917975102130` and `919902024973`. Other inbound traffic follows the lead/non-inventory boundary documented by WhAPI.
 
-### `shared/cloudinary/`
+## Phase-1 inventory
+`modules/efps-inventory-mgmnt/` owns the property workflow from `NEW → collect → NEW` through raw-text assembly, deterministic extraction, normalization, Maps resolution, validation, AI verification, and wording-only AI beautification.
 
-Reusable media-storage and upload capability. It provides deterministic media naming, uploads, stable media references, catalogue URL preparation, and image fingerprinting. Verified legacy AWS secret: `efps-whapi-panel-cloudinary`.
+The deterministic extractor reads only `raw_message_text`; it does not use existing Sheet canonical values as source facts. Images are recognized/countable but are not downloaded in Phase 1. Downstream-owned AK:AO fields remain untouched. Phase 1 does not implement lifecycle/locking, duplicate governance, Cloudinary media retrieval, or downstream publishing.
 
-### `shared/google_sheets/`
+## Canonical sheet
+The single source of physical shape is `shared/google_sheets/schema.py`: 48 columns A:AV, 41 contract + 2 extra + 5 tail. The schema records owner, first-population stage, allowed values, and field dependencies. `listing_id` is immutable row identity.
 
-Reusable Google Sheets technical access plus the canonical `Housing_Listings` contract/schema. Verified spreadsheet: `1zdOLWklkWlnVECCtcH4SJj6vm6nEVjINpTT2U2UJEKc`, worksheet `Housing_Listings`; verified AWS secret: `efps-whapi-panel-sheet`.
-
-The local canonical schema is `shared/google_sheets/schema.py`. The verified machine-readable legacy contract is 48 columns, A:AV, with `inventory_locked` at AV. The older legacy `src/schema.py` table stopped at AU; the generated `SHEET_CONTRACT.json` is the newer contract used for the correction.
-
-### `shared/whatsapp_whapi/`
-
-Reusable WhAPI technical integration: credential loading, authenticated transport, channel/settings primitives, webhook registration helpers, webhook normalization/verification, neutral message primitives, and the repository-level two-listener source boundary.
-
-Listener boundary:
-
-- **Inventory listener:** only direct inbound messages from `917975102130` and `919902024973`.
-- **Lead listener:** the default path for other inbound traffic; group and promotion paths remain explicitly outside the inventory listener.
-
-The shared layer only identifies the listener path. It does not create leads, create listings, deduplicate, match, assign, lock properties, or send business confirmations. Those actions remain module-owned.
-
-Current documented WhAPI connection surfaces used by the shared boundary are `GET /health`, `GET /settings`, `GET /settings/events`, `PATCH /settings`, `POST /settings/webhook_test`, and `POST /messages/text`. Live account state must still be verified at runtime.
-
-## Business modules
-
-### `modules/efps-inventory-mgmnt/`
-
-Owns property inventory business logic, inventory workflows, validation, updates, duplicate handling, and inventory-specific coordination with shared services.
-
-### `modules/efpd-lead-mgmnt/`
-
-Owns lead/enquiry business logic, conversation workflow, lead state, assignment, and lead-specific processing. It is intentionally separate from inventory management.
-
-### `modules/efps-meta-catalogue-mgmnt/`
-
-Owns Meta/WhatsApp catalogue business logic, catalogue content, publishing decisions, and catalogue-specific status handling.
-
-### `modules/efps-housing-portal-mgmnt/`
-
-Reserved for future Housing.com automation and portal-specific business workflows.
-
-### `modules/efps-website-mgmnt/`
-
-Dedicated exclusively to EasyFind website management and website automation.
-
-## Shared-capability skill model
-
-The three established shared capabilities each have a repository-specific Gemini skill:
-
-- `.gemini/skills/cloudinary/`
-- `.gemini/skills/google-sheets/`
-- `.gemini/skills/whapi/`
-
-## Data and ownership principle
-
-Modules own business meaning. Shared services own technical access and reusable cross-module contracts where explicitly established. A shared service must not decide which property to publish, what a listing means, which customer communication should happen, or whether a business action is authorized.
-
-Concrete live runtime state must be verified from the deployed AWS/WhAPI environment; GitHub source alone cannot prove the current production webhook URL, connected WhatsApp number, subscribed events, or live credential access.
+## Runtime boundary
+Source code cannot prove current production credentials, WhAPI webhook subscriptions, deployed webhook URL, Maps API access, or Vertex runtime access. Those remain runtime verification items and are never guessed.
