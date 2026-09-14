@@ -9,6 +9,7 @@ These are not instructions to guess or silently fix. An open pointer is a human-
 - Google Sheets spreadsheet ID and `Housing_Listings` worksheet are verified.
 - Google Sheets AWS secret name `efps-whapi-panel-sheet` and local credential variable names are verified.
 - WhAPI AWS secret name `efps-whapi-panel-token`, local token variable, base URL, webhook token variable, and two inventory-listener sender numbers are verified from the legacy deployment/configuration.
+- The repository now contains the two-listener source boundary: exactly the two dedicated inventory sender numbers use the inventory listener; other inbound traffic uses the lead listener path, while groups/promotions remain outside the inventory listener boundary.
 - Cloudinary AWS secret name `efps-whapi-panel-cloudinary` is verified.
 - The machine-readable legacy `Housing_Listings` contract is verified as a 48-column A:AV grid. The older legacy `src/schema.py` itself still contains the older 47-column/AU table; the generated `SHEET_CONTRACT.json` is the newer verified contract and is the source used to correct the new repository.
 - The current WhAPI public documentation confirms `GET /health`, `GET /settings`, `GET /settings/events`, `PATCH /settings`, `POST /settings/webhook_test`, and `POST /messages/text` as current API surfaces used by the shared connection boundary.
