@@ -4,53 +4,41 @@ This is the canonical cross-module data ownership and contract reference for EFP
 
 ## Inventory contract
 
-The inventory module is the business owner of canonical inventory meaning and inventory-specific decisions.
-
-The shared Google Sheets layer owns the technical sheet-access mechanism and the canonical physical `Housing_Listings` contract used by this repository. The local contract is **48 physical columns, A:AV** and includes field names, physical order, ownership, writable permissions, row identity, explicitly established allowed values, and derived ranges.
-
-Canonical local source:
-
-`shared/google_sheets/schema.py`
+`shared/google_sheets/schema.py` is the single physical `Housing_Listings` contract: 48 columns A:AV. Each column records owner, first-population stage, allowed values, and declared dependencies/interdependencies.
 
 Verified legacy sources:
-
 - `efps-platform/modules/efps-whapi-panel/src/schema.py` — older 47-column table.
-- `efps-platform/docs/SHEET_CONTRACT.json` — newer verified 48-column A:AV machine-readable contract.
+- `efps-platform/docs/SHEET_CONTRACT.json` — newer verified 48-column A:AV contract.
 
-The correction in this repository follows the newer generated contract, including `inventory_locked` at AV.
+The new repository follows the newer 48-column contract, including `inventory_locked` at AV. `listing_id` in A is immutable row identity.
 
-The verified legacy sheet is `Housing_Listings` in spreadsheet `1zdOLWklkWlnVECCtcH4SJj6vm6nEVjINpTT2U2UJEKc`, with row identity `listing_id` in column A.
+## Population stages
 
-## Housing_Listings ownership
+- **intake:** listing identity, fixed company values, raw text, source metadata, and initial `Raw` state.
+- **deterministic_extraction:** values read explicitly from `raw_message_text` only.
+- **normalization:** safe formatting/default/mapping rules that do not invent property facts.
+- **maps_resolution:** `locality`, `pincode`, and canonical `google_maps_url` from the shared Maps capability.
+- **validation:** canonical structural/business safety gate; status becomes `Pending` or `Needs Review`.
+- **ai_verification:** advisory contradiction check against exact source; conflicts cause `Needs Review` and never replace facts.
+- **ai_beautification:** only `catalog_title` and `property_highlights` may be changed.
+- **phase_2_media / phase_2_lifecycle:** intentionally not populated by Phase 1.
+- **downstream:** AK:AO remain owned by Housing/Meta agents and are untouched by inventory Phase 1.
 
-The verified contract assigns ownership as follows:
-
+## Ownership
 - `panel`: A–AJ plus AP–AV
-- `housing_agent`: AK–AM (`posted_url`, `posted_at`, `error_notes`)
-- `meta_catalog`: AN–AO (`meta_catalog_id`, `meta_catalog_status`)
+- `housing_agent`: AK–AM
+- `meta_catalog`: AN–AO
 
-Rows are addressed by immutable `listing_id`, never by row position.
+## Phase-1 raw contract
 
-A column owner or allowed-value rule is a business decision, not a refactor. Changes require an explicit owner decision and synchronized contract/document updates.
+`NEW` opens a property session. All text messages until the next `NEW` are appended in order to `raw_message_text`, with timestamp/message-id metadata when available. Image/media binaries are not downloaded or serialized into raw text in Phase 1.
 
-## Media contract
+Deterministic extraction reads only that completed raw text. Existing canonical Sheet values are not extraction input, so replay cannot silently inherit stale values.
 
-Cloudinary is a reusable technical capability. The owning module decides which media is stored and when. The verified legacy implementation uses deterministic listing-derived property paths and a separate lead/enquiry namespace.
+## Media / downstream
 
-## WhatsApp / WhAPI contract
+Cloudinary remains a reusable technical capability for Phase 2 media capture. Meta/Housing/website publishing is outside Phase 1.
 
-WhAPI is a reusable technical integration capability. The shared layer owns authentication, transport, webhook configuration/normalization, and integration metadata. The inventory and lead modules own the meaning and business processing of messages. The verified legacy inventory-listener numbers are `917975102130` and `919902024973`; they are source-number routing facts, not proven separate WhAPI channels.
+## Documentation impact
 
-## Documentation impact rule
-
-Changes to the `Housing_Listings` contract require review of:
-
-- `shared/google_sheets/schema.py`
-- `shared/google_sheets/README.md`
-- module documentation for any module that reads/writes affected fields
-- `docs/ARCHITECTURE.md`
-- `docs/DATA_CONTRACTS.md`
-- `docs/INFRASTRUCTURE.md` when infrastructure identifiers/configuration change
-- `docs/OPEN_POINTERS.md` when a decision or unresolved fact is created/resolved
-- `HANDOFF.md`
-- all maintained root and `docs/` documents under the repository-wide full-review rule
+Any change to the sheet contract requires synchronized review of the schema, affected module documentation, architecture/data contracts/infrastructure/open pointers, handoff, and all maintained root/docs guidance.
