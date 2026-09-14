@@ -8,22 +8,22 @@ This shared layer owns technical integration capabilities only:
 
 - WhAPI authentication and client setup
 - HTTP/API request handling
-- WhatsApp connection and health/status operations
-- webhook registration, verification, and inbound event handling
-- message send/receive primitives
-- media send/receive primitives
-- contact, group, channel, and community primitives when implemented
-- configured WhatsApp connection metadata
-- technical error handling and transport concerns
+- explicit live-traffic safety gating
+- webhook/transport foundations
+- reusable message/media transport primitives
+- connection/status handling
+- technical error handling
 
 Business modules decide when and why WhatsApp actions occur, what a message means, which audience should be contacted, and what business workflow follows an event.
 
+## Implementation
+
+`client.py` provides credential loading, GET/POST transport, bearer authentication, configurable base URL, injected transport testing, and an explicit `EFPS_WHAPI_LIVE=1` gate. The gate is deliberately disabled unless explicitly enabled at runtime.
+
+The implementation does not claim endpoint-specific message/group/webhook behavior until those endpoints are verified from the current WhAPI reference. This avoids inventing API contracts.
+
 ## Safety
 
-Live WhAPI traffic must not happen implicitly. The implementation must use an explicit runtime gate for live network access, following the verified anti-hallucination/approval pattern from `efps-platform`.
+The verified legacy `efps-platform` implementation blocks live WhAPI traffic unless an explicit runtime flag is supplied. fileciteturn223file0L2-L2
 
 Tokens, secrets, passwords, private keys, and production credentials must never be committed.
-
-## Implementation state
-
-The shared boundary is restored now. Concrete capabilities should be implemented from verified WhAPI behavior and references rather than guessed endpoints or payloads.
