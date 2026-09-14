@@ -18,13 +18,16 @@ This shared layer owns technical access and the physical contract only:
 
 Business meaning and workflow decisions remain with the owning module. Shared Sheets code does not decide inventory or lead workflow.
 
-## Verified AWS/runtime credential map
+## Credential resolution
 
-| Shared capability | Verified AWS secret | Verified local/runtime name |
-|---|---|---|
-| Google Sheets | `efps-whapi-panel-sheet` | `GOOGLE_SERVICE_ACCOUNT_JSON` / `GOOGLE_APPLICATION_CREDENTIALS` |
+| Item | Current value |
+|---|---|
+| Keychain service | `efps-whapi-panel-sheet` |
+| Keychain account | `efps` |
+| Historical AWS source | `efps-whapi-panel-sheet` |
+| Environment fallbacks | `GOOGLE_SERVICE_ACCOUNT_JSON`, `GOOGLE_APPLICATION_CREDENTIALS` |
 
-The recorded legacy service-account identity is `gcpnew@easyfind-automations.iam.gserviceaccount.com`. The private key/JSON value is never stored in GitHub.
+The current repository resolves the canonical local macOS Keychain service after environment fallbacks. The private key/JSON value is never stored in GitHub.
 
 ## Canonical EFPS inventory sheet
 
