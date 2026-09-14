@@ -29,9 +29,14 @@ The local canonical schema is `shared/google_sheets/schema.py`. The verified mac
 
 ### `shared/whatsapp_whapi/`
 
-Reusable WhAPI technical integration: credential loading, authenticated transport, channel/settings primitives, webhook registration helpers, webhook normalization/verification, and neutral message primitives. Verified AWS secret: `efps-whapi-panel-token`; base URL: `https://gate.whapi.cloud`.
+Reusable WhAPI technical integration: credential loading, authenticated transport, channel/settings primitives, webhook registration helpers, webhook normalization/verification, neutral message primitives, and the repository-level two-listener source boundary.
 
-The shared layer does not perform inventory or lead routing. It exposes retained sender-number configuration and normalized message data so the owning modules can make those decisions.
+Listener boundary:
+
+- **Inventory listener:** only direct inbound messages from `917975102130` and `919902024973`.
+- **Lead listener:** the default path for other inbound traffic; group and promotion paths remain explicitly outside the inventory listener.
+
+The shared layer only identifies the listener path. It does not create leads, create listings, deduplicate, match, assign, lock properties, or send business confirmations. Those actions remain module-owned.
 
 Current documented WhAPI connection surfaces used by the shared boundary are `GET /health`, `GET /settings`, `GET /settings/events`, `PATCH /settings`, `POST /settings/webhook_test`, and `POST /messages/text`. Live account state must still be verified at runtime.
 
