@@ -6,19 +6,15 @@ Repository-specific shared integration layer for EFPS WhatsApp connectivity thro
 
 This shared layer owns technical integration capabilities only:
 
-| Component | Functionality |
-|---|---|
-| Connection | WhAPI channel connection and connection state |
-| Authentication | Bearer token and secure credential loading |
-| API client | Common authenticated GET/POST/PATCH transport |
-| Webhook registration | Canonical webhook settings payload construction |
-| Webhook receiving | Delivery parsing and normalized message objects |
-| Webhook verification | Constant-time `?t=` shared-token validation |
-| Message/media primitives | Transport-level message and media data normalization |
-| Configured listeners | Verified inventory-listener sender numbers exposed to owning modules |
-| Connection health/status | Shared transport boundary; live health checks remain explicitly gated |
+- Bearer-token credential loading from the verified AWS secret or local environment.
+- Authenticated GET/POST/PATCH transport with an explicit live-traffic gate.
+- Neutral channel health/settings/event-discovery primitives.
+- Neutral text-message and webhook-test primitives.
+- Webhook payload parsing and normalized incoming-message objects.
+- Constant-time validation of the legacy `?t=` webhook secret.
+- Verified inventory-listener source numbers exposed as configuration data only.
 
-Business modules decide what a message means and what action to take. This layer must not decide inventory workflow, lead classification, catalogue behavior, or other EFPS business rules.
+Business modules decide what a message means and what action to take. This layer must not own inventory workflow, lead classification, catalogue behavior, persistence workflow, AI extraction, or posting logic.
 
 ## Verified AWS/runtime credential map
 
@@ -28,64 +24,38 @@ Business modules decide what a message means and what action to take. This layer
 
 The legacy secret accepts the token payload keys `api_token`, `token`, `value`, or `WHAPI_API_TOKEN`. The actual token is never copied into this repository.
 
-## Verified connection facts from `efps-platform`
+## Verified connection facts from the legacy repository
 
 - Base URL: `https://gate.whapi.cloud`
 - Authentication: `Authorization: Bearer <token>`
 - Live traffic gate: `EFPS_WHAPI_LIVE=1`
 - Webhook shared-token variable: `EFPS_WEBHOOK_TOKEN`
-- Webhook query parameter: `t`
-- Inventory-listener sender numbers: `917975102130`, `919902024973`
+- Legacy webhook query parameter: `t`
+- Retained inventory-listener sender numbers: `917975102130`, `919902024973`
 
-The legacy auth documentation states one token = one WhAPI channel = one connected WhatsApp number. Therefore the two inventory-listener numbers above must not be described as two WhAPI channels without runtime verification; they are the two source numbers used by the legacy webhook's inventory routing. fileciteturn386file0L2-L2
+The legacy auth model records one token/channel/connected-number relationship. The two numbers above are therefore source-number configuration, not evidence of two WhAPI channels.
 
-## Legacy webhook flow reviewed
+## Current API boundary
 
-```text
-WhatsApp message
-      ↓
-WhAPI channel
-      ↓
-HTTP POST to public EFPS webhook Function URL
-      ↓
-?t=<webhook secret> verification
-      ↓
-Webhook payload normalization
-      ↓
-┌───────────────────────────────┐
-│ direct message from either    │
-│ inventory-listener number     │ → inventory business module
-└───────────────────────────────┘
-                 OR
-┌───────────────────────────────┐
-│ other direct message          │ → lead business module
-└───────────────────────────────┘
-```
+The current WhAPI documentation exposes these connection/configuration endpoints used by this shared layer:
 
-The legacy webhook acknowledged quickly and could hand the payload to a separate asynchronous Lambda because media download, sheet writes, and AI extraction could exceed WhAPI's webhook response window. fileciteturn377file0L2-L2 fileciteturn379file0L2-L2
+- `GET /health` — health/channel launch check.
+- `GET /settings` — current channel settings.
+- `GET /settings/events` — allowed webhook events; callers must discover events instead of guessing names.
+- `PATCH /settings` — webhook/channel configuration; the shared package can construct the payload but does not mutate it automatically.
+- `POST /settings/webhook_test` — webhook delivery test.
+- `POST /messages/text` — neutral outbound text-message primitive.
 
-## Webhook configuration
+The exact live channel identity, current webhook URL, subscribed events, and deployed endpoint remain runtime facts and must be verified before production traffic is enabled.
 
-The verified legacy WhAPI skill uses `PATCH /settings` with:
+## Webhook boundary
 
-- `webhooks[].url`
-- `webhooks[].mode = "body"`
-- `webhooks[].events[].type`
-- `webhooks[].events[].method = "post"`
+The shared parser normalizes common text, link-preview, location, image, video, document, and audio message shapes. It does not persist, classify, deduplicate, enrich, or route business objects.
 
-The shared package can construct this registration payload through `config.webhook_registration_payload()` / `webhook.build_registration_payload()`. It does **not** automatically mutate the live WhAPI account. The exact live webhook URL and current subscription state require runtime verification. fileciteturn384file0L2-L2
-
-## Inventory-listener and lead separation
-
-The previous webhook's business routing was:
-
-1. A direct message from `917975102130` or `919902024973` was treated as inventory.
-2. Inventory processing wrote property data to `Housing_Listings` and could immediately process media/AI extraction in the legacy live path.
-3. A different direct message was treated as a lead and recorded conversation data before the lead representation was refreshed.
-4. Group messages were not part of the live lead path; the legacy configuration had retired group inventory routing from the webhook.
-
-Only the transport, sender configuration, and message normalization belong in `shared/whatsapp_whapi/`. Inventory and lead business behavior now belongs in their respective modules.
+The webhook registration builder requires the caller to supply explicitly verified event definitions. It deliberately does not retain a guessed/default event list.
 
 ## Safety
 
-Every live API request must pass `EFPS_WHAPI_LIVE=1`. Never enable that flag in code, and never commit production tokens, webhook secrets, passwords, or other credentials.
+Every live API request must pass `EFPS_WHAPI_LIVE=1`. The flag is never enabled automatically. Live settings mutation must be an explicit operational action after current state is recorded and verified.
+
+Never commit production tokens, webhook secrets, passwords, private keys, or other credentials.
