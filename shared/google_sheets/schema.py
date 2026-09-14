@@ -9,6 +9,7 @@ not redefine the sheet elsewhere.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Any, Mapping
 
 SHEET_ID = "1zdOLWklkWlnVECCtcH4SJj6vm6nEVjINpTT2U2UJEKc"
 WORKSHEET_NAME = "Housing_Listings"
@@ -44,8 +45,6 @@ def col_letter(index0: int) -> str:
 
 
 # Physical order is authoritative. Do not insert into the middle of this table.
-# The final five tail fields are AR:AV; this is why the verified grid is 48
-# columns even though the older source schema.py stopped at AU.
 _TABLE: tuple[tuple[str, str, str, str], ...] = (
     ("listing_id", "contract", PANEL, "EF-YYMM-XXXX; immutable row identity"),
     ("status", "contract", PANEL, "Raw / Pending / Needs Review"),
@@ -130,9 +129,33 @@ def writable_by(owner: str) -> tuple[str, ...]:
 
 def assert_writable(owner: str, names: list[str] | tuple[str, ...]) -> None:
     allowed = set(writable_by(owner))
+    unknown = [name for name in names if name not in BY_NAME]
+    if unknown:
+        raise KeyError(f"Unknown Housing_Listings field: {', '.join(unknown)}")
     foreign = [name for name in names if name not in allowed]
     if foreign:
         raise PermissionError(f"{owner} may not write: {', '.join(foreign)}")
+
+
+def validate_row(values: list[Any] | tuple[Any, ...]) -> tuple[Any, ...]:
+    """Validate one physical Housing_Listings row and return it as a tuple."""
+    if len(values) != GRID_WIDTH:
+        raise ValueError(f"Housing_Listings row must contain {GRID_WIDTH} values; found {len(values)}")
+    return tuple(values)
+
+
+def row_to_mapping(values: list[Any] | tuple[Any, ...]) -> dict[str, Any]:
+    """Convert one physical row to the canonical field-name mapping."""
+    row = validate_row(values)
+    return dict(zip(NAMES, row))
+
+
+def mapping_to_row(values: Mapping[str, Any]) -> list[Any]:
+    """Convert a canonical field mapping to one physical 48-column row."""
+    unknown = [name for name in values if name not in BY_NAME]
+    if unknown:
+        raise KeyError(f"Unknown Housing_Listings field: {', '.join(unknown)}")
+    return [values.get(name, "") for name in NAMES]
 
 
 def full_range(first_row: int = 1) -> str:
