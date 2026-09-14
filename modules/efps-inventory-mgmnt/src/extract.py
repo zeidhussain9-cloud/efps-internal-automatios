@@ -14,7 +14,6 @@ def _scale(n: str, s: str = "") -> str:
 
 
 def _line_value(text: str, label: str) -> str:
-    """Read a labelled value from either plain text or HTML-br-delimited raw text."""
     match = re.search(rf"{re.escape(label)}\s*:\s*(.*?)(?:<br\s*/?>|\n|$)", text, re.I)
     return match.group(1).strip() if match else ""
 
@@ -22,8 +21,6 @@ def _line_value(text: str, label: str) -> str:
 def scan(text: str) -> dict[str, str]:
     out: dict[str, str] = {}
     text = text or ""
-
-    # Preserve decimal BHK values such as 2.5 BHK; do not turn them into 5 BHK.
     m = (
         re.search(r"\b(\d+(?:\.\d+)?)\s*[- ]?\s*bhk\b", text, re.I)
         or re.search(r"\bbed\s*rooms?\s*[:\-]\s*(\d+(?:\.\d+)?)\b", text, re.I)
@@ -58,7 +55,6 @@ def scan(text: str) -> dict[str, str]:
         if m:
             out["built_up_area"] = m.group(1)
 
-    # Ground-floor shorthand is canonicalized to 0, matching existing sheet vocabulary.
     m = re.search(r"floor\s*:\s*(g|ground|\d{1,2})\s*(?:/|of)\s*(\d{1,2})", text, re.I)
     if m:
         floor = m.group(1).lower()
@@ -84,11 +80,13 @@ def scan(text: str) -> dict[str, str]:
         if m:
             out[key] = m.group(1)
 
-    # Preserve the complete maintenance term; normalization converts purely numeric
-    # values and leaves mixed terms such as "2,777 + Water" intact.
     maintenance = _line_value(text, "maintenance")
     if maintenance:
-        out["maintenance"] = maintenance
+        numeric = re.fullmatch(r"\s*([\d.,]+)\s*(k|lakh|l)?\s*", maintenance, re.I)
+        if numeric:
+            out["maintenance"] = _scale(numeric.group(1), numeric.group(2))
+        else:
+            out["maintenance"] = maintenance
 
     for key, label in (
         ("preferred_tenant_type", "preferred\s*tenant"),
@@ -124,5 +122,4 @@ def scan(text: str) -> dict[str, str]:
         if re.search(pat, text, re.I):
             out["furnish_type"] = label
             break
-
     return out
