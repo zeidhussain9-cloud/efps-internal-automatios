@@ -29,8 +29,10 @@ def test_missing_credentials(monkeypatch: pytest.MonkeyPatch) -> None:
         "CLOUDINARY_CLOUD_NAME",
         "CLOUDINARY_API_KEY",
         "CLOUDINARY_API_SECRET",
+        "CLOUDINARY_URL",
     ):
         monkeypatch.delenv(key, raising=False)
+    monkeypatch.setattr("shared.cloudinary.client._secret_from_keychain", lambda: None)
     with pytest.raises(MissingCloudinaryCredentials):
         CloudinaryCredentials.from_environment()
 
