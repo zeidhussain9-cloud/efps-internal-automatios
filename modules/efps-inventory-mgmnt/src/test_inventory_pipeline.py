@@ -1,15 +1,7 @@
 from __future__ import annotations
 
-from . import intake, pipeline, normalize
+from . import intake, pipeline
 from shared.google_sheets import schema
-
-
-class FakeMaps:
-    def extract_url(self, text):
-        return ""
-
-    def resolve(self, **kwargs):
-        raise AssertionError("Maps should not run when no Maps URL is present")
 
 
 def test_initial_row_is_canonical_and_stage_one_safe():
@@ -55,9 +47,10 @@ Gated Community"""
 
 
 def test_family_bachelor_explicit_value_is_not_overwritten():
-    raw = "2 BHK Rent 40000 Preferred Tenant: Family Bachelor: Open for both"
+    raw = "2 BHK\nRent: 40000\nPreferred Tenant: Family\nBachelor: Open for both"
     row = pipeline.deterministic(raw, pipeline.initial_row("EF-2609-0003"))
-    assert row["preferred_tenant_type"] == "Family Bachelor: Open for both"
+    assert row["preferred_tenant_type"] == "Family"
+    assert row["bachelor_preference"] == "Open for both"
 
 
 def test_new_marker_opens_then_closes_same_sender_session():
