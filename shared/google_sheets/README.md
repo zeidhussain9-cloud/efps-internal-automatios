@@ -12,15 +12,14 @@ This shared layer owns technical access only:
 - reading ranges
 - writing ranges
 - appending rows when explicitly requested by the caller
-- clearing/updating ranges when explicitly requested by the caller
 - connection/error handling suitable for calling modules
 
 Business meaning, field ownership, validation, duplicate rules, and decisions about when to read or write remain with the owning module.
 
+## Implementation
+
+`client.py` provides credential loading plus spreadsheet, worksheet, range-read, range-write, and row-append primitives. Tests inject a fake client so validation does not require Google network access.
+
 ## Credentials
 
-Credentials must never be committed. Supported runtime configuration must be established by the implementation and documented without storing secret values in the repository.
-
-## Implementation state
-
-This folder is a shared integration boundary. Concrete code should be added here only for verified Google Sheets capabilities required by EFPS modules.
+Credentials must never be committed. The current implementation accepts `GOOGLE_SERVICE_ACCOUNT_JSON` or `GOOGLE_APPLICATION_CREDENTIALS` at runtime. Secret values stay outside the repository.
