@@ -4,6 +4,8 @@
 
 The repository skeleton and documentation foundation are established. No business implementation is included at this stage.
 
+The mandatory AI operating foundation now includes `CORE_STEERING.md`, which every AI agent must apply before every response or action. `AGENTS.md` and `GEMINI.md` explicitly enforce this protocol.
+
 ## Source review completed
 
 The legacy `efps-platform` repository was reviewed for naming convention, business rules, document governance, architecture, infrastructure registry, cross-project contract, and open-pointer practices.
@@ -12,7 +14,8 @@ The new repository intentionally does not clone the legacy repository. Reusable 
 
 ## Current architecture
 
-- Root contains only AI/repository operation entry points.
+- Root contains AI/repository operating entry points.
+- `CORE_STEERING.md` is the mandatory core AI operating protocol.
 - `docs/` is the single canonical home for business and system knowledge.
 - `modules/` contains EFPS business capabilities and business decisions.
 - `shared/` contains reusable technical capabilities.
@@ -22,9 +25,11 @@ The new repository intentionally does not clone the legacy repository. Reusable 
 
 ## Current documentation model
 
-Root: `README.md`, `GEMINI.md`, `AGENTS.md`, and `HANDOFF.md`.
+Root: `README.md`, `CORE_STEERING.md`, `GEMINI.md`, `AGENTS.md`, and `HANDOFF.md`.
 
 Canonical docs: `docs/BUSINESS_CONTEXT.md`, `docs/PROJECT_RULES.md`, `docs/ARCHITECTURE.md`, `docs/DATA_CONTRACTS.md`, `docs/INFRASTRUCTURE.md`, `docs/DOCUMENT_GOVERNANCE.md`, `docs/DOCUMENT_MAP.md`, and `docs/OPEN_POINTERS.md`.
+
+A documentation update matrix is intentionally deferred until the remaining documentation migration/foundation work is complete, so it can be built against the final canonical document set rather than a moving structure.
 
 No duplicate architecture, business-context, project-rule, or documentation-policy files should be introduced.
 
@@ -43,4 +48,4 @@ No duplicate architecture, business-context, project-rule, or documentation-poli
 
 ## Next development rule
 
-Before implementing a capability, read the root guidance, `HANDOFF.md`, the applicable documents in `docs/`, and the relevant module/shared `README.md` and `GEMINI.md`. Establish current source truth before making implementation changes.
+Before implementing a capability, apply `CORE_STEERING.md`, then read the root guidance, `HANDOFF.md`, the applicable documents in `docs/`, and the relevant module/shared `README.md` and `GEMINI.md`. Establish current source truth before making implementation changes.
