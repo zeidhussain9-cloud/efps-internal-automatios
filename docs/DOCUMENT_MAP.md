@@ -31,18 +31,39 @@ Every module and established shared capability has its own `README.md` explainin
 
 Repository-wide Gemini skills live under `.gemini/skills/`. Repository-specific custom skills may have reference files under their skill directory when the procedure requires detailed material.
 
+## Shared capabilities
+
+Established shared capabilities include:
+
+- `shared/cloudinary/`
+- `shared/google_sheets/`
+- `shared/whatsapp_whapi/`
+- `shared/google_maps/`
+- `shared/slack/`
+
+### `shared/slack/` canonical documents
+
+- `README.md` — capability boundary, topology, lifecycle and migration status.
+- `COMMANDS.md` — supported `/efps` command surface and removed commands.
+- `CHANNELS.md` — current and historical channel topology and routing.
+- `SLACK_APP_MANIFEST.md` — cleaned Slack app manifest specification.
+- `REVERIFY_PHOTOS.md` — temporary bulk photo collection and recovery procedure.
+- `PROPERTY_VERIFICATION.md` — human property verification workflow.
+- `BATCH_OPERATIONS.md` — batch controls, reports, review relationship and failure behavior.
+- `NEW_USER_GUIDE.md` — practical EFPS Slack operations guide.
+- `IMPLEMENTATION_MAP.md` — legacy-to-new capability mapping and boundaries.
+- `HANDOFF.md` — migration status and remaining activation work.
+- `client.py` — reusable Slack Web API transport.
+- `security.py` — inbound request signature verification.
+- `safety.py` — safe text and thread-control helpers.
+- `routing.py` — channel/workspace routing constants.
+
 ## Single-source rule
 
 One fact or rule should have one canonical home. Other documents may link to or summarize it, but must not create a competing authoritative version.
 
 For every implementation, the agent must review all maintained root and `docs/` documents. Update every document whose content is affected by resulting repository reality; documents not affected must still be checked for continued accuracy.
 
-The established shared capability boundaries are:
-
-- `shared/cloudinary/`
-- `shared/google_sheets/`
-- `shared/whatsapp_whapi/`
-
-Presence of a boundary does not imply that every runtime feature is complete or live.
+Presence of a shared capability boundary does not imply that every runtime feature is complete or live.
 
 If a new maintained document is required, add it to this map and define its role before treating it as repository truth.
