@@ -37,4 +37,6 @@ One fact or rule should have one canonical home. Other documents may link to or 
 
 For every implementation, the agent must review all maintained root and `docs/` documents. Update every document whose content is affected by resulting repository reality; documents not affected must still be checked for continued accuracy.
 
+The current active shared implementation is only `shared/cloudinary/`. No other shared capability is listed as active until explicitly established and verified.
+
 If a new maintained document is required, add it to this map and define its role before treating it as repository truth.
