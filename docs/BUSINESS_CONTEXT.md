@@ -73,6 +73,12 @@ Known EFPS business/operational systems include Facebook Marketplace, Housing.co
 
 These systems are context. Their existence does not automatically authorize an agent to perform every available action.
 
+## Current automation implementation scope
+
+The active shared implementation scope is currently limited to `shared/cloudinary/`. This is a technical capability and does not own EFPS business decisions.
+
+Other systems listed above remain business/operational context until a corresponding implementation is explicitly established and verified.
+
 ## Open business decisions
 
 Do not invent or silently resolve these until EFPS establishes them:
