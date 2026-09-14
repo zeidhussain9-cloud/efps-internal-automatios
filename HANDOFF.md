@@ -20,6 +20,7 @@ Stage-2 items are processing sub-steps, not separate top-level stages. Google Sh
 - `pipeline.py` orchestrates Stage 2 and writes only Stage-1/2-owned fields.
 - `ai.py` remains advisory: it cannot replace deterministic facts or bypass a failed validation gate.
 - `webhook.py` connects the normalized WhAPI inventory message to the Stage-1/2 pipeline and persists raw text at current column G.
+- `batch.py` provides a deterministic-first Phase-1 batch path for existing canonical rows with `intake_status = Raw` and populated `raw_message_text`.
 
 ## Canonical sheet
 
@@ -29,17 +30,28 @@ Stage-2 items are processing sub-steps, not separate top-level stages. Google Sh
 
 - Internal property type values: `Gated Community`, `Semi Gated`, `Standalone`.
 - Gated-community defaults and semi-gated defaults are migrated from the legacy repository.
-- Family/family-only tenant preference deterministically forces `Not Allowed` for bachelor preference unless an explicit source value is present.
-- Exact preferred-tenant, bachelor-preference, pet-friendly, and inventory-lock sheet dropdown vocabularies are not claimed because they are not verified in repository source.
+- Family/family-only tenant preference deterministically forces `Not Allowed` for bachelor preference unless an explicit source value is present in source text.
+- Exact preferred-tenant, bachelor-preference, pet-friendly, and inventory-lock sheet dropdown vocabularies are treated as runtime/documentation boundaries unless verified by the current canonical contract.
+
+## Slack Phase-1 boundary
+
+- `shared/slack/` is the canonical shared Slack capability.
+- Slack is an operational interface; `Housing_Listings` remains the source of truth.
+- Phase-1 Slack includes batch control/reporting, property verification, runtime/bug reporting, and the temporary manual bulk-photo path.
+- The current webhook does not reliably persist inbound photo binaries with property association. Therefore photos are temporarily associated through the exact Slack property thread and then uploaded to Cloudinary.
+- Society approval is explicitly obsolete and excluded. Do not add society approval commands, queues, cards, or a society approval state.
+- The shared Slack capability is source-implemented, but production Slack deployment/live verification remains a separate acceptance step.
 
 ## Runtime verification still required
 
-Actual AWS secrets, live WhAPI event subscription/webhook deployment, Google Maps API access, Google Sheets authorization, and Vertex/Gemini runtime access cannot be proven from source alone. Missing runtime state remains `NOT VERIFIED` and is never guessed.
+Actual AWS secrets, live WhAPI event subscription/webhook deployment, Google Maps API access, Google Sheets authorization, Vertex/Gemini runtime access, Cloudinary upload access, and Slack endpoint/installation state cannot be proven from source alone. Missing runtime state remains `NOT VERIFIED` and is never guessed.
 
-## Phase boundary
+## Phase-1 production target
 
-This implementation does not activate production media downloads/Cloudinary association, lifecycle writers, Meta Catalogue publishing, Housing.com publishing, website integration, or Slack runtime. Their schema ownership is defined and protected, but downstream implementations remain separate.
+The next acceptance target is a production-grade Inventory Phase-1 path capable of safely processing the existing `Housing_Listings` rows requested for deterministic migration/testing, including rows 2–26. The batch path must preserve downstream-owned fields, stop on required verification failures, and leave the canonical row explicitly reviewable rather than guessing missing facts.
+
+See `shared/slack/RELEASE_GATE.md` for the complete Phase-1 acceptance gate and `shared/slack/PHASE1_BULK_PHOTOS.md` for the temporary photo workflow.
 
 ## Next development rule
 
-Do not enter additional downstream/media phases until explicitly authorized. At the end of each implementation, review maintained root/docs guidance and this handoff against repository reality.
+Do not enter additional downstream publishing/media phases beyond the authorized Phase-1 photo path until explicitly authorized. At the end of each implementation, review maintained root/docs guidance and this handoff against repository reality.
