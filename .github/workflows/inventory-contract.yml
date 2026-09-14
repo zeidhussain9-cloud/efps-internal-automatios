@@ -6,6 +6,7 @@ on:
       - "shared/google_sheets/**"
       - "shared/whatsapp_whapi/**"
       - "shared/google_maps/**"
+      - "shared/slack/**"
       - "modules/efps-inventory-mgmnt/**"
       - ".github/workflows/inventory-contract.yml"
   pull_request:
@@ -13,6 +14,7 @@ on:
       - "shared/google_sheets/**"
       - "shared/whatsapp_whapi/**"
       - "shared/google_maps/**"
+      - "shared/slack/**"
       - "modules/efps-inventory-mgmnt/**"
       - ".github/workflows/inventory-contract.yml"
 
@@ -24,11 +26,16 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - name: Install test dependency
+      - name: Install test dependencies
         run: python -m pip install --upgrade pip pytest
       - name: Compile inventory and shared Python modules
         run: python -m compileall -q shared modules/efps-inventory-mgmnt/src
-      - name: Run inventory and sheet contract tests
+      - name: Run inventory, sheet, and Slack contract tests
         env:
           PYTHONPATH: .:modules/efps-inventory-mgmnt
-        run: python -m pytest -q shared/google_sheets/test_schema.py modules/efps-inventory-mgmnt/src/test_inventory_pipeline.py
+        run: >-
+          python -m pytest -q
+          shared/google_sheets/test_schema.py
+          modules/efps-inventory-mgmnt/src/test_inventory_pipeline.py
+          modules/efps-inventory-mgmnt/src/test_batch.py
+          shared/slack/test_slack.py
