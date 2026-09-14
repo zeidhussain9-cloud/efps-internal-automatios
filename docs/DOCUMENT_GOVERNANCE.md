@@ -26,6 +26,7 @@ Every maintained document must have one clear role and one canonical subject. Do
 - Current working state → `HANDOFF.md`
 - Document roles → `DOCUMENT_MAP.md`
 - AI operating instructions → root `CORE_STEERING.md`, `GEMINI.md`, and `AGENTS.md`
+- Shared capability boundaries/behavior → local shared capability `README.md` plus canonical cross-cutting docs
 
 ## Mandatory implementation review
 
