@@ -31,6 +31,8 @@ def validate(row: dict) -> list[str]:
             errors.append(f"{key} must be {value}")
     if row["status"] not in ("Pending", "Needs Review"):
         errors.append("status must be Pending or Needs Review after extraction")
+    if row["intake_status"] not in ("Raw", "Processed"):
+        errors.append("intake_status must be Raw or Processed")
     if not row["listing_id"]:
         errors.append("listing_id required")
     if not row["monthly_rent"]:
@@ -49,11 +51,11 @@ def validate(row: dict) -> list[str]:
         if row[key] and not _numeric(row[key]):
             errors.append(f"{key} must be numeric")
 
-    # Maintenance is normally numeric, but a stated term such as Water Charges
-    # is a verified source fact and is intentionally preserved by normalization.
+    # Maintenance is normally numeric. A stated source term such as
+    # "Water Charges" is intentionally preserved by Stage-2 normalization.
     if row["maintenance"] and not _numeric(row["maintenance"]):
-        if not str(row["maintenance"]).strip():
-            errors.append("maintenance invalid")
+        if str(row["maintenance"]).strip().lower() == "included":
+            errors.append("maintenance must be 0 when included")
 
     for key, allowed in (("flat_furnishings", FURNISHINGS), ("society_amenities", AMENITIES)):
         bad = [x.strip() for x in str(row[key]).split(",") if x.strip() and x.strip() not in allowed]
@@ -70,8 +72,6 @@ def validate(row: dict) -> list[str]:
     if row["servant_room"] and row["servant_room"] not in {"Yes", "No"}:
         errors.append("servant_room must be Yes/No")
 
-    # Stage-3 fields are owned by downstream modules and cannot be populated by
-    # inventory Stage 1/2 processing.
     for key in ("posted_url", "posted_at", "error_notes", "meta_catalog_id", "meta_catalog_status"):
         if row[key]:
             errors.append(f"{key} must remain empty before downstream stages")
@@ -84,12 +84,16 @@ def validate_raw(row: dict) -> list[str]:
         return ["raw row shape does not match canonical 48 fields"]
     if row["status"] != "Raw":
         errors.append("initial row status must be Raw")
+    if row["intake_status"] != "Raw":
+        errors.append("initial row intake_status must be Raw")
     if not row["listing_id"]:
         errors.append("listing_id required")
+    if not row["onboarded_on"]:
+        errors.append("onboarded_on required")
     for key, value in FIXED.items():
         if row[key] != value:
             errors.append(f"{key} must be {value}")
-    for key in ("posted_url", "posted_at", "error_notes", "meta_catalog_id", "meta_catalog_status"):
+    for key in ("listing_state", "posted_url", "posted_at", "error_notes", "meta_catalog_id", "meta_catalog_status", "inventory_locked"):
         if row[key]:
-            errors.append(f"{key} must be empty at intake")
+            errors.append(f"{key} must be empty at initial intake")
     return errors
