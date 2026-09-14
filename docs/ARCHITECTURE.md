@@ -32,7 +32,7 @@ The processed inventory record is consumed by downstream workflows. Housing Port
 The single physical shape is `shared/google_sheets/schema.py`: 48 columns A:AV in the latest supplied order. The schema records owner, top-level population stage, allowed values where verified, and dependencies. `listing_id` is immutable row identity.
 
 ## Stage-1/2 write boundary
-Inventory Stage 1/2 may write panel-owned A:AO and AU:AV. It must never write downstream-owned AP:AT. Stage-3 writers are responsible for their own fields.
+Inventory Stage 1/2 may write A:D, F:AO, and AU. It must not write E (`listing_state`), AP:AT (Housing/Meta downstream fields), or AV (`inventory_locked`). Stage-3 writers are responsible for those protected fields.
 
 ## Runtime boundary
 Source code cannot prove current production credentials, WhAPI webhook subscriptions, deployed webhook URL, Maps API access, or AI runtime access. Those remain runtime verification items and are never guessed.
