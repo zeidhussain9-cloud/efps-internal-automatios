@@ -33,6 +33,12 @@ Stage-2 items are processing sub-steps, not separate top-level stages. Google Sh
 - Family/family-only tenant preference deterministically forces `Not Allowed` for bachelor preference unless an explicit source value is present in source text.
 - Exact preferred-tenant, bachelor-preference, pet-friendly, and inventory-lock sheet dropdown vocabularies are treated as runtime/documentation boundaries unless verified by the current canonical contract.
 
+## Credential migration state
+
+The current repository uses the shared macOS Keychain provider under `shared/credentials/`. The seven migrated local services are named `efps-whapi-panel-token`, `efps-whapi-panel-webhook`, `efps-whapi-panel-gemini`, `efps-whapi-panel-slack`, `efps-whapi-panel-sheet`, `efps-whapi-panel-cloudinary`, and `efps-whapi-panel-maps`, all under account `efps`. The historical AWS Secrets Manager values are migration sources only; the runtime adapters no longer require AWS Secrets Manager access.
+
+The migration was independently hash-verified on the local machine as 7/7 exact matches. Repository documentation records only secret names and non-sensitive identifiers.
+
 ## Slack Phase-1 boundary
 
 - `shared/slack/` is the canonical shared Slack capability.
@@ -42,9 +48,23 @@ Stage-2 items are processing sub-steps, not separate top-level stages. Google Sh
 - Society approval is explicitly obsolete and excluded. Do not add society approval commands, queues, cards, or a society approval state.
 - The shared Slack capability is source-implemented, but production Slack deployment/live verification remains a separate acceptance step.
 
+## P1 runtime acceptance state
+
+Source-side capability and documentation have been reviewed against the latest synchronized `main`. The following remain **NOT VERIFIED** until a real target runtime probe succeeds:
+
+- Google Sheets authorization and safe live read/write.
+- Google Maps API access and live resolution.
+- WhAPI live channel identity, event subscription, webhook deployment, and safe live health/settings probe.
+- Cloudinary account access and a safe live upload probe.
+- Slack app installation, bot membership, signing verification, endpoint registration, and live API probe.
+- Housing Portal production integration.
+- Meta Catalogue production integration.
+
+The repository cannot truthfully mark these as `LIVE` from GitHub source review alone. No secret values are committed or reproduced to make a source-only check appear successful.
+
 ## Runtime verification still required
 
-Actual AWS secrets, live WhAPI event subscription/webhook deployment, Google Maps API access, Google Sheets authorization, Vertex/Gemini runtime access, Cloudinary upload access, and Slack endpoint/installation state cannot be proven from source alone. Missing runtime state remains `NOT VERIFIED` and is never guessed.
+Actual live third-party state cannot be proven from source alone. Missing runtime evidence remains `NOT VERIFIED` and is never guessed. The canonical release gate is `shared/slack/RELEASE_GATE.md`.
 
 ## Phase-1 production target
 
