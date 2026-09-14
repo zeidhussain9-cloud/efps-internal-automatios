@@ -7,19 +7,20 @@ These are not instructions to guess or silently fix. An open pointer is a human-
 ## Resolved references now verified from the legacy repository
 
 - Google Sheets spreadsheet ID and `Housing_Listings` worksheet are verified.
-- Google Sheets AWS secret name `efps-whapi-panel-sheet` is verified.
-- WhAPI AWS secret name `efps-whapi-panel-token`, local token variable, and base URL are verified.
+- Google Sheets AWS secret name `efps-whapi-panel-sheet` and local credential variable names are verified.
+- WhAPI AWS secret name `efps-whapi-panel-token`, local token variable, base URL, webhook token variable, and two inventory-listener sender numbers are verified from the legacy deployment/configuration.
 - Cloudinary AWS secret name `efps-whapi-panel-cloudinary` is verified.
-- The legacy `Housing_Listings` schema and cross-project ownership contract are verified and have been established locally under `shared/google_sheets/schema.py`.
+- The machine-readable legacy `Housing_Listings` contract is verified as a 48-column A:AV grid. The older legacy `src/schema.py` itself still contains the older 47-column/AU table; the generated `SHEET_CONTRACT.json` is the newer verified contract and is the source used to correct the new repository.
 
 ## Remaining pointers
 
 - The actual secret values remain unavailable by design and must not be copied into GitHub.
+- The exact live WhAPI channel/connected WhatsApp number and current deployed webhook URL cannot be verified from GitHub alone; they require an approved runtime/AWS/WhAPI check.
+- The legacy deployment shows one WhAPI token/channel model. The two configured inventory numbers are sender/listener numbers used by the webhook to classify direct messages; they are not proven by the repository to be two separate WhAPI channels.
+- The exact live webhook subscription state must be checked with the WhAPI channel settings before any live replacement/mutation. The legacy-compatible registration shape is preserved locally, but this repository does not silently mutate the live WhAPI account.
+- Endpoint-specific WhAPI behavior must be verified from the current WhAPI API reference before adding live message/group/media operations beyond the transport and webhook normalization boundary.
 - Exact production Cloudinary runtime access mechanism for the new repository must be verified before live uploads.
-- Exact production WhAPI connection/account configuration must be verified before live endpoint operations beyond the safety-gated transport.
-- Endpoint-specific WhAPI behavior must be verified from the current WhAPI API reference before implementing message/group/webhook operations.
-- The local Google Sheets schema must remain fully synchronized with the verified 48-column legacy contract; the current local schema is intentionally fail-fast until all 48 fields are represented.
-- Exact module integration points and business workflows remain to be established before wiring the shared capabilities into modules.
+- Exact module integration points and business workflows remain to be established before wiring inventory and lead business logic into the shared capabilities.
 - Website technical stack and deployment contract must be established before website automation is implemented.
 
 ## Current shared-capability truth
