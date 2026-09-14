@@ -14,60 +14,57 @@ This shared layer owns technical access only:
 - row appends when explicitly requested by the caller
 - connection/error handling suitable for calling modules
 
-Business meaning, field ownership, validation, duplicate rules, and decisions about when to read or write remain with the owning module.
+Business meaning and workflow decisions remain with the owning module. The canonical physical sheet contract is centralized here so modules cannot silently redefine columns or ownership.
+
+## Verified AWS/runtime credential map
+
+| Shared capability | Verified AWS secret | Verified local/runtime name |
+|---|---|---|
+| Google Sheets | `efps-whapi-panel-sheet` | `GOOGLE_SERVICE_ACCOUNT_JSON` / `GOOGLE_APPLICATION_CREDENTIALS` |
+
+The recorded legacy service-account identity is `gcpnew@easyfind-automations.iam.gserviceaccount.com`. The private key/JSON value is never stored in GitHub.
 
 ## Canonical EFPS inventory sheet
-
-The verified legacy reference uses:
 
 - Spreadsheet ID: `1zdOLWklkWlnVECCtcH4SJj6vm6nEVjINpTT2U2UJEKc`
 - Worksheet: `Housing_Listings`
 - Immutable row identity: `listing_id` in column `A`
+- Physical contract: **48 columns, A:AV**
 
-These are identifiers, not secrets. fileciteturn315file0L2-L2
+## Canonical schema
 
-## Canonical schema source
-
-The legacy `efps-platform` defines the physical Housing_Listings contract in `src/schema.py` (under `modules/efps-whapi-panel/` in that repository). It is the single source of truth for:
+`schema.py` is the local source of truth for the physical sheet contract:
 
 - physical column order and letters
 - field names
 - contract/extra/tail grouping
 - owner of every column
 - writable permissions
-- allowed values where explicitly defined
+- explicitly defined allowed values
 - row identity
-- derived write/read ranges
+- derived ranges
 - integrity checks
 
-The new shared Google Sheets layer must preserve that model rather than creating a second independent definition. The copied schema must be treated as a maintained cross-module contract source for this repository. fileciteturn313file0L2-L2
+The corrected contract includes `inventory_locked` at `AV`. The older legacy source file stopped at `AU`; the generated legacy `SHEET_CONTRACT.json` is the verified newer 48-column contract used to correct this repository.
 
-## Cross-project ownership verified from legacy
-
-The legacy contract assigns:
+## Cross-project ownership
 
 - `panel`: A–AJ plus AP–AV
-- `housing_agent`: AK `posted_url`, AL `posted_at`, AM `error_notes`
-- `meta_catalog`: AN `meta_catalog_id`, AO `meta_catalog_status`
+- `housing_agent`: AK–AM (`posted_url`, `posted_at`, `error_notes`)
+- `meta_catalog`: AN–AO (`meta_catalog_id`, `meta_catalog_status`)
 
-Rows are addressed by immutable `listing_id`; never by row position. fileciteturn322file0L2-L2
+Rows are addressed by immutable `listing_id`, never by row position.
 
-The machine-readable legacy export confirms a 48-column grid ending at `AV` and the exact writable fields for each owner. fileciteturn323file0L2-L2
+## Documentation impact for contract changes
 
-## Credentials and AWS secret reference
+Any change to the physical sheet contract must update, in the same implementation session:
 
-The legacy implementation resolves the Google service-account credential from runtime configuration and, in deployment, from AWS Secrets Manager using secret name:
+1. `shared/google_sheets/schema.py` — canonical physical contract and checks.
+2. `docs/DATA_CONTRACTS.md` — repository-level data contract.
+3. `docs/ARCHITECTURE.md` — if ownership/boundary changes.
+4. `docs/INFRASTRUCTURE.md` — if spreadsheet/runtime configuration changes.
+5. `docs/OPEN_POINTERS.md` — if anything remains unverified.
+6. `HANDOFF.md` — current implementation state.
+7. All maintained root/`docs/` files must still be reviewed under the repository-wide documentation rule.
 
-`efps-whapi-panel-sheet`
-
-It also supports local-development `GOOGLE_SERVICE_ACCOUNT_JSON` or `GOOGLE_APPLICATION_CREDENTIALS`. fileciteturn315file0L2-L2
-
-The service-account email recorded by the legacy code is:
-
-`gcpnew@easyfind-automations.iam.gserviceaccount.com`
-
-Do not copy the private key or JSON credential into this repository. fileciteturn328file0L2-L2
-
-## Runtime boundary
-
-This shared service provides Google Sheets technical access. The inventory module owns EFPS inventory workflows and decides when the sheet is read or written. The sheet contract itself remains centralized here so every module can consume the same ownership and column rules.
+No second schema may be created in a module.
