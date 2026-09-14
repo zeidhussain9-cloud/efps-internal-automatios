@@ -33,7 +33,7 @@ Deterministic extraction reads the completed `raw_message_text` only. Existing c
 
 ## Stage-3 ownership boundary
 
-Stage 1/2 inventory writes must never overwrite AP:AT. The current inventory writer may write A:AO and AU:AV only. Housing and Meta downstream modules own their respective Stage-3 fields.
+Stage 1/2 inventory writes are restricted to A:D, F:AO, and AU. They must never overwrite E (`listing_state`), AP:AT (Housing/Meta downstream fields), or AV (`inventory_locked`). Housing and Meta downstream modules own their respective Stage-3 fields.
 
 ## Verification boundary
 
