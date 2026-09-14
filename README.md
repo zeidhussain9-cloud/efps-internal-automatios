@@ -33,6 +33,7 @@ For every implementation, the agent must review all maintained root and `docs/` 
 ## Current modules
 
 - `modules/efps-inventory-mgmnt/` — property inventory business workflows and rules.
+- `modules/efpd-lead-mgmnt/` — lead/enquiry business workflows and rules.
 - `modules/efps-meta-catalogue-mgmnt/` — Meta/WhatsApp catalogue business workflows.
 - `modules/efps-housing-portal-mgmnt/` — placeholder for future Housing.com automation.
 - `modules/efps-website-mgmnt/` — EasyFind website management and automation.
@@ -41,6 +42,6 @@ For every implementation, the agent must review all maintained root and `docs/` 
 
 - `shared/cloudinary/` — reusable Cloudinary media storage/upload capability.
 - `shared/google_sheets/` — reusable Google Sheets technical access plus the canonical `Housing_Listings` contract/schema.
-- `shared/whatsapp_whapi/` — reusable WhAPI/WhatsApp technical integration boundary with explicit live-traffic safety controls.
+- `shared/whatsapp_whapi/` — reusable WhAPI/WhatsApp technical integration boundary with explicit live-traffic safety controls, webhook configuration, and normalized message delivery.
 
 These boundaries do not imply that every endpoint, workflow, or live production integration is complete. Implementation status must be verified before calling a capability production-ready.
