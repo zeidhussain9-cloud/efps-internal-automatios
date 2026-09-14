@@ -37,12 +37,14 @@ For every implementation, the agent must review all maintained root and `docs/` 
 - `modules/efps-housing-portal-mgmnt/` — placeholder for future Housing.com automation.
 - `modules/efps-website-mgmnt/` — EasyFind website management and automation.
 
-## Current shared capabilities
+## Shared capabilities
 
-Only the Cloudinary shared capability is currently part of the active shared implementation scope:
+The shared layer currently contains these established capability boundaries:
 
-- `shared/cloudinary/` — reusable Cloudinary media capabilities.
+- `shared/cloudinary/` — media storage/upload and stable media-reference capabilities.
+- `shared/google_sheets/` — Google Sheets connectivity and range/worksheet operations.
+- `shared/whatsapp_whapi/` — WhAPI transport, authentication, webhook, messaging, media, and connection capabilities.
 
-Future shared capabilities must be explicitly established before being treated as active repository structure.
+Shared services provide technical capabilities; modules decide when and why those capabilities are used.
 
-This repository is currently a structural foundation. Implementation is added only when the corresponding capability is actually required.
+This repository is being implemented capability-by-capability. A capability may have a documented boundary before every runtime feature is complete; implementation status must be stated accurately and must not be guessed.
