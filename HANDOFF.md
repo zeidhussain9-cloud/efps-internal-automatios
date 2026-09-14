@@ -2,77 +2,39 @@
 
 ## Current state
 
-The repository documentation foundation and mandatory AI steering layer are established. The shared layer has three capability boundaries: `cloudinary`, `google_sheets`, and `whatsapp_whapi`.
+Phase 1 of `efps-inventory-mgmnt` is implemented in the new repository, using the legacy `efps-platform` inventory as a source of business rules while keeping reusable technical capabilities in `shared/`.
 
-`CORE_STEERING.md` is mandatory for every AI agent, every interaction, and every iteration. `AGENTS.md` and `GEMINI.md` enforce it.
+Phase 1 boundary: dedicated two-number WhAPI intake → `NEW` to `NEW` property session → raw text → deterministic extraction → normalization → shared Google Maps resolution → validation → optional Vertex/Gemini verification → wording-only AI beautification.
 
-For every implementation, all maintained root documents and all documents in `docs/` must be reviewed against resulting repository reality. Affected documents must be updated in the same work session.
+## Phase-1 implementation
 
-## Source review completed
+- `modules/efps-inventory-mgmnt/src/intake.py` implements the explicit `NEW` boundary and ignores media binary downloads.
+- `extract.py` migrates the deterministic prescan contract.
+- `normalize.py` migrates safe legacy normalization/default rules.
+- `validate.py` enforces the canonical Phase-1 row rules.
+- `listing_id.py` preserves `EF-YYMM-XXXX` immutable IDs.
+- `pipeline.py` orchestrates Phase 1 without touching downstream-owned AK:AO fields.
+- `ai.py` provides advisory contradiction verification and wording-only beautification, both fail-safe.
+- `webhook.py` connects the dedicated listener to the Phase-1 pipeline.
 
-The legacy `efps-platform` repository was reviewed for naming convention, business rules, document governance, architecture, infrastructure, the Google Sheets contract, WhAPI authentication, webhook configuration, webhook routing, inventory listeners, lead handling, and custom WhAPI skills.
+## Shared additions
 
-The new repository intentionally does not copy legacy business workflow into `shared/`. Shared folders contain reusable technical capabilities; inventory and lead workflows remain module responsibilities.
+- `shared/google_maps/` is implemented as the reusable Maps technical capability.
+- `shared/slack/` exists as a Phase-1 placeholder only; no Slack runtime is implemented.
+- `shared/google_sheets/schema.py` now records all 48 columns plus owner, first-population stage, allowed values, and declared dependencies.
 
-## Verified infrastructure references
+## Canonical sheet
 
-- Google Sheets spreadsheet: `1zdOLWklkWlnVECCtcH4SJj6vm6nEVjINpTT2U2UJEKc`
-- Google Sheets worksheet: `Housing_Listings`
-- Google Sheets AWS secret: `efps-whapi-panel-sheet`
-- WhAPI AWS secret: `efps-whapi-panel-token`
-- WhAPI base URL: `https://gate.whapi.cloud`
-- Cloudinary AWS secret: `efps-whapi-panel-cloudinary`
-- WhAPI local token variable: `WHAPI_API_TOKEN`
-- Google local credential variables: `GOOGLE_SERVICE_ACCOUNT_JSON`, `GOOGLE_APPLICATION_CREDENTIALS`
-- Cloudinary local credential variables: `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`, `CLOUDINARY_URL`
+`Housing_Listings` is 48 columns A:AV. `listing_id` is immutable row identity. The deterministic extractor reads only `raw_message_text` for property facts. On a new property, downstream-owned AK:AO are left untouched/blank.
 
-Actual credential values remain outside version control.
+## Runtime verification still required
 
-## Canonical Google Sheets contract
+Actual AWS secrets, live WhAPI event subscription/webhook deployment, Google Maps API access, Google Sheets authorization, and Vertex/Gemini runtime access cannot be proven from source alone. Missing runtime state is treated as `NOT VERIFIED`, never guessed.
 
-`shared/google_sheets/schema.py` is the local source for the `Housing_Listings` physical schema and ownership contract.
+## Phase boundary
 
-The verified machine-readable legacy contract is a 48-column grid ending at `AV`, with immutable `listing_id` as row identity. The older legacy `src/schema.py` table itself stopped at 47/AU; the newer generated `docs/SHEET_CONTRACT.json` contains the 48th `inventory_locked` column at AV. The new repository now explicitly models 48/A:AV and fails if it drifts.
-
-## Shared capability implementation state
-
-### `shared/cloudinary/`
-
-Implemented as a reusable technical package boundary with AWS/local credential resolution, dependency-injected upload transport, deterministic property/lead public IDs, non-overwriting uploads, secure URL extraction, catalogue URL limiting, and media fingerprinting.
-
-### `shared/google_sheets/`
-
-Implemented with AWS/local credential loading, authenticated client creation, spreadsheet/worksheet access, range reads/writes, full-row read/write/append contract enforcement, canonical row mapping helpers, and the corrected 48-column A:AV schema/ownership contract.
-
-### `shared/whatsapp_whapi/`
-
-Implemented with AWS/local token resolution, Bearer transport, live-traffic gate, neutral `GET/POST/PATCH` transport, health/settings/event-discovery/webhook-test/text-message primitives, webhook normalization, constant-time query-token verification, and a completed two-listener source boundary.
-
-- **Inventory listener:** exactly the two dedicated source numbers `917975102130` and `919902024973`, direct inbound only.
-- **Lead listener:** default path for other inbound traffic; groups and promotions remain explicit non-inventory paths.
-- The shared layer reports the neutral listener path but does not create leads, create listings, deduplicate, match, assign, lock properties, or send business confirmations.
-- The webhook builder still requires current event names from WhAPI runtime discovery and does not mutate the live account automatically.
-
-## Production-readiness scope
-
-The current hardening pass is limited to:
-
-1. repository root governance documents;
-2. all maintained `docs/` documents; and
-3. everything under `shared/`.
-
-Business modules are not being expanded as part of this scope.
-
-Repository/source hardening is distinct from live external-system verification. GitHub source review cannot prove AWS credential access, Cloudinary account reachability, Google spreadsheet authorization, a currently connected WhatsApp number, or a deployed public webhook endpoint.
-
-## Current modules
-
-- `efps-inventory-mgmnt`
-- `efpd-lead-mgmnt`
-- `efps-meta-catalogue-mgmnt`
-- `efps-housing-portal-mgmnt`
-- `efps-website-mgmnt`
+Phase 1 does not implement production media downloads/Cloudinary association, lifecycle/locking, duplicate governance, batch/live orchestration beyond the explicit intake path, Meta catalogue publishing, Housing.com publishing, website integration, or Slack integration.
 
 ## Next development rule
 
-Before implementing a capability, apply `CORE_STEERING.md`, read the root guidance, `HANDOFF.md`, applicable `docs/`, and relevant module/shared guidance. Establish current source truth before changes. At the end of every implementation, review all maintained root and `docs/` documents, update every affected document, update `HANDOFF.md`, and validate the final repository state.
+Do not enter Phase 2 until explicitly authorized. At the end of each implementation, review and update all maintained root/docs guidance and this handoff against repository reality.
