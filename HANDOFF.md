@@ -2,15 +2,15 @@
 
 ## Current state
 
-The repository skeleton and documentation foundation are established. No business implementation is included at this stage.
+The repository skeleton, documentation foundation, mandatory AI steering layer, documentation update matrix, and initial skill placeholders are established. No business implementation is included at this stage.
 
-The mandatory AI operating foundation now includes `CORE_STEERING.md`, which every AI agent must apply before every response or action. `AGENTS.md` and `GEMINI.md` explicitly enforce this protocol.
+`CORE_STEERING.md` is mandatory for every AI agent, every interaction, and every iteration. `AGENTS.md` and `GEMINI.md` enforce it.
 
 ## Source review completed
 
-The legacy `efps-platform` repository was reviewed for naming convention, business rules, document governance, architecture, infrastructure registry, cross-project contract, and open-pointer practices.
+The legacy `efps-platform` repository was reviewed for naming convention, business rules, document governance, architecture, infrastructure registry, cross-project contract, open-pointer practices, and custom agent skills.
 
-The new repository intentionally does not clone the legacy repository. Reusable governance and valid EFPS business-context concepts were carried forward and adapted to the new architecture.
+Legacy Slack-specific skills are not carried forward because they are not part of the new repository architecture. The legacy WhAPI skill was identified as the relevant repository-specific custom skill and a new placeholder/reference structure has been created under `.gemini/skills/whapi/`; its contents must be rebuilt only from verified requirements and current integration truth.
 
 ## Current architecture
 
@@ -27,11 +27,17 @@ The new repository intentionally does not clone the legacy repository. Reusable 
 
 Root: `README.md`, `CORE_STEERING.md`, `GEMINI.md`, `AGENTS.md`, and `HANDOFF.md`.
 
-Canonical docs: `docs/BUSINESS_CONTEXT.md`, `docs/PROJECT_RULES.md`, `docs/ARCHITECTURE.md`, `docs/DATA_CONTRACTS.md`, `docs/INFRASTRUCTURE.md`, `docs/DOCUMENT_GOVERNANCE.md`, `docs/DOCUMENT_MAP.md`, and `docs/OPEN_POINTERS.md`.
+Canonical docs: `docs/BUSINESS_CONTEXT.md`, `docs/PROJECT_RULES.md`, `docs/ARCHITECTURE.md`, `docs/DATA_CONTRACTS.md`, `docs/INFRASTRUCTURE.md`, `docs/DOCUMENT_GOVERNANCE.md`, `docs/DOCUMENT_MAP.md`, `docs/DOCUMENT_UPDATE_MATRIX.md`, and `docs/OPEN_POINTERS.md`.
 
-A documentation update matrix is intentionally deferred until the remaining documentation migration/foundation work is complete, so it can be built against the final canonical document set rather than a moving structure.
+`DOCUMENT_UPDATE_MATRIX.md` is now established as the canonical routing baseline. It must evolve only when actual implementation reveals durable documentation ownership or recurring update patterns.
 
 No duplicate architecture, business-context, project-rule, or documentation-policy files should be introduced.
+
+## Current AI skills
+
+Repository-wide Gemini operating skills include `session-start`, `session-end`, `core-steering`, `truth-verification`, `change-planning`, `change-verification`, `documentation-governance`, `handoff-update`, and `repository-audit`.
+
+The repository-specific `whapi` custom skill is currently a placeholder derived from the legacy skill's verified structural coverage; it is not yet a complete technical reference.
 
 ## Current modules
 
@@ -48,4 +54,4 @@ No duplicate architecture, business-context, project-rule, or documentation-poli
 
 ## Next development rule
 
-Before implementing a capability, apply `CORE_STEERING.md`, then read the root guidance, `HANDOFF.md`, the applicable documents in `docs/`, and the relevant module/shared `README.md` and `GEMINI.md`. Establish current source truth before making implementation changes.
+Before implementing a capability, apply `CORE_STEERING.md`, then read the root guidance, `HANDOFF.md`, the applicable documents in `docs/`, and the relevant module/shared guidance. Establish current source truth before making implementation changes. At session end, verify the result, apply the documentation update matrix, update `HANDOFF.md`, and validate the final repository state.

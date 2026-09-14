@@ -7,8 +7,9 @@ This document is the canonical map of maintained repository documentation. It te
 | Document | Role |
 |---|---|
 | `README.md` | Human-oriented repository entry point |
+| `CORE_STEERING.md` | Mandatory core AI operating protocol |
 | `GEMINI.md` | Gemini CLI operating adapter and concise repository rules |
-| `AGENTS.md` | Canonical AI-agent precedence and working rules |
+| `AGENTS.md` | General AI-agent operating rules and core-steering enforcement |
 | `HANDOFF.md` | Current working state between sessions |
 
 ## `docs/`: business and system truth
@@ -21,11 +22,14 @@ This document is the canonical map of maintained repository documentation. It te
 | `DATA_CONTRACTS.md` | Cross-module data ownership and contracts |
 | `INFRASTRUCTURE.md` | External systems and verified resource identifiers; never secrets |
 | `DOCUMENT_GOVERNANCE.md` | Document classes, authority, and maintenance governance |
+| `DOCUMENT_UPDATE_MATRIX.md` | Routing table for documentation review/update decisions |
 | `OPEN_POINTERS.md` | Unresolved decisions and verified unknowns |
 
 ## Local documentation
 
 Every module and shared capability has its own `README.md` explaining its purpose and boundary. Module `GEMINI.md` files provide local AI-agent guidance.
+
+Repository-wide Gemini skills live under `.gemini/skills/`. Repository-specific custom skills may have reference files under their skill directory when the procedure requires detailed material.
 
 ## Single-source rule
 
