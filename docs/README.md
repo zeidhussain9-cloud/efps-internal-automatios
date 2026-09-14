@@ -14,8 +14,10 @@
 - `DOCUMENT_UPDATE_MATRIX.md` — mandatory routing and full-review rule for documentation changes.
 - `OPEN_POINTERS.md` — unresolved decisions and verified unknowns.
 
-Root files are intentionally limited to repository/AI entry points: `README.md`, `GEMINI.md`, `AGENTS.md`, and `HANDOFF.md`.
+Root files are intentionally limited to repository/AI entry points: `README.md`, `CORE_STEERING.md`, `GEMINI.md`, `AGENTS.md`, and `HANDOFF.md`.
 
 For every implementation, all maintained root documents and all documents in `docs/` are reviewed against the resulting repository reality. A document is updated when its subject or statement is affected; unchanged documents are still checked for accuracy.
+
+Established shared capability boundaries are documented in the local capability READMEs and reflected in the canonical architecture/contract/infrastructure documents.
 
 Add another document only when the subject has a clear, non-duplicative canonical home.
