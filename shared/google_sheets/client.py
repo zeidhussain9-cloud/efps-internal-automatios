@@ -8,6 +8,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from . import schema
+
 SECRET_NAME = "efps-whapi-panel-sheet"
 
 
@@ -37,8 +39,6 @@ class GoogleSheetsCredentials:
 
     @classmethod
     def from_environment(cls) -> "GoogleSheetsCredentials":
-        # Explicit local path remains supported and avoids an unnecessary AWS
-        # call during local development.
         credentials_path = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS", "").strip()
         if credentials_path:
             path = Path(credentials_path)
@@ -79,7 +79,12 @@ class GoogleSheetsCredentials:
 
 
 class GoogleSheetsClient:
-    """Small dependency-injected wrapper around gspread."""
+    """Small dependency-injected wrapper around gspread.
+
+    Technical access is separated from business workflow. Full-row operations
+    enforce the canonical Housing_Listings contract; modules decide what rows
+    mean and when to write them.
+    """
 
     def __init__(self, credentials: GoogleSheetsCredentials | None = None, *, client: Any | None = None) -> None:
         self.credentials = credentials or GoogleSheetsCredentials.from_environment()
@@ -119,12 +124,26 @@ class GoogleSheetsClient:
             raise ValueError("range_name must not be empty")
         return self.worksheet(spreadsheet_id, worksheet_name).get(range_name)
 
+    def read_rows(self, spreadsheet_id: str, worksheet_name: str, range_name: str) -> list[tuple[Any, ...]]:
+        """Read full contract rows and reject schema-width drift."""
+        rows = self.read_range(spreadsheet_id, worksheet_name, range_name)
+        return [schema.validate_row(row) for row in rows]
+
     def write_range(self, spreadsheet_id: str, worksheet_name: str, range_name: str, values: list[list[Any]]) -> Any:
         if not range_name.strip():
             raise ValueError("range_name must not be empty")
         return self.worksheet(spreadsheet_id, worksheet_name).update(range_name, values, raw=True)
 
+    def write_row(self, spreadsheet_id: str, worksheet_name: str, row_number: int, values: list[Any] | tuple[Any, ...]) -> Any:
+        if row_number < 1:
+            raise ValueError("row_number must be >= 1")
+        row = schema.validate_row(values)
+        return self.write_range(spreadsheet_id, worksheet_name, schema.full_range(row_number), [list(row)])
+
     def append_rows(self, spreadsheet_id: str, worksheet_name: str, values: list[list[Any]]) -> Any:
         if not values:
             return None
-        return self.worksheet(spreadsheet_id, worksheet_name).append_rows(values, value_input_option="RAW")
+        rows = [schema.validate_row(row) for row in values]
+        return self.worksheet(spreadsheet_id, worksheet_name).append_rows(
+            [list(row) for row in rows], value_input_option="RAW"
+        )
