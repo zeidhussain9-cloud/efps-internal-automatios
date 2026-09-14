@@ -1,32 +1,34 @@
-# Slack Implementation Map
+# Slack Phase-1 Implementation Map
 
-## Legacy source → new shared capability
+This maps the legacy Slack behavior to the new repository without copying obsolete business workflows.
 
-| Legacy area | New shared location / owner | Notes |
-|---|---|---|
-| Slack Web API `notify.py` | `shared/slack/client.py` | Reusable transport; modules choose content. |
-| Slack request signing | `shared/slack/security.py` | HMAC verification and replay-age check. |
-| Slack-safe customer text | `shared/slack/safety.py` | Prevent accidental mentions. |
-| Channel IDs/config | `shared/slack/routing.py` | Destinations only. |
-| `/efps` command routing | Owning module | Shared Slack does not contain inventory business rules. |
-| `photo_session.py` | Inventory module + `shared/slack` transport | Session/business state belongs to inventory; Slack supplies transport. |
-| `verify_session.py` | Inventory module + `shared/slack` transport | Verification rules belong to inventory. |
-| `lead_card.py` / `digest.py` | Lead-management module + `shared/slack` transport | Lead business state remains in lead module. |
-| `bugs.py` / `crash_report.py` | Owning runtime/error capability + `shared/slack` transport | Slack is notification/control surface, not bug database. |
-| Slack manifest | `shared/slack/SLACK_APP_MANIFEST.md` | Cleaned; obsolete society workflow removed. |
-| Operational command docs | `shared/slack/COMMANDS.md` | Canonical command surface. |
-| Photo runbook | `shared/slack/REVERIFY_PHOTOS.md` | Current temporary bulk-photo process. |
-| Verification runbook | `shared/slack/PROPERTY_VERIFICATION.md` | Property verification only. |
+## Legacy → new ownership
 
-## Explicitly not migrated as business logic
+| Legacy source | New location / responsibility |
+|---|---|
+| `modules/efps-whapi-panel/src/commands.py` | `shared/slack/COMMANDS.md` for transport-facing command surface; inventory module owns actual inventory actions |
+| `photo_session.py` | `shared/slack/PHASE1_BULK_PHOTOS.md` for operator contract; inventory/media owners implement row selection and Cloudinary persistence |
+| `verify_session.py` | `shared/slack/PROPERTY_VERIFICATION.md` for operator contract; inventory module owns correction/revalidation |
+| `notify.py` | `shared/slack/client.py` for reusable Slack transport |
+| `crash_report.py` / `bugs.py` | Slack operational bug surface; runtime owner remains responsible for recording failures |
+| `lead_card.py` / `digest.py` | Lead-specific Slack behavior; retained as capability knowledge and outside inventory-only completion gate |
+| `SLACK_APP_MANIFEST.md` | `shared/slack/SLACK_APP_MANIFEST.md` |
+| legacy infrastructure/channel records | `shared/slack/CHANNELS.md` and `shared/slack/routing.py` |
 
-- Society approval queue/cards.
-- `/efps societies`.
-- `/efps society <name>`.
-- `/efps approve`.
-- Legacy Lambda names/URLs as if they were new production endpoints.
-- Secret values.
+## Architectural rule
 
-## Generic agent skills
+The new `shared/slack/` layer provides reusable technical Slack capability. It must not own inventory extraction, normalization, Maps decisions, verification eligibility, or publishing decisions.
 
-The old repository also contained generic Slack agent skills for Block Kit, app creation, API use, CLI, docs, messaging, search and testing. Those are developer tooling guidance, not EFPS runtime behavior. The new shared capability should consume equivalent official Slack knowledge when implementing features; it should not copy unrelated generic skill text into the runtime package.
+The inventory module owns the deterministic row-processing workflow described in the canonical Stage-1/Stage-2 architecture.
+
+## Photo implementation boundary
+
+The legacy `photo_session.py` contains the critical Phase-1 behavior: queue eligibility comes from the sheet, the Slack thread timestamp identifies the property, `done` triggers saving, existing Cloudinary URLs are preserved, and the same row is updated. The new repository documents this behavior but does not claim production Slack file retrieval or Cloudinary-worker deployment as live until runtime acceptance tests pass.
+
+## Verification implementation boundary
+
+The legacy `verify_session.py` collects missing property fields in Slack, writes corrections to the same row, reapplies deterministic dependencies, validates, and only then changes the row state. No society profile/learning table is created.
+
+## Explicit exclusions
+
+Legacy society approval commands and workflows are obsolete and are not part of this map or the new repository.
