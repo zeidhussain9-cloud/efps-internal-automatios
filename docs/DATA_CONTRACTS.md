@@ -6,41 +6,40 @@ This is the canonical cross-module data ownership and contract reference for EFP
 
 The inventory module is the business owner of canonical inventory meaning and inventory-specific decisions.
 
-The shared Google Sheets layer owns the technical sheet-access mechanism and the canonical physical `Housing_Listings` contract used by this repository. The contract includes field names, physical order, ownership, writable permissions, row identity, allowed values where explicitly established, and derived ranges.
+The shared Google Sheets layer owns the technical sheet-access mechanism and the canonical physical `Housing_Listings` contract used by this repository. The local contract is **48 physical columns, A:AV** and includes field names, physical order, ownership, writable permissions, row identity, explicitly established allowed values, and derived ranges.
 
 Canonical local source:
 
 `shared/google_sheets/schema.py`
 
-Verified legacy source:
+Verified legacy sources:
 
-`efps-platform/modules/efps-whapi-panel/src/schema.py`
+- `efps-platform/modules/efps-whapi-panel/src/schema.py` — older 47-column table.
+- `efps-platform/docs/SHEET_CONTRACT.json` — newer verified 48-column A:AV machine-readable contract.
 
-Verified legacy machine-readable export:
+The correction in this repository follows the newer generated contract, including `inventory_locked` at AV.
 
-`efps-platform/docs/SHEET_CONTRACT.json`
-
-The verified legacy sheet is `Housing_Listings` in spreadsheet `1zdOLWklkWlnVECCtcH4SJj6vm6nEVjINpTT2U2UJEKc`, with row identity `listing_id` in column A. fileciteturn315file0L2-L2
+The verified legacy sheet is `Housing_Listings` in spreadsheet `1zdOLWklkWlnVECCtcH4SJj6vm6nEVjINpTT2U2UJEKc`, with row identity `listing_id` in column A.
 
 ## Housing_Listings ownership
 
-The verified legacy contract assigns ownership as follows:
+The verified contract assigns ownership as follows:
 
-- `panel`: inventory fields plus raw/tail fields
-- `housing_agent`: `posted_url`, `posted_at`, `error_notes`
-- `meta_catalog`: `meta_catalog_id`, `meta_catalog_status`
+- `panel`: A–AJ plus AP–AV
+- `housing_agent`: AK–AM (`posted_url`, `posted_at`, `error_notes`)
+- `meta_catalog`: AN–AO (`meta_catalog_id`, `meta_catalog_status`)
 
-The machine-readable contract is authoritative for the exact 48-column grid and writable field sets. fileciteturn322file0L2-L2 fileciteturn323file0L2-L2
+Rows are addressed by immutable `listing_id`, never by row position.
 
 A column owner or allowed-value rule is a business decision, not a refactor. Changes require an explicit owner decision and synchronized contract/document updates.
 
 ## Media contract
 
-Cloudinary is a reusable technical capability. The owning module decides which media is stored and when. The verified legacy implementation uses deterministic listing-derived property paths and a separate lead/enquiry namespace. fileciteturn228file0L2-L2
+Cloudinary is a reusable technical capability. The owning module decides which media is stored and when. The verified legacy implementation uses deterministic listing-derived property paths and a separate lead/enquiry namespace.
 
 ## WhatsApp / WhAPI contract
 
-WhAPI is a reusable technical integration capability. The shared layer owns authentication, transport, and verified endpoint primitives; business modules own workflow meaning. Live traffic must remain behind the explicit safety gate. fileciteturn223file0L2-L2
+WhAPI is a reusable technical integration capability. The shared layer owns authentication, transport, webhook configuration/normalization, and integration metadata. The inventory and lead modules own the meaning and business processing of messages. The verified legacy inventory-listener numbers are `917975102130` and `919902024973`; they are source-number routing facts, not proven separate WhAPI channels.
 
 ## Documentation impact rule
 
@@ -53,4 +52,5 @@ Changes to the `Housing_Listings` contract require review of:
 - `docs/DATA_CONTRACTS.md`
 - `docs/INFRASTRUCTURE.md` when infrastructure identifiers/configuration change
 - `docs/OPEN_POINTERS.md` when a decision or unresolved fact is created/resolved
+- `HANDOFF.md`
 - all maintained root and `docs/` documents under the repository-wide full-review rule
