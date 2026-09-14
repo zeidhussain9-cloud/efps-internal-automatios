@@ -19,29 +19,35 @@ Shared code must remain business-neutral. Business rules, publishing decisions, 
 
 ### `shared/cloudinary/`
 
-Reusable media-storage and upload capability. It provides deterministic media naming, uploads, stable media references, catalogue URL preparation, and image fingerprinting. The legacy `efps-platform` implementation demonstrates property-image storage under listing-derived paths and a separate `leads/` namespace for enquiry media. fileciteturn228file0L2-L2
-
-Verified legacy AWS secret reference: `efps-whapi-panel-cloudinary`. fileciteturn315file0L2-L2
+Reusable media-storage and upload capability. It provides deterministic media naming, uploads, stable media references, catalogue URL preparation, and image fingerprinting. Verified legacy AWS secret: `efps-whapi-panel-cloudinary`.
 
 ### `shared/google_sheets/`
 
-Reusable Google Sheets technical access plus the canonical `Housing_Listings` contract/schema. The shared layer owns the physical sheet definition and technical access; business modules decide which business workflow causes a read/write.
+Reusable Google Sheets technical access plus the canonical `Housing_Listings` contract/schema. Verified spreadsheet: `1zdOLWklkWlnVECCtcH4SJj6vm6nEVjINpTT2U2UJEKc`, worksheet `Housing_Listings`; verified AWS secret: `efps-whapi-panel-sheet`.
 
-Verified legacy spreadsheet: `1zdOLWklkWlnVECCtcH4SJj6vm6nEVjINpTT2U2UJEKc`, worksheet `Housing_Listings`. Verified legacy AWS secret: `efps-whapi-panel-sheet`. fileciteturn315file0L2-L2
-
-The local canonical schema is `shared/google_sheets/schema.py`. The verified legacy source is `efps-platform/modules/efps-whapi-panel/src/schema.py`, with the machine-readable export in `efps-platform/docs/SHEET_CONTRACT.json`.
+The local canonical schema is `shared/google_sheets/schema.py`. The verified machine-readable legacy contract is 48 columns, A:AV, with `inventory_locked` at AV. The older legacy `src/schema.py` table stopped at AU; the generated `SHEET_CONTRACT.json` is the newer contract used for the correction.
 
 ### `shared/whatsapp_whapi/`
 
-Reusable WhAPI technical integration: connection, authentication, API transport, webhook registration/receiving/verification, message and media primitives, contact/group primitives, configured connection metadata, webhook configuration, and health/status. Business modules remain responsible for business workflow decisions.
+Reusable WhAPI technical integration: connection/authentication, API transport, webhook registration/receiving/verification, normalized message/media data, configured inventory-listener source numbers, and live-traffic safety controls. Verified AWS secret: `efps-whapi-panel-token`; base URL: `https://gate.whapi.cloud`.
 
-Verified legacy AWS secret: `efps-whapi-panel-token`; verified base URL: `https://gate.whapi.cloud`. Live network access must remain behind the explicit runtime approval gate. fileciteturn315file0L2-L2 fileciteturn223file0L2-L2
+The reviewed legacy flow is:
+
+`WhatsApp → WhAPI channel → public Lambda Function URL webhook → query-token verification → payload normalization → inventory-listener or ordinary-direct-message routing → owning business module`.
+
+The legacy deployment configured two inventory-listener sender numbers (`917975102130`, `919902024973`). The legacy auth documentation describes one token = one WhAPI channel = one connected WhatsApp number, so these two numbers are treated as sender-routing configuration, not two proven WhAPI channels. fileciteturn386file0L2-L2
+
+The webhook acknowledged quickly and could hand slow processing to a separate asynchronous Lambda. fileciteturn377file0L2-L2 fileciteturn379file0L2-L2
 
 ## Business modules
 
 ### `modules/efps-inventory-mgmnt/`
 
 Owns property inventory business logic, inventory workflows, validation, updates, duplicate handling, and inventory-specific coordination with shared services.
+
+### `modules/efpd-lead-mgmnt/`
+
+Owns lead/enquiry business logic, conversation workflow, lead state, assignment, and lead-specific processing. It is intentionally separate from inventory management.
 
 ### `modules/efps-meta-catalogue-mgmnt/`
 
@@ -63,10 +69,8 @@ The three established shared capabilities each have a repository-specific Gemini
 - `.gemini/skills/google-sheets/`
 - `.gemini/skills/whapi/`
 
-These skills provide technical capability guidance. They do not move business decisions out of the owning modules.
-
 ## Data and ownership principle
 
 Modules own business meaning. Shared services own technical access and reusable cross-module contracts where explicitly established. A shared service must not decide which property to publish, what a listing means, which customer communication should happen, or whether a business action is authorized.
 
-Concrete runtime flows and contracts must only be documented after implementation establishes them. Capability boundaries may exist before every feature is complete, but status must be stated accurately.
+Concrete live runtime state must be verified from the deployed AWS/WhAPI environment; GitHub source alone cannot prove the current production webhook URL or channel settings.
