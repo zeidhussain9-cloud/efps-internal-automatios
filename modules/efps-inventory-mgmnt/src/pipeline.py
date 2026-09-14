@@ -43,9 +43,10 @@ def deterministic(raw_text: str, row: dict | None = None) -> dict:
 
 
 def process_closed_session(raw_text: str, *, row: dict | None = None, maps_client=None, ai_llm=None):
-    """Run the complete Stage-2 property-processing sequence."""
+    """Run Stage 2 and fail closed when a supplied Maps location is not verified."""
     out = deterministic(raw_text, row)
     issues: list[str] = []
+    maps_unverified = False
 
     maps = maps_client or GoogleMapsClient()
     maps_url = out.get("google_maps_url", "") or maps.extract_url(raw_text)
@@ -57,16 +58,20 @@ def process_closed_session(raw_text: str, *, row: dict | None = None, maps_clien
                 "locality": resolved.locality,
                 "pincode": resolved.pincode,
             })
-        elif resolved.confidence in ("PARTIAL_MATCH", "NEEDS_RUNTIME_VERIFICATION"):
-            issues.append("Google Maps verification is not fully verified")
-        elif resolved.confidence not in ("NOT_FOUND", ""):
-            issues.append("Google Maps resolution returned an unrecognized verification state")
+        elif resolved.confidence in ("PARTIAL_MATCH", "NEEDS_RUNTIME_VERIFICATION", "NOT_FOUND"):
+            maps_unverified = True
+            issues.append(f"Google Maps verification failed or is incomplete: {resolved.confidence}")
+        else:
+            maps_unverified = True
+            issues.append(f"Google Maps resolution returned an unrecognized verification state: {resolved.confidence}")
 
     out["status"] = "Pending"
     errors = validate.validate(out)
     if errors:
         out["status"] = "Needs Review"
         issues.extend(errors)
+    if maps_unverified:
+        out["status"] = "Needs Review"
 
     if out["status"] == "Pending":
         from .ai import apply
@@ -91,6 +96,10 @@ def write_new_property(client: GoogleSheetsClient, row: dict):
 
 def write_phase1_update(client: GoogleSheetsClient, row_number: int, row: dict):
     """Update Stage-1/2-owned fields only; never overwrite Stage-3 state."""
+    if row_number < 2:
+        raise ValueError("inventory row_number must be >= 2")
+    if set(row) != set(schema.NAMES):
+        raise ValueError("inventory row does not match canonical 48-field schema")
     schema.assert_writable(schema.PANEL, list(STAGE_1_2_WRITABLE))
     # A:D are Stage-1/2. E listing_state is lifecycle-owned and protected.
     # F:AO are Stage-1/2 property fields. AP:AT are downstream-owned.
