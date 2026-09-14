@@ -15,16 +15,31 @@ TOKEN_ENV = "WHAPI_API_TOKEN"
 BASE_URL = "https://gate.whapi.cloud"
 LIVE_FLAG = "EFPS_WHAPI_LIVE"
 
-# The legacy webhook protected the public Function URL with a shared token in
-# query parameter `t`. The secret value itself remains runtime-only.
+# The webhook endpoint may also be protected by a shared query token. The
+# secret value itself remains runtime-only.
 WEBHOOK_TOKEN_ENV = "EFPS_WEBHOOK_TOKEN"
 WEBHOOK_QUERY_PARAMETER = "t"
 
-# Verified legacy source numbers retained as integration hints. They are not
-# two WhAPI credentials and must not be interpreted as two channels.
+# Verified legacy source numbers. These are source-routing facts, not two
+# WhAPI credentials/channels.
 INVENTORY_LISTENER_NUMBERS = (
     "917975102130",
     "919902024973",
+)
+
+# Business-neutral listener policy for the shared integration boundary:
+# exactly the two dedicated numbers are inventory; everything else is lead
+# traffic. Group/promotion exclusions are represented as explicit source/path
+# metadata rather than business actions.
+INVENTORY_LISTENER_NAME = "inventory"
+LEAD_LISTENER_NAME = "lead"
+
+# These path/source labels are configuration only. Modules decide what each
+# accepted message ultimately creates or updates.
+LEAD_LISTENER_EXCLUDED_PATHS = (
+    "inventory",
+    "groups",
+    "promotions",
 )
 
 
@@ -43,8 +58,44 @@ def normalise_phone(value: str) -> str:
 
 
 def is_inventory_listener(value: str) -> bool:
-    """Whether the sender matches one of the retained inventory-listener numbers."""
+    """Whether the sender matches one of the two dedicated inventory numbers."""
     return normalise_phone(value) in set(INVENTORY_LISTENER_NUMBERS)
+
+
+def classify_listener_source(*, sender: str, chat_id: str, from_me: bool = False, path: str | None = None) -> str:
+    """Return the neutral listener name: ``inventory`` or ``lead``.
+
+    Inventory is restricted to the two dedicated direct-message sender
+    numbers. Group traffic, promotion traffic, and all other direct senders
+    remain on the lead listener path. This function performs no business
+    action, persistence, matching, deduplication, or lead creation.
+    """
+    normalized_path = (path or "").strip().lower()
+    is_group = chat_id.endswith("@g.us")
+    if (
+        not from_me
+        and not is_group
+        and normalized_path not in {"groups", "promotions"}
+        and is_inventory_listener(sender or chat_id)
+    ):
+        return INVENTORY_LISTENER_NAME
+    return LEAD_LISTENER_NAME
+
+
+def listener_configuration() -> dict[str, object]:
+    """Return the repository-level two-listener routing configuration."""
+    return {
+        "inventory": {
+            "name": INVENTORY_LISTENER_NAME,
+            "source_numbers": list(INVENTORY_LISTENER_NUMBERS),
+            "direct_messages_only": True,
+        },
+        "lead": {
+            "name": LEAD_LISTENER_NAME,
+            "default_for_other_inbound_traffic": True,
+            "excluded_paths": list(LEAD_LISTENER_EXCLUDED_PATHS),
+        },
+    }
 
 
 def webhook_registration_payload(url: str, events: Iterable[Mapping[str, str] | str]) -> dict:
