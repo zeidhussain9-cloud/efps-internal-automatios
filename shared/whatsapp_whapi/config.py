@@ -15,8 +15,6 @@ TOKEN_ENV = "WHAPI_API_TOKEN"
 BASE_URL = "https://gate.whapi.cloud"
 LIVE_FLAG = "EFPS_WHAPI_LIVE"
 
-# The webhook endpoint may also be protected by a shared query token. The
-# secret value itself remains runtime-only.
 WEBHOOK_TOKEN_ENV = "EFPS_WEBHOOK_TOKEN"
 WEBHOOK_QUERY_PARAMETER = "t"
 
@@ -26,16 +24,12 @@ INVENTORY_LISTENER_NUMBERS = (
     "917975102130",
     "919902024973",
 )
+# Backward-compatible alias for existing inventory tests/callers.
+INVENTORY_SENDER_NUMBERS = INVENTORY_LISTENER_NUMBERS
 
-# Business-neutral listener policy for the shared integration boundary:
-# exactly the two dedicated numbers are inventory; everything else is lead
-# traffic. Group/promotion exclusions are represented as explicit source/path
-# metadata rather than business actions.
 INVENTORY_LISTENER_NAME = "inventory"
 LEAD_LISTENER_NAME = "lead"
 
-# These path/source labels are configuration only. Modules decide what each
-# accepted message ultimately creates or updates.
 LEAD_LISTENER_EXCLUDED_PATHS = (
     "inventory",
     "groups",
