@@ -4,23 +4,32 @@ This is the canonical list of unresolved decisions and verified unknowns for the
 
 These are not instructions to guess or silently fix. An open pointer is a human-owned decision or a fact that still needs verification.
 
-## Current pointers
+## Resolved references now verified from the legacy repository
 
-- Exact implementation contracts for each module are not yet established.
-- Exact Google Sheets inventory schema for any future implementation must be established from the current owner-approved source before module integration.
-- Exact Cloudinary production resource configuration and approved runtime secret store must be verified before live integration work.
-- Exact production WhatsApp / WhAPI connection/resource identifiers and current API behavior must be verified before live integration work.
-- Cross-project ownership rules for any shared inventory sheet must be established before multiple modules write to the same dataset.
+- Google Sheets spreadsheet ID and `Housing_Listings` worksheet are verified.
+- Google Sheets AWS secret name `efps-whapi-panel-sheet` is verified.
+- WhAPI AWS secret name `efps-whapi-panel-token`, local token variable, and base URL are verified.
+- Cloudinary AWS secret name `efps-whapi-panel-cloudinary` is verified.
+- The legacy `Housing_Listings` schema and cross-project ownership contract are verified and have been established locally under `shared/google_sheets/schema.py`.
+
+## Remaining pointers
+
+- The actual secret values remain unavailable by design and must not be copied into GitHub.
+- Exact production Cloudinary runtime access mechanism for the new repository must be verified before live uploads.
+- Exact production WhAPI connection/account configuration must be verified before live endpoint operations beyond the safety-gated transport.
+- Endpoint-specific WhAPI behavior must be verified from the current WhAPI API reference before implementing message/group/webhook operations.
+- The local Google Sheets schema must remain fully synchronized with the verified 48-column legacy contract; the current local schema is intentionally fail-fast until all 48 fields are represented.
+- Exact module integration points and business workflows remain to be established before wiring the shared capabilities into modules.
 - Website technical stack and deployment contract must be established before website automation is implemented.
 
 ## Current shared-capability truth
 
-The repository has established three shared capability boundaries:
+The repository has three established shared capability boundaries:
 
 - `shared/cloudinary/`
 - `shared/google_sheets/`
 - `shared/whatsapp_whapi/`
 
-Their boundaries are established, but open pointers remain for production configuration, runtime credentials, and any behavior not yet verified. No agent may infer those values.
+Each has a repository-specific Gemini skill. Presence of a shared boundary does not imply that every runtime endpoint is complete or production-live.
 
 When a pointer is resolved, update this document during the same work session and update the relevant architecture, business, contract, or infrastructure documentation.
