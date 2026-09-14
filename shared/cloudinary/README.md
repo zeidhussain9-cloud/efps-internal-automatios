@@ -1,9 +1,33 @@
 # Cloudinary Shared Service
 
-Provides reusable technical capabilities for property and other media handling through Cloudinary, such as upload and media URL operations.
+Provides the reusable technical media-storage capability used by EFPS modules.
 
-This folder is the **only active shared capability in the current repository scope**. Other integrations must not be treated as active shared implementation until explicitly established and verified.
+## What Cloudinary achieves
 
-This folder contains technical infrastructure only. Business modules decide when and why media is uploaded and how media references are used.
+This layer handles the technical storage of images/media after a module decides that media must be stored. It provides capabilities such as:
 
-Secrets and credentials must never be committed.
+- deterministic media storage paths
+- image upload
+- secure media URL retrieval
+- idempotent uploads where the same logical media should not be duplicated
+- separate namespaces for property photos and lead/enquiry media
+- stable media references that can be stored by an owning module
+- image fingerprinting when callers need stable duplicate detection
+
+The business module still decides **when**, **why**, and **which** media is uploaded. Cloudinary does not decide listing status, catalogue eligibility, customer workflow, or business rules.
+
+## EFPS use case verified from `efps-platform`
+
+The legacy `efps-whapi-panel` uploaded WhatsApp property media to Cloudinary immediately because WhAPI media links can expire. Property images were stored under deterministic paths derived from the immutable listing ID, and stored URLs were used for catalogue media. fileciteturn228file0L2-L2
+
+The same legacy implementation separated customer/enquiry images under a `leads/` namespace keyed by phone and message ID, preventing enquiry media from colliding with property media. fileciteturn228file0L2-L2
+
+## Credentials
+
+Cloudinary credentials are runtime secrets/configuration and must never be committed. The legacy implementation resolved Cloudinary credentials from AWS Secrets Manager with environment-variable fallback during local development. fileciteturn229file0L2-L2
+
+This repository may document variable names and secret references, but never secret values.
+
+## Boundary
+
+This folder owns Cloudinary technical access only. Business modules own media-selection rules, listing semantics, catalogue rules, and workflow decisions.
