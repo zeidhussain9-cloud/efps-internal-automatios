@@ -10,7 +10,7 @@ Any future spreadsheet or external data store remains a technical capability onl
 
 ## Media contract
 
-Cloudinary is the currently active shared technical capability under `shared/cloudinary/`. The inventory module decides when property images are uploaded and how resulting media references are used.
+Cloudinary is the only currently active shared technical capability under `shared/cloudinary/`. The inventory module decides when property images are uploaded and how resulting media references are used.
 
 ## Catalogue contract
 
@@ -18,7 +18,7 @@ The Meta catalogue module consumes approved inventory information for catalogue 
 
 ## Current shared-scope rule
 
-No other shared integration is treated as active repository structure until it is explicitly established and verified.
+The `shared/` folder currently contains only `cloudinary`. No other shared integration is treated as active repository structure until it is explicitly established and verified.
 
 ## Contract maturity
 
