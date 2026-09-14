@@ -18,3 +18,6 @@ CHANNEL_NAMES = {
 }
 
 TOP_LEVEL_COMMAND = "/efps"
+
+# Legacy society-approval routing is intentionally absent. The property
+# verification channel is for property verification only.
