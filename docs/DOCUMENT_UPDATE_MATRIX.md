@@ -1,6 +1,6 @@
 # Documentation Update Matrix
 
-**Status:** Initial routing baseline  
+**Status:** Active baseline  
 **Purpose:** Define which maintained documents must be reviewed or updated when repository reality changes.
 
 > This matrix is a routing guide. It does not replace `CORE_STEERING.md` or `DOCUMENT_GOVERNANCE.md`.
@@ -27,7 +27,9 @@
 
 ## Mandatory agent behavior
 
-For every change, the agent must determine which rows apply. A document marked for review must be checked against resulting repository reality even when no textual update is ultimately required.
+For **every implementation**, the agent must review **all maintained root documents and all documents inside `docs/`** against the resulting repository reality. It must update every document that is affected and must confirm the remaining documents are still accurate. This full review is mandatory even when the change appears small.
+
+For all other maintained documentation, use the routing table above to identify additional local documents that must be reviewed or updated.
 
 If the matrix does not clearly cover a change, do not guess. Establish the correct documentation owner before proceeding and update this matrix if a durable routing rule is discovered.
 
