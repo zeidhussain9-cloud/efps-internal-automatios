@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import os
 import re
+from collections.abc import Iterable, Mapping
 
 SECRET_NAME = "efps-whapi-panel-token"
 TOKEN_ENV = "WHAPI_API_TOKEN"
@@ -19,25 +20,11 @@ LIVE_FLAG = "EFPS_WHAPI_LIVE"
 WEBHOOK_TOKEN_ENV = "EFPS_WEBHOOK_TOKEN"
 WEBHOOK_QUERY_PARAMETER = "t"
 
-# These are the two verified inventory-listener source numbers from the legacy
-# deployment. They are WhatsApp sender numbers used to distinguish inventory
-# messages from ordinary direct enquiries. They are NOT two WhAPI channel
-# credentials; the legacy WhAPI auth model is one token per connected channel.
+# Verified legacy source numbers retained as integration hints. They are not
+# two WhAPI credentials and must not be interpreted as two channels.
 INVENTORY_LISTENER_NUMBERS = (
     "917975102130",
     "919902024973",
-)
-
-# The legacy WhAPI skill/reference configured webhook subscriptions through
-# PATCH /settings using this event family. Endpoint-specific registration must
-# still be verified against the current WhAPI API before a live mutation.
-WEBHOOK_EVENT_TYPES = (
-    "messages",
-    "statuses",
-    "chats",
-    "contacts",
-    "groups",
-    "calls",
 )
 
 
@@ -56,26 +43,41 @@ def normalise_phone(value: str) -> str:
 
 
 def is_inventory_listener(value: str) -> bool:
-    """Whether the sender matches one of the verified inventory-listener numbers."""
+    """Whether the sender matches one of the retained inventory-listener numbers."""
     return normalise_phone(value) in set(INVENTORY_LISTENER_NUMBERS)
 
 
-def webhook_registration_payload(url: str) -> dict:
-    """Build the legacy-compatible WhAPI webhook settings payload.
+def webhook_registration_payload(url: str, events: Iterable[Mapping[str, str] | str]) -> dict:
+    """Build a WhAPI `/settings` webhook payload from explicitly verified events.
 
-    This only constructs data. It does not perform the destructive/live
-    `PATCH /settings` operation.
+    The caller must obtain the allowed event names from `GET /settings/events`
+    before a live configuration change. This prevents the shared layer from
+    guessing that legacy event names remain valid.
     """
+    normalized: list[dict[str, str]] = []
+    for event in events:
+        if isinstance(event, str):
+            event_type = event.strip()
+            method = "post"
+        else:
+            event_type = str(event.get("type") or "").strip()
+            method = str(event.get("method") or "post").strip().lower()
+        if not event_type:
+            raise ValueError("webhook event type must not be empty")
+        if not method:
+            raise ValueError("webhook event method must not be empty")
+        normalized.append({"type": event_type, "method": method})
+
     if not url.strip():
         raise ValueError("webhook URL must not be empty")
+    if not normalized:
+        raise ValueError("at least one verified webhook event is required")
+
     return {
         "webhooks": [
             {
                 "mode": "body",
-                "events": [
-                    {"type": event_type, "method": "post"}
-                    for event_type in WEBHOOK_EVENT_TYPES
-                ],
+                "events": normalized,
                 "url": url.rstrip("/"),
             }
         ]
