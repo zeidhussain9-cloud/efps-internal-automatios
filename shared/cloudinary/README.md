@@ -17,13 +17,16 @@ This layer handles technical media storage after a module decides that media mus
 
 The business module decides **when**, **why**, and **which** media is uploaded. Cloudinary does not decide listing status, catalogue eligibility, customer workflow, or business rules.
 
-## Verified AWS/runtime credential map
+## Credential resolution
 
-| Shared capability | Verified AWS secret | Verified local/runtime name |
-|---|---|---|
-| Cloudinary | `efps-whapi-panel-cloudinary` | `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`, `CLOUDINARY_URL` |
+| Item | Current value |
+|---|---|
+| Keychain service | `efps-whapi-panel-cloudinary` |
+| Keychain account | `efps` |
+| Historical AWS source | `efps-whapi-panel-cloudinary` |
+| Accepted environment fallback | `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`, `CLOUDINARY_URL` |
 
-`CLOUDINARY_CLOUD_NAME` is also accepted when the deployment supplies the cloud name separately. Secret values are never stored in GitHub.
+The current repository resolves the canonical local macOS Keychain service before using environment fallback. Secret values are never stored in GitHub.
 
 ## Legacy compatibility retained
 
@@ -35,4 +38,4 @@ A module supplies the bytes, immutable business identifier, and image index. The
 
 ## Runtime status
 
-The package is statically implemented and testable with dependency injection. Actual Cloudinary account access and credentials remain runtime verification items; repository code alone cannot prove the live account is reachable.
+The package is statically implemented and testable with dependency injection. Actual Cloudinary account access and a successful live upload remain runtime verification items; repository code alone cannot prove the live account is reachable.
