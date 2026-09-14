@@ -90,14 +90,12 @@ def write_new_property(client: GoogleSheetsClient, row: dict):
 
 
 def write_phase1_update(client: GoogleSheetsClient, row_number: int, row: dict):
-    """Update Stage-1/2-owned fields only.
-
-    Explicitly protected: E `listing_state`, AP:AT downstream fields, and AV
-    `inventory_locked`. This prevents a late Stage-2 write from erasing lifecycle
-    or downstream state written by another module.
-    """
+    """Update Stage-1/2-owned fields only; never overwrite Stage-3 state."""
     schema.assert_writable(schema.PANEL, list(STAGE_1_2_WRITABLE))
-    client.write_range(schema.SHEET_ID, schema.WORKSHEET_NAME, schema.range_for("listing_id", "intake_status", row_number), [[row[name] for name in schema.NAMES[0:3]]])
+    # A:D are Stage-1/2. E listing_state is lifecycle-owned and protected.
+    # F:AO are Stage-1/2 property fields. AP:AT are downstream-owned.
+    # AU is Stage-1 source metadata. AV inventory_locked is lifecycle-owned.
+    client.write_range(schema.SHEET_ID, schema.WORKSHEET_NAME, schema.range_for("listing_id", "internal_property_type", row_number), [[row[name] for name in schema.NAMES[0:4]]])
     client.write_range(schema.SHEET_ID, schema.WORKSHEET_NAME, schema.range_for("onboarded_on", "city", row_number), [[row[name] for name in schema.NAMES[5:41]]])
     client.write_range(schema.SHEET_ID, schema.WORKSHEET_NAME, schema.range_for("source_group", "source_group", row_number), [[row["source_group"]]])
 
