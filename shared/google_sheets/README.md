@@ -32,6 +32,16 @@ The recorded legacy service-account identity is `gcpnew@easyfind-automations.iam
 - Worksheet: `Housing_Listings`
 - Immutable row identity: `listing_id` in column `A`
 - Physical contract: **48 columns, A:AV**
+- Physical order: maintained exclusively in `schema.py` and locked by tests to the latest supplied order.
+
+## Ownership and downstream boundary
+
+- Inventory/panel owns the Stage-1/2 fields and `source_group` at AU.
+- Housing Portal owns AP:AR: `posted_url`, `posted_at`, `error_notes`.
+- Meta Catalogue owns AS:AT: `meta_catalog_id`, `meta_catalog_status`.
+- Lifecycle/control owns E and AV: `listing_state`, `inventory_locked`.
+
+Inventory Stage-1/2 writes are explicitly restricted to A:D, F:AO, and AU so lifecycle/downstream state cannot be erased by a late processing update.
 
 ## Canonical schema
 
@@ -39,23 +49,15 @@ The recorded legacy service-account identity is `gcpnew@easyfind-automations.iam
 
 - physical column order and letters
 - field names
-- contract/extra/tail grouping
 - owner of every column
+- top-level population stage
 - writable permissions
-- explicitly defined allowed values
+- explicitly verified allowed values
 - row identity
 - derived ranges
 - row-width and ownership integrity checks
 
-The corrected contract includes `inventory_locked` at `AV`. The older legacy source file stopped at `AU`; the generated legacy `SHEET_CONTRACT.json` is the newer 48-column contract used to correct this repository.
-
-## Cross-project ownership
-
-- `panel`: A–AJ plus AP–AV
-- `housing_agent`: AK–AM (`posted_url`, `posted_at`, `error_notes`)
-- `meta_catalog`: AN–AO (`meta_catalog_id`, `meta_catalog_status`)
-
-The shared client enforces 48-column width for full-row operations. It does not perform business-level row lookup, duplicate handling, locking, or workflow transitions; those remain module responsibilities.
+Exact sheet dropdown vocabularies that are not verified in repository source are intentionally left unclaimed rather than guessed.
 
 ## Runtime status
 
@@ -65,13 +67,13 @@ The credential contract and client are implemented. Actual service-account autho
 
 Any change to the physical sheet contract must update, in the same implementation session:
 
-1. `shared/google_sheets/schema.py` — canonical physical contract and checks.
-2. `shared/google_sheets/README.md` — local capability documentation.
-3. `docs/DATA_CONTRACTS.md` — repository-level data contract.
-4. `docs/ARCHITECTURE.md` — if ownership/boundary changes.
-5. `docs/INFRASTRUCTURE.md` — if spreadsheet/runtime configuration changes.
-6. `docs/OPEN_POINTERS.md` — if anything remains unverified.
-7. `HANDOFF.md` — current implementation state.
-8. All maintained root/`docs/` files must still be reviewed under the repository-wide documentation rule.
+1. `shared/google_sheets/schema.py`
+2. `shared/google_sheets/README.md`
+3. `docs/DATA_CONTRACTS.md`
+4. `docs/ARCHITECTURE.md` when ownership/boundary changes
+5. `docs/INFRASTRUCTURE.md` when spreadsheet/runtime configuration changes
+6. `docs/OPEN_POINTERS.md` when anything remains unverified
+7. `HANDOFF.md`
+8. All maintained root/`docs/` files under the repository-wide documentation rule.
 
 No second schema may be created in a module.
