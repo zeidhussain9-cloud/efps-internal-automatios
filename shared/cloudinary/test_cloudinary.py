@@ -1,18 +1,27 @@
 from __future__ import annotations
 
-import os
-
 import pytest
 
-from client import CloudinaryClient, CloudinaryCredentials, MissingCloudinaryCredentials
-from media import (
-    catalog_urls,
-    image_fingerprint,
-    lead_public_id,
-    property_public_id,
-    upload_lead_images,
-    upload_property_images,
-)
+try:
+    from client import CloudinaryClient, CloudinaryCredentials, MissingCloudinaryCredentials
+    from media import (
+        catalog_urls,
+        image_fingerprint,
+        lead_public_id,
+        property_public_id,
+        upload_lead_images,
+        upload_property_images,
+    )
+except ImportError:  # pragma: no cover - supports pytest from repository root
+    from shared.cloudinary.client import CloudinaryClient, CloudinaryCredentials, MissingCloudinaryCredentials
+    from shared.cloudinary.media import (
+        catalog_urls,
+        image_fingerprint,
+        lead_public_id,
+        property_public_id,
+        upload_lead_images,
+        upload_property_images,
+    )
 
 
 def test_missing_credentials(monkeypatch: pytest.MonkeyPatch) -> None:
