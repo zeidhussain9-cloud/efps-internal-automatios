@@ -1,0 +1,5 @@
+[project]
+name = "efps-shared-google-sheets"
+version = "0.1.0"
+dependencies = ["gspread>=6,<7", "google-auth>=2,<3"]
+requires-python = ">=3.10"
