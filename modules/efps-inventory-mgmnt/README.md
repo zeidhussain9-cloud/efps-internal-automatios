@@ -1,19 +1,18 @@
 # EFPS Inventory Management
 
-Owns EFPS property inventory business workflows and decisions.
+Phase 1 owns the inventory business workflow from the dedicated two-number WhAPI listener through deterministic extraction, normalization, Google Maps resolution, validation, AI verification, and wording-only AI beautification.
 
-## Responsibility
+## Property boundary
+`NEW` opens a property session. Every text message until the next `NEW` belongs to that property. The closing `NEW` finalizes the session. Images are counted/recognized but their binary payloads are not downloaded in Phase 1.
 
-This module owns inventory intake, extraction, validation, inventory creation/update, duplicate handling, inventory state, and inventory-specific coordination with shared services.
+## Raw source
+All text messages are preserved in `raw_message_text`, in arrival order with timestamp/message-id metadata when available. Image payloads are never serialized into that field.
 
-The technical WhatsApp connection is not owned here. `shared/whatsapp_whapi/` supplies normalized webhook messages and the verified inventory-listener sender configuration. The current legacy listener numbers are `917975102130` and `919902024973`.
+## Extraction source
+Deterministic extraction reads the property's `raw_message_text` only. Existing canonical Sheet values are never used as extraction input during a replay.
 
-The module may use shared Google Sheets, Cloudinary, and WhatsApp/WhAPI capabilities, but those shared services do not contain inventory business rules.
+## Maps
+`shared/google_maps` is the reusable technical Maps capability. Inventory owns when/why a property requires Maps and consumes the normalized result for `locality`, `pincode`, and `google_maps_url`.
 
-## Housing_Listings
-
-The canonical physical contract is provided by `shared/google_sheets/schema.py`: 48 columns, A:AV. The inventory module must address rows by immutable `listing_id` and must respect the shared column ownership contract.
-
-## Status
-
-Implementation will be added in small, verified steps. Live webhook/AWS integration must be established only after runtime verification of the deployed WhAPI connection and webhook state.
+## Phase-1 boundary
+No Cloudinary media download, inventory locking/lifecycle, duplicate governance, downstream Meta/Housing/website publishing, or Slack integration is implemented here.
