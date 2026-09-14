@@ -53,6 +53,36 @@ def test_family_bachelor_explicit_value_is_not_overwritten():
     assert row["bachelor_preference"] == "Open for both"
 
 
+def test_real_message_formats_are_extracted_deterministically():
+    raw = """👉Semi Furnished 2.5 BHK with 2 Bathrooms, 2 Balconies & Utility<br><br>Rent: 39K<br>Maintenance: Included<br>Deposit: 1.25L<br>Sqft: 1450<br>Floor: 2/4<br>Preferred tenant: Open For All<br>Pets: Allowed<br>Location: Harlur<br>Gated Community"""
+    row = pipeline.deterministic(raw, pipeline.initial_row("EF-2609-0025"))
+    assert row["BHK"] == "2.5 BHK"
+    assert row["floor_number"] == "2"
+    assert row["total_floors"] == "4"
+    assert row["monthly_rent"] == "39000"
+    assert row["maintenance"] == "0"
+    assert row["maintenance_included"] == "Yes"
+    assert row["security_deposit"] == "125000"
+    assert row["preferred_tenant_type"] == "Open For All"
+    assert row["pet_friendly"] == "Allowed"
+    assert row["internal_property_type"] == "Gated Community"
+
+
+def test_ground_floor_and_mixed_maintenance_are_normalized():
+    raw = """Semi Furnished 2 BHK<br>Rent: 42K<br>Maintenance: 2,777 + Water<br>Deposit: 120000<br>Sqft: 1211<br>Floor: G/4<br>Preferred Tenant: Open For All<br>Pets: Not Allowed<br>Gated Community"""
+    row = pipeline.deterministic(raw, pipeline.initial_row("EF-2609-0026"))
+    assert row["floor_number"] == "0"
+    assert row["total_floors"] == "4"
+    assert row["maintenance"] == "2777 + Water"
+    assert row["security_deposit"] == "120000"
+
+
+def test_gated_colon_variant_is_classified_as_gated():
+    raw = "3 BHK\nRent: 75000\nFloor: 1/14\nGated: Community"
+    row = pipeline.deterministic(raw, pipeline.initial_row("EF-2609-0027"))
+    assert row["internal_property_type"] == "Gated Community"
+
+
 def test_new_marker_opens_then_closes_same_sender_session():
     store = intake.InMemorySessionStore()
     sender = "917975102130"
