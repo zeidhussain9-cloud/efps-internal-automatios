@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from client import CloudinaryClient, CloudinaryCredentials
-from media import catalog_urls, image_fingerprint, lead_public_id, property_public_id
+from shared.cloudinary.client import CloudinaryClient, CloudinaryCredentials
+from shared.cloudinary.media import catalog_urls, image_fingerprint, lead_public_id, property_public_id
 
 
 def test_cloudinary_imports_and_helpers() -> None:

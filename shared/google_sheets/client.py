@@ -17,19 +17,22 @@ class MissingGoogleSheetsCredentials(RuntimeError):
     """Raised when Google Sheets runtime credentials are unavailable."""
 
 
-def _secret_from_aws() -> dict[str, Any] | None:
+def _secret_from_keychain() -> dict[str, Any] | None:
+    from shared.credentials import get_secret
+
     try:
-        import boto3
-        client = boto3.client("secretsmanager", region_name=os.environ.get("AWS_REGION", "us-east-1"))
-        raw = client.get_secret_value(SecretId=SECRET_NAME).get("SecretString", "")
+        raw = get_secret(SECRET_NAME)
     except Exception:
         return None
+
     if not raw:
         return None
+
     try:
         value = json.loads(raw)
     except json.JSONDecodeError:
         return {"value": raw}
+
     return value if isinstance(value, dict) else {"value": value}
 
 
@@ -59,7 +62,7 @@ class GoogleSheetsCredentials:
                     "GOOGLE_SERVICE_ACCOUNT_JSON is not valid JSON."
                 ) from exc
 
-        secret = _secret_from_aws()
+        secret = _secret_from_keychain()
         if secret:
             raw = secret.get("GOOGLE_SERVICE_ACCOUNT_JSON", secret.get("value", secret))
             if isinstance(raw, str):
@@ -73,7 +76,7 @@ class GoogleSheetsCredentials:
                 return cls(raw)
 
         raise MissingGoogleSheetsCredentials(
-            f"No Google service-account credential. Expected AWS secret '{SECRET_NAME}', "
+            f"No Google service-account credential. Expected local Keychain secret '{SECRET_NAME}', "
             "GOOGLE_SERVICE_ACCOUNT_JSON, or GOOGLE_APPLICATION_CREDENTIALS."
         )
 

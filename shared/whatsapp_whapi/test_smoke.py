@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from client import WhApiClient, WhApiCredentials
+from shared.whatsapp_whapi.client import WhApiClient, WhApiCredentials
 
 
 def test_whapi_client_constructs_without_live_network_access() -> None:

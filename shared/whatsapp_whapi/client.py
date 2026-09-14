@@ -19,29 +19,29 @@ class WhApiLiveTrafficBlocked(RuntimeError):
     """Raised when a live network operation is attempted without approval."""
 
 
-def _secret_from_aws() -> dict[str, Any] | None:
-    """Read the verified legacy secret when AWS runtime access is available."""
-    try:
-        import boto3
+def _secret_from_keychain() -> dict[str, Any] | None:
+    """Read the canonical local Keychain secret without logging its value."""
+    from shared.credentials import get_secret
 
-        client = boto3.client(
-            "secretsmanager", region_name=os.environ.get("AWS_REGION", "us-east-1")
-        )
-        raw = client.get_secret_value(SecretId=config.SECRET_NAME).get("SecretString", "")
+    try:
+        raw = get_secret(config.SECRET_NAME)
     except Exception:
         return None
+
     if not raw:
         return None
+
     try:
         value = json.loads(raw)
     except json.JSONDecodeError:
         return {"value": raw}
+
     return value if isinstance(value, dict) else {"value": value}
 
 
 def _resolve_token() -> str:
-    """AWS secret first; local WHAPI_API_TOKEN fallback. Never log the value."""
-    secret = _secret_from_aws()
+    """Resolve the canonical local Keychain secret without logging the value."""
+    secret = _secret_from_keychain()
     if secret:
         for key in ("api_token", "token", "value", config.TOKEN_ENV):
             if secret.get(key):
@@ -50,7 +50,7 @@ def _resolve_token() -> str:
     if token:
         return token
     raise MissingWhApiCredentials(
-        f"No WhAPI token. Expected AWS secret '{config.SECRET_NAME}' "
+        f"No WhAPI token. Expected local Keychain secret '{config.SECRET_NAME}' "
         f"or environment variable {config.TOKEN_ENV}."
     )
 

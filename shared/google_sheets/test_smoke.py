@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from client import GoogleSheetsClient, GoogleSheetsCredentials
+from shared.google_sheets.client import GoogleSheetsClient, GoogleSheetsCredentials
 
 
 def test_google_sheets_client_constructs_with_injected_client() -> None:

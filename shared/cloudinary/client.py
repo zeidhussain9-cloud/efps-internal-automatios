@@ -14,19 +14,22 @@ class MissingCloudinaryCredentials(RuntimeError):
     """Raised when required Cloudinary credentials are unavailable."""
 
 
-def _secret_from_aws() -> dict[str, Any] | None:
+def _secret_from_keychain() -> dict[str, Any] | None:
+    from shared.credentials import get_secret
+
     try:
-        import boto3
-        client = boto3.client("secretsmanager", region_name=os.environ.get("AWS_REGION", "us-east-1"))
-        raw = client.get_secret_value(SecretId=SECRET_NAME).get("SecretString", "")
+        raw = get_secret(SECRET_NAME)
     except Exception:
         return None
+
     if not raw:
         return None
+
     try:
         value = json.loads(raw)
     except json.JSONDecodeError:
         return {"value": raw}
+
     return value if isinstance(value, dict) else {"value": value}
 
 
@@ -53,7 +56,7 @@ class CloudinaryCredentials:
         api_secret = os.environ.get("CLOUDINARY_API_SECRET", "").strip()
         url = os.environ.get("CLOUDINARY_URL", "").strip()
 
-        secret = _secret_from_aws()
+        secret = _secret_from_keychain()
         if secret:
             if not url:
                 url = str(secret.get("CLOUDINARY_URL") or "").strip()
@@ -73,7 +76,7 @@ class CloudinaryCredentials:
         ]
         if missing:
             raise MissingCloudinaryCredentials(
-                f"No Cloudinary runtime credential. Expected AWS secret '{SECRET_NAME}' "
+                f"No Cloudinary runtime credential. Expected local Keychain secret '{SECRET_NAME}' "
                 f"or {', '.join(missing)} / CLOUDINARY_URL."
             )
         return cls(cloud_name=cloud_name, api_key=api_key, api_secret=api_secret)
