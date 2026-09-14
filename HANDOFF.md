@@ -12,11 +12,7 @@ For every implementation, all maintained root documents and all documents in `do
 
 The legacy `efps-platform` repository was reviewed for naming convention, business rules, document governance, architecture, infrastructure, the Google Sheets contract, WhAPI authentication, webhook configuration, webhook routing, inventory listeners, lead handling, and custom WhAPI skills.
 
-The legacy WhAPI webhook uses a public Lambda Function URL, authenticates with a shared query parameter `?t=...`, acknowledges quickly, and can hand the payload to a separate asynchronous Lambda for slow processing. The webhook payload is normalized before routing. fileciteturn377file0L2-L2 fileciteturn379file0L2-L2
-
-The legacy routing distinguishes direct messages from the two configured inventory-listener sender numbers from ordinary direct enquiries. Inventory-listener messages enter the inventory path; other direct messages enter the lead path. The legacy deployment configured those sender numbers as `917975102130` and `919902024973`. fileciteturn367file0L2-L2 fileciteturn380file0L2-L2
-
-The legacy WhAPI skill documents webhook configuration through `PATCH /settings` with `webhooks[].url`, `mode: body`, and per-event `type`/`method` entries. fileciteturn384file0L2-L2
+The new repository intentionally does not copy legacy business workflow into `shared/`. Shared folders contain reusable technical capabilities; inventory and lead workflows remain module responsibilities.
 
 ## Verified infrastructure references
 
@@ -42,29 +38,29 @@ The verified machine-readable legacy contract is a 48-column grid ending at `AV`
 
 ### `shared/cloudinary/`
 
-Implemented as a reusable technical package boundary with dependency-injected upload transport, deterministic media support, and runtime credential contract.
+Implemented as a reusable technical package boundary with AWS/local credential resolution, dependency-injected upload transport, deterministic property/lead public IDs, non-overwriting uploads, secure URL extraction, catalogue URL limiting, and media fingerprinting.
 
 ### `shared/google_sheets/`
 
-Implemented with credential loading, authenticated client creation, spreadsheet/worksheet access, range reads/writes, row append capability, and the corrected 48-column A:AV contract under `schema.py`. Production runtime wiring remains to be verified.
+Implemented with AWS/local credential loading, authenticated client creation, spreadsheet/worksheet access, range reads/writes, full-row read/write/append contract enforcement, canonical row mapping helpers, and the corrected 48-column A:AV schema/ownership contract.
 
 ### `shared/whatsapp_whapi/`
 
-Implemented with the verified token secret boundary, Bearer transport, live-traffic gate, canonical integration configuration, two inventory-listener sender numbers, webhook normalization, query-token verification, and legacy-compatible webhook registration payload construction. No live WhAPI settings are mutated by this repository automatically.
+Implemented with AWS/local token resolution, Bearer transport, live-traffic gate, neutral `GET/POST/PATCH` transport, health/settings/event-discovery/webhook-test/text-message primitives, webhook normalization, constant-time query-token verification, retained sender-number configuration, and explicit-event webhook registration construction.
 
-The legacy flow is now documented as: WhAPI channel -> public webhook Lambda URL -> token verification -> payload normalization -> inventory-listener routing or lead routing -> owning business module. Slow inventory work may be handed to an asynchronous Lambda so WhAPI receives a fast acknowledgement. fileciteturn377file0L2-L2 fileciteturn379file0L2-L2
+The shared WhAPI builder does not guess current event names or mutate live settings automatically. Current live channel identity, webhook URL, subscribed events, and deployed endpoint behavior remain runtime verification items.
 
-### `modules/efpd-lead-mgmnt/`
+## Production-readiness scope
 
-Added immediately after `efps-inventory-mgmnt` in the repository module order. It is the future canonical owner of lead/enquiry business workflows. The shared WhAPI layer supplies transport/message data but does not own lead business decisions.
+The current hardening pass is limited to:
 
-## Current AI skills
+1. repository root governance documents;
+2. all maintained `docs/` documents; and
+3. everything under `shared/`.
 
-Repository-specific shared capability skills include:
+Business modules are not being expanded as part of this scope.
 
-- `.gemini/skills/cloudinary/`
-- `.gemini/skills/google-sheets/`
-- `.gemini/skills/whapi/`
+Repository/source hardening is distinct from live external-system verification. GitHub source review cannot prove AWS credential access, Cloudinary account reachability, Google spreadsheet authorization, a currently connected WhatsApp number, or a deployed public webhook endpoint.
 
 ## Current modules
 
