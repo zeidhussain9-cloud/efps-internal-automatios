@@ -5,15 +5,15 @@ This is the canonical precedence and working guide for AI agents in EFPS Interna
 ## Authority order
 
 1. The owner's instruction in the current session.
-2. `PROJECT_RULES.md` for standing engineering and automation rules.
+2. `docs/PROJECT_RULES.md` for standing engineering and automation rules.
 3. Running code and verified external infrastructure for actual system behavior.
-4. `BUSINESS_CONTEXT.md` for EFPS business decisions and domain rules.
-5. `ARCHITECTURE.md`, `INFRASTRUCTURE.md`, `docs/` contracts, and module guidance for documented structure and ownership.
+4. `docs/BUSINESS_CONTEXT.md` for EFPS business decisions and domain rules.
+5. `docs/ARCHITECTURE.md`, `docs/INFRASTRUCTURE.md`, `docs/DATA_CONTRACTS.md`, `docs/OPEN_POINTERS.md`, and module/shared guidance for documented structure and ownership.
 6. General explanatory prose and historical records are lower authority than the sources above.
 
 ## Before changing anything
 
-Read the root guidance, `HANDOFF.md`, and the relevant module/shared guidance. Establish the current state from the repository before making a change.
+Read the root guidance, `HANDOFF.md`, the applicable documents in `docs/`, and the relevant module/shared guidance. Establish the current state from the repository before making a change.
 
 ## Working principles
 
