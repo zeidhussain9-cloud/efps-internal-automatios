@@ -1,6 +1,6 @@
 # EFPS Internal Automations — Core Steering Protocol
 
-**Version:** 1.0  
+**Version:** 1.1  
 **Status:** MANDATORY  
 **Scope:** Entire repository  
 **Applies to:** Every AI agent, every interaction, every iteration, every response, and every action
@@ -100,13 +100,25 @@ A completed change requires, as applicable:
 - Required documentation updated.
 - No known unresolved contradiction introduced.
 
-## 8. Documentation is part of implementation
+## 8. Documentation is part of every implementation
 
 Documentation updates are part of the change, not optional cleanup.
 
-Whenever implementation changes the documented reality, the affected canonical documentation MUST be updated in the same work session.
+For **every implementation**, the agent MUST review **all maintained documents in the repository root** and **all documents inside `docs/`** against the resulting repository reality.
 
-The repository's documentation ownership and update rules must be followed uniformly. The documentation update matrix, once established, becomes the canonical routing table for deciding which documents require review or update after each type of change.
+The maintained root set is:
+
+- `README.md`
+- `CORE_STEERING.md`
+- `AGENTS.md`
+- `GEMINI.md`
+- `HANDOFF.md`
+
+The maintained `docs/` set is defined by `docs/DOCUMENT_MAP.md`.
+
+Every document affected by the implementation MUST be updated in the same work session. Documents not affected MUST still be checked for continued accuracy. `HANDOFF.md` MUST be updated when current task/session state changes.
+
+The documentation update matrix and document governance rules are mandatory routing mechanisms, but they do not replace the full root-and-`docs/` review.
 
 ## 9. Never manufacture certainty
 
@@ -128,6 +140,14 @@ Do not expose production data merely to make implementation easier.
 
 Do not modify unrelated modules, shared capabilities, documentation, or infrastructure merely because they are nearby.
 
+## Current active shared scope
+
+The only active shared implementation in the repository is:
+
+- `shared/cloudinary/`
+
+No other shared capability is active until it is explicitly established and verified.
+
 ## Mandatory pre-response / pre-action checklist
 
 Before every response or action, the agent must internally confirm:
@@ -140,7 +160,7 @@ Before every response or action, the agent must internally confirm:
 - Are there conflicting sources?
 - What is the smallest safe next step?
 - What must be verified after that step?
-- Which documentation must be reviewed or updated if the state changes?
+- Which root and `docs/` documents must be updated if repository reality changes?
 
 If a necessary answer to these questions is not established, the agent must stop and establish it before proceeding.
 
