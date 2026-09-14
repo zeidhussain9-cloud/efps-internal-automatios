@@ -25,14 +25,30 @@ Every maintained document must have one clear role and one canonical subject. Do
 - Unresolved decisions/unknowns → `OPEN_POINTERS.md`
 - Current working state → `HANDOFF.md`
 - Document roles → `DOCUMENT_MAP.md`
-- AI operating instructions → root `GEMINI.md` and `AGENTS.md`
+- AI operating instructions → root `CORE_STEERING.md`, `GEMINI.md`, and `AGENTS.md`
+
+## Mandatory implementation review
+
+For **every implementation**, review all maintained documents in the repository root and all documents inside `docs/` against the resulting repository reality.
+
+The maintained root set is:
+
+- `README.md`
+- `CORE_STEERING.md`
+- `AGENTS.md`
+- `GEMINI.md`
+- `HANDOFF.md`
+
+The maintained `docs/` set is defined by `DOCUMENT_MAP.md`.
+
+Update every affected document in the same work session. Documents not affected must still be checked for continued accuracy. Update `HANDOFF.md` whenever current task/session state changes.
 
 ## Maintenance rules
 
 1. Establish facts from repository evidence or verified external sources before documenting them.
 2. Update the relevant canonical document in the same work session when implementation changes its reality.
 3. Do not keep duplicate competing statements of the same fact.
-4. Update `HANDOFF.md` when current task state changes.
+4. Use `DOCUMENT_UPDATE_MATRIX.md` as the routing baseline, without weakening the full-review requirement above.
 5. Resolve open pointers only from verified evidence or explicit owner decisions.
 6. Update generated documents through their source of truth.
 7. Preserve historical records as historical records.
