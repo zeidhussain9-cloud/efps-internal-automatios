@@ -26,7 +26,7 @@ The repository follows one simple operating model:
 - `shared/` — reusable technical integrations and capabilities.
 - `.gemini/skills/` — repeatable AI session procedures.
 
-## Documentation rule
+## Mandatory documentation rule
 
 For every implementation, the agent must review all maintained root and `docs/` documentation and update every document whose content is affected by the resulting repository reality. Do not create duplicate authoritative documents.
 
@@ -37,14 +37,10 @@ For every implementation, the agent must review all maintained root and `docs/` 
 - `modules/efps-housing-portal-mgmnt/` — placeholder for future Housing.com automation.
 - `modules/efps-website-mgmnt/` — EasyFind website management and automation.
 
-## Shared capabilities
+## Established shared capabilities
 
-The shared layer currently contains these established capability boundaries:
+- `shared/cloudinary/` — reusable Cloudinary media storage/upload capability.
+- `shared/google_sheets/` — reusable Google Sheets technical access plus the canonical `Housing_Listings` contract/schema.
+- `shared/whatsapp_whapi/` — reusable WhAPI/WhatsApp technical integration boundary with explicit live-traffic safety controls.
 
-- `shared/cloudinary/` — media storage/upload and stable media-reference capabilities.
-- `shared/google_sheets/` — Google Sheets connectivity and range/worksheet operations.
-- `shared/whatsapp_whapi/` — WhAPI transport, authentication, webhook, messaging, media, and connection capabilities.
-
-Shared services provide technical capabilities; modules decide when and why those capabilities are used.
-
-This repository is being implemented capability-by-capability. A capability may have a documented boundary before every runtime feature is complete; implementation status must be stated accurately and must not be guessed.
+These boundaries do not imply that every endpoint, workflow, or live production integration is complete. Implementation status must be verified before calling a capability production-ready.
