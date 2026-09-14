@@ -11,8 +11,11 @@
 - `INFRASTRUCTURE.md` — verified external systems and resource identifiers; never secrets.
 - `DOCUMENT_GOVERNANCE.md` — documentation classes, authority, and maintenance rules.
 - `DOCUMENT_MAP.md` — canonical map of maintained documents and their roles.
+- `DOCUMENT_UPDATE_MATRIX.md` — mandatory routing and full-review rule for documentation changes.
 - `OPEN_POINTERS.md` — unresolved decisions and verified unknowns.
 
 Root files are intentionally limited to repository/AI entry points: `README.md`, `GEMINI.md`, `AGENTS.md`, and `HANDOFF.md`.
+
+For every implementation, all maintained root documents and all documents in `docs/` are reviewed against the resulting repository reality. A document is updated when its subject or statement is affected; unchanged documents are still checked for accuracy.
 
 Add another document only when the subject has a clear, non-duplicative canonical home.
