@@ -6,7 +6,7 @@ Repository-specific shared integration layer for EFPS WhatsApp connectivity thro
 
 This shared layer owns technical integration capabilities only:
 
-- Bearer-token credential loading from the verified AWS secret or local environment.
+- Bearer-token credential loading from the canonical local Keychain service.
 - Authenticated GET/POST/PATCH transport with an explicit live-traffic gate.
 - Neutral channel health/settings/event-discovery primitives.
 - Neutral text-message and webhook-test primitives.
@@ -34,13 +34,18 @@ The lead listener is the default inbound path for everything that is not one of 
 
 The configuration explicitly reserves `inventory`, `groups`, and `promotions` as non-lead business paths. The shared layer does not create, update, deduplicate, or assign any business object for these paths.
 
-## Verified AWS/runtime credential map
+## Credential resolution
 
-| Shared capability | Verified AWS secret | Verified local/runtime name |
-|---|---|---|
-| WhAPI | `efps-whapi-panel-token` | `WHAPI_API_TOKEN` |
+| Item | Current value |
+|---|---|
+| Token Keychain service | `efps-whapi-panel-token` |
+| Webhook Keychain service | `efps-whapi-panel-webhook` |
+| Keychain account | `efps` |
+| Historical token AWS source | `easyfind/whatsapp-api-credentials` |
+| Historical webhook AWS source | `easyfind/whatsapp-webhook-credentials` |
+| Environment token fallback | `WHAPI_API_TOKEN` |
 
-The legacy secret accepts the token payload keys `api_token`, `token`, `value`, or `WHAPI_API_TOKEN`. The actual token is never copied into this repository.
+The current repository resolves the canonical local Keychain service and does not require AWS Secrets Manager access at runtime. The actual token and webhook secret are never copied into this repository.
 
 ## Verified connection facts from the legacy repository
 
