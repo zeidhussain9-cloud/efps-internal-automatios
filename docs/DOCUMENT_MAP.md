@@ -27,12 +27,14 @@ This document is the canonical map of maintained repository documentation. It te
 
 ## Local documentation
 
-Every module and shared capability has its own `README.md` explaining its purpose and boundary. Module `GEMINI.md` files provide local AI-agent guidance.
+Every module and active shared capability has its own `README.md` explaining its purpose and boundary. Module `GEMINI.md` files provide local AI-agent guidance.
 
 Repository-wide Gemini skills live under `.gemini/skills/`. Repository-specific custom skills may have reference files under their skill directory when the procedure requires detailed material.
 
 ## Single-source rule
 
 One fact or rule should have one canonical home. Other documents may link to or summarize it, but must not create a competing authoritative version.
+
+For every implementation, the agent must review all maintained root and `docs/` documents. Update every document whose content is affected by resulting repository reality; documents not affected must still be checked for continued accuracy.
 
 If a new maintained document is required, add it to this map and define its role before treating it as repository truth.
