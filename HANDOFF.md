@@ -2,7 +2,7 @@
 
 ## Current state
 
-The repository skeleton, documentation foundation, mandatory AI steering layer, documentation update matrix, initial skill placeholders, and active Cloudinary shared capability scope are established. No other shared capability is currently treated as active implementation scope.
+The repository documentation foundation and mandatory AI steering layer are established. The shared layer now has three established capability boundaries: `cloudinary`, `google_sheets`, and `whatsapp_whapi`.
 
 `CORE_STEERING.md` is mandatory for every AI agent, every interaction, and every iteration. `AGENTS.md` and `GEMINI.md` enforce it.
 
@@ -12,6 +12,8 @@ For every implementation, all maintained root documents and all documents in `do
 
 The legacy `efps-platform` repository was reviewed for naming convention, business rules, document governance, architecture, infrastructure registry, cross-project contract, open-pointer practices, and custom agent skills.
 
+The legacy `efps-whapi-panel` provides verified reference behavior for the shared capability boundaries. Its Cloudinary media layer uses deterministic property paths and a separate lead-media namespace. Its configuration resolves credentials from AWS Secrets Manager with environment-variable fallback. Its WhAPI network traffic is explicitly gated before live calls. fileciteturn228file0L2-L2 fileciteturn229file0L2-L2 fileciteturn223file0L2-L2
+
 Legacy Slack-specific skills are not carried forward because they are not part of the new repository architecture. The legacy WhAPI skill remains relevant as source material for the repository-specific `.gemini/skills/whapi/` structure; technical details must be carried forward only after verification against current requirements/current integration truth.
 
 ## Current architecture
@@ -20,10 +22,23 @@ Legacy Slack-specific skills are not carried forward because they are not part o
 - `CORE_STEERING.md` is the mandatory core AI operating protocol.
 - `docs/` is the single canonical home for business and system knowledge.
 - `modules/` contains EFPS business capabilities and business decisions.
-- `shared/` currently contains only the active `cloudinary` capability.
+- `shared/` contains reusable technical capabilities.
 - Shared capabilities provide capabilities; modules decide when and why those capabilities are used.
 - `efps-website-mgmnt` is dedicated exclusively to EasyFind website management.
-- No additional shared capability should be treated as active until explicitly established and verified.
+
+## Shared capability implementation state
+
+### `shared/cloudinary/`
+
+Implemented as a reusable technical package boundary with credential loading, dependency-injected upload transport, deterministic property and lead media identifiers, upload helpers, catalogue URL limiting, and image fingerprinting. Live credentials are not stored in the repository.
+
+### `shared/google_sheets/`
+
+Restored as the canonical shared Google Sheets capability boundary. Its technical implementation is the next integration surface to complete from verified requirements; business ownership remains in modules.
+
+### `shared/whatsapp_whapi/`
+
+Restored as the canonical shared WhAPI capability boundary. Its implementation must follow the verified legacy safety pattern: live network traffic is explicitly gated and secrets remain outside the repository.
 
 ## Current documentation model
 
@@ -47,10 +62,6 @@ The repository-specific `whapi` custom skill is currently a placeholder/referenc
 - `efps-meta-catalogue-mgmnt`
 - `efps-housing-portal-mgmnt`
 - `efps-website-mgmnt`
-
-## Current shared capability
-
-- `cloudinary`
 
 ## Next development rule
 
