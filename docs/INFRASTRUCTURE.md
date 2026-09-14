@@ -9,20 +9,17 @@ This is the canonical registry for external systems and verified resource identi
 
 ## Active shared capability
 
-- `shared/cloudinary/` — currently active shared technical capability for Cloudinary media operations.
+- `shared/cloudinary/` — the only active shared capability in the current repository scope.
 
-## External service boundaries
+## Reserved future boundaries
 
-Future integration boundaries may include:
+The following systems may be integrated later, but are **not active shared implementations in the current repository state** unless and until explicitly established and verified:
 
 - Google Sheets
-- Cloudinary
 - WhatsApp / WhAPI
 - Meta / WhatsApp Catalogue
 - Housing.com
 - EFPS website infrastructure
-
-Except for the explicitly active Cloudinary shared capability, these remain reserved boundaries until their implementation is actually established and verified.
 
 ## Secret policy
 
