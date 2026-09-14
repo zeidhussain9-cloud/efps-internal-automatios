@@ -40,8 +40,10 @@ For every implementation, the agent must review all maintained root and `docs/` 
 
 ## Established shared capabilities
 
-- `shared/cloudinary/` — reusable Cloudinary media storage/upload capability.
-- `shared/google_sheets/` — reusable Google Sheets technical access plus the canonical `Housing_Listings` contract/schema.
-- `shared/whatsapp_whapi/` — reusable WhAPI/WhatsApp technical integration boundary with explicit live-traffic safety controls, webhook configuration, and normalized message delivery.
+- `shared/cloudinary/` — reusable Cloudinary media storage/upload capability with deterministic property/lead namespaces and secure URL helpers.
+- `shared/google_sheets/` — reusable Google Sheets technical access plus the canonical 48-column `Housing_Listings` A:AV contract.
+- `shared/whatsapp_whapi/` — reusable WhAPI technical transport, live gate, channel/settings primitives, webhook normalization, and neutral messaging primitives.
 
-These boundaries do not imply that every endpoint, workflow, or live production integration is complete. Implementation status must be verified before calling a capability production-ready.
+## Production status
+
+Repository/source hardening is maintained separately from live external-system verification. A shared implementation being present does not prove that AWS credentials, Cloudinary access, Google Sheets authorization, a connected WhAPI number, a public webhook endpoint, or live webhook subscriptions are currently valid.
