@@ -20,11 +20,15 @@ These are standing engineering and automation rules for EFPS Internal Automation
 
 ## Cloudinary
 
-`shared/cloudinary/` provides technical media storage/upload capabilities. Business modules decide which media is stored and why. The verified legacy reference used deterministic listing-derived property paths and a separate lead/enquiry namespace. fileciteturn228file0L2-L2
+`shared/cloudinary/` provides technical media storage/upload capabilities. Business modules decide which media is stored and why. The shared implementation uses deterministic property/lead namespaces, non-overwriting uploads, stable secure URLs, and optional media fingerprints.
+
+## Google Sheets
+
+`shared/google_sheets/` owns the technical Sheets client and the canonical physical `Housing_Listings` contract. Full-row operations must use the 48-column A:AV schema; ownership and business workflow remain outside the shared client.
 
 ## WhatsApp / WhAPI
 
-`shared/whatsapp_whapi/` must retain an explicit live-traffic gate. No token check, quota check, health ping, fetch, send, or other live WhAPI network operation should happen without the deliberate runtime approval mechanism derived from the verified legacy guard. fileciteturn223file0L2-L2
+`shared/whatsapp_whapi/` must retain an explicit live-traffic gate. No live WhAPI network operation should happen without the deliberate runtime approval mechanism. Webhook event names must be discovered from the current allowed-events endpoint rather than guessed from historical configuration.
 
 ## Documentation
 
