@@ -21,13 +21,21 @@ Shared code must remain business-neutral. Business rules, publishing decisions, 
 
 Reusable media-storage and upload capability. It provides deterministic media naming, uploads, stable media references, catalogue URL preparation, and image fingerprinting. The legacy `efps-platform` implementation demonstrates property-image storage under listing-derived paths and a separate `leads/` namespace for enquiry media. fileciteturn228file0L2-L2
 
+Verified legacy AWS secret reference: `efps-whapi-panel-cloudinary`. fileciteturn315file0L2-L2
+
 ### `shared/google_sheets/`
 
-Reusable Google Sheets technical access: authenticated client setup plus worksheet/range read and write primitives. Modules remain responsible for what spreadsheet data means and which business operations trigger reads or writes.
+Reusable Google Sheets technical access plus the canonical `Housing_Listings` contract/schema. The shared layer owns the physical sheet definition and technical access; business modules decide which business workflow causes a read/write.
+
+Verified legacy spreadsheet: `1zdOLWklkWlnVECCtcH4SJj6vm6nEVjINpTT2U2UJEKc`, worksheet `Housing_Listings`. Verified legacy AWS secret: `efps-whapi-panel-sheet`. fileciteturn315file0L2-L2
+
+The local canonical schema is `shared/google_sheets/schema.py`. The verified legacy source is `efps-platform/modules/efps-whapi-panel/src/schema.py`, with the machine-readable export in `efps-platform/docs/SHEET_CONTRACT.json`.
 
 ### `shared/whatsapp_whapi/`
 
-Reusable WhAPI technical access: authentication, API transport, webhook primitives, messaging/media primitives, connection/status handling, and related WhatsApp integration concerns. Business modules remain responsible for business workflow decisions. The legacy repository's WhAPI panel also used an explicit live-traffic gate so network calls could not happen without owner approval. fileciteturn223file0L2-L2
+Reusable WhAPI technical integration: connection, authentication, API transport, webhook registration/receiving/verification, message and media primitives, contact/group primitives, configured connection metadata, webhook configuration, and health/status. Business modules remain responsible for business workflow decisions.
+
+Verified legacy AWS secret: `efps-whapi-panel-token`; verified base URL: `https://gate.whapi.cloud`. Live network access must remain behind the explicit runtime approval gate. fileciteturn315file0L2-L2 fileciteturn223file0L2-L2
 
 ## Business modules
 
@@ -47,8 +55,18 @@ Reserved for future Housing.com automation and portal-specific business workflow
 
 Dedicated exclusively to EasyFind website management and website automation.
 
+## Shared-capability skill model
+
+The three established shared capabilities each have a repository-specific Gemini skill:
+
+- `.gemini/skills/cloudinary/`
+- `.gemini/skills/google-sheets/`
+- `.gemini/skills/whapi/`
+
+These skills provide technical capability guidance. They do not move business decisions out of the owning modules.
+
 ## Data and ownership principle
 
-Modules own business meaning. Shared services own technical access. A shared service must not decide which property to publish, what a listing means, which customer communication should happen, or whether a business action is authorized.
+Modules own business meaning. Shared services own technical access and reusable cross-module contracts where explicitly established. A shared service must not decide which property to publish, what a listing means, which customer communication should happen, or whether a business action is authorized.
 
 Concrete runtime flows and contracts must only be documented after implementation establishes them. Capability boundaries may exist before every feature is complete, but status must be stated accurately.
