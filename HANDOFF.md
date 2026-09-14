@@ -46,9 +46,12 @@ Implemented with AWS/local credential loading, authenticated client creation, sp
 
 ### `shared/whatsapp_whapi/`
 
-Implemented with AWS/local token resolution, Bearer transport, live-traffic gate, neutral `GET/POST/PATCH` transport, health/settings/event-discovery/webhook-test/text-message primitives, webhook normalization, constant-time query-token verification, retained sender-number configuration, and explicit-event webhook registration construction.
+Implemented with AWS/local token resolution, Bearer transport, live-traffic gate, neutral `GET/POST/PATCH` transport, health/settings/event-discovery/webhook-test/text-message primitives, webhook normalization, constant-time query-token verification, and a completed two-listener source boundary.
 
-The shared WhAPI builder does not guess current event names or mutate live settings automatically. Current live channel identity, webhook URL, subscribed events, and deployed endpoint behavior remain runtime verification items.
+- **Inventory listener:** exactly the two dedicated source numbers `917975102130` and `919902024973`, direct inbound only.
+- **Lead listener:** default path for other inbound traffic; groups and promotions remain explicit non-inventory paths.
+- The shared layer reports the neutral listener path but does not create leads, create listings, deduplicate, match, assign, lock properties, or send business confirmations.
+- The webhook builder still requires current event names from WhAPI runtime discovery and does not mutate the live account automatically.
 
 ## Production-readiness scope
 
