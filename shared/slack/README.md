@@ -85,7 +85,7 @@ The bare thread words `done`, `submit`, `next`, `skip`, and `exit` are session c
 Shared Slack may provide:
 
 - Web API request transport.
-- Token/signing-secret loading from environment/secret references.
+- Token/signing-secret loading from the approved local Keychain secret reference or environment fallback.
 - Message and thread posting.
 - File/thread retrieval primitives needed by photo sessions.
 - Interactivity/request parsing.
@@ -107,7 +107,7 @@ Those decisions belong to the owning module and canonical contracts.
 
 ## Security
 
-Never store Slack bot tokens, signing secrets, webhook secrets, private keys, or other credentials in this folder or in Git. The legacy system used the secret reference `efps-whapi-panel-slack`; the new repository should use the approved runtime secret mechanism without copying its values.
+The canonical local Keychain service is `efps-whapi-panel-slack` under account `efps`. The historical AWS source was `easyfind/slack-api-credentials`. Never store Slack bot tokens, signing secrets, webhook secrets, private keys, or other credentials in this folder or in Git.
 
 Slack request verification must validate the signing secret before processing interactive/event requests. Fail closed for invalid signatures.
 
