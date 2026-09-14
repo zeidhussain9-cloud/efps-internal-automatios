@@ -14,7 +14,7 @@ def _scale(n: str, s: str = "") -> str:
 
 
 def _line_value(text: str, label: str) -> str:
-    match = re.search(rf"{re.escape(label)}\s*:\s*(.*?)(?:<br\s*/?>|\n|$)", text, re.I)
+    match = re.search(rf"{label}\s*:\s*(.*?)(?:<br\s*/?>|\n|$)", text, re.I)
     return match.group(1).strip() if match else ""
 
 
@@ -87,12 +87,13 @@ def scan(text: str) -> dict[str, str]:
             out["maintenance"] = _scale(numeric.group(1), numeric.group(2))
         else:
             out["maintenance"] = maintenance
+        out["maintenance_included"] = "Yes" if maintenance.strip().lower() == "included" else "No"
 
     for key, label in (
-        ("preferred_tenant_type", "preferred\s*tenant"),
-        ("bachelor_preference", "bachelor(?:s)?"),
-        ("pet_friendly", "pets?"),
-        ("servant_room", "servant\s*room"),
+        ("preferred_tenant_type", r"preferred\s*tenant"),
+        ("bachelor_preference", r"bachelor(?:s)?"),
+        ("pet_friendly", r"pets?"),
+        ("servant_room", r"servant\s*room"),
     ):
         value = _line_value(text, label)
         if value:
