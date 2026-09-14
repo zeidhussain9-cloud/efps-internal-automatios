@@ -15,19 +15,15 @@ The governing boundary is:
 
 Shared code must remain business-neutral. Business rules, publishing decisions, property decisions, and workflow decisions belong to the owning module.
 
-## Shared capabilities
+## Shared implementation scope
 
-### `shared/google_sheets/`
-
-Technical capability for Google Sheets access and reusable spreadsheet operations.
+At the current repository state, the only active shared capability is:
 
 ### `shared/cloudinary/`
 
 Technical capability for media upload and media URL operations.
 
-### `shared/whatsapp_whapi/`
-
-Technical capability for WhatsApp/WhAPI connection, authentication, API access, webhooks, messages, media, contacts, groups, configured numbers, and connection health/status.
+Other shared integrations may be established later only when explicitly required and verified. They must not be treated as active repository structure before that happens.
 
 ## Business modules
 
@@ -51,4 +47,4 @@ Dedicated exclusively to EasyFind website management and website automation.
 
 Modules own business meaning. Shared services own technical access. A shared service must not decide which property to publish, what a listing means, which customer communication should happen, or whether a business action is authorized.
 
-Exact runtime flows and contracts will be added only when implementation establishes them. This document must not claim workflows that do not exist.
+Exact runtime flows and contracts will be added only when implementation establishes them. This document must not claim workflows or active capabilities that do not exist.
