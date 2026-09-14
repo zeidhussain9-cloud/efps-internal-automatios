@@ -9,9 +9,9 @@ This is the canonical registry for external systems and verified resource identi
 
 ## Established shared capabilities
 
-- `shared/cloudinary/` — technical media storage/upload and stable media-reference operations.
+- `shared/cloudinary/` — technical media storage/upload and stable media-reference helpers.
 - `shared/google_sheets/` — technical Google Sheets connectivity and the canonical `Housing_Listings` schema/ownership contract.
-- `shared/whatsapp_whapi/` — technical WhAPI connectivity, authentication, webhook, messaging/media, and connection operations.
+- `shared/whatsapp_whapi/` — technical WhAPI authentication, transport, channel/settings primitives, webhook normalization, and neutral message primitives.
 
 ## Verified runtime credential map
 
@@ -31,6 +31,7 @@ Only names are recorded here; secret values are runtime-only.
 - Recorded service-account identity: `gcpnew@easyfind-automations.iam.gserviceaccount.com`
 - Canonical local schema: `shared/google_sheets/schema.py`
 - Verified physical contract: 48 columns, `A:AV`
+- Ownership: `panel` A–AJ + AP–AV; `housing_agent` AK–AM; `meta_catalog` AN–AO
 
 ## WhatsApp / WhAPI
 
@@ -38,19 +39,26 @@ Only names are recorded here; secret values are runtime-only.
 - Local token variable: `WHAPI_API_TOKEN`
 - WhAPI base URL: `https://gate.whapi.cloud`
 - Live-traffic approval flag: `EFPS_WHAPI_LIVE=1`
-- Webhook shared-token variable: `EFPS_WEBHOOK_TOKEN`
-- Webhook query parameter: `t`
-- Inventory-listener sender numbers: `917975102130`, `919902024973`
+- Legacy webhook shared-token variable: `EFPS_WEBHOOK_TOKEN`
+- Legacy webhook query parameter: `t`
+- Retained inventory-listener sender numbers: `917975102130`, `919902024973`
 
-The legacy deployment uses one channel/token model; the two numbers above are the configured source numbers used by the webhook to identify inventory messages. The exact currently connected WhatsApp channel and live webhook URL still require runtime verification.
+The legacy deployment uses one token/channel/connected-number relationship. The two numbers above are source-number configuration and are not proof of two WhAPI channels.
 
-The legacy webhook registration shape is `PATCH /settings` with `webhooks[].url`, `mode: body`, and per-event `type`/`method` entries. The shared repository can construct this payload but does not silently mutate live WhAPI settings.
+Current WhAPI documentation confirms these relevant API surfaces: `GET /health`, `GET /settings`, `GET /settings/events`, `PATCH /settings`, `POST /settings/webhook_test`, and `POST /messages/text`. The shared client exposes neutral primitives for these operations. Live channel identity, webhook URL, subscription state, and endpoint behavior for the deployed account remain runtime verification items.
+
+The shared webhook builder requires explicit event definitions discovered from `GET /settings/events`; it does not guess or silently reuse a legacy event list.
 
 ## Cloudinary
 
 - AWS Secrets Manager secret: `efps-whapi-panel-cloudinary`
 - Local/runtime variables: `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`, `CLOUDINARY_URL`
-- The new shared client may also accept `CLOUDINARY_CLOUD_NAME` as an explicit runtime field when the deployment supplies it.
+- Optional explicit cloud name: `CLOUDINARY_CLOUD_NAME`
+- Property public-ID convention: `properties/{listing_id}/photo_{n}`
+- Lead public-ID namespace: `leads/{phone}/{message_id}_{n}`
+- Catalogue helper limit: 10 URLs
+
+Actual account access and a successful live upload remain runtime verification items.
 
 ## Credential policy
 
