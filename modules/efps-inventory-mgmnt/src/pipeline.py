@@ -12,6 +12,7 @@ FIXED = {
     "whatsapp_contact_link": "https://wa.me/919148338801",
     "whatsapp_group_link": "https://chat.whatsapp.com/FxOPO0xAOsD6lNwPcIDdFM",
 }
+PANEL_FIELDS = tuple(name for name in schema.NAMES if schema.owner_of(name) == schema.PANEL)
 
 
 def empty_row() -> dict[str, str]:
@@ -56,7 +57,7 @@ def process_closed_session(raw_text: str, *, row: dict | None = None, maps_clien
             })
         elif resolved.confidence in ("PARTIAL_MATCH", "NEEDS_RUNTIME_VERIFICATION"):
             issues.append("Google Maps verification is not fully verified")
-        elif resolved.confidence != "NOT_FOUND":
+        elif resolved.confidence not in ("NOT_FOUND", ""):
             issues.append("Google Maps resolution returned an unrecognized verification state")
 
     out["status"] = "Pending"
@@ -65,7 +66,7 @@ def process_closed_session(raw_text: str, *, row: dict | None = None, maps_clien
         out["status"] = "Needs Review"
         issues.extend(errors)
 
-    # AI is advisory and wording-only. Do not let it replace a failed deterministic gate.
+    # AI is advisory and wording-only. A deterministic failure is never hidden by AI.
     if out["status"] == "Pending":
         from .ai import apply
         out = apply(out, raw_text, ai_llm)
@@ -83,17 +84,17 @@ def write_new_property(client: GoogleSheetsClient, row: dict):
     validate_errors = validate.validate_raw(row)
     if validate_errors:
         raise ValueError("Refusing invalid raw inventory row: " + "; ".join(validate_errors))
-    schema.assert_writable(schema.PANEL, list(row))
+    schema.assert_writable(schema.PANEL, list(PANEL_FIELDS))
     return client.append_rows(schema.SHEET_ID, schema.WORKSHEET_NAME, [schema.mapping_to_row(row)])
 
 
 def write_phase1_update(client: GoogleSheetsClient, row_number: int, row: dict):
-    """Update only panel-owned ranges; never overwrite Stage-3 downstream columns."""
-    schema.assert_writable(schema.PANEL, list(row))
-    # Latest sheet order makes the downstream boundary explicit:
-    # A:AO = panel-owned; AP:AR = Housing-owned; AS:AT = Meta-owned; AU:AV = panel-owned.
-    left = [row[name] for name in schema.NAMES[:41]]
-    right = [row[name] for name in schema.NAMES[46:48]]
+    """Update panel-owned ranges only; never overwrite AP:AT downstream columns."""
+    schema.assert_writable(schema.PANEL, list(PANEL_FIELDS))
+    left_names = schema.NAMES[:41]   # A:AO
+    right_names = schema.NAMES[46:48]  # AU:AV
+    left = [row[name] for name in left_names]
+    right = [row[name] for name in right_names]
     client.write_range(
         schema.SHEET_ID,
         schema.WORKSHEET_NAME,
