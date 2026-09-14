@@ -29,15 +29,11 @@ The local canonical schema is `shared/google_sheets/schema.py`. The verified mac
 
 ### `shared/whatsapp_whapi/`
 
-Reusable WhAPI technical integration: connection/authentication, API transport, webhook registration/receiving/verification, normalized message/media data, configured inventory-listener source numbers, and live-traffic safety controls. Verified AWS secret: `efps-whapi-panel-token`; base URL: `https://gate.whapi.cloud`.
+Reusable WhAPI technical integration: credential loading, authenticated transport, channel/settings primitives, webhook registration helpers, webhook normalization/verification, and neutral message primitives. Verified AWS secret: `efps-whapi-panel-token`; base URL: `https://gate.whapi.cloud`.
 
-The reviewed legacy flow is:
+The shared layer does not perform inventory or lead routing. It exposes retained sender-number configuration and normalized message data so the owning modules can make those decisions.
 
-`WhatsApp → WhAPI channel → public Lambda Function URL webhook → query-token verification → payload normalization → inventory-listener or ordinary-direct-message routing → owning business module`.
-
-The legacy deployment configured two inventory-listener sender numbers (`917975102130`, `919902024973`). The legacy auth documentation describes one token = one WhAPI channel = one connected WhatsApp number, so these two numbers are treated as sender-routing configuration, not two proven WhAPI channels. fileciteturn386file0L2-L2
-
-The webhook acknowledged quickly and could hand slow processing to a separate asynchronous Lambda. fileciteturn377file0L2-L2 fileciteturn379file0L2-L2
+Current documented WhAPI connection surfaces used by the shared boundary are `GET /health`, `GET /settings`, `GET /settings/events`, `PATCH /settings`, `POST /settings/webhook_test`, and `POST /messages/text`. Live account state must still be verified at runtime.
 
 ## Business modules
 
@@ -73,4 +69,4 @@ The three established shared capabilities each have a repository-specific Gemini
 
 Modules own business meaning. Shared services own technical access and reusable cross-module contracts where explicitly established. A shared service must not decide which property to publish, what a listing means, which customer communication should happen, or whether a business action is authorized.
 
-Concrete live runtime state must be verified from the deployed AWS/WhAPI environment; GitHub source alone cannot prove the current production webhook URL or channel settings.
+Concrete live runtime state must be verified from the deployed AWS/WhAPI environment; GitHub source alone cannot prove the current production webhook URL, connected WhatsApp number, subscribed events, or live credential access.
