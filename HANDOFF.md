@@ -2,27 +2,31 @@
 
 ## Current state
 
-The repository skeleton is established. No business implementation is included at this stage.
+The repository skeleton and documentation foundation are established. No business implementation is included at this stage.
 
 ## Source review completed
 
-The legacy `efps-platform` repository was reviewed for its naming convention, business rules, document governance, architecture, infrastructure registry, cross-project contract, and open-pointer model.
+The legacy `efps-platform` repository was reviewed for naming convention, business rules, document governance, architecture, infrastructure registry, cross-project contract, and open-pointer practices.
 
-The new repository intentionally does not clone the legacy repository. Only reusable governance and business-context concepts relevant to the new architecture have been carried forward.
+The new repository intentionally does not clone the legacy repository. Reusable governance and valid EFPS business-context concepts were carried forward and adapted to the new architecture.
 
 ## Current architecture
 
-- `shared/` contains reusable technical capabilities.
+- Root contains only AI/repository operation entry points.
+- `docs/` is the single canonical home for business and system knowledge.
 - `modules/` contains EFPS business capabilities and business decisions.
+- `shared/` contains reusable technical capabilities.
 - Shared capabilities provide capabilities; modules decide when and why those capabilities are used.
 - `efps-website-mgmnt` is dedicated exclusively to EasyFind website management.
 - WhatsApp/WhAPI remains a shared technical capability under `shared/whatsapp_whapi/` rather than a separate business module.
 
-## Current documentation foundation
+## Current documentation model
 
-Root governance and business documents now include `AGENTS.md`, `PROJECT_RULES.md`, `BUSINESS_CONTEXT.md`, `ARCHITECTURE.md`, `INFRASTRUCTURE.md`, `OPEN_POINTERS.md`, `DOCUMENT_MAP.md`, `GEMINI.md`, `README.md`, and this `HANDOFF.md`.
+Root: `README.md`, `GEMINI.md`, `AGENTS.md`, and `HANDOFF.md`.
 
-Cross-repository documentation includes document governance, documentation policy, architecture details, and data-contract guidance under `docs/`.
+Canonical docs: `docs/BUSINESS_CONTEXT.md`, `docs/PROJECT_RULES.md`, `docs/ARCHITECTURE.md`, `docs/DATA_CONTRACTS.md`, `docs/INFRASTRUCTURE.md`, `docs/DOCUMENT_GOVERNANCE.md`, `docs/DOCUMENT_MAP.md`, and `docs/OPEN_POINTERS.md`.
+
+No duplicate architecture, business-context, project-rule, or documentation-policy files should be introduced.
 
 ## Current modules
 
@@ -31,7 +35,7 @@ Cross-repository documentation includes document governance, documentation polic
 - `efps-housing-portal-mgmnt`
 - `efps-website-mgmnt`
 
-## Current shared services
+## Current shared capabilities
 
 - `google_sheets`
 - `cloudinary`
@@ -39,4 +43,4 @@ Cross-repository documentation includes document governance, documentation polic
 
 ## Next development rule
 
-Before implementing a capability, read the root guidance, `HANDOFF.md`, the relevant module/shared `README.md` and `GEMINI.md`, and the applicable documents in `docs/`. Establish current source truth before making implementation changes.
+Before implementing a capability, read the root guidance, `HANDOFF.md`, the applicable documents in `docs/`, and the relevant module/shared `README.md` and `GEMINI.md`. Establish current source truth before making implementation changes.
