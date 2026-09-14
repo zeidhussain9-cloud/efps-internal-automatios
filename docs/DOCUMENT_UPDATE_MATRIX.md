@@ -29,6 +29,8 @@
 
 For **every implementation**, the agent must review **all maintained root documents and all documents inside `docs/`** against the resulting repository reality. It must update every document that is affected and must confirm the remaining documents are still accurate. This full review is mandatory even when the change appears small.
 
+For a shared capability implementation, review the capability's local `README.md`, relevant capability code/tests, and the canonical architecture, contracts, infrastructure, and open-pointer documents.
+
 For all other maintained documentation, use the routing table above to identify additional local documents that must be reviewed or updated.
 
 If the matrix does not clearly cover a change, do not guess. Establish the correct documentation owner before proceeding and update this matrix if a durable routing rule is discovered.
