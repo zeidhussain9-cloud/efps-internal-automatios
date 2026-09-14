@@ -7,6 +7,7 @@ Each module owns its business decisions and may use reusable technical capabilit
 ## Current modules
 
 - `efps-inventory-mgmnt/` — property inventory management.
+- `efpd-lead-mgmnt/` — lead and enquiry management.
 - `efps-meta-catalogue-mgmnt/` — Meta / WhatsApp catalogue management.
 - `efps-housing-portal-mgmnt/` — future Housing.com automation.
 - `efps-website-mgmnt/` — EasyFind website management.
