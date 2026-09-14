@@ -16,9 +16,9 @@ Current repository-wide skills include:
 
 Repository-specific shared capability skills:
 
-- `cloudinary/` — EFPS Cloudinary media-storage capability, verified credential boundary, and media handling rules.
-- `google-sheets/` — EFPS Google Sheets access plus the canonical `Housing_Listings` schema/ownership contract.
-- `whapi/` — EFPS WhAPI/WhatsApp integration skill and references.
+- `cloudinary/` — EFPS Cloudinary media-storage capability and verified credential boundary.
+- `google-sheets/` — EFPS Google Sheets access plus the canonical 48-column `Housing_Listings` contract/ownership rules.
+- `whapi/` — EFPS WhAPI/WhatsApp integration, webhook configuration, listener routing facts, and safety rules.
 
 A capability skill is technical guidance for that shared capability; business workflow decisions remain with the owning module.
 
