@@ -27,7 +27,7 @@ This document is the canonical map of maintained repository documentation. It te
 
 ## Local documentation
 
-Every module and active shared capability has its own `README.md` explaining its purpose and boundary. Module `GEMINI.md` files provide local AI-agent guidance.
+Every module and established shared capability has its own `README.md` explaining its purpose and boundary. Active implementation packages should also document their runtime requirements and validation approach locally.
 
 Repository-wide Gemini skills live under `.gemini/skills/`. Repository-specific custom skills may have reference files under their skill directory when the procedure requires detailed material.
 
@@ -37,6 +37,12 @@ One fact or rule should have one canonical home. Other documents may link to or 
 
 For every implementation, the agent must review all maintained root and `docs/` documents. Update every document whose content is affected by resulting repository reality; documents not affected must still be checked for continued accuracy.
 
-The current active shared implementation is only `shared/cloudinary/`. No other shared capability is listed as active until explicitly established and verified.
+The established shared capability boundaries are:
+
+- `shared/cloudinary/`
+- `shared/google_sheets/`
+- `shared/whatsapp_whapi/`
+
+Presence of a boundary does not imply that every runtime feature is complete or live.
 
 If a new maintained document is required, add it to this map and define its role before treating it as repository truth.
