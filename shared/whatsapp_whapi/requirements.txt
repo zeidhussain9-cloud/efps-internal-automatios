@@ -1,1 +1,2 @@
-# WhAPI transport uses Python's standard-library HTTP stack for the shared client.
+# AWS Secrets Manager credential resolution.
+boto3>=1.34,<2
