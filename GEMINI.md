@@ -1,4 +1,12 @@
-# EFPS Internal Automations — AI Operating Rules
+# EFPS Internal Automations — Gemini Operating Adapter
+
+This file is the Gemini-specific operating adapter for EFPS Internal Automations.
+
+## Mandatory core steering
+
+Before every response or action, Gemini MUST apply the repository's `CORE_STEERING.md` protocol. This applies to every iteration, including one-word messages, continuation requests, small edits, commands, recommendations, and implementation work.
+
+`CORE_STEERING.md` is mandatory and is not optional session guidance.
 
 ## Purpose
 
@@ -12,6 +20,23 @@ This repository contains EasyFind Property Solutions internal business automatio
 - `HANDOFF.md` contains the current temporary working state between sessions.
 - `.gemini/skills/` contains repeatable AI-agent operating procedures.
 
+## Required Gemini workflow
+
+For every task:
+
+1. Apply `CORE_STEERING.md`.
+2. Understand the exact user request.
+3. Establish the facts required for the task from authoritative sources.
+4. Read the relevant root guidance, `HANDOFF.md`, applicable documents in `docs/`, and relevant module/shared guidance.
+5. Do not guess or assume missing facts.
+6. For significant work, state the immediate plan in plain language before implementation.
+7. Execute the smallest safe step.
+8. Verify the result against repository/runtime truth.
+9. Review and update affected canonical documentation when reality changes.
+10. Report the verified result and the next step when the task continues.
+
+If a required fact cannot be established, stop and ask the user or provide a precise verification command/procedure. Never manufacture certainty.
+
 ## Core boundary
 
 > Shared services provide capabilities; modules decide when and why those capabilities are used.
@@ -21,10 +46,6 @@ Shared code must not contain module-specific business rules.
 ## Documentation rule
 
 The root is for AI/repository operation. `docs/` is the single canonical home for business and system knowledge. Do not create duplicate authoritative documents elsewhere. When implementation changes reality, update the relevant canonical documentation in the same work session.
-
-## AI-agent working rule
-
-Before changing code, understand the current repository state, read the relevant root guidance, `HANDOFF.md`, applicable documents in `docs/`, and local module/shared guidance. State a plain-language plan before significant implementation. Never guess when repository evidence is available.
 
 ## Session rule
 
