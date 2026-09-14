@@ -23,7 +23,10 @@ def _secret_from_aws() -> dict[str, Any] | None:
     """Read the verified legacy secret when AWS runtime access is available."""
     try:
         import boto3
-        client = boto3.client("secretsmanager", region_name=os.environ.get("AWS_REGION", "us-east-1"))
+
+        client = boto3.client(
+            "secretsmanager", region_name=os.environ.get("AWS_REGION", "us-east-1")
+        )
         raw = client.get_secret_value(SecretId=config.SECRET_NAME).get("SecretString", "")
     except Exception:
         return None
@@ -64,9 +67,9 @@ class WhApiCredentials:
 class WhApiClient:
     """Small dependency-injected WhAPI HTTP client.
 
-    The shared client provides transport/authentication only. Modules own all
-    business decisions. Every live network request passes the explicit
-    EFPS_WHAPI_LIVE=1 gate.
+    The shared client provides transport/authentication and neutral endpoint
+    primitives only. Modules own all inventory/lead business decisions.
+    Every live network request passes the explicit EFPS_WHAPI_LIVE=1 gate.
     """
 
     LIVE_FLAG = config.LIVE_FLAG
@@ -80,7 +83,9 @@ class WhApiClient:
         transport: Any | None = None,
     ) -> None:
         self.credentials = credentials or WhApiCredentials.from_environment()
-        self.base_url = (base_url or os.environ.get("WHAPI_BASE_URL") or self.DEFAULT_BASE_URL).rstrip("/")
+        self.base_url = (
+            base_url or os.environ.get("WHAPI_BASE_URL") or self.DEFAULT_BASE_URL
+        ).rstrip("/")
         self._transport = transport
 
     def live_enabled(self) -> bool:
@@ -93,7 +98,9 @@ class WhApiClient:
                 f"Set {self.LIVE_FLAG}=1 explicitly for the approved run."
             )
 
-    def _request(self, method: str, path: str, payload: Mapping[str, Any] | None = None) -> Any:
+    def _request(
+        self, method: str, path: str, payload: Mapping[str, Any] | None = None
+    ) -> Any:
         self.assert_live_allowed(f"{method} {path}")
         url = f"{self.base_url}/{path.lstrip('/')}"
         body = None
@@ -135,3 +142,20 @@ class WhApiClient:
 
     def patch(self, path: str, payload: Mapping[str, Any]) -> Any:
         return self._request("PATCH", path, payload)
+
+    # Neutral, currently documented endpoint primitives. These methods contain
+    # no EFPS business routing or persistence logic.
+    def health(self) -> Any:
+        return self.get("/health")
+
+    def settings(self) -> Any:
+        return self.get("/settings")
+
+    def allowed_webhook_events(self) -> Any:
+        return self.get("/settings/events")
+
+    def test_webhook(self, payload: Mapping[str, Any]) -> Any:
+        return self.post("/settings/webhook_test", payload)
+
+    def send_text(self, payload: Mapping[str, Any]) -> Any:
+        return self.post("/messages/text", payload)
