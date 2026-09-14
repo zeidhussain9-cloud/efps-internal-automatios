@@ -15,8 +15,16 @@ These are standing engineering and automation rules for EFPS Internal Automation
 - `modules/` owns EFPS business capabilities and business decisions.
 - `shared/` owns reusable technical capabilities and must remain business-neutral.
 - Shared services provide capabilities; modules decide when and why they are used.
-- The current active shared implementation scope is only `shared/cloudinary/`.
-- New shared capabilities require explicit justification and verification before being treated as repository structure.
+- Established shared capability boundaries are `shared/cloudinary/`, `shared/google_sheets/`, and `shared/whatsapp_whapi/`.
+- A shared boundary may exist before every runtime feature is complete; status must be explicit and verified.
+
+## Cloudinary
+
+`shared/cloudinary/` provides technical media storage/upload capabilities. Business modules decide which media is stored and why. The verified legacy reference used deterministic listing-derived property paths and a separate lead/enquiry namespace. fileciteturn228file0L2-L2
+
+## WhatsApp / WhAPI
+
+`shared/whatsapp_whapi/` must retain an explicit live-traffic gate. No token check, quota check, health ping, fetch, send, or other live WhAPI network operation should happen without the deliberate runtime approval mechanism derived from the verified legacy guard. fileciteturn223file0L2-L2
 
 ## Documentation
 
@@ -32,6 +40,7 @@ These are standing engineering and automation rules for EFPS Internal Automation
 - Never commit secrets, API tokens, passwords, private keys, or production authentication material.
 - Do not expose production data merely to simplify implementation.
 - Document verified resource identifiers without storing secret values.
+- Cloudinary configuration/credentials, Google service-account credentials, and WhAPI tokens must remain outside version control.
 
 ## Validation
 
