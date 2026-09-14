@@ -12,11 +12,15 @@ The repository follows one simple operating model:
 >
 > **`shared/` = reusable technical capabilities.**
 
+## Mandatory AI operating protocol
+
+- `CORE_STEERING.md` — mandatory core steering protocol applied by every AI agent before every response or action.
+- `GEMINI.md` — Gemini-specific operating adapter.
+- `AGENTS.md` — general AI-agent operating rules and enforcement of core steering.
+- `HANDOFF.md` — current working state between development sessions.
+
 ## Repository structure
 
-- `GEMINI.md` — concise Gemini operating adapter.
-- `AGENTS.md` — canonical AI-agent precedence and working rules.
-- `HANDOFF.md` — current working state between development sessions.
 - `docs/` — single canonical home for EFPS business and system knowledge.
 - `modules/` — business capabilities and business decisions.
 - `shared/` — reusable technical integrations and capabilities.
