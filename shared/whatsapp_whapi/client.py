@@ -1,4 +1,4 @@
-"""WhAPI transport wrapper with an explicit live-traffic safety gate."""
+"""WhAPI transport wrapper with explicit live-traffic safety controls."""
 
 from __future__ import annotations
 
@@ -7,6 +7,8 @@ import os
 from dataclasses import dataclass
 from typing import Any, Mapping
 from urllib import error, parse, request
+
+from . import config
 
 
 class MissingWhApiCredentials(RuntimeError):
@@ -17,27 +19,58 @@ class WhApiLiveTrafficBlocked(RuntimeError):
     """Raised when a live network operation is attempted without approval."""
 
 
+def _secret_from_aws() -> dict[str, Any] | None:
+    """Read the verified legacy secret when AWS runtime access is available."""
+    try:
+        import boto3
+        client = boto3.client("secretsmanager", region_name=os.environ.get("AWS_REGION", "us-east-1"))
+        raw = client.get_secret_value(SecretId=config.SECRET_NAME).get("SecretString", "")
+    except Exception:
+        return None
+    if not raw:
+        return None
+    try:
+        value = json.loads(raw)
+    except json.JSONDecodeError:
+        return {"value": raw}
+    return value if isinstance(value, dict) else {"value": value}
+
+
+def _resolve_token() -> str:
+    """AWS secret first; local WHAPI_API_TOKEN fallback. Never log the value."""
+    secret = _secret_from_aws()
+    if secret:
+        for key in ("api_token", "token", "value", config.TOKEN_ENV):
+            if secret.get(key):
+                return str(secret[key]).strip()
+    token = os.environ.get(config.TOKEN_ENV, "").strip()
+    if token:
+        return token
+    raise MissingWhApiCredentials(
+        f"No WhAPI token. Expected AWS secret '{config.SECRET_NAME}' "
+        f"or environment variable {config.TOKEN_ENV}."
+    )
+
+
 @dataclass(frozen=True)
 class WhApiCredentials:
     token: str
 
     @classmethod
     def from_environment(cls) -> "WhApiCredentials":
-        token = os.environ.get("WHAPI_API_TOKEN", "").strip()
-        if not token:
-            raise MissingWhApiCredentials("WHAPI_API_TOKEN is not set.")
-        return cls(token=token)
+        return cls(token=_resolve_token())
 
 
 class WhApiClient:
-    """Minimal dependency-free WhAPI HTTP client.
+    """Small dependency-injected WhAPI HTTP client.
 
-    Every network operation checks the explicit live gate first. The gate is
-    intentionally environment-controlled and is never enabled by code.
+    The shared client provides transport/authentication only. Modules own all
+    business decisions. Every live network request passes the explicit
+    EFPS_WHAPI_LIVE=1 gate.
     """
 
-    LIVE_FLAG = "EFPS_WHAPI_LIVE"
-    DEFAULT_BASE_URL = "https://gate.whapi.cloud"
+    LIVE_FLAG = config.LIVE_FLAG
+    DEFAULT_BASE_URL = config.BASE_URL
 
     def __init__(
         self,
@@ -99,3 +132,6 @@ class WhApiClient:
 
     def post(self, path: str, payload: Mapping[str, Any]) -> Any:
         return self._request("POST", path, payload)
+
+    def patch(self, path: str, payload: Mapping[str, Any]) -> Any:
+        return self._request("PATCH", path, payload)
