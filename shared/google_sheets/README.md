@@ -4,17 +4,19 @@ Provides the reusable technical capability for connecting to and operating Googl
 
 ## Responsibility
 
-This shared layer owns technical access only:
+This shared layer owns technical access and the physical contract only:
 
 - Google service-account credential loading
 - authenticated Sheets client creation
 - spreadsheet and worksheet access
-- range reads
-- range writes
-- row appends when explicitly requested by the caller
+- arbitrary range reads/writes
+- canonical full-row reads/writes/appends for `Housing_Listings`
+- canonical row-to-mapping and mapping-to-row conversion
+- contract-width validation
+- ownership guards exposed by `schema.py`
 - connection/error handling suitable for calling modules
 
-Business meaning and workflow decisions remain with the owning module. The canonical physical sheet contract is centralized here so modules cannot silently redefine columns or ownership.
+Business meaning and workflow decisions remain with the owning module. Shared Sheets code does not decide inventory or lead workflow.
 
 ## Verified AWS/runtime credential map
 
@@ -33,7 +35,7 @@ The recorded legacy service-account identity is `gcpnew@easyfind-automations.iam
 
 ## Canonical schema
 
-`schema.py` is the local source of truth for the physical sheet contract:
+`schema.py` is the single maintained source of truth for:
 
 - physical column order and letters
 - field names
@@ -43,9 +45,9 @@ The recorded legacy service-account identity is `gcpnew@easyfind-automations.iam
 - explicitly defined allowed values
 - row identity
 - derived ranges
-- integrity checks
+- row-width and ownership integrity checks
 
-The corrected contract includes `inventory_locked` at `AV`. The older legacy source file stopped at `AU`; the generated legacy `SHEET_CONTRACT.json` is the verified newer 48-column contract used to correct this repository.
+The corrected contract includes `inventory_locked` at `AV`. The older legacy source file stopped at `AU`; the generated legacy `SHEET_CONTRACT.json` is the newer 48-column contract used to correct this repository.
 
 ## Cross-project ownership
 
@@ -53,18 +55,23 @@ The corrected contract includes `inventory_locked` at `AV`. The older legacy sou
 - `housing_agent`: AK–AM (`posted_url`, `posted_at`, `error_notes`)
 - `meta_catalog`: AN–AO (`meta_catalog_id`, `meta_catalog_status`)
 
-Rows are addressed by immutable `listing_id`, never by row position.
+The shared client enforces 48-column width for full-row operations. It does not perform business-level row lookup, duplicate handling, locking, or workflow transitions; those remain module responsibilities.
+
+## Runtime status
+
+The credential contract and client are implemented. Actual service-account authorization to the named spreadsheet and a safe live read/write smoke test remain runtime verification items.
 
 ## Documentation impact for contract changes
 
 Any change to the physical sheet contract must update, in the same implementation session:
 
 1. `shared/google_sheets/schema.py` — canonical physical contract and checks.
-2. `docs/DATA_CONTRACTS.md` — repository-level data contract.
-3. `docs/ARCHITECTURE.md` — if ownership/boundary changes.
-4. `docs/INFRASTRUCTURE.md` — if spreadsheet/runtime configuration changes.
-5. `docs/OPEN_POINTERS.md` — if anything remains unverified.
-6. `HANDOFF.md` — current implementation state.
-7. All maintained root/`docs/` files must still be reviewed under the repository-wide documentation rule.
+2. `shared/google_sheets/README.md` — local capability documentation.
+3. `docs/DATA_CONTRACTS.md` — repository-level data contract.
+4. `docs/ARCHITECTURE.md` — if ownership/boundary changes.
+5. `docs/INFRASTRUCTURE.md` — if spreadsheet/runtime configuration changes.
+6. `docs/OPEN_POINTERS.md` — if anything remains unverified.
+7. `HANDOFF.md` — current implementation state.
+8. All maintained root/`docs/` files must still be reviewed under the repository-wide documentation rule.
 
 No second schema may be created in a module.
