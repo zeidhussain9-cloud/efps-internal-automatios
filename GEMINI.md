@@ -1,60 +1,51 @@
 # EFPS Internal Automations — Gemini Operating Adapter
 
-This file is the Gemini-specific operating adapter for EFPS Internal Automations.
+Gemini CLI work in this repository follows `CORE_STEERING.md` first and these repository rules second.
 
-## Mandatory core steering
+## Before every task
 
-Before every response or action, Gemini MUST apply the repository's `CORE_STEERING.md` protocol. This applies to every iteration, including one-word messages, continuation requests, small edits, commands, recommendations, and implementation work.
+- Read and apply `CORE_STEERING.md`.
+- Read `HANDOFF.md` and relevant `docs/` and local guidance.
+- Establish verified repository/runtime truth before acting.
+- Never guess or silently fill missing facts.
+- For significant work, state the immediate plan, perform one logical step, verify it, then continue.
 
-`CORE_STEERING.md` is mandatory and is not optional session guidance.
+## Mandatory documentation rule
 
-## Purpose
+For **every implementation**, Gemini must review **all maintained root documents** and **all documents inside `docs/`** against the resulting repository reality.
 
-This repository contains EasyFind Property Solutions internal business automations. It is designed for AI-agent-driven development and must remain simple, understandable, safe, and expandable.
+Maintained root documents:
 
-## Repository model
+- `README.md`
+- `CORE_STEERING.md`
+- `AGENTS.md`
+- `GEMINI.md`
+- `HANDOFF.md`
 
-- `modules/` contains business capabilities and business decisions.
-- `shared/` contains reusable technical integrations and capabilities.
-- `docs/` contains the canonical business and system knowledge.
-- `HANDOFF.md` contains the current temporary working state between sessions.
-- `.gemini/skills/` contains repeatable AI-agent operating procedures.
+Maintained `docs/` documents are defined by `docs/DOCUMENT_MAP.md`.
 
-## Required Gemini workflow
+Every affected document must be updated in the same implementation. Documents not affected must still be checked for continued accuracy. Update `HANDOFF.md` when current task/session state changes.
 
-For every task:
+Apply `docs/DOCUMENT_UPDATE_MATRIX.md` and `docs/DOCUMENT_GOVERNANCE.md` for detailed routing.
 
-1. Apply `CORE_STEERING.md`.
-2. Understand the exact user request.
-3. Establish the facts required for the task from authoritative sources.
-4. Read the relevant root guidance, `HANDOFF.md`, applicable documents in `docs/`, and relevant module/shared guidance.
-5. Do not guess or assume missing facts.
-6. For significant work, state the immediate plan in plain language before implementation.
-7. Execute the smallest safe step.
-8. Verify the result against repository/runtime truth.
-9. Review and update affected canonical documentation when reality changes.
-10. Report the verified result and the next step when the task continues.
+## Current architecture truth
 
-If a required fact cannot be established, stop and ask the user or provide a precise verification command/procedure. Never manufacture certainty.
+- Root = AI/repository operation.
+- `docs/` = canonical business/system truth.
+- `modules/` = business capabilities.
+- `shared/` = reusable technical capabilities.
+- Current active shared implementation scope: **only** `shared/cloudinary/`.
 
-## Core boundary
+Do not treat another shared capability as active until it is explicitly established and verified.
 
-> Shared services provide capabilities; modules decide when and why those capabilities are used.
+## Gemini-specific maintenance
 
-Shared code must not contain module-specific business rules.
+`GEMINI.md` is a live operating adapter. Update it when Gemini workflow, repository layout, or mandatory Gemini-specific operating requirements change.
 
-## Documentation rule
+## Session procedure
 
-The root is for AI/repository operation. `docs/` is the single canonical home for business and system knowledge. Do not create duplicate authoritative documents elsewhere. When implementation changes reality, update the relevant canonical documentation in the same work session.
+Use `.gemini/skills/session-start/SKILL.md` at session start and `.gemini/skills/session-end/SKILL.md` at session end. Use the applicable repository-wide and custom skills for verification, planning, documentation, and capability-specific work.
 
-## Session rule
+## Security
 
-Use the `session-start` and `session-end` skills for every development session. `HANDOFF.md` is live state, not a permanent session diary.
-
-## Safety rule
-
-Do not commit secrets, tokens, passwords, private keys, or production credentials. Do not modify unrelated modules or shared integrations without a clear reason and validation.
-
-## Expansion rule
-
-Do not create speculative folders or frameworks. Add structure only when actual functionality requires it.
+Never commit secrets, API tokens, passwords, private keys, or production authentication material.
