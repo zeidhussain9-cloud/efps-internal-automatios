@@ -6,6 +6,7 @@ sys.path.insert(0, str(MODULE_ROOT))
 
 from src.extract import scan
 from src.normalize import normalize
+from src.source_segments import split_source_messages
 
 
 def test_timestamped_direct_fields_stop_at_next_message():
@@ -34,6 +35,28 @@ def test_timestamped_direct_fields_support_inline_message_delimiters():
     assert extracted["internal_property_type"] == "Gated Community"
     assert extracted["society_name"] == "Example Heights"
     assert extracted["locality"] == "Bellandur"
+
+
+def test_source_segmentation_handles_bracketed_and_inline_timestamps():
+    raw = (
+        "[2026-09-15 10:00] Property Type: Semi Gated\n"
+        "2026-09-15 10:01 Society Name: Example Heights | "
+        "2026-09-15 10:02 Location: Bellandur"
+    )
+    assert split_source_messages(raw) == [
+        "Property Type: Semi Gated",
+        "Society Name: Example Heights",
+        "Location: Bellandur",
+    ]
+
+
+def test_direct_field_does_not_consume_following_message():
+    raw = (
+        "[2026-09-15 10:00] Society Name: First Residency\n"
+        "[2026-09-15 10:01] Society Name: Second Residency\n"
+        "[2026-09-15 10:02] Location: Harlur"
+    )
+    assert scan(raw)["society_name"] == "First Residency"
 
 
 def test_boolean_gated_field_is_authoritative():
