@@ -4,44 +4,51 @@
 
 ## Purpose
 
-This document is the canonical contract for deterministic extraction from `raw_message_text` in Inventory Management Stage 2. It exists to prevent repeated field-specific fixes that only handle one raw-message representation.
+This document is the canonical contract for deterministic extraction from `raw_message_text` in Inventory Management Stage 2. It defines source boundaries; `docs/DETERMINISTIC_FIELD_RESOLUTION.md` defines candidate precedence and resolution.
 
 ## Source-of-truth rule
 
-`raw_message_text` is the authoritative Stage-2 source. Existing Stage-2 Sheet values are not used as evidence to manufacture a new extraction result. Explicit source facts outrank inferred defaults.
+`raw_message_text` is the authoritative Stage-2 extraction source. Existing Stage-2 Sheet values are never extraction evidence and are never used to manufacture a deterministic result.
 
 ## Canonical processing boundary
 
-All deterministic labelled-field extraction must first respect WhatsApp source-message boundaries. The shared module `modules/efps-inventory-mgmnt/src/source_segments.py` is the canonical boundary parser.
+All Inventory Stage-2 labelled extraction first uses `modules/efps-inventory-mgmnt/src/source_segments.py` to divide concatenated WhatsApp traffic into source-message units. A field must never consume content from a later source message.
 
-Supported transport forms include bracketed timestamps, ISO-like timestamps, slash-date timestamps, newline-delimited messages, and inline pipe-delimited timestamped messages. A field value must never consume content from a later source message.
+Supported transport forms include bracketed timestamps, ISO-like timestamps, slash-date timestamps, newline-delimited messages, and inline pipe-delimited timestamped messages. The segmentation module contains no business rules.
 
 ## Extraction contract
 
-1. Segment the raw source into source-message units.
-2. Extract a labelled field from one source unit at a time.
-3. Normalize the extracted source value without inventing facts.
-4. Apply business rules only after source extraction.
-5. Use Maps only for the documented Stage-2 enrichment/verification step.
-6. Treat unresolved ambiguity as a validation/runtime state rather than silently changing source facts.
+1. Segment the raw source into canonical source-message units.
+2. Discover field candidates within those units.
+3. Resolve recurring multi-candidate fields through `src/field_resolution.py`.
+4. Normalize the resolved source fact.
+5. Validate the normalized record.
+6. Use Maps only for the documented Stage-2 enrichment/verification step.
+7. Treat unresolved ambiguity as a validation/runtime state rather than inventing a fact.
 
-## Property-type precedence
+## Property-type evidence
 
-For `internal_property_type`, explicit labelled source evidence is authoritative. Boolean forms such as `Gated Community: Yes` and `Semi Gated: Yes` are explicit evidence. Explicit negative boolean forms do not classify the property as gated. Canonical free-text phrases are evaluated within an individual source unit only.
+`internal_property_type` supports exactly `Gated Community`, `Semi Gated`, and `Standalone`.
 
-## Field-specific safeguards
+Accepted explicit evidence includes property-type labels and boolean gating labels. Negative boolean gating evidence is explicit evidence for `Standalone`. Specific canonical phrases may classify the field when no stronger explicit evidence exists. When no property-type evidence exists, the declared deterministic fallback is `Standalone`.
 
-- Society, landmark, locality, property subtype, highlights, age, tenant preference, bachelor preference, pet status, servant-room status, and maintenance labelled values are extracted within source units.
-- Placeholder-only source values are treated as blank by normalization.
-- Mixed maintenance values such as `2777 + Water` remain source facts; normalization does not silently discard the suffix.
-- Existing furnishing, tenant, parking, pet, amenity, subtype, title, and highlight business rules remain downstream normalization rules rather than extraction shortcuts.
+`internal_property_type` is resolved once by `src/field_resolution.py`. Normalization consumes the resolved value and does not independently classify the property.
+
+## Maintenance evidence
+
+Only maintenance-specific labels or the specific `rent + maintenance` pattern can create maintenance candidates. Numeric values with `K`/lakh units are normalized to rupees. Source qualifiers such as `+ Water` and `Water Charges` are preserved. `Included` is represented by maintenance `0` and `maintenance_included = Yes`; an amount alone does not imply inclusion.
+
+## Other source rules
+
+- Decimal BHK values such as `2.5 BHK` are preserved.
+- Later explicit source corrections supersede earlier explicit values for recurring multi-candidate fields.
+- Society, landmark, locality, subtype, highlights, age, tenant preference, bachelor preference, pet status, and servant-room source facts are extracted within source-message boundaries.
+- Placeholder-only values are blank for normalization purposes.
 
 ## Regression requirement
 
-Every production extraction fix must include a regression fixture representing the source-message shape that caused the failure. A fix is not complete if it only makes the current 25-row projection look correct. The test must prove that the same source-boundary rule remains correct for future inventory sessions.
+Every production extraction/resolution defect must have a regression fixture for the exact triggering source shape. Current regression coverage must exercise segmentation, multi-candidate resolution, corrections, positive/negative gating, decimal BHK, maintenance units/qualifiers/inclusion, Sheet-independence, and normalized validation.
 
 ## Model-test interpretation
 
-The read-only 25-row model test compares the Stage-2 projection with the persisted Sheet. Blank Sheet Stage-2 cells are expected differences before persistence and are not extraction failures. Populated Sheet values that conflict with a source-grounded projection require source inspection before being labelled a bug.
-
-The test must report these categories separately: expected blank-cell projection differences, populated-cell conflicts, formatting-only differences, and Maps verification issues.
+The read-only model audit compares deterministic Stage-2 projection with persisted Sheet values. Blank Stage-2 cells becoming populated are expected projections. A populated Sheet mismatch is a source conflict requiring adjudication; it is not permission to alter deterministic source rules to match historical values. The audit never writes the production Sheet.
