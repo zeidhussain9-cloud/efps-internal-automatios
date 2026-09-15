@@ -31,6 +31,39 @@ def test_contract_is_exactly_latest_48_columns() -> None:
         assert schema.letter(name) == column
 
 
+def test_verified_sheet_vocabularies_are_recorded_in_schema() -> None:
+    assert schema.BY_NAME["internal_property_type"].allowed_values == (
+        "Gated Community", "Semi Gated", "Standalone"
+    )
+    assert schema.BY_NAME["furnish_type"].allowed_values == (
+        "Fully Furnished", "Semi Furnished"
+    )
+    assert schema.BY_NAME["preferred_tenant_type"].allowed_values == (
+        "Family", "Open For All"
+    )
+    assert schema.BY_NAME["bachelor_preference"].allowed_values == (
+        "Female Only ", "Male Only", "Open for both"
+    )
+    assert schema.BY_NAME["pet_friendly"].allowed_values == ("Yes", "No")
+    assert schema.BY_NAME["society_amenities"].allowed_values == (
+        "Security, Lift, CCTV, Power Backup",
+        "Club House, Lift, Gym, CCTV, Power Backup, Swimming Pool, Garden, Sports, Kids Area",
+        "-",
+    )
+    assert schema.BY_NAME["flat_furnishings"].allowed_values == (
+        "Wardrobe, Modular Kitchen, Geyser, Fan, Light",
+        "Wardrobe, Modular Kitchen, Geyser, Fan, Light, Fridge, Washing Machine, TV, Sofa, Bed, Dining Table",
+    )
+
+
+def test_verified_field_dependencies_are_recorded_in_schema() -> None:
+    assert schema.BY_NAME["society_amenities"].depends_on == ("internal_property_type",)
+    assert schema.BY_NAME["flat_furnishings"].depends_on == ("furnish_type",)
+    assert schema.BY_NAME["bachelor_preference"].depends_on == ("preferred_tenant_type",)
+    assert schema.BY_NAME["maintenance"].depends_on == ("maintenance_included",)
+    assert schema.BY_NAME["security_deposit"].depends_on == ("monthly_rent",)
+
+
 def test_row_mapping_round_trip() -> None:
     row = [f"v{i}" for i in range(schema.GRID_WIDTH)]
     assert schema.mapping_to_row(schema.row_to_mapping(row)) == row
