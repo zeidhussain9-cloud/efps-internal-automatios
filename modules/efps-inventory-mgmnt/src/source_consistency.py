@@ -17,6 +17,11 @@ _BOOLEAN_GATING = re.compile(
     r"\b(?P<label>semi[-\s]*gated|gated\s*(?:community|society|property)?)\b"
     r"\s*(?:[:=|\-])\s*(?P<value>[^|\n<]+)", re.I,
 )
+_NEGATIVE_GATING = re.compile(
+    r"\b(?:semi[-\s]*gated|gated\s*(?:community|society|property)?)\b"
+    r"\s*(?:[:=|\-])\s*(?:no|n|false|0|not\s+allowed|not\s+permitted|none)\b",
+    re.I,
+)
 
 
 def _canonical_value(value: str) -> str:
@@ -36,30 +41,23 @@ def _boolean_value(value: str) -> bool | None:
 def extract_property_type(raw_text: str) -> str:
     """Return explicit canonical property type from source evidence only."""
     for unit in split_source_messages(raw_text):
-        # Boolean gating is checked before free-text canonical phrase matching;
-        # otherwise ``Gated Community: No`` would be mistaken for a positive
-        # canonical phrase merely because the label itself contains the phrase.
         for match in _BOOLEAN_GATING.finditer(unit):
             value = _boolean_value(match.group("value"))
             if value is True:
                 label = match.group("label").lower()
                 return "Semi Gated" if "semi" in label else "Gated Community"
             if value is False:
-                continue
+                return "Standalone"
 
         for match in _LABEL.finditer(unit):
             value = _canonical_value(match.group(1))
             if value: return value
 
-        # Standalone/semi-gated/gated phrases are accepted only within this
-        # source unit, never by concatenating evidence from different messages.
+        if _NEGATIVE_GATING.search(unit):
+            return "Standalone"
+
         value = _canonical_value(unit)
-        if value:
-            # A negative boolean form was already handled above. Reject any
-            # remaining explicit negative gating phrase defensively.
-            if re.search(r"\b(?:gated|semi[-\s]*gated)\b\s*(?:community|society|property)?\s*(?:[:=|\-])\s*(?:no|false|0|not\s+allowed|not\s+permitted)\b", unit, re.I):
-                continue
-            return value
+        if value: return value
     return ""
 
 
