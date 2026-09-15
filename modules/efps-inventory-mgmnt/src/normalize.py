@@ -64,8 +64,6 @@ def _canonical_tenant(value:str)->str:
 
 def _pet_value(raw_text:str)->str:
     text=str(raw_text or "")
-    # Source syntax is normally 'Pets: Not Allowed'; the delimiter must be
-    # accepted before the restriction phrase. Explicit negative evidence wins.
     if re.search(r"\b(?:pets?|animals?)\s*(?::|=|-)?\s*(?:are\s*)?(?:not\s*allowed|not\s*permitted|prohibited|banned)\b",text,re.I):return "No"
     if re.search(r"\b(?:no|without)\s+pets?\b",text,re.I):return "No"
     if re.search(r"\b(?:pets?|animals?)\s*(?::|=|-)?\s*(?:are\s*)?(?:allowed|permitted)\b",text,re.I):return "Yes"
@@ -171,6 +169,8 @@ def normalize(row:dict,raw_text:str="",*,resolved_internal_property_type:str="")
         match=re.fullmatch(r"(\d+(?:\.\d+)?)\s*[- ]?\s*bhk",val,re.I)
         if match:out["BHK"]=f"{match.group(1)} BHK"
     original_subtype=out.get("property_subtype","");default_property_subtype(out,raw_text);floor_for_standalone(out)
+    # Source form 'Balcony' means one balcony; numbered forms are extracted upstream.
+    if not out.get("balconies") and re.search(r"\b(?:with\s+)?balcony\b",raw_text or "",re.I):out["balconies"]="1"
     if not out.get("flat_furnishings"):
         if out.get("furnish_type")=="Semi Furnished":out["flat_furnishings"]=", ".join(SEMI_FURNISHED_DEFAULTS)
         elif out.get("furnish_type")=="Fully Furnished":out["flat_furnishings"]=", ".join(FULLY_FURNISHED_DEFAULTS)
@@ -180,7 +180,10 @@ def normalize(row:dict,raw_text:str="",*,resolved_internal_property_type:str="")
     out["internal_property_type"]=resolved_internal_property_type
     if not _usable(out.get("society_amenities","")):
         out["society_amenities"]=("Club House, Lift, Gym, CCTV, Power Backup, Swimming Pool, Garden, Sports, Kids Area" if resolved_internal_property_type=="Gated Community" else "Security, Lift, CCTV, Power Backup" if resolved_internal_property_type=="Semi Gated" else "-")
-    apply_parking_defaults(out);out["pet_friendly"]=_pet_value(raw_text);apply_tenant_bachelor_rule(out,raw_text);normalize_bachelor_preference(out)
+    apply_parking_defaults(out)
+    out["pet_friendly"]=_pet_value(raw_text)
+    if out.get("landmark") and re.search(r"https?://(?:maps\.app\.goo\.gl|goo\.gl|www\.google\.com/maps|maps\.google\.com)",out["landmark"],re.I):out["landmark"]=""
+    apply_tenant_bachelor_rule(out,raw_text);normalize_bachelor_preference(out)
     fragments=construct_deterministic_highlights(out,raw_text,original_subtype)
     if fragments and not _usable(out.get("property_highlights","")):out["property_highlights"]=" | ".join(fragments)
     if not _usable(out.get("catalog_title","")):out["catalog_title"]=build_catalog_title(out)
