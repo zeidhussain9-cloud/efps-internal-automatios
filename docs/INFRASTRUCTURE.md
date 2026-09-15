@@ -13,7 +13,7 @@ This is the canonical registry for external systems and verified resource identi
 - `shared/google_sheets/` — technical Google Sheets connectivity and the canonical `Housing_Listings` schema/ownership contract.
 - `shared/whatsapp_whapi/` — technical WhAPI authentication, transport, channel/settings primitives, webhook normalization, and neutral message primitives.
 - `shared/google_maps/` — reusable Google Maps URL extraction and Geocoding resolution capability.
-- `shared/slack/` — reusable Slack transport, security, routing, and live operational capability.
+- `shared/slack/` — reusable Slack transport, security, routing, and Phase-1 operational capability.
 - `shared/credentials/` — canonical local macOS Keychain credential provider.
 - `shared/webhook/` — generic webhook request/response transport primitives.
 
@@ -30,7 +30,7 @@ This is the canonical registry for external systems and verified resource identi
 | Google Maps baseline migration service | `efps-whapi-panel-maps` | `efps` | `efps-whapi-panel-maps` |
 | Google Maps current API credential | `efps-google-maps-api-key` | `efps` | dedicated Maps credential registry |
 
-Runtime credential resolution uses the following model: local development may use the canonical macOS Keychain provider; deployed AWS Lambdas use the environment variables populated by the `NoEcho` parameters in `template.yaml`. Secret values are never stored in GitHub or this document.
+The AWS entries identify historical migration sources only. Local development uses the local Keychain provider; deployed AWS Lambda uses environment variables populated from the `NoEcho` parameters in `template.yaml`. Secret values are never stored in GitHub or this document.
 
 ## Google Sheets
 
@@ -42,6 +42,8 @@ Runtime credential resolution uses the following model: local development may us
 - Verified physical contract: 48 columns, `A:AV`
 - Verified Stage-1/2 inventory write boundary: `A:D`, `F:AO`, `AU`
 - Protected Stage-3 fields: `E`, `AP:AT`, `AV`
+- Housing Portal owns `AP:AR`; Meta Catalogue owns `AS:AT`; Panel owns `A:AO` and `AU:AV` physically, subject to the Stage-3 ownership boundary.
+- Runtime state: canonical read and write-boundary verification completed for Inventory Phase 1.
 
 ## WhatsApp / WhAPI
 
@@ -52,13 +54,32 @@ Runtime credential resolution uses the following model: local development may us
 - Webhook token Keychain service: `efps-whapi-panel-webhook`
 - Legacy webhook query parameter: `t`
 - Retained inventory-listener sender numbers: `917975102130`, `919902024973`
-- Canonical shared client sends `User-Agent: EFPS-Inventory-Phase1/1.0` on WhAPI API requests because that header was required by the previously verified Cloudflare-protected diagnostic path.
+- Canonical client user-agent: `EFPS-Inventory-Phase1/1.0`
 
-The legacy deployment uses one token/channel/connected-number relationship. The two numbers above are source-number configuration and are not proof of two WhAPI channels.
+The current runtime credential provider reads the canonical local Keychain service for local development. Deployed AWS Lambda receives the equivalent WhAPI token via its environment configuration. The two numbers above are source-number configuration and are not proof of two WhAPI channels.
 
 ### Verified live Inventory Phase-1 state
 
-The connected WhAPI account was previously verified with read-only/live diagnostic requests, including `GET /health`, settings/event discovery, and a non-inventory synthetic webhook POST. Those checks did not change WhAPI settings or send a customer message. This evidence applies to the previously deployed runtime; it does not by itself prove the destination migration runtime is live.
+The connected WhAPI account was verified with read-only/live diagnostic requests:
+
+- `GET /health`: HTTP 200.
+- Connected display identity: `Easyfind Property Solutions`.
+- Connected WhatsApp ID: `919148338801`.
+- Business channel: `true`.
+- Channel ID: `DRAXTH-J6HEU`.
+- `GET /settings`: HTTP 200.
+- A webhook is configured in `body` mode with `messages` / `POST` subscription.
+- `GET /settings/events`: HTTP 200; `messages` / `post` is an allowed event.
+- A direct synthetic JSON POST to the configured deployed webhook returned HTTP 200 with `{"ok": true, "queued": 1}`.
+- The synthetic probe used non-inventory sender `919000000000`, so it could not open an Inventory Phase-1 property session.
+- The deployed webhook URL and its `?t=` authentication token are intentionally not recorded here.
+- No WhAPI settings were modified and no customer message was sent during the acceptance checks.
+
+The initial `/health` request was blocked by Cloudflare browser-signature filtering. A subsequent single diagnostic request with explicit `User-Agent: EFPS-Inventory-Phase1/1.0` passed with HTTP 200. This verifies the live endpoint under that diagnostic request but does not by itself prove destination migration runtime compatibility.
+
+Current WhAPI documentation confirms these relevant API surfaces: `GET /health`, `GET /settings`, `GET /settings/events`, `PATCH /settings`, `POST /settings/webhook_test`, and `POST /messages/text`. The shared client exposes neutral primitives for these operations.
+
+The shared webhook builder requires explicit event definitions discovered from `GET /settings/events`; it does not guess or silently reuse a legacy event list.
 
 ## Google Maps
 
@@ -69,6 +90,12 @@ The connected WhAPI account was previously verified with read-only/live diagnost
 - Keychain account: `efps`
 - Runtime variable accepted by the adapter: `GOOGLE_MAPS_API_KEY`
 - Geocoding endpoint: `https://maps.googleapis.com/maps/api/geocode/json`
+- API restriction: `geocoding-backend.googleapis.com`
+- Runtime state: live direct API access, application-path resolution, and Inventory Stage-2 consumption verified.
+- Verified Maps URL resolution returned `VERIFIED` confidence and structured locality/pincode/coordinates for the test location.
+- Missing/incomplete Maps resolution fails closed into Inventory `Needs Review`; no location is guessed.
+
+The separate existing `Maps Platform API Key` resource remains documented in `shared/google_maps/CREDENTIALS.md` with its secret-storage mapping marked `NOT VERIFIED`.
 
 ## Cloudinary
 
@@ -79,6 +106,7 @@ The connected WhAPI account was previously verified with read-only/live diagnost
 - Property public-ID convention: `properties/{listing_id}/photo_{n}`
 - Lead public-ID namespace: `leads/{phone}/{message_id}_{n}`
 - Catalogue helper limit: 10 URLs
+- Runtime state: live Inventory Phase-1 upload acceptance verified through the application credential path; HTTPS `secure_url` and deterministic property public ID were returned.
 
 ## Slack
 
@@ -86,9 +114,12 @@ The connected WhAPI account was previously verified with read-only/live diagnost
 - Keychain account: `efps`
 - Runtime variables accepted by the adapter: `SLACK_BOT_TOKEN`, `SLACK_SIGNING_SECRET`
 - Workspace/channel IDs are documented only where previously verified; current app installation, bot membership, command registration, and live endpoint behavior remain runtime verification items.
-- Slack inbound signatures are resolved from `SLACK_SIGNING_SECRET` in AWS and fall back to the local Keychain secret for local development.
+- `SLACK_SIGNING_SECRET` is the deployed-runtime source; local development may fall back to the Keychain secret.
 - Slack Events `event_id` deduplication uses the existing `efps-sessions` table with an atomic conditional claim.
+- Society approval commands, queues, cards, and workflows are explicitly excluded from the new architecture.
 
 ## Credential policy
 
 Only secret names and non-sensitive identifiers may be documented here. Secret values, WhAPI tokens, Cloudinary API secrets, Google service-account private keys, webhook secrets, Slack signing secrets, and production credentials must remain outside version control.
+
+The credential migration pattern is: historical AWS source values → local macOS Keychain for local adapters and NoEcho-backed environment configuration for deployed AWS Lambdas → shared adapters. The migration itself does not prove live third-party connectivity; each integration requires its own runtime acceptance probe.
