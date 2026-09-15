@@ -10,10 +10,13 @@ FIXED = {
     "whatsapp_group_link": "https://chat.whatsapp.com/FxOPO0xAOsD6lNwPcIDdFM",
 }
 PROPERTY_SUBTYPES = {"Apartment", "Independent House", "Duplex", "Independent Floor", "Villa", "Penthouse", "Studio", "Farm House"}
-FURNISH_TYPES = {"Fully Furnished", "Semi Furnished", "Unfurnished"}
+FURNISH_TYPES = {"Fully Furnished", "Semi Furnished"}
+PREFERRED_TENANT_TYPES = {"Family", "Open For All"}
+BACHELOR_PREFERENCES = {"Female Only ", "Male Only", "Open for both"}
+PET_FRIENDLY = {"Yes", "No"}
 COVERED_PARKING = {"0", "1", "2", "3", "3+"}
 FURNISHINGS = {"AC", "Wardrobe", "Geyser", "Fan", "Light", "Fridge", "TV", "Bed", "Sofa", "Dining Table", "Washing Machine", "Cupboard", "Microwave", "Stove", "Water Purifier", "Gas Pipeline", "Chimney", "Modular Kitchen"}
-AMENITIES = {"Semi Gated", "Standalone", "Lift", "Gym", "CCTV", "Power Backup", "Swimming Pool", "Gated Community", "Club House", "Garden", "Intercom", "Sports", "Kids Area", "Community Hall", "Regular Water Supply", "Attached Balcony"}
+AMENITIES = {"Security", "Semi Gated", "Standalone", "Lift", "Gym", "CCTV", "Power Backup", "Swimming Pool", "Gated Community", "Club House", "Garden", "Intercom", "Sports", "Kids Area", "Community Hall", "Regular Water Supply", "Attached Balcony"}
 NUMERIC = {"pincode", "built_up_area", "carpet_area", "age_of_property_years", "total_floors", "bathrooms", "balconies", "open_parking", "monthly_rent", "security_deposit"}
 
 
@@ -42,6 +45,12 @@ def validate(row: dict) -> list[str]:
         errors.append("invalid property_subtype")
     if row["furnish_type"] and row["furnish_type"] not in FURNISH_TYPES:
         errors.append("invalid furnish_type")
+    if row["preferred_tenant_type"] and row["preferred_tenant_type"] not in PREFERRED_TENANT_TYPES:
+        errors.append("invalid preferred_tenant_type")
+    if row["bachelor_preference"] and row["bachelor_preference"] not in BACHELOR_PREFERENCES and row["bachelor_preference"] != "Not Allowed":
+        errors.append("invalid bachelor_preference")
+    if row["pet_friendly"] and row["pet_friendly"] not in PET_FRIENDLY:
+        errors.append("invalid pet_friendly")
     if row["covered_parking"] not in COVERED_PARKING | {""}:
         errors.append("invalid covered_parking")
     for key in NUMERIC:
