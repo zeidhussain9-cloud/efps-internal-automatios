@@ -17,6 +17,7 @@
 | Architecture/boundary changes | `docs/ARCHITECTURE.md`, `docs/DATA_CONTRACTS.md` when contracts/ownership are affected |
 | Data ownership/schema/contract changes | `docs/DATA_CONTRACTS.md` |
 | Infrastructure/resource changes | `docs/INFRASTRUCTURE.md` |
+| Credential-provider or credential-reference changes | `docs/INFRASTRUCTURE.md`, affected shared capability credential registry/README, `HANDOFF.md`, and `docs/OPEN_POINTERS.md` when verification state changes |
 | New unresolved decision/unknown/conflict | `docs/OPEN_POINTERS.md` |
 | Documentation structure/role changes | `docs/DOCUMENT_GOVERNANCE.md`, `docs/DOCUMENT_MAP.md` |
 | Module responsibility/behavior changes | Relevant module `README.md` and `GEMINI.md`; canonical docs when cross-module truth changes |
