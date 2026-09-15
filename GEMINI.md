@@ -48,13 +48,13 @@ Inventory Phase 1 uses three top-level stages only: Initial/Webhook, Determinist
 
 Stage 2 uses `raw_message_text` as its only deterministic extraction source. The flow is canonical source segmentation -> candidate extraction -> field resolution -> normalization -> validation -> Maps enrichment/verification -> optional AI review/wording.
 
-`modules/efps-inventory-mgmnt/src/field_resolution.py` is the sole candidate-resolution layer for BHK, maintenance, and internal property type. `internal_property_type` has exactly three values: `Gated Community`, `Semi Gated`, and `Standalone`. `normalize.py` consumes the resolved value and does not independently classify property type.
+`modules/efps-inventory-mgmnt/src/field_resolution.py` is the sole candidate-resolution layer for BHK, maintenance, and internal property type. `internal_property_type` has exactly three values: `Gated Community`, `Semi Gated`, and `Standalone`. `normalize.py` consumes the resolved value and does not independently classify property type. Absence of authoritative property-type evidence remains unresolved/blank; Standalone is not fabricated.
 
-### Required deterministic fallback and dependency contracts
+### Required deterministic dependency contracts
 
-- `society_name` is required whenever a usable location/locality exists. Resolution order is explicit society/apartment/community/building evidence first, then verified Maps/location enrichment, then the **ultimate fallback is the same resolved location/locality**. A blank society in that situation is a contract failure and must be treated as **RED**.
+- `society_name` resolution uses explicit society/apartment/community/building evidence first, then verified Maps/location enrichment, then the same resolved locality/location as ultimate fallback. `landmark` has no locality dependency and never stores a Maps URL.
 - `bachelor_preference` is interdependent with `preferred_tenant_type`. Direct valid source evidence has priority. `Family` requires a blank dependent value; `Open For All` deterministically defaults to the exact Sheet dropdown value `Open for both`. Explicit `Female Only ` or `Male Only` source evidence overrides that default. The live `Female Only ` value includes an intentional trailing space and that space is part of the exact Sheet contract.
-- `google_maps_url` is deterministic source extraction, not network enrichment. The exact supported Maps URL found in `raw_message_text` must survive deterministic projection. `GoogleMapsClient.extract_url()` is the single URL-recognition source of truth; runtime short-link expansion/verification is separate and network-dependent. Any Step-4/source-preservation failure remains **RED** until the end-to-end path passes.
+- `google_maps_url` is deterministic source extraction, not network enrichment. The exact supported Maps URL found in `raw_message_text` must survive deterministic projection. `GoogleMapsClient.extract_url()` is the single URL-recognition source of truth; runtime short-link expansion/verification is separate and network-dependent.
 - A valid `property_subtype` such as `Independent House` is a successful direct subtype result and must not be regressed by an Apartment fallback.
 
 ### Deterministic Needs Review boundary
@@ -65,9 +65,13 @@ This distinction is deliberate: `Needs Review` is a property-truth gate, not a c
 
 Existing persisted Stage-2 Sheet values are never extraction input. The read-only model audit reports populated Sheet mismatches as source conflicts and does not overwrite the Sheet.
 
-## Verification status
+## Repository audit and verification
 
-The repository-level architecture and regression contract are implemented. Production extraction remains gated on final post-change repository test execution and the read-only model audit. Google Sheets/Maps runtime capability verification remains separate from source-code verification. Other runtime capabilities remain explicitly unverified until their target-runtime probes succeed.
+`tools/repository_audit.py` is a read-only repository-wide audit utility. It walks every checkout file except `.git` metadata, reports exact physical line counts for text files and identifies binary files, checks selected contract invariants, and fails on known stale contract language. Inventory Contract CI runs it before the deterministic regression suite.
+
+The verified deterministic baseline immediately before this audit was commit `df9ef879a570290f13fe2a300a90d950691d32b7`: 78 passing tests, 25/25 read-only projection rows, 48/48 canonical fields, zero model errors, zero writes, and a 25/25 production projection contract gate. Those results do not automatically apply to later commits until rerun.
+
+The audit branch fixes stale documentation, exact bachelor validation in the production gate, and stale schema dependency metadata. Final acceptance is the resulting merged `main` commit plus successful CI and local synchronization; live rows 2–26 extraction/write remains a separate next-step acceptance boundary.
 
 ## Gemini-specific maintenance
 
