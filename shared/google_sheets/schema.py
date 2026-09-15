@@ -40,7 +40,7 @@ _ROWS = [
 ("raw_message_text",PANEL,STAGE_1,(),(),"Completed source text assembled between NEW markers; media binaries are not serialized."),
 ("locality",PANEL,STAGE_2,(),("google_maps_url",),"Explicit Location/Locality/Area source field; verified Maps may replace it."),
 ("society_name",PANEL,STAGE_2,(),("locality",),"Direct source value; if absent, use resulting locality/location fallback."),
-("landmark",PANEL,STAGE_2,(),("locality",),"Direct source value; if absent, use resulting locality/location fallback."),
+("landmark",PANEL,STAGE_2,(),(),"Direct source value; Maps URLs are never landmarks and locality is never inherited."),
 ("pincode",PANEL,STAGE_2,(),("google_maps_url",),"Maps-owned when verified; optional."),
 ("google_maps_url",PANEL,STAGE_2,(),(),"Exact source Maps URL is preserved during deterministic projection; runtime verification is separate."),
 ("furnish_type",PANEL,STAGE_2,("Fully Furnished","Semi Furnished"),(),"Exact live Sheet dropdown vocabulary. Unfurnished is represented by blank furnish_type and blank flat_furnishings."),
