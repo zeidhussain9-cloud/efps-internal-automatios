@@ -15,8 +15,20 @@ These are standing engineering and automation rules for EFPS Internal Automation
 - `modules/` owns EFPS business capabilities and business decisions.
 - `shared/` owns reusable technical capabilities and must remain business-neutral.
 - Shared services provide capabilities; modules decide when and why they are used.
-- Established shared capability boundaries are `shared/cloudinary/`, `shared/google_sheets/`, and `shared/whatsapp_whapi/`.
+- Established shared capability boundaries are `shared/cloudinary/`, `shared/google_sheets/`, `shared/whatsapp_whapi/`, `shared/google_maps/`, `shared/slack/`, and `shared/credentials/`.
 - A shared boundary may exist before every runtime feature is complete; status must be explicit and verified.
+
+## Inventory Phase 1
+
+Inventory uses three top-level stages only:
+
+1. Stage 1 — Initial / Webhook.
+2. Stage 2 — Deterministic Extraction / Property Processing.
+3. Stage 3 — Downstream Operations boundary.
+
+Maps resolution, validation, AI verification, and wording-only AI beautification are Stage-2 sub-steps. Google Sheets persistence is transport/output, not a top-level stage.
+
+The completed `raw_message_text` is the authoritative deterministic extraction source. Existing canonical Sheet values must not become replay/extraction inputs. Deterministic rules must preserve explicit source facts and fail closed rather than invent missing facts.
 
 ## Cloudinary
 
@@ -24,11 +36,19 @@ These are standing engineering and automation rules for EFPS Internal Automation
 
 ## Google Sheets
 
-`shared/google_sheets/` owns the technical Sheets client and the canonical physical `Housing_Listings` contract. Full-row operations must use the 48-column A:AV schema; ownership and business workflow remain outside the shared client.
+`shared/google_sheets/` owns the technical Sheets client and the canonical physical `Housing_Listings` contract. Full-row operations must use the 48-column A:AV schema; ownership and business workflow remain outside the shared client. Verified Inventory Phase-1 Stage-1/2 write ranges are A:D, F:AO, and AU; E, AP:AT, and AV are protected.
+
+## Google Maps
+
+`shared/google_maps/` is a reusable technical adapter. Inventory decides when Maps is required. The adapter uses `GOOGLE_MAPS_API_KEY` or the approved local Keychain credential, resolves through the Google Geocoding API, and returns a structured `MapsResolution`. `resolve()` is keyword-only. Inventory treats only `VERIFIED` as accepted; incomplete/unrecognized states fail closed into review. The current Inventory Phase-1 direct and application-path Maps verification has passed.
 
 ## WhatsApp / WhAPI
 
 `shared/whatsapp_whapi/` must retain an explicit live-traffic gate. No live WhAPI network operation should happen without the deliberate runtime approval mechanism. Webhook event names must be discovered from the current allowed-events endpoint rather than guessed from historical configuration.
+
+## Credentials
+
+`shared/credentials/` is the canonical local macOS Keychain provider. Secret values must never be committed. Historical AWS Secret Manager values are migration sources only. The verified seven-service migration is recorded as a machine-level identity check; a separate dedicated Maps credential is documented where applicable.
 
 ## Documentation
 
@@ -44,7 +64,7 @@ These are standing engineering and automation rules for EFPS Internal Automation
 - Never commit secrets, API tokens, passwords, private keys, or production authentication material.
 - Do not expose production data merely to simplify implementation.
 - Document verified resource identifiers without storing secret values.
-- Cloudinary configuration/credentials, Google service-account credentials, and WhAPI tokens must remain outside version control.
+- Cloudinary configuration/credentials, Google service-account credentials, WhAPI tokens, Maps API keys, and Slack secrets must remain outside version control.
 
 ## Validation
 
