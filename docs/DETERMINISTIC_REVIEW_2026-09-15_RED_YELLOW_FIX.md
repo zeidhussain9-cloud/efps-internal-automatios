@@ -2,16 +2,16 @@
 
 ## Current evidence state
 
-The 2026-09-15 audit reviewed the 25-row Inventory projection for rows 2:26 and classified the 48 canonical fields. The current control state is:
+The 2026-09-15 audit reviewed the 25-row Inventory projection for rows 2:26 and classified the 48 canonical fields. The current code-level acceptance state is:
 
 - 35 deterministic-scope fields
-- 32 GREEN
-- 0 YELLOW
-- 3 RED: `google_maps_url`, `society_name`, `bachelor_preference`
+- `google_maps_url`: **GREEN by current projection evidence**
+- `society_name`: **GREEN by current projection evidence**
+- `bachelor_preference`: **RED** for `Open For All` rows with no valid dependent value
+- 0 deterministic YELLOW fields in the current targeted gate
 - 13 SYSTEM / OUT OF SCOPE
-- Production acceptance remains blocked until the current-commit contract gate passes
 
-Historical Sheet-value differences were adjudicated against authoritative `raw_message_text`; they are not automatically deterministic defects.
+Historical spreadsheet classifications that still show `google_maps_url` or `society_name` as RED/PARTIAL are stale relative to the current merged repository and latest projection evidence. They must not be used as current code truth.
 
 ## Closed deterministic findings
 
@@ -28,37 +28,38 @@ The audit cycle permanently hardened:
 - dependent `society_amenities` and `covered_parking` behaviour;
 - non-blocking pincode and property-highlight semantics;
 - Sheet-independence of deterministic extraction;
-- direct `Independent House` subtype resolution as a valid canonical subtype.
+- direct `Independent House` subtype resolution as a valid canonical subtype;
+- Google Maps source URL extraction and exact source preservation, including `share.google`.
 
 These findings are closed. They should not be reclassified unless a future projection demonstrates an actual regression against their contracts.
 
-## RED: `society_name`
+## Google Maps contract — GREEN
 
-`society_name` is an interdependent required projection when a usable location exists. The resolution order is:
+`google_maps_url` is source-owned during deterministic projection. A supported Maps URL present in `raw_message_text` must be captured without network access and preserved exactly apart from message wrappers or terminal punctuation that are not part of the URL.
+
+The latest projection provides direct evidence for the formerly failing source form. Row 10 / `EF-2609-JCN1` contains the source URL `https://share.google/oo7aBEUjVMGWUQzPm` and the deterministic model projects that exact URL into `google_maps_url`. The same row preserves `SM ART Apartments` as `society_name`, proving the URL is not being swallowed by the marker parser.
+
+The shared adapter remains the single recognizer, and regression coverage now includes supported host families, wrappers, terminal punctuation, and adjacent-text boundaries. Runtime short-link expansion/geocoding remains a separate network-dependent enrichment stage and is not required for deterministic URL capture.
+
+## Society contract — GREEN
+
+`society_name` resolution order is:
 
 1. explicit society/apartment/community/building source evidence;
 2. verified Maps/location enrichment when available;
 3. ultimate fallback to the same resolved locality/location.
 
-If the resulting location exists and `society_name` remains blank, that is a deterministic contract failure and is **RED**. A blank is not a permissible Yellow outcome in that situation.
+The latest row-10 evidence demonstrates that an explicit marker is preserved instead of falling back to locality.
 
-## RED: `bachelor_preference`
+## Remaining RED — `bachelor_preference`
 
 `bachelor_preference` is a dependent field driven by `preferred_tenant_type`. Direct source evidence remains authoritative.
 
 - `Family` → dependent value must be blank.
-- `Open For All` → dependent value must be one of `Female Only`, `Male Only`, or `Open for both`.
+- `Open For All` → one of `Female Only`, `Male Only`, or `Open for both` is required.
 - `Open For All` with a blank/invalid dependent value is a deterministic contract failure and is **RED**.
 
-The validator and production gate now enforce this dependency rather than allowing an unjustified blank to pass silently.
-
-## RED: `google_maps_url`
-
-The remaining Maps failure is treated as an end-to-end source-preservation contract, not a temporary test adjustment.
-
-The deterministic extractor must recognize the supported Google Maps URL families from `raw_message_text`, preserve the source URL through deterministic projection, and expose one canonical recognizer through `GoogleMapsClient.extract_url()`. Runtime short-link expansion/verification remains a separate network-dependent stage.
-
-The shared Maps adapter has been hardened to handle source-message wrappers and terminal punctuation without changing the underlying URL. A regression test covers `share.google` and exact source preservation.
+The current production gate reports 19 affected rows, but those failures represent one field-level dependency defect rather than 19 independent field defects. Do not invent a value merely to clear the gate.
 
 ## Property subtype adjudication
 
@@ -76,15 +77,13 @@ The shared Maps adapter has been hardened to handle source-message wrappers and 
 
 Inventory remains responsible for business interpretation and field projection.
 
+## Needs Review boundary
+
+`docs/NEEDS_REVIEW_CONTRACT.md` is the canonical blocking-field contract. `Needs Review` is a property-truth gate, not a catch-all for optional, enrichment-owned, display, or downstream fields.
+
 ## Acceptance rule from this point
 
-The control matrix is intentionally frozen around the current three-RED state until new evidence arrives. The next rows 2:26 read-only projection must use the current merged `main` commit.
-
-Valid promotion requires all three RED contracts to pass without reopening unrelated GREEN fields:
-
-- `google_maps_url`: exact source URL is projected from raw source;
-- `society_name`: explicit source wins, otherwise the ultimate location fallback is populated when location exists;
-- `bachelor_preference`: dependent contract is satisfied for the resolved preferred tenant type.
+Do not reopen `google_maps_url` or `society_name` without fresh regression evidence. The next acceptance cycle should target the remaining `bachelor_preference` dependency and then rerun the complete suite plus the 25-row projection/gate from the exact merged `main` commit.
 
 ## Regression controls
 
@@ -94,5 +93,3 @@ The repository contains:
 - `tools/projection_regression_check.py` for deterministic regression assertions;
 - `tools/production_projection_gate.py` for the live 25-row contract gate;
 - `tools/inventory_model_test.py` for the read-only full 48-field projection dump.
-
-The primary next audit remains `inventory_model_test.py --start-row 2 --end-row 26`. It must be executed against the current merged `main` before changing any RED field to GREEN.
