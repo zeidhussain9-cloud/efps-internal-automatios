@@ -6,6 +6,7 @@ sys.path.insert(0, str(MODULE_ROOT))
 
 from src.extract import scan
 from src.normalize import normalize
+from src.pipeline import deterministic
 from src.source_segments import split_source_messages
 
 
@@ -85,9 +86,7 @@ def test_boolean_semi_gated_field_is_authoritative():
 
 def test_negative_boolean_gated_field_is_not_positive_gating_evidence():
     raw = "[2026-09-15 10:00] Gated Community: No"
-    extracted = scan(raw)
-    row = {"internal_property_type": extracted.get("internal_property_type", ""), "society_amenities": ""}
-    out = normalize(row, raw)
+    out = deterministic(raw)
     assert out["internal_property_type"] == "Standalone"
     assert out["society_amenities"] == "-"
 
