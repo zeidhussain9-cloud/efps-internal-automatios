@@ -34,11 +34,11 @@ monthly_rent -> security_deposit (month-based source form)
 
 For tenant eligibility:
 
+- `preferred_tenant_type` has exactly two live Sheet values: `Family` and `Open For All`.
 - `Family` -> `bachelor_preference` is blank.
 - `Open For All` -> `bachelor_preference` defaults exactly to the Sheet dropdown value `Open for both`.
-- Explicit valid source evidence for `Female Only` or `Male Only` overrides the default.
-
-The canonical bachelor vocabulary is exactly `Female Only`, `Male Only`, and `Open for both`; the historical trailing-space variant is removed from the repository contract.
+- Explicit valid source evidence for `Female Only ` or `Male Only` overrides the default.
+- `Female Only ` includes the intentional trailing space present in the live Sheet dropdown and that exact value is the canonical contract.
 
 ## Google Maps state
 
@@ -46,23 +46,25 @@ The canonical bachelor vocabulary is exactly `Female Only`, `Male Only`, and `Op
 
 Supported source URL forms include `maps.app.goo.gl`, `goo.gl`, `maps.google.com`, `www.google.com/maps`, and `share.google`.
 
-The latest 25-row projection previously provided direct acceptance evidence for the formerly failing Maps case: row 10 / `EF-2609-JCN1` contained `https://share.google/oo7aBEUjVMGWUQzPm` in the raw source and projected the exact same URL into `google_maps_url`; `SM ART Apartments` was simultaneously retained as `society_name`. The production gate no longer treats that source-preservation case as a Maps failure.
+The 25-row production projection now passes the source-preservation contract for the tested Maps cases, including row 10 / `EF-2609-JCN1`, where the raw `https://share.google/oo7aBEUjVMGWUQzPm` value is projected unchanged into `google_maps_url`. The production projection contract gate reports all rows as PASS.
 
 Do not re-open the Maps or society contracts unless a new projection demonstrates an actual regression against their contracts.
 
-## Implementation completed in this change set
+## Current verification truth before this hardening change
 
-- Canonicalized the `bachelor_preference` Sheet vocabulary by removing the historical trailing-space variant from schema and validation.
-- Implemented the missing deterministic dependency: `Open For All -> Open for both`.
-- Preserved explicit valid bachelor source evidence over the dependency default.
-- Kept `Family -> blank` deterministic behavior.
-- Aligned the production projection gate with the same canonical dependency contract.
-- Added regression tests for defaulting, explicit override, and Family clearing.
-- Synchronized `GEMINI.md`, `docs/NEEDS_REVIEW_CONTRACT.md`, `docs/DETERMINISTIC_FIELD_RESOLUTION.md`, and this handoff with the implementation.
+The merged baseline `176fcaf3b52d9899309e90f7f3556f97cb6dcc8d` had 74 passing and 4 failing regression tests. The failures were caused by stale test expectations and one validator/schema mismatch around the intentional trailing-space `Female Only ` Sheet value. The 25-row production projection and production projection contract gate both passed, but the full regression suite exposed the remaining bachelor contract inconsistency.
 
-## Verification status
+## Permanent hardening change in progress
 
-This change set has been implemented on the branch `deterministic-contract-sync-2026-09-15` from the current `main` baseline. Final acceptance is intentionally not claimed yet: the complete test suite and the 25-row read-only projection/gate must be run from the merged commit, and their actual output is the acceptance truth.
+This branch synchronizes the code, tests, and canonical documentation to the live Sheet contract rather than deleting or weakening the failing tests. The intended invariant is:
+
+- schema allowed value = `Female Only `, `Male Only`, `Open for both`;
+- normalized explicit Female Only source = exact `Female Only `;
+- validator accepts that exact value;
+- `Family` clears the dependent field;
+- `Open For All` defaults to `Open for both`;
+- explicit valid Male/Female source overrides the default;
+- regression tests assert the exact live dropdown semantics.
 
 ## Safety boundary
 
