@@ -84,6 +84,11 @@ def test_duplex_villa_is_portal_villa():
     assert out["property_subtype"] == "Villa"
 
 
+def test_independent_house_is_a_valid_direct_subtype():
+    out = deterministic("3 BHK Independent House\nRent: 50000\nLocation: Harlur")
+    assert out["property_subtype"] == "Independent House"
+
+
 def test_one_rk_is_studio():
     out = deterministic("1 RK\nRent: 20000\nLocation: Harlur")
     assert out["BHK"] == "1 RK"
@@ -102,6 +107,13 @@ def test_maps_url_is_extracted_without_network_enrichment():
     assert out["society_name"] == "Bren Avalon"
 
 
+def test_share_google_url_is_extracted_and_preserved_exactly():
+    raw = "Location: Bellandur\n📍 Landmark:\nhttps://share.google/AbC123"
+    out = deterministic(raw)
+    assert out["google_maps_url"] == "https://share.google/AbC123"
+    assert out["landmark"] == ""
+
+
 def test_landmark_maps_url_is_not_stored_as_landmark():
     raw = "Location: Harlur\n📍 Landmark:\nhttps://maps.app.goo.gl/example"
     out = deterministic(raw)
@@ -117,7 +129,38 @@ def test_locality_is_not_copied_to_landmark_during_deterministic_projection():
 
 def test_society_name_fallback_is_last_resort_in_production_path():
     out = deterministic("2 BHK\nRent: 40000\nLocation: Harlur")
-    assert out["society_name"] == ""
+    assert out["society_name"] == "Harlur"
+
+
+def test_explicit_society_name_beats_location_fallback():
+    out = deterministic("2 BHK\nRent: 40000\nLocation: Harlur\nSociety Name: Bren Avalon")
+    assert out["society_name"] == "Bren Avalon"
+
+
+def test_placeholder_society_uses_location_fallback():
+    out = deterministic("2 BHK\nRent: 40000\nLocation: Harlur\nSociety: N/A")
+    assert out["society_name"] == "Harlur"
+
+
+def test_open_for_all_requires_bachelor_preference():
+    out = deterministic("2 BHK\nRent: 40000\nLocation: Harlur\nPreferred Tenant: Open For All")
+    assert out["preferred_tenant_type"] == "Open For All"
+    assert out["bachelor_preference"] == ""
+    assert any("bachelor_preference required" in e for e in validate.validate(out))
+
+
+def test_family_requires_blank_bachelor_preference():
+    out = deterministic("2 BHK\nRent: 40000\nLocation: Harlur\nPreferred Tenant: Family")
+    assert out["preferred_tenant_type"] == "Family"
+    assert out["bachelor_preference"] == ""
+    assert not any("bachelor_preference required" in e for e in validate.validate(out))
+
+
+def test_explicit_bachelor_preference_is_preserved_for_open_for_all():
+    out = deterministic("2 BHK\nRent: 40000\nLocation: Harlur\nPreferred Tenant: Open For All\nBachelor: Female Only")
+    assert out["preferred_tenant_type"] == "Open For All"
+    assert out["bachelor_preference"].strip() == "Female Only"
+    assert not any("bachelor_preference" in e for e in validate.validate(out))
 
 
 def test_model_projection_normalizes_units_but_does_not_use_sheet_values():

@@ -50,6 +50,13 @@ Stage 2 uses `raw_message_text` as its only deterministic extraction source. The
 
 `modules/efps-inventory-mgmnt/src/field_resolution.py` is the sole candidate-resolution layer for BHK, maintenance, and internal property type. `internal_property_type` has exactly three values: `Gated Community`, `Semi Gated`, and `Standalone`. `normalize.py` consumes the resolved value and does not independently classify property type.
 
+### Required deterministic fallback and dependency contracts
+
+- `society_name` is required whenever a usable location/locality exists. Resolution order is explicit society/apartment/community/building evidence first, then verified Maps/location enrichment, then the **ultimate fallback is the same resolved location/locality**. A blank society in that situation is a contract failure and must be treated as **RED**.
+- `bachelor_preference` is interdependent with `preferred_tenant_type`. Direct source evidence has priority. `Family` requires a blank dependent value; `Open For All` requires one of the canonical dependent values (`Female Only`, `Male Only`, `Open for both`). A blank dependent value for `Open For All` is a contract failure and must be treated as **RED**, not Yellow.
+- `google_maps_url` is deterministic source extraction, not network enrichment. The exact supported Maps URL found in `raw_message_text` must survive deterministic projection. `GoogleMapsClient.extract_url()` is the single URL-recognition source of truth; runtime short-link expansion/verification is separate and network-dependent. Any Step-4/source-preservation failure remains **RED** until the end-to-end path passes.
+- A valid `property_subtype` such as `Independent House` is a successful direct subtype result and must not be regressed by an Apartment fallback.
+
 Existing persisted Stage-2 Sheet values are never extraction input. The read-only model audit reports populated Sheet mismatches as source conflicts and does not overwrite the Sheet.
 
 ## Verification status

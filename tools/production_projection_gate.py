@@ -90,7 +90,7 @@ def check_row(row_number: int, raw: str, model: dict[str, str]) -> list[str]:
     if expected_loc and model.get("locality", "").strip() != expected_loc:
         failures.append(f"locality expected {expected_loc!r}, got {model.get('locality')!r}")
 
-    expected_society = raw_society(raw)
+    expected_society = raw_society(raw) or expected_loc
     if expected_society and model.get("society_name", "").strip() != expected_society:
         failures.append(f"society_name expected {expected_society!r}, got {model.get('society_name')!r}")
 
@@ -153,6 +153,15 @@ def check_row(row_number: int, raw: str, model: dict[str, str]) -> list[str]:
     else:
         if model.get("society_amenities", "").strip() not in {"", "-"}:
             failures.append("unresolved property type must not invent a society amenity bundle")
+
+    tenant = model.get("preferred_tenant_type", "").strip()
+    bachelor = model.get("bachelor_preference", "").strip()
+    if tenant == "Family":
+        if bachelor:
+            failures.append("bachelor_preference must be blank for Family")
+    elif tenant == "Open For All":
+        if bachelor not in {"Female Only", "Male Only", "Open for both"}:
+            failures.append(f"bachelor_preference required for Open For All, got {bachelor!r}")
 
     if model.get("raw_message_text", "").strip() != raw.strip():
         failures.append("raw_message_text changed during projection")
