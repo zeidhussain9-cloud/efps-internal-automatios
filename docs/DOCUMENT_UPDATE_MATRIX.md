@@ -22,6 +22,7 @@
 | Documentation structure/role changes | `docs/DOCUMENT_GOVERNANCE.md`, `docs/DOCUMENT_MAP.md` |
 | Module responsibility/behavior changes | Relevant module `README.md` and `GEMINI.md`; canonical docs when cross-module truth changes |
 | Shared capability responsibility/behavior changes | Relevant shared `README.md`; canonical docs when cross-cutting truth changes |
+| Inventory source-extraction behavior changes | `docs/INVENTORY_SOURCE_EXTRACTION.md`, `docs/ARCHITECTURE.md`, `docs/DATA_CONTRACTS.md` if field semantics change, Inventory module `README.md`, affected regression fixtures, `HANDOFF.md` |
 | Repository overview changes | Root `README.md` |
 | Repository-wide AI skill changes | `.gemini/skills/README.md`, affected skill, relevant governance docs |
 | Repository-specific custom skill changes | `.gemini/skills/README.md`, affected skill and references, relevant capability/module docs |
