@@ -39,8 +39,11 @@ Deterministic processing is source-preserving and does not guess missing propert
 - Explicit furnishings are not silently overwritten.
 - Property subtype aliases are normalized to the canonical subtype vocabulary.
 - Explicit `Gated Community` wording produces `Gated Community` internal property type; explicit semi-gated wording produces `Semi Gated`; independent-house/floor/farm-house wording produces `Standalone`; otherwise the documented fallback applies without inventing gating facts.
-- Gated-community and semi-gated amenity defaults are deterministic and are not evidence that a property is gated when the source does not establish that fact. Exact Sheet dropdown reconciliation remains an open contract item.
-- Family/family-only tenant preference forces the current internal bachelor fallback only when no explicit bachelor value is present. Its `Not Allowed` output is not currently a live Sheet dropdown value and remains an open contract item.
+- Gated Community defaults to the exact live Sheet amenity combination `Club House, Lift, Gym, CCTV, Power Backup, Swimming Pool, Garden, Sports, Kids Area` when amenities are blank.
+- Semi Gated defaults to the exact live Sheet amenity combination `Security, Lift, CCTV, Power Backup` when amenities are blank.
+- Standalone classification does not invent amenities.
+- Family/family-only with no explicit bachelor preference leaves `bachelor_preference` blank because `Not Allowed` is not a live Sheet value.
+- `Family & Female Bachelors` and explicit female-only bachelor wording normalize to the exact live Sheet value `Female Only `, including the observed trailing space.
 
 ## Canonical Sheet-controlled fields
 
@@ -60,9 +63,9 @@ D, M, Y, Z, AE, and AF use strict `ONE_OF_LIST` validation with custom UI enable
 
 ## Business field dependencies
 
-- `internal_property_type` → `society_amenities`: deterministic tier defaults when amenities are blank.
+- `internal_property_type` → `society_amenities`: Gated Community and Semi Gated produce exact verified Sheet amenity combinations when blank; Standalone does not invent amenities; nonblank values are validated against the verified Sheet combinations.
 - `furnish_type` → `flat_furnishings`: deterministic furnishing defaults when furnishings are blank.
-- `preferred_tenant_type` → `bachelor_preference`: family/bachelor normalization rule; Sheet vocabulary reconciliation remains open.
+- `preferred_tenant_type` → `bachelor_preference`: family/family-only with no explicit bachelor value leaves the dependent field blank; explicit female-only wording maps to the exact Sheet value `Female Only `.
 - `maintenance_included` ↔ `maintenance`: included means maintenance `0`.
 - `monthly_rent` → `security_deposit`: month-based deposits are calculated from rent.
 
@@ -93,6 +96,7 @@ The implementation package is `modules/efps-inventory-mgmnt/src/` and contains `
 ## Current verification state
 
 - Deterministic rules validated against the current inventory sample: verified.
+- Dependent-field contract reconciliation for tenant/bachelor and property-type/amenities: verified by regression coverage and aligned to the live Sheet vocabulary.
 - Google Sheets production read/write boundary: verified without unauthorized Stage-3 writes.
 - Live Sheet dropdown/populated-value inspection: verified for D, M, Y, Z, AA, AE, AF.
 - Google Maps direct API access: verified.

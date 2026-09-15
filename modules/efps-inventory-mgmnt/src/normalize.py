@@ -10,8 +10,8 @@ CARPET_RATIO=0.90
 PORTAL_SUBTYPE_MAP={"Triplex Villa":"Villa","Complex Villa":"Villa","Villa Complex":"Villa","Triplex":"Independent House","Builder Floor":"Independent Floor","Independent Building":"Independent House"}
 NO_FLOOR_SUBTYPES={"Villa","Independent House","Farm House","Duplex"}
 STANDALONE_SUBTYPES={"independent house","independent floor","farm house"}
-GATED_COMMUNITY_DEFAULTS=("Lift","Gym","CCTV","Power Backup","Swimming Pool","Gated Community","Club House","Garden","Sports","Kids Area","Community Hall")
-SEMI_GATED_AMENITIES=("CCTV","Power Backup","Regular Water Supply")
+GATED_COMMUNITY_DEFAULTS=("Club House","Lift","Gym","CCTV","Power Backup","Swimming Pool","Garden","Sports","Kids Area")
+SEMI_GATED_AMENITIES=("Security","Lift","CCTV","Power Backup")
 _GATED_KW=re.compile(r"\bgated\s*(?:[:\-]\s*)?(?:community|society)\b",re.I)
 _SEMI_GATED_KW=re.compile(r"\bsemi[-\s]*gated\b",re.I)
 _STANDALONE_WORDS=re.compile(r"\b(villa|independent house|independent floor|builder floor|farm ?house|duplex|triplex|penthouse|studio)\b",re.I)
@@ -56,7 +56,7 @@ def _verified_in_text(value:str,raw_text:str)->bool:
     needle=norm(value); return bool(needle) and needle in norm(raw_text)
 
 def _gating_level_from_text(raw_text:str,row:dict)->str:
-    text=str(raw_text or ""); subtype=str(row.get("property_subtype","")).strip().lower()
+    text=str(raw_text or "")
     if _SEMI_GATED_KW.search(text):return "Semi Gated"
     if _GATED_KW.search(text):return "Gated Community"
     return "Standalone"
@@ -72,10 +72,17 @@ def set_internal_type(row:dict,raw_text:str)->dict:
 def apply_tenant_bachelor_rule(row:dict,raw_text:str)->dict:
     tenant=str(row.get("preferred_tenant_type","")).strip().lower()
     if "family" in tenant and "female" in tenant and "bachelor" in tenant:
-        row["preferred_tenant_type"]="Open For All"; row["bachelor_preference"]="Female Only"; return row
+        row["preferred_tenant_type"]="Open For All"; row["bachelor_preference"]="Female Only "; return row
     if tenant in {"family","family only"}:
         current=str(row.get("bachelor_preference","")).strip()
-        if not (current and _verified_in_text(current,raw_text)):row["bachelor_preference"]="Not Allowed"
+        if not (current and _verified_in_text(current,raw_text)):row["bachelor_preference"]=""
+    return row
+
+def normalize_bachelor_preference(row:dict)->dict:
+    value=str(row.get("bachelor_preference","")).strip().lower()
+    if value=="female only":row["bachelor_preference"]="Female Only "
+    elif value=="male only":row["bachelor_preference"]="Male Only"
+    elif value=="open for both":row["bachelor_preference"]="Open for both"
     return row
 
 def default_property_subtype(row:dict,raw_text:str)->dict:
@@ -131,7 +138,7 @@ def normalize(row:dict,raw_text:str="")->dict:
         elif out.get("furnish_type")=="Fully Furnished":out["flat_furnishings"]=", ".join(FULLY_FURNISHED_DEFAULTS)
     if not out.get("carpet_area") and out.get("built_up_area","").isdigit():out["carpet_area"]=str(int(round(int(out["built_up_area"])*CARPET_RATIO)))
     if not out.get("servant_room"):out["servant_room"]="No"
-    set_internal_type(out,raw_text);apply_tenant_bachelor_rule(out,raw_text)
+    set_internal_type(out,raw_text);apply_tenant_bachelor_rule(out,raw_text);normalize_bachelor_preference(out)
     fragments=construct_deterministic_highlights(out,raw_text,original_subtype)
     if fragments and not str(out.get("property_highlights","")).strip():out["property_highlights"]=" | ".join(fragments)
     preserve_rk_wording(out,raw_text)

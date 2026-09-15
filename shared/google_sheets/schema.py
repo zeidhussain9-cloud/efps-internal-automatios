@@ -5,7 +5,7 @@ from typing import Any, Mapping
 
 SHEET_ID = "1zdOLWklkWlnVECCtcH4SJj6vm6nEVjINpTT2U2UJEKc"
 WORKSHEET_NAME = "Housing_Listings"
-CONTRACT_VERSION = 2
+CONTRACT_VERSION = 3
 PANEL, HOUSING_AGENT, META_CATALOG = "panel", "housing_agent", "meta_catalog"
 OWNERS = (PANEL, HOUSING_AGENT, META_CATALOG)
 STAGE_1 = "initial_webhook"
@@ -56,12 +56,12 @@ _ROWS = [
 ("maintenance_included",PANEL,STAGE_2,("Yes","No"),(),"Interdependent with maintenance."),
 ("security_deposit",PANEL,STAGE_2,(),("monthly_rent",),"Explicit amount or explicitly stated months converted using rent."),
 ("preferred_tenant_type",PANEL,STAGE_2,("Family","Open For All"),(),"Exact live Sheet dropdown vocabulary."),
-("bachelor_preference",PANEL,STAGE_2,("Female Only ","Male Only","Open for both"),("preferred_tenant_type",),"Exact live Sheet dropdown vocabulary; repository family-only deterministic fallback currently uses internal value Not Allowed and requires contract reconciliation."),
+("bachelor_preference",PANEL,STAGE_2,("Female Only ","Male Only","Open for both"),("preferred_tenant_type",),"Exact live Sheet dropdown vocabulary. Family without an explicit bachelor preference is represented by blank bachelor_preference because Not Allowed is not a valid Sheet value."),
 ("pet_friendly",PANEL,STAGE_2,("Yes","No"),(),"Live populated vocabulary verified from Sheet values; no Sheet dropdown validation rule exists."),
 ("servant_room",PANEL,STAGE_2,("Yes","No"),(),"Defaults to No when unmentioned under legacy rule."),
 ("covered_parking",PANEL,STAGE_2,("0","1","2","3","3+"),(),"Controlled parking count."),
 ("open_parking",PANEL,STAGE_2,(),(),"Explicit numeric source value."),
-("society_amenities",PANEL,STAGE_2,("Security, Lift, CCTV, Power Backup","Club House, Lift, Gym, CCTV, Power Backup, Swimming Pool, Garden, Sports, Kids Area","-"),("internal_property_type",),"Exact live Sheet dropdown vocabulary; deterministic tier defaults apply only when blank."),
+("society_amenities",PANEL,STAGE_2,("Security, Lift, CCTV, Power Backup","Club House, Lift, Gym, CCTV, Power Backup, Swimming Pool, Garden, Sports, Kids Area","-"),("internal_property_type",),"Exact live Sheet dropdown vocabulary. Gated Community and Semi Gated deterministic defaults now emit the exact corresponding Sheet combinations; standalone leaves the field blank unless explicitly supplied."),
 ("flat_furnishings",PANEL,STAGE_2,("Wardrobe, Modular Kitchen, Geyser, Fan, Light","Wardrobe, Modular Kitchen, Geyser, Fan, Light, Fridge, Washing Machine, TV, Sofa, Bed, Dining Table"),("furnish_type",),"Exact live Sheet dropdown vocabulary; defaults apply only when blank."),
 ("property_highlights",PANEL,STAGE_2,(),(),"AI wording/beautification only; deterministic highlights may be preserved."),
 ("catalog_title",PANEL,STAGE_2,(),(),"AI wording/beautification only; no invented facts."),

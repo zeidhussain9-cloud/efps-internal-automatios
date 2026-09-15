@@ -42,7 +42,7 @@ Live `Housing_Listings` validation for column M `furnish_type` is a strict `ONE_
 - `Fully Furnished`
 - `Semi Furnished`
 
-The repository contract is now aligned to those two values. Source text such as `Unfurnished`, `un-furnished`, `not furnished`, or `empty` does not create a third `furnish_type` value. It results in blank `furnish_type` and blank `flat_furnishings`, because the live Sheet has no `Unfurnished` dropdown value.
+The repository contract is aligned to those two values. Source text such as `Unfurnished`, `un-furnished`, `not furnished`, or `empty` does not create a third `furnish_type` value. It results in blank `furnish_type` and blank `flat_furnishings`, because the live Sheet has no `Unfurnished` dropdown value.
 
 `Semi Furnished` and `Fully Furnished` drive deterministic `flat_furnishings` defaults only when explicit `flat_furnishings` are absent.
 
@@ -59,7 +59,7 @@ The live production Sheet was read-only inspected for the current Phase-1 contra
 | AE | `society_amenities` | `Security, Lift, CCTV, Power Backup`; `Club House, Lift, Gym, CCTV, Power Backup, Swimming Pool, Garden, Sports, Kids Area`; `-` |
 | AF | `flat_furnishings` | `Wardrobe, Modular Kitchen, Geyser, Fan, Light`; `Wardrobe, Modular Kitchen, Geyser, Fan, Light, Fridge, Washing Machine, TV, Sofa, Bed, Dining Table` |
 
-The observed `Female Only ` value contains a trailing space in the live validation configuration. This is recorded exactly as observed and is not silently rewritten.
+The observed `Female Only ` value contains a trailing space in the live validation configuration. This is intentionally preserved as the canonical Sheet value; equivalent source wording is normalized to this exact string.
 
 Column AA `pet_friendly` has no Google Sheets data-validation rule. However, the populated live values inspected in AA are exactly `Yes` and `No`.
 
@@ -67,9 +67,9 @@ No conditional/row-dependent Google Sheets dropdown validation was observed for 
 
 ## Verified business interdependencies
 
-- `internal_property_type` → `society_amenities`: `Gated Community` and `Semi Gated` trigger deterministic amenity defaults only when `society_amenities` is blank. Standalone classification does not invent amenities. The live Sheet's exact amenity dropdown combinations are separately recorded above; reconciliation between deterministic tier strings and those exact dropdown combinations remains an open contract item.
+- `internal_property_type` → `society_amenities`: `Gated Community` deterministically defaults to the exact live Sheet value `Club House, Lift, Gym, CCTV, Power Backup, Swimming Pool, Garden, Sports, Kids Area`; `Semi Gated` deterministically defaults to `Security, Lift, CCTV, Power Backup`; `Standalone` does not invent amenities. Explicit source amenities are preserved and deterministic validation requires any nonblank value to be one of the verified Sheet combinations.
 - `furnish_type` → `flat_furnishings`: `Semi Furnished` and `Fully Furnished` populate the corresponding deterministic default furnishing sets only when `flat_furnishings` is blank. Unfurnished source text produces blank furnishing fields.
-- `preferred_tenant_type` → `bachelor_preference`: the repository contains a deterministic family/bachelor rule. Family/family-only currently maps an absent bachelor value to internal `Not Allowed`, while the live Sheet dropdown does not contain `Not Allowed`; this remains an open contract item.
+- `preferred_tenant_type` → `bachelor_preference`: Family/family-only with no explicit bachelor preference now leaves `bachelor_preference` blank because the live Sheet has no `Not Allowed` value. `Family & Female Bachelors` and explicit female preference normalize to the exact live Sheet value `Female Only `, including the observed trailing space.
 - `society_amenities` declares dependency on `internal_property_type` in the canonical schema.
 - `flat_furnishings` declares dependency on `furnish_type` in the canonical schema.
 - `bachelor_preference` declares dependency on `preferred_tenant_type` in the canonical schema.
@@ -77,7 +77,7 @@ No conditional/row-dependent Google Sheets dropdown validation was observed for 
 
 ## Validation authority
 
-Deterministic validation must reject values that are outside the canonical application contract, except where an explicitly documented internal intermediate value remains under reconciliation. No Sheet dropdown value is to be invented from source text or general knowledge.
+Deterministic validation rejects values that are outside the canonical application contract. No Sheet dropdown value is to be invented from source text or general knowledge. The live Sheet vocabulary is authoritative for fields with verified validation lists.
 
 ## Stage-3 ownership boundary
 
