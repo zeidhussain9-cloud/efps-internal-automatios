@@ -41,10 +41,13 @@ Use `docs/DOCUMENT_UPDATE_MATRIX.md` and `docs/DOCUMENT_GOVERNANCE.md` to route 
 - `modules/` = EFPS business capabilities and business decisions.
 - `shared/` = reusable technical capabilities.
 
-The repository currently has three established shared capability boundaries:
+The repository currently has six established shared capability boundaries:
 
 - `shared/cloudinary/`
+- `shared/credentials/`
+- `shared/google_maps/`
 - `shared/google_sheets/`
+- `shared/slack/`
 - `shared/whatsapp_whapi/`
 
 Established boundary does not mean every runtime feature is complete. Implementation status must be stated accurately and verified before being called live or production-ready.
