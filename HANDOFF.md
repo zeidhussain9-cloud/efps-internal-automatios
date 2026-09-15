@@ -15,7 +15,7 @@ Stage-2 items are processing sub-steps, not separate top-level stages. Google Sh
 - `intake.py` implements the explicit `NEW` boundary, dedicated-listener filtering, and message-ID idempotency within an active session.
 - `extract.py` performs deterministic extraction from completed `raw_message_text`.
 - `normalize.py` contains the migrated deterministic normalization/business rules, including furnishing defaults, carpet derivation, maintenance handling, property subtype normalization, internal property type/amenity rules, and tenant/bachelor dependency.
-- `validate.py` enforces the canonical 48-field shape, fixed values, deterministic validation, and downstream write protection.
+- `validate.py` enforces the canonical 48-field shape, fixed values, deterministic validation, verified Sheet vocabularies, and downstream write protection.
 - `listing_id.py` preserves immutable `EF-YYMM-XXXX` IDs.
 - `pipeline.py` orchestrates Stage 2 and writes only Stage-1/2-owned fields. The canonical processing entry point is `process_closed_session()`.
 - When a Maps URL is supplied/extracted, `process_closed_session()` calls `GoogleMapsClient.resolve(maps_url=...)`. Only `VERIFIED` resolution populates `google_maps_url`, `locality`, and `pincode`; incomplete/unrecognized states fail closed to `Needs Review`.
@@ -35,7 +35,10 @@ Stage-2 items are processing sub-steps, not separate top-level stages. Google Sh
 - Property subtype aliases normalize to the canonical subtype vocabulary.
 - Internal property type is limited to `Gated Community`, `Semi Gated`, and `Standalone`, with classification driven by verified source wording and documented fallback behavior.
 - Gated/semi-gated amenity defaults do not by themselves prove that a property is gated.
-- Family/family-only tenant preference sets the current internal bachelor fallback to `Not Allowed` only when no explicit bachelor value is present; this outcome is not currently present in the live Sheet dropdown and remains an open reconciliation item.
+- Family/family-only tenant preference with no explicit bachelor value now leaves `bachelor_preference` blank because `Not Allowed` is not a valid live Sheet value.
+- `Family & Female Bachelors` and explicit female-only bachelor wording normalize to the exact live Sheet value `Female Only `, including the observed trailing space.
+- Gated Community defaults to the exact live Sheet amenity combination `Club House, Lift, Gym, CCTV, Power Backup, Swimming Pool, Garden, Sports, Kids Area`.
+- Semi Gated defaults to the exact live Sheet amenity combination `Security, Lift, CCTV, Power Backup`.
 - Deterministic extraction uses completed `raw_message_text`, not prior canonical Sheet values.
 
 ## Canonical sheet
@@ -51,7 +54,7 @@ Read-only production inspection established:
 - D `internal_property_type`: `Gated Community`, `Semi Gated`, `Standalone`.
 - M `furnish_type`: `Fully Furnished`, `Semi Furnished`.
 - Y `preferred_tenant_type`: `Family`, `Open For All`.
-- Z `bachelor_preference`: exact observed values `Female Only `, `Male Only`, `Open for both`; the first value contains a trailing space.
+- Z `bachelor_preference`: exact observed values `Female Only `, `Male Only`, `Open for both`; the first value contains a trailing space and is intentionally preserved by normalization.
 - AA `pet_friendly`: no Sheet data-validation rule; populated values observed are `Yes` and `No`.
 - AE `society_amenities`: `Security, Lift, CCTV, Power Backup`; `Club House, Lift, Gym, CCTV, Power Backup, Swimming Pool, Garden, Sports, Kids Area`; `-`.
 - AF `flat_furnishings`: `Wardrobe, Modular Kitchen, Geyser, Fan, Light`; `Wardrobe, Modular Kitchen, Geyser, Fan, Light, Fridge, Washing Machine, TV, Sofa, Bed, Dining Table`.
@@ -60,9 +63,9 @@ D, M, Y, Z, AE, and AF use strict `ONE_OF_LIST` validation with custom UI enable
 
 ### Verified business dependencies
 
-- `internal_property_type` → `society_amenities` for deterministic amenity tiers when amenities are blank. Exact live Sheet amenity combinations do not yet match the deterministic tier strings and remain an open reconciliation item.
+- `internal_property_type` → `society_amenities`: Gated Community and Semi Gated now emit their exact verified Sheet amenity combinations when amenities are blank; Standalone does not invent amenities. Nonblank amenity output is validated against the verified Sheet combinations.
 - `furnish_type` → `flat_furnishings` for deterministic furnishing defaults when furnishings are blank.
-- `preferred_tenant_type` → `bachelor_preference` for family/bachelor normalization; the current `Not Allowed` internal outcome does not match the live Sheet dropdown and remains open.
+- `preferred_tenant_type` → `bachelor_preference`: Family/family-only with no explicit bachelor value leaves the dependent field blank; explicit female-only wording maps to the exact Sheet value `Female Only `.
 - `maintenance_included` ↔ `maintenance` and `monthly_rent` → `security_deposit` are deterministic dependencies.
 
 ## Google Maps verified state
@@ -117,14 +120,11 @@ The shared Cloudinary application path has passed live Inventory Phase-1 upload 
 
 ## Current open pointers
 
-See `docs/OPEN_POINTERS.md`. The current unresolved items are:
+See `docs/OPEN_POINTERS.md`. The three inventory dependent-field contract pointers are closed. Current unresolved items are:
 
 1. Slack production runtime acceptance.
 2. Exact `inventory_locked` sheet control vocabulary.
 3. Decide and verify whether the explicit WhAPI user-agent required by the successful Cloudflare diagnostic should become part of the canonical `WhApiClient` transport contract.
-4. Reconcile the family/bachelor deterministic `Not Allowed` outcome with the live `bachelor_preference` Sheet vocabulary.
-5. Reconcile deterministic gated/semi-gated amenity default strings with the live `society_amenities` Sheet dropdown combinations.
-6. Explicitly decide how to treat the trailing space in the live `Female Only ` validation value.
 
 Future Meta Catalogue, Housing Portal, and website production integrations are outside the current Inventory Phase-1 pointer list.
 
