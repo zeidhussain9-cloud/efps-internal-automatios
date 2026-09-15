@@ -21,10 +21,6 @@ sys.path.insert(0, str(MODULE_ROOT))
 pipeline = importlib.import_module("src.pipeline")
 field_resolution = importlib.import_module("src.field_resolution")
 
-# Keep the gate's Maps grammar aligned with the shared adapter. In particular,
-# share.google is a Google short-link form and must not be mistaken for a
-# landmark when it follows a 📍 Landmark: marker.
-MAP_URL_RE = re.compile(r"https?://(?:maps\.app\.goo\.gl|goo\.gl|www\.google\.com/maps|maps\.google\.com|share\.google)\S+", re.I)
 PLACEHOLDERS = {"", "*", "-", "—", "n/a", "na", "none", "not available", "not mentioned", "nil"}
 TARGET_FIELDS = {
     "internal_property_type",
@@ -99,11 +95,12 @@ def check_row(row_number: int, raw: str, model: dict[str, str]) -> list[str]:
         failures.append(f"society_name expected {expected_society!r}, got {model.get('society_name')!r}")
 
     expected_url = canonical_maps_url(raw)
-    if expected_url and not model.get("google_maps_url", "").strip():
-        failures.append("google_maps_url is blank despite a source Maps URL")
+    actual_url = model.get("google_maps_url", "").strip()
+    if expected_url and actual_url != expected_url:
+        failures.append(f"google_maps_url expected exact source URL {expected_url!r}, got {actual_url!r}")
 
     landmark = model.get("landmark", "").strip()
-    if MAP_URL_RE.fullmatch(landmark):
+    if GoogleMapsClient.is_maps_url(landmark):
         failures.append("landmark contains a Maps URL")
 
     source_subtype = field_resolution.resolve_property_subtype(raw)
@@ -157,7 +154,7 @@ def check_row(row_number: int, raw: str, model: dict[str, str]) -> list[str]:
         if model.get("society_amenities", "").strip() not in {"", "-"}:
             failures.append("unresolved property type must not invent a society amenity bundle")
 
-    if not model.get("raw_message_text", "").strip() == raw.strip():
+    if model.get("raw_message_text", "").strip() != raw.strip():
         failures.append("raw_message_text changed during projection")
     furnish = "Fully Furnished" if re.search(r"\bfully\s*furnish", raw, re.I) else "Semi Furnished" if re.search(r"\bsemi[-\s]*furnish", raw, re.I) else ""
     if furnish and model.get("furnish_type", "").strip() != furnish:
