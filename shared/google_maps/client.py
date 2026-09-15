@@ -41,14 +41,18 @@ class GoogleMapsClient:
 
         This is intentionally network-free. URL recognition is a deterministic
         source operation; expansion/resolution belongs to the runtime layer.
+        The returned value is normalized only for source-message wrappers and
+        terminal punctuation; the URL itself is otherwise preserved exactly.
         """
         match = cls.MAP_URL_RE.search(text or "")
-        return match.group(0).rstrip(".,)") if match else ""
+        if not match:
+            return ""
+        return match.group(0).strip("<>\"'").rstrip(".,);]}")
 
     @classmethod
     def is_maps_url(cls, value: str) -> bool:
         """Return whether a value is exactly one supported Maps URL."""
-        return bool(cls.MAP_URL_RE.fullmatch((value or "").strip()))
+        return bool(cls.MAP_URL_RE.fullmatch((value or "").strip().strip("<>\"'")))
 
     @classmethod
     def expand(cls, url: str) -> str:
