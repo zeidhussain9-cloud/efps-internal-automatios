@@ -194,6 +194,9 @@ class FakeSheets:
     def __init__(self):
         self.writes = []
 
+    def write_ranges(self, spreadsheet_id, worksheet_name, updates):
+        self.writes.extend((range_name, values) for range_name, values in updates)
+
     def write_range(self, spreadsheet_id, worksheet_name, range_name, values):
         self.writes.append((range_name, values))
 
