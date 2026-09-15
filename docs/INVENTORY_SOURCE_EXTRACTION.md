@@ -36,7 +36,19 @@ Accepted explicit evidence includes property-type labels and boolean gating labe
 
 ## Maintenance evidence
 
-Only maintenance-specific labels or the specific `rent + maintenance` pattern can create maintenance candidates. Numeric values with `K`/lakh units are normalized to rupees. Source qualifiers such as `+ Water` and `Water Charges` are preserved. `Included` is represented by maintenance `0` and `maintenance_included = Yes`; an amount alone does not imply inclusion.
+Only maintenance-specific labels or the specific `rent + maintenance` pattern can create maintenance candidates. Numeric values with `K`/lakh units are normalized to rupees. Source qualifiers such as `+ Water` and `Water Charges` are preserved. `Included` is represented by maintenance `0` and `maintenance_included = Yes`; an amount alone does not imply inclusion. `Included + Water` is also represented by `maintenance 0 + Water` with `maintenance_included = Yes`.
+
+## Numeric source variants
+
+Numeric extraction accepts explicit singular and plural balcony wording (`Balcony` / `Balconies`) and integer/decimal counts. A bare singular `Balcony` in the source means one balcony. No parking value is inferred from balcony or other unrelated text.
+
+## Pet preference evidence
+
+Pet status is source-grounded during deterministic normalization. Explicit negative forms such as `Pets: Not Allowed`, `Pets: Not Permitted`, `Pets: Prohibited`, `Pets: Banned`, and equivalent `No pets`/`Without pets` forms resolve to `No`. Explicit positive forms resolve to `Yes`; when no pet restriction is present, the established last-resort value remains `Yes`.
+
+## Location and Maps URL separation
+
+A `📍 Name:` marker supplies a property/society-name candidate and a subsequent Maps URL supplies `google_maps_url`. A `📍 Landmark:` marker followed only by a Maps URL does not make the URL the landmark; `landmark` remains blank unless a real landmark value is supplied. The deterministic Maps URL is source-extracted without requiring network access during the read-only projection.
 
 ## Other source rules
 
@@ -47,7 +59,7 @@ Only maintenance-specific labels or the specific `rent + maintenance` pattern ca
 
 ## Regression requirement
 
-Every production extraction/resolution defect must have a regression fixture for the exact triggering source shape. Current regression coverage must exercise segmentation, multi-candidate resolution, corrections, positive/negative gating, decimal BHK, maintenance units/qualifiers/inclusion, Sheet-independence, and normalized validation.
+Every production extraction/resolution defect must have a regression fixture for the exact triggering source shape. Current regression coverage must exercise segmentation, multi-candidate resolution, corrections, positive/negative gating, decimal BHK, maintenance units/qualifiers/inclusion, singular/decimal balcony counts, explicit pet negatives, Sheet-independence, dependent defaults, and normalized validation.
 
 ## Model-test interpretation
 
