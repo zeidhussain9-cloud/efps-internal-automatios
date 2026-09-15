@@ -47,16 +47,29 @@ The configuration explicitly reserves `inventory`, `groups`, and `promotions` as
 
 The current repository resolves the canonical local Keychain service and does not require AWS Secrets Manager access at runtime. The actual token and webhook secret are never copied into this repository.
 
-## Verified connection facts from the legacy repository
+## Verified live state — Inventory Phase 1
 
-- Base URL: `https://gate.whapi.cloud`
-- Authentication: `Authorization: Bearer <token>`
-- Live traffic gate: `EFPS_WHAPI_LIVE=1`
-- Webhook shared-token variable: `EFPS_WEBHOOK_TOKEN`
-- Legacy webhook query parameter: `t`
-- Retained inventory-listener sender numbers: `917975102130`, `919902024973`
+The following facts were verified against the connected WhAPI account using read-only/live diagnostic requests. The diagnostics used an explicit `User-Agent: EFPS-Inventory-Phase1/1.0` after the initial request was rejected by Cloudflare browser-signature filtering without an explicit user-agent.
 
-The legacy auth model records one token/channel/connected-number relationship. The two numbers above are therefore source-number routing configuration, not evidence of two WhAPI channels.
+- `GET /health`: HTTP 200.
+- Connected display identity: `Easyfind Property Solutions`.
+- Connected WhatsApp ID: `919148338801`.
+- Business channel: `true`.
+- Channel ID: `DRAXTH-J6HEU`.
+- `GET /settings`: HTTP 200.
+- A webhook is currently configured in `body` mode.
+- The configured webhook subscribes to `messages` with `POST`.
+- The configured endpoint is the deployed AWS Lambda URL already present in the live WhAPI settings. The URL, including its authentication query token, is intentionally not recorded in Git.
+- `GET /settings/events`: HTTP 200 and the `messages`/`post` event is present in the allowed-events response.
+- A direct synthetic JSON POST to the configured webhook endpoint returned HTTP 200 with `{"ok": true, "queued": 1}`.
+- The synthetic probe used a non-inventory sender (`919000000000`), so it could not open an Inventory Phase-1 property session.
+- No WhAPI settings were changed and no customer message was sent during these acceptance checks.
+
+These checks verify the live WhAPI account, current webhook configuration, and deployed endpoint reachability. They do not constitute a production real-inventory message acceptance test.
+
+## Important transport note
+
+The successful Cloudflare diagnostic required an explicit user-agent. The current diagnostic proves that `gate.whapi.cloud` accepts the request with `EFPS-Inventory-Phase1/1.0`, but the repository's canonical `WhApiClient` transport has not yet been changed solely on the basis of this diagnostic. Do not claim that the current client transport is permanently Cloudflare-compatible until that implementation decision is explicitly made and tested.
 
 ## Current API boundary
 
@@ -69,8 +82,6 @@ The current WhAPI documentation exposes these connection/configuration endpoints
 - `POST /settings/webhook_test` — webhook delivery test.
 - `POST /messages/text` — neutral outbound text-message primitive.
 
-The exact live channel identity, current webhook URL, subscribed events, and deployed endpoint remain runtime facts and must be verified before production traffic is enabled.
-
 ## Webhook boundary
 
 The shared parser normalizes common text, link-preview, location, image, video, document, and audio message shapes. It also exposes a neutral `listener` value of `inventory` or `lead` for each normalized inbound message according to the two-listener configuration.
@@ -79,8 +90,10 @@ It does not persist, create, classify beyond the listener boundary, deduplicate,
 
 The webhook registration builder requires the caller to supply explicitly verified event definitions. It deliberately does not retain a guessed/default event list.
 
+The Inventory Stage-1 adapter applies the business boundary after normalization: only the two configured inventory sender numbers qualify, `NEW` opens/closes property sessions, and non-inventory senders cannot create Inventory Phase-1 property sessions.
+
 ## Safety
 
 Every live API request must pass `EFPS_WHAPI_LIVE=1`. The flag is never enabled automatically. Live settings mutation must be an explicit operational action after current state is recorded and verified.
 
-Never commit production tokens, webhook secrets, passwords, private keys, or other credentials.
+Never commit production tokens, webhook secrets, passwords, private keys, or other credentials. In particular, never copy the live webhook URL when it contains the `?t=` authentication token.
