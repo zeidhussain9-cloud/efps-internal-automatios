@@ -57,6 +57,12 @@ Stage 2 uses `raw_message_text` as its only deterministic extraction source. The
 - `google_maps_url` is deterministic source extraction, not network enrichment. The exact supported Maps URL found in `raw_message_text` must survive deterministic projection. `GoogleMapsClient.extract_url()` is the single URL-recognition source of truth; runtime short-link expansion/verification is separate and network-dependent. Any Step-4/source-preservation failure remains **RED** until the end-to-end path passes.
 - A valid `property_subtype` such as `Independent House` is a successful direct subtype result and must not be regressed by an Apartment fallback.
 
+### Deterministic Needs Review boundary
+
+`docs/NEEDS_REVIEW_CONTRACT.md` is the canonical list of property-detail fields that can block a record with `Needs Review`. The blocking set covers property identity/type, location, core commercial terms, tenant eligibility, furnishing, size, bathrooms, and floor facts. Non-blocking fields remain deterministic and contract-valid but a blank or ordinary uncertainty in those fields alone must not force `Needs Review`.
+
+This distinction is deliberate: `Needs Review` is a property-truth gate, not a catch-all for every optional, enrichment-owned, display, or downstream field.
+
 Existing persisted Stage-2 Sheet values are never extraction input. The read-only model audit reports populated Sheet mismatches as source conflicts and does not overwrite the Sheet.
 
 ## Verification status
