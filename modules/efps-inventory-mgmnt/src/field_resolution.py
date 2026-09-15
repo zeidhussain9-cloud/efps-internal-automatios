@@ -97,7 +97,10 @@ def resolve_internal_property_type(text: str) -> str:
             elif "stand" in v: explicit.append(Candidate(c.field,"Standalone",c.segment_index,method,True,c.position))
 
     boolean=[]
-    pattern=re.compile(r"\b(?P<label>semi[-\s]*gated|gated)\s*(?::|=|\||-)\s*(?P<value>[^|\n<]+)",re.I)
+    # Explicit boolean/source fields. Handle both "Gated: No" and
+    # "Gated Community: No" so negative gating evidence cannot be shadowed
+    # later by a generic "gated community" phrase.
+    pattern=re.compile(r"\b(?P<label>semi[-\s]*gated(?:\s+community)?|gated(?:\s+community)?)\s*(?::|=|\||-)\s*(?P<value>[^|\n<]+)",re.I)
     yes={"yes","y","true","1","allowed","community","society","property"}
     no={"no","n","false","0","not allowed","not permitted","none"}
     for i,segment in enumerate(_segments(text)):
