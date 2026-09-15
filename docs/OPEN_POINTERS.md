@@ -11,30 +11,35 @@ This is the canonical list of unresolved decisions and verified unknowns for the
 
 - The successful WhAPI Cloudflare diagnostic required an explicit `User-Agent: EFPS-Inventory-Phase1/1.0`. The current `WhApiClient` source has not yet been changed to add that header. Decide and verify whether the explicit user-agent should become part of the canonical client transport contract before treating the client itself as production-accepted for live API calls.
 
-## Deterministic audit status — 2026-09-15
+## Deterministic audit status — 2026-09-15 final hardening
 
-The latest available 25-row read-only production projection shows the previously RED `google_maps_url` contract now passing: the observed `share.google` source URL is projected exactly into `google_maps_url`, and the corresponding society marker is preserved as `society_name`. The production gate output shows the remaining failures are the `preferred_tenant_type -> bachelor_preference` dependency on rows where `Open For All` has no valid dependent value.
+The current repository hardening state is **35 GREEN, 0 YELLOW, 0 RED** for the 35 deterministic-scope fields, plus 13 SYSTEM / OUT OF SCOPE. The 25-row read-only projection and production contract gate passed on the merged hardening commit, with zero contract failures and zero Sheet writes.
 
-Current deterministic acceptance therefore has one demonstrated unresolved property contract: `bachelor_preference` for `Open For All` rows. Do not reopen Maps or society unless a fresh projection demonstrates a regression.
+The previously demonstrated Maps, society, and bachelor RED states are closed by the merged contract hardening. The exact bachelor live dropdown remains `Female Only `, `Male Only`, `Open for both`, with the trailing space on `Female Only ` intentionally preserved. `Family` clears the dependent field; `Open For All` defaults to `Open for both`; explicit valid source evidence overrides the default.
+
+Do not reopen Maps, society, or bachelor contracts without fresh regression evidence demonstrating a new contract violation.
 
 ## Closed deterministic contract findings
 
-- `google_maps_url` source extraction and exact source preservation, including `share.google`, are closed by the current projection evidence and regression coverage.
-- `preferred_tenant_type` normalization is closed for the observed source variants.
+- `google_maps_url` source extraction and exact source preservation, including the observed `share.google` source form, are closed by projection evidence and regression coverage.
+- `preferred_tenant_type -> bachelor_preference` dependency and exact live dropdown vocabulary are closed by the merged hardening state.
 - `pet_friendly` contract is closed for explicit positive/negative source wording.
 - `servant_room` behavior is closed.
 - `covered_parking` behavior is closed and follows resolved `internal_property_type`.
 - `internal_property_type` direct extraction/resolution is closed, including explicit negative gating and unresolved-no-evidence semantics.
 - `society_name` direct extraction/fallback behavior is closed.
-- `landmark` separation from Maps URLs is closed.
+- `landmark` separation from Maps URLs is closed; landmark never inherits locality.
 - Property subtype behavior is closed for the current operational contract.
 - Property highlights and catalog title fallback behavior are closed.
 - `age_of_property_years` remains non-blocking and conservative.
 - `furnish_type` behavior is closed for the observed live contract.
-- Exact `bachelor_preference` vocabulary formatting remains closed, but the dependency requirement for `Open For All` remains unresolved where the source provides no valid dependent value.
 - Maintenance business semantics are closed, including `Included + Water`.
 - `society_amenities` dependency behavior is closed.
 - `pincode` is explicitly non-blocking.
+
+## Historical projection conflicts
+
+The latest read-only projection identified populated historical Sheet differences in BHK, maintenance, internal property type, and property highlights. These remain documented as historical/source/display conflicts. They are not parser failures because `raw_message_text` is the source of truth; deterministic extraction must not be altered to reproduce stale persisted values.
 
 ## Deferred by current Phase-1 boundary
 
