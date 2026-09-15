@@ -20,16 +20,16 @@ The completed `raw_message_text` is the only extraction source. Existing Sheet v
 
 ### Direct fields
 
-- `internal_property_type`: extract and resolve source evidence to exactly `Gated Community`, `Semi Gated`, or `Standalone`. Boolean gating labels are explicit evidence. Explicit negative boolean values resolve to `Standalone`. When no source evidence exists, the declared fallback is `Standalone`.
-- `society_name`: use the directly supplied society name. Also accept apartment/community/building-name labels. Strip presentation-only markdown. Placeholder-only values such as `*` or `-` count as blank. If blank, use the resulting location/locality.
-- `landmark`: use the directly supplied landmark. Also accept landmark labels. Strip presentation-only markdown. Placeholder-only values such as `*` or `-` count as blank. A `📍 Landmark:` marker followed only by a Maps URL remains blank; the URL belongs to `google_maps_url`.
-- `locality`: use explicit `Property Location`, `Location`, `Locality`, or `Area`; a verified Maps locality may replace it.
-- `google_maps_url`: extract deterministic source URLs, including common short-link and Google Maps forms supported by the shared adapter; read-only deterministic projection must not require network resolution.
-- `property_subtype`: use explicit subtype and normalize supported aliases. If absent, default to `Apartment` only for a normal floor-bearing apartment-style record; standalone-property wording does not invent Apartment.
-- `property_highlights`: preserve explicit highlights. Otherwise construct only factual deterministic fragments supported by source.
-- `catalog_title`: construct a factual fallback from furnishing type, BHK, and location when blank. AI may rewrite wording only.
-- `age_of_property_years`: populate only from an explicit/authoritative property-age fact; otherwise blank.
-- `balconies`: accept explicit numeric `Balcony`/`Balconies` source forms; a bare singular `Balcony` is one balcony.
+- `internal_property_type`: resolve explicit source gating evidence first. Explicit negative gating resolves to `Standalone`. Specific/generic gated wording is accepted after explicit labelled evidence. Independently adjudicated community names may resolve through `src/community_property_types.py`. **No gating/standalone evidence is not proof of Standalone; unresolved type is represented as blank until an authoritative adjudication/enrichment source exists.**
+- `society_name`: use the directly supplied society name. Also accept apartment/community/building-name labels. Structured `📍 Name:` markers are source anchors; `📍 Landmark:` and `📍 Location:` are not society names. Strip presentation-only markdown. Placeholder-only values such as `*` or `-` count as blank. If blank after source extraction/enrichment, use the resulting locality.
+- `landmark`: use the directly supplied landmark. A `📍 Landmark:` marker followed only by a Maps URL remains blank. A Maps URL must never be stored as a landmark; the URL belongs to `google_maps_url`. Landmark does not inherit locality.
+- `locality`: use explicit `Property Location`, `Location`, `Locality`, or `Area`. This is deterministic source extraction. A verified Maps locality may replace it later during the separate enrichment stage.
+- `google_maps_url`: extract deterministic source URLs, including common short-link and Google Maps forms supported by the shared adapter. Read-only deterministic projection must not require network resolution.
+- `pincode`: optional/enrichment-owned unless explicitly written in source. A blank pincode is a valid deterministic result and must not by itself create `Needs Review`.
+- `property_subtype`: use explicit subtype and normalize supported aliases. `Duplex Villa` resolves to `Villa`; 1 RK/studio resolves to `Studio`; normal apartment-style records fall back to `Apartment`.
+- `maintenance`: normalize explicit maintenance values and the specific `rent + maintenance` form. Preserve source qualifiers such as `+ Water`. `Included` means `0` plus `maintenance_included = Yes`; `Included + Water` means `0 + Water` plus `maintenance_included = Yes`.
+- `property_highlights`: preserve explicit highlights. Otherwise construct only supported factual deterministic fragments. Blank is valid when no supported highlight is present.
+- `balconies`: accept explicit numeric `Balcony`/`Balconies` forms; a bare singular `Balcony` is one balcony.
 - `pet_friendly`: explicit no-pet wording is authoritative and resolves to `No`; explicit positive wording resolves to `Yes`; source silence uses the established `Yes` last-resort value.
 
 ### Canonical source-message parsing
@@ -42,11 +42,7 @@ Inventory sessions can concatenate multiple WhatsApp messages. `modules/efps-inv
 
 For repeated source evidence, later explicit values supersede earlier explicit values. Explicit labelled/boolean evidence outranks generic wording. Explicit negative gating is authoritative against generic positive wording.
 
-- `BHK`: preserve decimal values and later explicit corrections.
-- `maintenance`: only maintenance-labelled context or the specific `rent + maintenance` form can create a maintenance candidate. Normalize `K`/lakh units. Preserve qualifiers such as `+ Water`. `Included` means `0` plus `maintenance_included = Yes`; `Included + Water` means `0 + Water` plus `maintenance_included = Yes`.
-- `internal_property_type`: one canonical resolver owns Gated Community, Semi Gated, and Standalone. Downstream normalization consumes the resolved value and does not rediscover it.
-
-### Dependency graph
+## Dependency graph
 
 ```text
 raw_message_text
@@ -64,19 +60,21 @@ raw_message_text
 
 These are application/business dependencies. A dependent field may still have explicit source evidence; the parent controls only the documented fallback/default relationship.
 
-### Maintenance storage contract
-
-`maintenance` is stored as a normalized numeric amount with an optional source qualifier. Examples:
-
-- `3.7K` → `3700`
-- `2777 + Water` → `2777 + Water`
-- `Included` → `0`, with `maintenance_included = Yes`
-- `Included + Water` → `0 + Water`, with `maintenance_included = Yes`
-- `5K + Water` → `5000 + Water`
-
 ## Review-status contract
 
-`Needs Review` is reserved for deterministic validation errors or explicit AI conflicts after the deterministic gate. Google Maps uncertainty is recorded as an issue but does not by itself create `Needs Review`.
+`Needs Review` is reserved for deterministic validation errors or explicit AI conflicts after the deterministic gate. Google Maps uncertainty is recorded as an issue but does not by itself create `Needs Review`. Pincode absence alone is non-blocking. Unresolved internal property type is a data-quality/enrichment condition, not a fabricated `Standalone` value.
+
+## Projection audit contract
+
+`tools/inventory_model_test.py` is read-only and observational. It must be run against the exact repository commit under review.
+
+`tools/production_projection_gate.py` is the fail-closed contract gate for the recurring production range. It validates the 11 previously recurring audit fields against source-backed rules, checks dependency outputs, and guards selected previously-green fields against regression. It does not compare deterministic correctness to persisted Sheet values.
+
+The 11-field review is no longer a manually inferred "PARTIAL" list. A field is only a failure when its contract is violated. Valid blanks are accepted where the field is optional/enrichment-owned, including pincode and property highlights when no source highlight exists. Historical Sheet mismatches are separately adjudicated and never treated as parser evidence.
+
+## Known community adjudications
+
+`modules/efps-inventory-mgmnt/src/community_property_types.py` contains explicit community-level property-type facts that cannot be derived safely from a generic society-name pattern. The registry is deliberately small and evidence-driven. `Prima Hi-Life` is recorded as `Gated Community` based on independent project/property evidence; unknown communities must not be auto-classified as gated merely because they are apartments/societies.
 
 ## Verified live Sheet vocabulary
 
@@ -95,12 +93,6 @@ Column AA `pet_friendly` has no Sheet validation rule; observed/application valu
 
 Stage 1/2 writes are restricted to A:D, F:AO, and AU. E (`listing_state`), AP:AT (Housing/Meta downstream fields), and AV (`inventory_locked`) are protected.
 
-## Model-audit contract
-
-`tools/inventory_model_test.py` is read-only. It compares deterministic Stage-2 output against persisted Sheet values without using persisted Stage-2 values as extraction evidence. Blank Stage-2 cells becoming populated are expected projections. Lifecycle transitions, formatting-only differences, populated source conflicts, and protected-column changes are distinct categories.
-
-A populated Sheet value that conflicts with a source-grounded deterministic result is a stale/historical Sheet conflict until adjudicated; the raw source remains authoritative for deterministic extraction. The audit fails closed while populated source conflicts or protected-column changes remain.
-
 ## Verification boundary
 
-Production Google Sheets access, the 48-column contract, write boundary, Google Maps access/application path, and live dropdown observations have been verified. Repository changes to deterministic rules require regression coverage before live production extraction.
+Production Google Sheets access, the 48-column contract, write boundary, Google Maps access/application path, and live dropdown observations have been verified. Repository changes to deterministic rules require regression coverage before live production extraction. The recurring production dataset must always be re-run from the commit that contains the fix under review; prior projection output is evidence of that earlier commit only.
