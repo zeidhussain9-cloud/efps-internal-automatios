@@ -18,10 +18,14 @@ def _clean_source_value(value: str) -> str:
     return value.strip(" -–—")
 
 
+# Raw inventory sessions concatenate timestamped WhatsApp messages. A field value
+# must stop at the next message marker as well as a line/HTML break; otherwise a
+# direct field can absorb subsequent messages and become unusable.
+_NEXT_MESSAGE = r"(?=\s*(?:\[(?:\d{4}[-/]\d{1,2}[-/]\d{1,2})[^\]]*\]|(?:\d{4}[-/]\d{1,2}[-/]\d{1,2}[ T]\d{1,2}:\d{2}(?::\d{2})?))|$)"
+
+
 def _line_value(text: str, label: str) -> str:
-    # Intake raw_text prefixes each message with [timestamp] [message_id],
-    # so the field label is not necessarily at the beginning of the line.
-    pattern = rf"\b{label}\b\s*(?::|[-–—])\s*(.*?)(?=(?:<br\s*/?>)|\n|$)"
+    pattern = rf"\b{label}\b\s*(?::|[-–—|])\s*(.*?)(?=(?:<br\s*/?>)|\n|{_NEXT_MESSAGE})"
     match = re.search(pattern, text, re.I)
     return _clean_source_value(match.group(1)) if match else ""
 
