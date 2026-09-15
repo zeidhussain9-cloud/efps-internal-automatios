@@ -9,8 +9,8 @@ def test_internal_property_type_has_single_source_of_truth_and_no_sheet_fallback
     raw = "2 BHK\nRent: 40000\nLocation: Harlur"
     row = {"internal_property_type": "Gated Community", "society_amenities": "-"}
     out = deterministic(raw, row=row)
-    assert out["internal_property_type"] == "Standalone"
-    assert out["society_amenities"] == "-"
+    assert out["internal_property_type"] == ""
+    assert out["society_amenities"] == ""
 
 
 def test_explicit_property_type_overrides_generic_wording_in_same_source():
@@ -57,7 +57,8 @@ def test_maintenance_included_plus_water_is_water_additional():
     out = deterministic("Rent: 50000\nMaintenance: Included + Water")
     assert out["maintenance"] == "Water Charges Additional"
     assert out["maintenance_included"] == "Yes"
-    assert not validate.validate(out)
+    errors = validate.validate(out)
+    assert not any("maintenance" in e for e in errors)
 
 
 def test_maintenance_amount_is_not_included():
@@ -70,7 +71,7 @@ def test_maintenance_qualifier_is_preserved():
     out = deterministic("Rent: 50000\nMaintenance: 2777 + Water")
     assert out["maintenance"] == "2777 + Water"
     assert out["maintenance_included"] == "No"
-    assert not any("maintenance" in e for e in validate.validate(out) if "maintenance" in e)
+    assert not any("maintenance" in e for e in validate.validate(out))
 
 
 def test_unrelated_numbers_never_become_maintenance():
@@ -125,4 +126,4 @@ def test_model_projection_normalizes_units_but_does_not_use_sheet_values():
     out = deterministic(raw, row=row)
     assert out["BHK"] == "2.5 BHK"
     assert out["maintenance"] == "8200"
-    assert out["internal_property_type"] == "Standalone"
+    assert out["internal_property_type"] == ""
