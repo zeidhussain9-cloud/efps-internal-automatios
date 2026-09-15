@@ -11,12 +11,14 @@ Raw API keys and private credentials MUST NOT be stored in this repository.
 
 - Display name: `Google Maps Key`
 - Resource UID: `2334a827-466f-4a7a-8962-68c2afa29e34`
-- AWS Secrets Manager secret: `efps-google-maps-api-key`
-- AWS region: `us-east-1`
+- Credential service: `efps-google-maps-api-key`
 - Local macOS Keychain account: `efps`
 - Local macOS Keychain service: `efps-google-maps-api-key`
 - Environment override: `GOOGLE_MAPS_API_KEY`
 - API restriction: `geocoding-backend.googleapis.com`
+- Runtime status: live Geocoding API access verified
+
+The credential value itself is intentionally not recorded.
 
 ## Existing Maps Platform API Key
 
