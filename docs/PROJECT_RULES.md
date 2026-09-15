@@ -36,9 +36,27 @@ Inventory raw sessions can contain multiple concatenated WhatsApp messages. `mod
 
 ### Canonical field-resolution boundary
 
-`modules/efps-inventory-mgmnt/src/field_resolution.py` is the sole deterministic candidate-resolution layer. Extractors discover candidates; the resolver chooses the authoritative source candidate; normalization canonicalizes the chosen result. No downstream normalization function may independently reclassify a resolved deterministic field. Existing Sheet values are never candidates. Later explicit source corrections supersede earlier values; explicit negative gating cannot be overridden by generic positive wording.
+`modules/efps-inventory-mgmnt/src/field_resolution.py` is the sole deterministic candidate-resolution layer for BHK, maintenance, and internal property type. Extractors discover candidates; the resolver chooses the authoritative source candidate; normalization canonicalizes the chosen result. No downstream normalization function may independently reclassify a resolved deterministic field. Existing Sheet values are never candidates.
 
-The three fields that previously produced recurring populated conflicts are governed explicitly: BHK preserves decimals and resolves later explicit corrections; maintenance requires maintenance-specific context and preserves qualifiers such as `+ Water`; internal property type has one canonical resolver for Gated Community, Semi Gated, and Standalone.
+Later explicit source corrections supersede earlier explicit values. Explicit negative gating is authoritative against generic positive wording.
+
+### Dependency contract
+
+The established Inventory application dependency graph is:
+
+```text
+internal_property_type -> society_amenities
+internal_property_type -> covered_parking (blank-only default)
+furnish_type -> flat_furnishings (blank-only default)
+preferred_tenant_type -> bachelor_preference
+maintenance -> maintenance_included
+built_up_area -> carpet_area (blank-only fallback)
+monthly_rent -> security_deposit (month-based source form)
+```
+
+`internal_property_type` has exactly three business values: `Gated Community`, `Semi Gated`, and `Standalone`.
+
+Maintenance is a normalized numeric amount with an optional source qualifier; `maintenance_included` is evaluated independently. Explicit child source evidence remains authoritative where the child contract permits it.
 
 ## Cloudinary
 
@@ -50,7 +68,7 @@ The three fields that previously produced recurring populated conflicts are gove
 
 ## Google Maps
 
-`shared/google_maps/` is a reusable technical adapter. Inventory decides when Maps is required. The adapter uses `GOOGLE_MAPS_API_KEY` or the approved local Keychain credential, resolves through the Google Geocoding API, and returns a structured `MapsResolution`. `resolve()` is keyword-only. Inventory accepts only `VERIFIED` as a successful Maps enrichment; `PARTIAL_MATCH`, `NEEDS_RUNTIME_VERIFICATION`, and `NOT_FOUND` are recorded as informational issues and do not by themselves convert an otherwise valid deterministic extraction to `Needs Review`. The current Inventory Phase-1 direct and application-path Maps verification has passed.
+`shared/google_maps/` is a reusable technical adapter. Inventory decides when Maps is required. The adapter uses `GOOGLE_MAPS_API_KEY` or the approved local Keychain credential, resolves through the Google Geocoding API, and returns a structured `MapsResolution`. `resolve()` is keyword-only. Inventory accepts only `VERIFIED` as a successful Maps enrichment; `PARTIAL_MATCH`, `NEEDS_RUNTIME_VERIFICATION`, and `NOT_FOUND` are recorded as informational issues and do not by themselves convert an otherwise valid deterministic extraction to `Needs Review`.
 
 ## WhatsApp / WhAPI
 
@@ -58,7 +76,7 @@ The three fields that previously produced recurring populated conflicts are gove
 
 ## Credentials
 
-`shared/credentials/` is the canonical local macOS Keychain provider. Secret values must never be committed. Historical AWS Secret Manager values are migration sources only. The verified seven-service migration is recorded as a machine-level identity check; a separate dedicated Maps credential is documented where applicable.
+`shared/credentials/` is the canonical local macOS Keychain provider. Secret values must never be committed.
 
 ## Documentation
 
@@ -74,8 +92,7 @@ The three fields that previously produced recurring populated conflicts are gove
 - Never commit secrets, API tokens, passwords, private keys, or production authentication material.
 - Do not expose production data merely to simplify implementation.
 - Document verified resource identifiers without storing secret values.
-- Cloudinary configuration/credentials, Google service-account credentials, WhAPI tokens, Maps API keys, and Slack secrets must remain outside version control.
 
 ## Validation
 
-A change is complete only when the applicable implementation, verification, validation, and documentation checks are complete and there are no known contradictions with repository truth. The read-only model audit must report populated source conflicts separately from expected projections and must exit non-zero when true populated conflicts or protected-column changes remain.
+A change is complete only when implementation, verification, validation, and documentation checks are complete and there are no known contradictions with repository truth. The read-only model audit must distinguish expected projections from populated source conflicts and protected-column changes. Populated conflicts are not resolved by changing deterministic rules to match historical Sheet values.
