@@ -25,7 +25,7 @@ def _segments(text: str) -> list[str]:
 
 def _label_candidates(text: str, label: str, field: str) -> list[Candidate]:
     out=[]
-    pattern=re.compile(rf"\b{label}\b\s*(?::|[-–—|=])\s*([^|\n<]+)", re.I)
+    pattern=re.compile(rf"\b(?:{label})\b\s*(?::|[-–—|=])\s*([^|\n<]+)", re.I)
     for i,segment in enumerate(_segments(text)):
         for match in pattern.finditer(segment):
             value=_clean(match.group(1))
@@ -98,8 +98,6 @@ def resolve_internal_property_type(text: str) -> str:
         elif re.search(r"\bgated\s*(?:community|society|property)\b",segment,re.I): generic.append(Candidate("internal_property_type","Gated Community",i,"generic",False,0))
         elif re.search(r"\b(?:independent\s+(?:house|floor)|farm\s*house|stand[-\s]*alone)\b",segment,re.I): generic.append(Candidate("internal_property_type","Standalone",i,"generic",False,0))
     if generic:return sorted(generic,key=lambda c:(c.segment_index,c.position))[-1].value
-    # Canonical schema requires one of the three values. Until enrichment can
-    # establish gated/semi-gated, retain the historical operational fallback.
     return "Standalone"
 
 def resolve_property_subtype(text: str) -> str:

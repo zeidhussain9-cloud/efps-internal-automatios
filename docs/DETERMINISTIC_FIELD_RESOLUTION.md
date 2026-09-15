@@ -77,7 +77,15 @@ The marker name is a society/property-name candidate and the URL is a `google_ma
 
 `google_maps_url` is a deterministic source field because the URL is present in `raw_message_text`. Maps resolution is a separate enrichment step that may verify/replace locality and obtain pincode.
 
-`society_name` may fall back to locality only after raw source extraction and Maps enrichment have had an opportunity to establish a society/property name. `landmark` never inherits locality.
+`society_name` may fall back to locality only after raw source extraction and Maps verification have had an opportunity to establish a society/property name. `landmark` never inherits locality.
+
+### Numeric balcony source forms
+
+Balcony counts are deterministic source facts. Both singular and plural spellings are valid (`Balcony`, `Balconies`), and numeric counts may be integers or decimals when explicitly supplied. A bare singular `Balcony` means `1`. No value is invented from other room/property wording.
+
+### Pet preference
+
+Pet status is source-grounded during deterministic normalization. Explicit negative forms including `Pets: Not Allowed`, `Pets: Not Permitted`, `Pets: Prohibited`, `Pets: Banned`, `No pets`, and `Without pets` resolve to `No`. Explicit positive forms resolve to `Yes`. When no pet restriction is present, the established last-resort value remains `Yes`.
 
 ### Parking
 
@@ -140,6 +148,8 @@ Every production extraction/resolution defect must have a fixture for the exact 
 - positive and negative gating evidence;
 - `📍` society/property and landmark markers;
 - Maps URL extraction without network access;
+- singular/decimal balcony source forms;
+- explicit positive and negative pet forms;
 - Sheet-independence;
 - dependent-value generation;
 - non-blocking pincode absence;

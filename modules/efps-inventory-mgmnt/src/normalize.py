@@ -169,7 +169,6 @@ def normalize(row:dict,raw_text:str="",*,resolved_internal_property_type:str="")
         match=re.fullmatch(r"(\d+(?:\.\d+)?)\s*[- ]?\s*bhk",val,re.I)
         if match:out["BHK"]=f"{match.group(1)} BHK"
     original_subtype=out.get("property_subtype","");default_property_subtype(out,raw_text);floor_for_standalone(out)
-    # Source form 'Balcony' means one balcony; numbered forms are extracted upstream.
     if not out.get("balconies") and re.search(r"\b(?:with\s+)?balcony\b",raw_text or "",re.I):out["balconies"]="1"
     if not out.get("flat_furnishings"):
         if out.get("furnish_type")=="Semi Furnished":out["flat_furnishings"]=", ".join(SEMI_FURNISHED_DEFAULTS)
@@ -181,7 +180,7 @@ def normalize(row:dict,raw_text:str="",*,resolved_internal_property_type:str="")
     if not _usable(out.get("society_amenities","")):
         out["society_amenities"]=("Club House, Lift, Gym, CCTV, Power Backup, Swimming Pool, Garden, Sports, Kids Area" if resolved_internal_property_type=="Gated Community" else "Security, Lift, CCTV, Power Backup" if resolved_internal_property_type=="Semi Gated" else "-")
     apply_parking_defaults(out)
-    out["pet_friendly"]=_pet_value(raw_text)
+    out["pet_friendly"]="No" if re.search(r"\b(?:pets?|animals?)\s*(?::|=|-)?\s*(?:are\s*)?(?:not\s*allowed|not\s*permitted|prohibited|banned)\b|\b(?:no|without)\s+pets?\b",raw_text or "",re.I) else "Yes"
     if out.get("landmark") and re.search(r"https?://(?:maps\.app\.goo\.gl|goo\.gl|www\.google\.com/maps|maps\.google\.com)",out["landmark"],re.I):out["landmark"]=""
     apply_tenant_bachelor_rule(out,raw_text);normalize_bachelor_preference(out)
     fragments=construct_deterministic_highlights(out,raw_text,original_subtype)

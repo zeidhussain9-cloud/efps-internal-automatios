@@ -55,10 +55,10 @@ Inventory uses three top-level stages:
 2. **Stage 2 — Deterministic Extraction / Property Processing**: canonical source segmentation, deterministic candidate extraction/resolution, normalization/business rules, Google Maps resolution, deterministic validation, optional AI verification, and wording-only AI beautification.
 3. **Stage 3 — Downstream Operations**: a boundary for future/downstream consumers; it is not part of the current Inventory Phase-1 publishing implementation.
 
-The deterministic source contract is: `raw_message_text` is authoritative; persisted Stage-2 Sheet values are never extraction input. BHK, maintenance, and internal property type use canonical candidate resolution, and downstream defaults follow the documented dependency graph.
+The deterministic source contract is: `raw_message_text` is authoritative; persisted Stage-2 Sheet values are never extraction input. BHK, maintenance, and internal property type use canonical candidate resolution, and downstream defaults follow the documented dependency graph. Projection hardening additionally covers source-safe singular/decimal balcony counts and explicit no-pet wording.
 
 Google Maps is a Stage-2 sub-step, not a separate stage. Google Sheets is transport/output, not a top-level stage.
 
 ## Production status
 
-Repository/source hardening is maintained separately from live external-system verification. Inventory Phase-1 Google Sheets and Google Maps runtime probes have been completed successfully. Production extraction remains gated on repository verification and the read-only model audit. Other external integrations remain explicitly `NOT VERIFIED` until their applicable target-runtime acceptance probes succeed.
+Repository/source hardening is maintained separately from live external-system verification. Inventory Phase-1 Google Sheets and Google Maps runtime probes have been completed successfully. The 2026-09-15 projection fix cycle added source-shape regression coverage; production extraction remains gated on local execution of that regression harness and a read-only model audit against the resulting final `main` commit. Other external integrations remain explicitly `NOT VERIFIED` until their applicable target-runtime acceptance probes succeed.

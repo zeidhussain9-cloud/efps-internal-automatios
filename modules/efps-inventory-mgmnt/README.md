@@ -26,8 +26,12 @@ Existing Sheet Stage-2 values are never used as deterministic source evidence.
 ## Deterministic field contracts
 
 - `BHK`: preserve integer and decimal values; later explicit BHK source corrections supersede earlier explicit values.
-- `maintenance`: accept only maintenance-specific source context or the specific rent-plus-maintenance form; normalize K/lakh; preserve qualifiers such as `+ Water`; evaluate `maintenance_included` independently.
+- `maintenance`: accept only maintenance-specific source context or the specific rent-plus-maintenance form; normalize K/lakh; preserve qualifiers such as `+ Water`; evaluate `maintenance_included` independently. `Included + Water` resolves to `0 + Water` and `Yes`.
 - `internal_property_type`: exactly `Gated Community`, `Semi Gated`, or `Standalone`. Explicit source evidence is authoritative; explicit negative gating resolves to `Standalone`; the declared `Standalone` fallback applies only when no property-type evidence exists.
+- `balconies`: accept explicit numeric singular/plural balcony forms; bare `Balcony` is one balcony.
+- `pet_friendly`: explicit no-pet wording such as `Pets: Not Allowed` is authoritative and resolves to `No`; absent restriction retains the established `Yes` fallback.
+- `google_maps_url`: deterministic source URLs are extracted independently of network Maps enrichment.
+- `landmark`: a `📍 Landmark:` marker followed only by a Maps URL remains blank; the URL belongs to `google_maps_url`.
 
 ## Dependency contract
 
@@ -61,4 +65,4 @@ The inventory contract is 48 columns A:AV. Stage 1/2 writes are restricted to A:
 
 ## Verification
 
-Regression coverage includes canonical source segmentation, multi-candidate resolution, later corrections, decimal BHK, maintenance unit normalization/qualifiers/inclusion, positive/negative property-type evidence, Sheet-independence, dependent defaults, and normalized maintenance validation. Production extraction remains gated on repository verification plus the read-only live model audit.
+Regression coverage includes canonical source segmentation, multi-candidate resolution, later corrections, decimal BHK, maintenance unit normalization/qualifiers/inclusion, positive/negative property-type evidence, singular/decimal balcony source forms, explicit pet negatives, Sheet-independence, dependent defaults, and normalized maintenance validation. Production extraction remains gated on repository verification plus the read-only live model audit.

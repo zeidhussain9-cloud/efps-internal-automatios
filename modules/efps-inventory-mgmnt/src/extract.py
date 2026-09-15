@@ -23,7 +23,7 @@ def _clean_source_value(value: str) -> str:
 
 
 def _line_value(text: str, label: str) -> str:
-    pattern = re.compile(rf"\b{label}\b\s*(?::|[-–—|=])\s*([^|\n<]+)", re.I)
+    pattern = re.compile(rf"\b(?:{label})\b\s*(?::|[-–—|=])\s*([^|\n<]+)", re.I)
     for unit in split_source_messages(text):
         match = pattern.search(unit)
         if match:
@@ -87,7 +87,12 @@ def scan(text: str) -> dict[str, str]:
             n = re.search(r"(?:out of|of|/)\s*(\d{1,2})", tail, re.I)
             if n: out["total_floors"] = n.group(1)
 
-    patterns = {"bathrooms": r"\b(\d)\s*(?:bath|bathroom|toilet|washroom)s?\b","balconies": r"\b(\d)\s*balcon(?:y|ies)\b","covered_parking": r"(\d)\s*covered\s*parking","open_parking": r"(\d)\s*open\s*parking"}
+    patterns = {
+        "bathrooms": r"\b(\d)\s*(?:bath|bathroom|toilet|washroom)s?\b",
+        "balconies": r"\b(\d+(?:\.\d+)?)\s*balcon(?:y|ies)\b",
+        "covered_parking": r"(\d)\s*covered\s*parking",
+        "open_parking": r"(\d)\s*open\s*parking",
+    }
     for key, pat in patterns.items():
         m = re.search(pat, text, re.I)
         if m: out[key] = m.group(1)

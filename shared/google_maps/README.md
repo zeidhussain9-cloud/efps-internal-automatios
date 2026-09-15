@@ -47,7 +47,7 @@ For verified results, the canonical URL is generated from returned coordinates a
 
 ## Inventory integration boundary
 
-Inventory Management owns when Maps is required. In Stage 2, `process_closed_session()` resolves a supplied/extracted Maps URL after deterministic extraction/normalization. A `VERIFIED` result updates `google_maps_url`, `locality`, and `pincode`. `PARTIAL_MATCH`, `NEEDS_RUNTIME_VERIFICATION`, `NOT_FOUND`, or an unrecognized state fails closed into `Needs Review`.
+Inventory Management owns when Maps is required. In Stage 2, `process_closed_session()` resolves a supplied/extracted Maps URL after deterministic extraction/normalization. A `VERIFIED` result updates `google_maps_url`, `locality`, and `pincode`. Other Maps confidence states are recorded according to the Inventory processing contract and are not deterministic source-extraction failures.
 
 Maps is a Stage-2 processing sub-step, not a separate top-level stage.
 
