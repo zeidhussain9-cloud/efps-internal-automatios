@@ -20,6 +20,7 @@ _MONTHS=re.compile(r"^\s*(\d+(?:\.\d+)?)\s*(?:months?|mnths?|mos?)\s*$",re.I)
 _MAINT_NUMERIC=re.compile(r"^\s*([\d.,]+)\s*(k|l|lakh|lakhs)?\s*(?:\+\s*(.+))?\s*$",re.I)
 _UTILITY=re.compile(r"\butilit(?:y|ies)\b",re.I)
 _SLACK_LINK=re.compile(r"^<(?P<url>[^|>]+)(\|[^>]*)?>$")
+_PLACEHOLDERS={"*","-","—","n/a","na","none","not available","not mentioned","nil"}
 
 
 def strip_slack_markup(value:str)->str:
@@ -65,11 +66,15 @@ def _direct_value(row:dict, key:str, raw_text:str)->str:
     return str(row.get(key,"")).strip()
 
 
+def _usable(value:str)->bool:
+    return bool(str(value or "").strip()) and str(value or "").strip().lower() not in _PLACEHOLDERS
+
+
 def _gating_level_from_text(raw_text:str,row:dict)->str:
     text=str(raw_text or "")
     direct=_direct_value(row,"internal_property_type",text).lower()
-    if "semi gated" in direct or "semi-gated" in direct:return "Semi Gated"
-    if "gated community" in direct or "gated society" in direct:return "Gated Community"
+    if "semi" in direct and "gated" in direct:return "Semi Gated"
+    if "gated" in direct:return "Gated Community"
     if direct in {"standalone","stand alone"}:return "Standalone"
     if _SEMI_GATED_KW.search(text):return "Semi Gated"
     if _GATED_KW.search(text):return "Gated Community"
@@ -86,9 +91,9 @@ def _canonical_tenant(value:str)->str:
 
 def _pet_value(raw_text:str)->str:
     text=str(raw_text or "")
-    if re.search(r"\bpets?\s*(?:are\s*)?(?:not\s*allowed|not\s*permitted|prohibited)\b",text,re.I):return "No"
+    if re.search(r"\b(?:pets?|animals?)\s*(?:are\s*)?(?:not\s*allowed|not\s*permitted|prohibited|banned)\b",text,re.I):return "No"
     if re.search(r"\b(?:no|without)\s+pets?\b",text,re.I):return "No"
-    # User-defined last-resort rule: absence of a pet restriction means pet-friendly.
+    # Established EFPS last-resort rule: silence on pets means Yes.
     return "Yes"
 
 
@@ -103,9 +108,9 @@ def _direct_property_type(row:dict)->str:
 def set_internal_type(row:dict,raw_text:str)->dict:
     classification=_direct_property_type(row) or _gating_level_from_text(raw_text,row)
     row["internal_property_type"]=classification
-    if not str(row.get("society_amenities","")).strip():
-        if classification=="Gated Community":row["society_amenities"]=", ".join(GATED_COMMUNITY_DEFAULTS)
-        elif classification=="Semi Gated":row["society_amenities"]=", ".join(SEMI_GATED_AMENITIES)
+    if not _usable(row.get("society_amenities","")):
+        if classification=="Gated Community":row["society_amenities"]="Club House, Lift, Gym, CCTV, Power Backup, Swimming Pool, Garden, Sports, Kids Area"
+        elif classification=="Semi Gated":row["society_amenities"]="Security, Lift, CCTV, Power Backup"
         else:row["society_amenities"]="-"
     return row
 
@@ -118,10 +123,8 @@ def apply_tenant_bachelor_rule(row:dict,raw_text:str)->dict:
         row["preferred_tenant_type"]="Open For All"; row["bachelor_preference"]="Female Only "; return row
     current=str(row.get("bachelor_preference","")).strip()
     if current and not _verified_in_text(current,raw_text):current=""
-    if current:
-        row["bachelor_preference"]=current
-    elif tenant=="Family":
-        row["bachelor_preference"]=""
+    if current:row["bachelor_preference"]=current
+    elif tenant=="Family":row["bachelor_preference"]=""
     return row
 
 
@@ -133,10 +136,23 @@ def normalize_bachelor_preference(row:dict)->dict:
     return row
 
 
+def _canonical_subtype(value:str)->str:
+    raw=str(value or "").strip()
+    if not raw:return ""
+    for key, canonical in PORTAL_SUBTYPE_MAP.items():
+        if raw.lower()==key.lower():return canonical
+    for canonical in ("Apartment","Independent House","Duplex","Independent Floor","Villa","Penthouse","Studio","Farm House"):
+        if raw.lower()==canonical.lower():return canonical
+    return raw
+
+
 def default_property_subtype(row:dict,raw_text:str)->dict:
-    if str(row.get("property_subtype","")).strip() or not str(row.get("floor_number","")).strip():return row
+    explicit=_canonical_subtype(row.get("property_subtype",""))
+    row["property_subtype"]=explicit
+    if explicit or not str(row.get("floor_number","")).strip():return row
     if _STANDALONE_WORDS.search(raw_text or ""):return row
-    row["property_subtype"]="Apartment"; return row
+    row["property_subtype"]="Apartment"
+    return row
 
 
 def floor_for_standalone(row:dict)->dict:
@@ -151,21 +167,20 @@ def _fallback_location(row:dict)->str:
 
 def apply_location_fallbacks(row:dict)->dict:
     location=_fallback_location(row)
-    if not str(row.get("society_name","")).strip() and location:row["society_name"]=location
-    if not str(row.get("landmark","")).strip() and location:row["landmark"]=location
+    if not _usable(row.get("society_name","")) and location:row["society_name"]=location
+    if not _usable(row.get("landmark","")) and location:row["landmark"]=location
     return row
 
 
 def apply_parking_defaults(row:dict)->dict:
-    if row.get("internal_property_type") in {"Gated Community","Semi Gated"} and not str(row.get("covered_parking","")).strip():
-        row["covered_parking"]="1"
+    if row.get("internal_property_type") in {"Gated Community","Semi Gated"} and not str(row.get("covered_parking","")).strip():row["covered_parking"]="1"
     return row
 
 
 def construct_deterministic_highlights(row:dict,raw_text:str,original_subtype:str)->list[str]:
     fragments=[]
     explicit=str(row.get("property_highlights","")).strip()
-    if explicit:return [explicit]
+    if _usable(explicit):return [explicit]
     if _UTILITY.search(raw_text or ""):fragments.append("Utility area")
     if original_subtype and original_subtype in PORTAL_SUBTYPE_MAP:fragments.append(original_subtype)
     floors=[f.strip() for f in str(row.get("floor_number","")).split(",") if f.strip()]
@@ -176,14 +191,14 @@ def construct_deterministic_highlights(row:dict,raw_text:str,original_subtype:st
 
 
 def build_catalog_title(row:dict)->str:
-    if str(row.get("catalog_title","")).strip():return str(row["catalog_title"]).strip()
+    if _usable(row.get("catalog_title","")):return str(row["catalog_title"]).strip()
     parts=[]
     furnish=str(row.get("furnish_type","")).strip()
     bhk=str(row.get("BHK","")).strip()
     location=str(row.get("locality","")).strip()
     if furnish:parts.append(furnish)
     if bhk:parts.append(bhk)
-    if parts: title=" ".join(parts)+" for Rent"
+    if parts:title=" ".join(parts)+" for Rent"
     else:title="Property for Rent"
     return f"{title} - {location}" if location else title
 
@@ -201,7 +216,10 @@ def preserve_rk_wording(row:dict,raw_text:str)->dict:
 
 def normalize(row:dict,raw_text:str="")->dict:
     out={k:str(v or "").strip() for k,v in row.items()}
-    for key,value in list(out.items()):out[key]=strip_slack_markup(value)
+    for field,value in list(out.items()):
+        out[field]=strip_slack_markup(value)
+        if field in {"society_name","landmark","locality","internal_property_type","property_subtype","property_highlights","catalog_title"}:
+            out[field]=out[field].strip("*_")
     out.update(FIXED)
     for field in NUMERIC_FIELDS:
         if out.get(field):out[field]=clean_number(out[field])
@@ -215,7 +233,6 @@ def normalize(row:dict,raw_text:str="")->dict:
         match=re.fullmatch(r"(\d+(?:\.\d+)?)\s*[- ]?\s*bhk",val,re.I)
         if match:out["BHK"]=f"{match.group(1)} BHK"
     original_subtype=out.get("property_subtype","")
-    if original_subtype in PORTAL_SUBTYPE_MAP:out["property_subtype"]=PORTAL_SUBTYPE_MAP[original_subtype]
     default_property_subtype(out,raw_text);floor_for_standalone(out)
     if not out.get("flat_furnishings"):
         if out.get("furnish_type")=="Semi Furnished":out["flat_furnishings"]=", ".join(SEMI_FURNISHED_DEFAULTS)
@@ -228,7 +245,7 @@ def normalize(row:dict,raw_text:str="")->dict:
     apply_tenant_bachelor_rule(out,raw_text);normalize_bachelor_preference(out)
     apply_location_fallbacks(out)
     fragments=construct_deterministic_highlights(out,raw_text,original_subtype)
-    if fragments and not str(out.get("property_highlights","")).strip():out["property_highlights"]=" | ".join(fragments)
-    if not str(out.get("catalog_title","")).strip():out["catalog_title"]=build_catalog_title(out)
+    if fragments and not _usable(out.get("property_highlights","")):out["property_highlights"]=" | ".join(fragments)
+    if not _usable(out.get("catalog_title","")):out["catalog_title"]=build_catalog_title(out)
     preserve_rk_wording(out,raw_text)
     return out
