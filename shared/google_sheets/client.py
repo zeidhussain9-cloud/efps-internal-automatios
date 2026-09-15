@@ -1,16 +1,17 @@
-"""Google Sheets transport wrapper with verified EFPS credential resolution."""
-
+"""Google Sheets transport wrapper with caching, batching, and 429 backoff."""
 from __future__ import annotations
 
 import json
 import os
+import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable, TypeVar
 
 from . import schema
 
 SECRET_NAME = "efps-whapi-panel-sheet"
+T = TypeVar("T")
 
 
 class MissingGoogleSheetsCredentials(RuntimeError):
@@ -19,20 +20,16 @@ class MissingGoogleSheetsCredentials(RuntimeError):
 
 def _secret_from_keychain() -> dict[str, Any] | None:
     from shared.credentials import get_secret
-
     try:
         raw = get_secret(SECRET_NAME)
     except Exception:
         return None
-
     if not raw:
         return None
-
     try:
         value = json.loads(raw)
     except json.JSONDecodeError:
         return {"value": raw}
-
     return value if isinstance(value, dict) else {"value": value}
 
 
@@ -58,9 +55,7 @@ class GoogleSheetsCredentials:
             try:
                 return cls(json.loads(raw_json))
             except json.JSONDecodeError as exc:
-                raise MissingGoogleSheetsCredentials(
-                    "GOOGLE_SERVICE_ACCOUNT_JSON is not valid JSON."
-                ) from exc
+                raise MissingGoogleSheetsCredentials("GOOGLE_SERVICE_ACCOUNT_JSON is not valid JSON.") from exc
 
         secret = _secret_from_keychain()
         if secret:
@@ -70,7 +65,7 @@ class GoogleSheetsCredentials:
                     raw = json.loads(raw)
                 except json.JSONDecodeError as exc:
                     raise MissingGoogleSheetsCredentials(
-                        f"AWS secret '{SECRET_NAME}' does not contain valid service-account JSON."
+                        f"Keychain secret '{SECRET_NAME}' does not contain valid service-account JSON."
                     ) from exc
             if isinstance(raw, dict) and raw.get("private_key"):
                 return cls(raw)
@@ -82,16 +77,22 @@ class GoogleSheetsCredentials:
 
 
 class GoogleSheetsClient:
-    """Small dependency-injected wrapper around gspread.
+    """Dependency-injected gspread wrapper with object reuse and quota-safe writes."""
 
-    Technical access is separated from business workflow. Full-row operations
-    enforce the canonical Housing_Listings contract; modules decide what rows
-    mean and when to write them.
-    """
-
-    def __init__(self, credentials: GoogleSheetsCredentials | None = None, *, client: Any | None = None) -> None:
+    def __init__(
+        self,
+        credentials: GoogleSheetsCredentials | None = None,
+        *,
+        client: Any | None = None,
+        max_retries: int = 5,
+        backoff_base_seconds: float = 1.0,
+    ) -> None:
         self.credentials = credentials or GoogleSheetsCredentials.from_environment()
         self._client = client
+        self._spreadsheet_cache: dict[str, Any] = {}
+        self._worksheet_cache: dict[tuple[str, str], Any] = {}
+        self.max_retries = max(0, int(max_retries))
+        self.backoff_base_seconds = max(0.0, float(backoff_base_seconds))
 
     def _default_client(self) -> Any:
         try:
@@ -115,27 +116,65 @@ class GoogleSheetsClient:
     def open_spreadsheet(self, spreadsheet_id: str) -> Any:
         if not spreadsheet_id.strip():
             raise ValueError("spreadsheet_id must not be empty")
-        return self.client.open_by_key(spreadsheet_id)
+        if spreadsheet_id not in self._spreadsheet_cache:
+            self._spreadsheet_cache[spreadsheet_id] = self.client.open_by_key(spreadsheet_id)
+        return self._spreadsheet_cache[spreadsheet_id]
 
     def worksheet(self, spreadsheet_id: str, worksheet_name: str) -> Any:
         if not worksheet_name.strip():
             raise ValueError("worksheet_name must not be empty")
-        return self.open_spreadsheet(spreadsheet_id).worksheet(worksheet_name)
+        key = (spreadsheet_id, worksheet_name)
+        if key not in self._worksheet_cache:
+            self._worksheet_cache[key] = self.open_spreadsheet(spreadsheet_id).worksheet(worksheet_name)
+        return self._worksheet_cache[key]
+
+    @staticmethod
+    def _is_rate_limited(exc: Exception) -> bool:
+        response = getattr(exc, "response", None) or getattr(exc, "resp", None)
+        status = getattr(response, "status_code", None) or getattr(response, "status", None)
+        if status == 429:
+            return True
+        text = str(exc).upper()
+        return "429" in text or "RESOURCE_EXHAUSTED" in text or "RATE LIMIT" in text
+
+    def _with_backoff(self, operation: Callable[[], T]) -> T:
+        attempt = 0
+        while True:
+            try:
+                return operation()
+            except Exception as exc:
+                if not self._is_rate_limited(exc) or attempt >= self.max_retries:
+                    raise
+                delay = self.backoff_base_seconds * (2 ** attempt)
+                if delay:
+                    time.sleep(delay)
+                attempt += 1
 
     def read_range(self, spreadsheet_id: str, worksheet_name: str, range_name: str) -> list[list[Any]]:
         if not range_name.strip():
             raise ValueError("range_name must not be empty")
-        return self.worksheet(spreadsheet_id, worksheet_name).get(range_name)
+        return self._with_backoff(lambda: self.worksheet(spreadsheet_id, worksheet_name).get(range_name))
 
     def read_rows(self, spreadsheet_id: str, worksheet_name: str, range_name: str) -> list[tuple[Any, ...]]:
-        """Read full contract rows and reject schema-width drift."""
         rows = self.read_range(spreadsheet_id, worksheet_name, range_name)
         return [schema.validate_row(row) for row in rows]
+
+    def write_ranges(
+        self,
+        spreadsheet_id: str,
+        worksheet_name: str,
+        updates: list[tuple[str, list[list[Any]]]],
+    ) -> Any:
+        """Write many ranges through one gspread batch_update request."""
+        if not updates:
+            return None
+        payload = [{"range": range_name, "values": values} for range_name, values in updates]
+        return self._with_backoff(lambda: self.worksheet(spreadsheet_id, worksheet_name).batch_update(payload))
 
     def write_range(self, spreadsheet_id: str, worksheet_name: str, range_name: str, values: list[list[Any]]) -> Any:
         if not range_name.strip():
             raise ValueError("range_name must not be empty")
-        return self.worksheet(spreadsheet_id, worksheet_name).update(range_name, values, raw=True)
+        return self.write_ranges(spreadsheet_id, worksheet_name, [(range_name, values)])
 
     def write_row(self, spreadsheet_id: str, worksheet_name: str, row_number: int, values: list[Any] | tuple[Any, ...]) -> Any:
         if row_number < 1:
@@ -147,6 +186,8 @@ class GoogleSheetsClient:
         if not values:
             return None
         rows = [schema.validate_row(row) for row in values]
-        return self.worksheet(spreadsheet_id, worksheet_name).append_rows(
-            [list(row) for row in rows], value_input_option="RAW"
+        return self._with_backoff(
+            lambda: self.worksheet(spreadsheet_id, worksheet_name).append_rows(
+                [list(row) for row in rows], value_input_option="RAW"
+            )
         )

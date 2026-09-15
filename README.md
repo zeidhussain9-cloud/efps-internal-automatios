@@ -42,7 +42,7 @@ For every implementation, the agent must review all maintained root and `docs/` 
 
 - `shared/cloudinary/` — reusable Cloudinary media storage/upload capability with deterministic property/lead namespaces and secure URL helpers.
 - `shared/credentials/` — canonical local macOS Keychain credential provider.
-- `shared/google_maps/` — dedicated reusable Google Maps URL extraction, short-link handling, and Geocoding resolution capability.
+- `shared/google_maps/` — reusable Google Maps URL extraction plus later runtime Geocoding resolution.
 - `shared/google_sheets/` — reusable Google Sheets technical access plus the canonical 48-column `Housing_Listings` A:AV contract; live read/write boundary verified for Inventory Phase 1.
 - `shared/slack/` — reusable Slack operational capability for the authorized Inventory Phase-1 workflows.
 - `shared/whatsapp_whapi/` — reusable WhAPI technical transport, live gate, channel/settings primitives, webhook normalization, and neutral messaging primitives.
@@ -52,19 +52,19 @@ For every implementation, the agent must review all maintained root and `docs/` 
 Inventory uses three top-level stages:
 
 1. **Stage 1 — Initial / Webhook**: dedicated inventory listener, `NEW` property-session boundary, raw capture, and initial row.
-2. **Stage 2 — Deterministic Extraction / Property Processing**: canonical source segmentation, deterministic candidate extraction/resolution, normalization/business rules, Google Maps resolution, deterministic validation, optional AI verification, and wording-only AI beautification.
-3. **Stage 3 — Downstream Operations**: a boundary for future/downstream consumers; it is not part of the current Inventory Phase-1 publishing implementation.
+2. **Phase-1 deterministic boundary**: canonical source segmentation, deterministic candidate extraction/resolution, normalization/dependencies, deterministic Google Maps URL extraction, and deterministic validation. This boundary is implemented by `src.phase1.run_phase1()` and is AI-independent and network-free for Maps.
+3. **Later property verification / downstream processing**: runtime Google Maps resolution, optional AI verification, wording-only AI beautification, media handling, and downstream publishing. These do not provide source evidence to the deterministic boundary.
 
-The deterministic source contract is: `raw_message_text` is authoritative; persisted Stage-2 Sheet values are never extraction input. BHK, maintenance, and internal property type use canonical candidate resolution, and downstream defaults follow the documented dependency graph. Projection hardening additionally covers source-safe singular/decimal balcony counts and explicit no-pet wording.
+The deterministic source contract is: `raw_message_text` is authoritative; persisted Stage-2 Sheet values are never extraction input. Internal property type is restricted to `Gated Community`, `Semi Gated`, or `Standalone`; direct source evidence wins, the canonical registry is consulted when needed, and missing evidence never implies `Standalone`.
 
-Google Maps is a Stage-2 sub-step, not a separate stage. Google Sheets is transport/output, not a top-level stage.
+Property type drives the coupled parking/amenities resolution: covered parking defaults to `1` for Gated Community/Semi Gated when absent, explicit counts are preserved, open parking defaults to `-`, and society amenities use exact live Sheet dropdown combinations.
+
+`landmark` falls back to `locality` when no better source value exists. `society_name` falls back to locality only as a last resort and is review-flagged. `pincode` and property age are non-blocking optional fields; image URLs are a separate media flow.
 
 ## Deterministic audit status — 2026-09-15
 
-The deterministic contract currently under final hardening contains 35 deterministic-scope fields. The intended accepted state is **35 GREEN, 0 YELLOW, 0 RED**, plus 13 SYSTEM / OUT OF SCOPE fields.
-
-The final hardening change synchronizes the live Sheet bachelor dropdown vocabulary, including the intentional trailing space in `Female Only `, across schema, normalization, validation, regression tests, and maintained documentation. The read-only 25-row projection and production contract gate remain required acceptance evidence from the resulting merged commit.
+The hardened Phase-1 contract remains a 48-field canonical `Housing_Listings` schema with deterministic fields owned by the panel and downstream fields protected. `catalog_title` and `property_highlights` remain valid deterministic fields but may be wording-only AI beautification outputs after the Phase-1 boundary.
 
 ## Production status
 
-Repository/source hardening is maintained separately from live external-system verification. Inventory Phase-1 Google Sheets and Google Maps runtime probes are separate acceptance boundaries. The deterministic regression suite and read-only 25-row projection/gate must pass from the resulting merged `main` commit before this state is accepted as production-ready.
+Repository/source hardening is maintained separately from live external-system verification. The production Phase-1 batch path is one read plus one quota-safe batch write, with bounded 429 backoff and resumable/idempotent row eligibility. Run the full regression/audit suite from the merged `main` commit before processing live remaining rows.

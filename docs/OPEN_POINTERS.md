@@ -1,53 +1,56 @@
 # Open Pointers
 
-This is the canonical list of unresolved decisions and verified unknowns for the current Inventory Management Phase 1 scope. Unknowns are never guessed. Future Meta Catalogue and Housing Portal additions are outside the current Phase-1 scope and are not treated as open pointers here.
+This is the canonical list of unresolved decisions and verified unknowns for the current Inventory Management Phase 1 scope. Unknowns are never guessed. Future Meta Catalogue and Housing Portal additions are outside the current Phase-1 scope.
 
 ## Runtime verification required
 
 - Slack app installation, bot membership, command registration, endpoint deployment, signature verification in the target runtime, and live API probe remain `NOT VERIFIED`.
 - Exact `inventory_locked` sheet control vocabulary remains `NOT VERIFIED`.
+- Google Maps network resolution remains a later runtime verification step; deterministic URL extraction is complete at the Phase-1 boundary.
 
 ## Contract / implementation follow-up
 
-- The successful WhAPI Cloudflare diagnostic required an explicit `User-Agent: EFPS-Inventory-Phase1/1.0`. The current `WhApiClient` source has not yet been changed to add that header. Decide and verify whether the explicit user-agent should become part of the canonical client transport contract before treating the client itself as production-accepted for live API calls.
+- The successful WhAPI Cloudflare diagnostic required an explicit `User-Agent: EFPS-Inventory-Phase1/1.0`. The current `WhApiClient` source has not yet been changed to add that header. Decide and verify whether that explicit user-agent should become part of the canonical client transport contract before treating the client itself as production-accepted for live API calls.
 
-## Deterministic audit status — 2026-09-15 final hardening
+## Phase-1 deterministic hardening status — 2026-09-15
 
-The current repository hardening state is **35 GREEN, 0 YELLOW, 0 RED** for the 35 deterministic-scope fields, plus 13 SYSTEM / OUT OF SCOPE. The 25-row read-only projection and production contract gate passed on the merged hardening commit, with zero contract failures and zero Sheet writes.
+The consolidated Phase-1 implementation pointers are closed in the `phase1-deterministic-hardening` change set pending final CI acceptance and merge. The implementation now has one canonical Phase-1 runner, deterministic Maps URL extraction, strict internal-property-type resolution, coupled parking/amenity resolution, location fallbacks, immediate validation, status transitions, field-level reporting, deterministic traceability, and quota-safe resumable Sheets processing.
 
-The previously demonstrated Maps, society, and bachelor RED states are closed by the merged contract hardening. The exact bachelor live dropdown remains `Female Only `, `Male Only`, `Open for both`, with the trailing space on `Female Only ` intentionally preserved. `Family` clears the dependent field; `Open For All` defaults to `Open for both`; explicit valid source evidence overrides the default.
-
-Do not reopen Maps, society, or bachelor contracts without fresh regression evidence demonstrating a new contract violation.
+The exact bachelor live dropdown remains `Female Only `, `Male Only`, `Open for both`, with the trailing space on `Female Only ` intentionally preserved. `Family` clears the dependent field; `Open For All` defaults to `Open for both`; explicit valid source evidence overrides the default.
 
 ## Closed deterministic contract findings
 
-- `google_maps_url` source extraction and exact source preservation, including the observed `share.google` source form, are closed by projection evidence and regression coverage.
-- `preferred_tenant_type -> bachelor_preference` dependency and exact live dropdown vocabulary are closed by the merged hardening state.
-- `pet_friendly` contract is closed for explicit positive/negative source wording.
+- `google_maps_url` source extraction and exact source preservation, including the observed `share.google` form, are closed by deterministic extraction and regression coverage.
+- `preferred_tenant_type -> bachelor_preference` dependency and exact live dropdown vocabulary are closed.
+- `pet_friendly` contract is closed for the current positive/negative wording contract.
 - `servant_room` behavior is closed.
-- `covered_parking` behavior is closed and follows resolved `internal_property_type`.
-- `internal_property_type` direct extraction/resolution is closed, including explicit negative gating and unresolved-no-evidence semantics.
-- `society_name` direct extraction/fallback behavior is closed.
-- `landmark` separation from Maps URLs is closed; landmark never inherits locality.
-- Property subtype behavior is closed for the current operational contract.
-- Property highlights and catalog title fallback behavior are closed.
-- `age_of_property_years` remains non-blocking and conservative.
-- `furnish_type` behavior is closed for the observed live contract.
-- Maintenance business semantics are closed, including `Included + Water`.
-- `society_amenities` dependency behavior is closed.
-- `pincode` is explicitly non-blocking.
+- `internal_property_type` resolves only to `Gated Community`, `Semi Gated`, or `Standalone`; direct labelled source evidence wins over weaker evidence; the canonical registry is consulted only when source evidence is insufficient; missing evidence never implies `Standalone`.
+- `covered_parking` defaults to `1` for Gated Community/Semi Gated when absent, while explicit counts (including counts greater than 1) are preserved.
+- `open_parking` defaults to `-` and is populated only from explicit source evidence.
+- `society_amenities` is resolved from the internal property type using exact canonical Sheet vocabulary.
+- The internal `parkingSocietyAmenitiesResolved` concept is implemented by the coupled deterministic resolver.
+- `landmark` never receives a Google Maps URL and falls back to `locality` as the final deterministic fallback.
+- `society_name` uses explicit source evidence first, later verified Maps place evidence when available at runtime, and locality only as the final deterministic fallback; the fallback is review-flagged.
+- `pincode` is non-blocking and property age may remain intentionally blank.
+- Persisted Stage-2 Sheet values are not deterministic evidence.
+- The canonical contract remains exactly 48 fields A:AV.
+- Deterministic validation runs immediately after projection and fails closed for invalid canonical values.
+- AI verification/beautification remains after the deterministic boundary. `catalog_title` and `property_highlights` can be produced/worded by AI later; they are not Phase-1 blockers. Image URL association remains a separate media flow.
 
-## Historical projection conflicts
+## Batch / operating contract
 
-The latest read-only projection identified populated historical Sheet differences in BHK, maintenance, internal property type, and property highlights. These remain documented as historical/source/display conflicts. They are not parser failures because `raw_message_text` is the source of truth; deterministic extraction must not be altered to reproduce stale persisted values.
+The canonical row path is `tools/run_phase1_rows.py --start-row <n> --end-row <m>`.
 
-## Deferred by current Phase-1 boundary
+The batch runner performs one source-range read and one multi-range batch write. Google Sheets spreadsheet/worksheet objects are reused and rate-limit failures are retried with bounded exponential backoff. Already Processed rows are skipped, while a failed batch write does not mark prepared rows as processed, making the operation safe to rerun.
 
-- Production WhAPI media downloads and direct Cloudinary association beyond the currently authorized temporary photo workflow.
-- Inventory lifecycle/locking implementation beyond the current protected-column boundary.
-- Additional batch/live orchestration beyond the explicit Phase-1 intake and processing paths.
-- Future Meta Catalogue, Housing Portal, and website production integrations until their implementation requirements are explicitly authorized and established.
+Field-level execution reporting exposes populated, blank, unresolved, and flagged fields, plus source segments, extracted candidates, and resolved selections.
+
+## Remaining external-system work
+
+The next live acceptance boundary after merge is deterministic Phase-1 processing of rows 12–26. That run must occur only from the merged `main` commit and only through the Phase-1 deterministic boundary; runtime Maps enrichment and AI verification/beautification remain later steps.
+
+The remaining live/runtime unknowns above must not be confused with unresolved deterministic contract work.
 
 ## Governance
 
-When a deterministic pointer is resolved, update this document and the affected architecture/contracts/handoff in the same implementation session. The deterministic field contract, regression suite, handoff, and control matrix must remain synchronized with approved business-rule changes.
+When a deterministic pointer is resolved, update this document and the affected architecture/contracts/handoff/control matrix in the same implementation session. The deterministic field contract, regression suite, handoff, and control matrix must remain synchronized with approved business-rule changes.
