@@ -18,9 +18,18 @@ def _line_value(text: str, label: str) -> str:
     return match.group(1).strip() if match else ""
 
 
+def _first_line_value(text: str, labels: tuple[str, ...]) -> str:
+    for label in labels:
+        value = _line_value(text, label)
+        if value:
+            return value
+    return ""
+
+
 def scan(text: str) -> dict[str, str]:
     out: dict[str, str] = {}
     text = text or ""
+
     m = (
         re.search(r"\b(\d+(?:\.\d+)?)\s*[- ]?\s*bhk\b", text, re.I)
         or re.search(r"\bbed\s*rooms?\s*[:\-]\s*(\d+(?:\.\d+)?)\b", text, re.I)
@@ -80,6 +89,20 @@ def scan(text: str) -> dict[str, str]:
         if m:
             out[key] = m.group(1)
 
+    # These are direct source fields. We prefer explicit labels and do not
+    # infer their values from unrelated prose.
+    direct = {
+        "internal_property_type": _first_line_value(text, (r"internal\s*property\s*type", r"property\s*type", r"type")),
+        "society_name": _first_line_value(text, (r"society\s*name", r"society")),
+        "landmark": _first_line_value(text, (r"landmark",)),
+        "locality": _first_line_value(text, (r"location", r"locality", r"area")),
+        "property_subtype": _first_line_value(text, (r"property\s*subtype", r"subtype")),
+        "property_highlights": _first_line_value(text, (r"property\s*highlights", r"highlights")),
+    }
+    for key, value in direct.items():
+        if value:
+            out[key] = value
+
     maintenance = _line_value(text, "maintenance")
     if maintenance:
         numeric = re.fullmatch(r"\s*([\d.,]+)\s*(k|lakh|l)?\s*", maintenance, re.I)
@@ -115,9 +138,6 @@ def scan(text: str) -> dict[str, str]:
             else _scale(m.group(1), m.group(2))
         )
 
-    # Live Housing_Listings furnish_type dropdown is limited to the two
-    # canonical values below. Unfurnished is represented by a blank
-    # furnish_type and blank flat_furnishings rather than a third value.
     for pat, label in (
         (r"\bfully\s*furnish", "Fully Furnished"),
         (r"\bsemi[-\s]*furnish", "Semi Furnished"),
