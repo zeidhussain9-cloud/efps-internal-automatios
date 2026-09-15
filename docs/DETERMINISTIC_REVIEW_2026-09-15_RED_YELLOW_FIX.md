@@ -1,66 +1,82 @@
 # Deterministic Extraction Review — 2026-09-15
 
-## Evidence and version audit
+## Current evidence state
 
-The recurring 25-row projection artifact `Pasted markdown(20260915-094155).md` was executed from repository commit `98d657b`, not from the subsequently merged deterministic-fix commit `c096445` or current `main`. The artifact itself records `git rev-parse --short HEAD` as `98d657b` before the projection command. Therefore it cannot be used to judge the fixes that were later merged. This version mismatch explains why already-fixed source shapes kept reappearing in later manual classifications.
+The 2026-09-15 audit reviewed the 25-row Inventory projection for rows 2:26 and classified the 48 canonical fields. The current control state is:
 
-Current `main` is `60e167ad2d181f5444bb0f1df5b20e0f0ec84e0c`. The comparison from `98d657b` to current `main` contains 21 commits and includes changes to the deterministic extractor, resolver, normalizer, regression suite, and review documentation.
+- 35 deterministic-scope fields
+- 34 GREEN
+- 0 YELLOW
+- 1 RED: `google_maps_url`
+- 13 SYSTEM / OUT OF SCOPE
+- 0 model errors in the audited projection
+- 0 Sheet writes
 
-## Source-backed findings
+Historical Sheet-value differences were adjudicated against authoritative `raw_message_text`; they are not automatically deterministic defects.
 
-### `pet_friendly`
-The old projection at `98d657b` showed `Pets: Not Allowed` becoming `Yes`. Current normalization explicitly recognizes negative pet wording with `:`, `=`, or `-`, and negative evidence wins.
+## Closed deterministic findings
 
-### `balconies`
-Bare singular `Balcony` means one. Current normalization handles this when the extractor has no numeric count.
+The audit cycle permanently hardened:
 
-### `landmark` vs `google_maps_url`
-A `📍 Landmark:` marker followed by a Maps URL must leave `landmark` blank and place the URL in `google_maps_url`. Current extraction and normalization implement that separation.
+- explicit negative pet wording;
+- bare singular `Balcony` and numeric/decimal balcony forms;
+- maintenance inclusion and `+ Water` semantics;
+- explicit positive and negative internal-property-type evidence;
+- unresolved internal-property-type handling without inventing `Standalone`;
+- community-name adjudication where independently established;
+- society/property marker versus landmark separation;
+- locality source extraction;
+- dependent `society_amenities` and `covered_parking` behaviour;
+- non-blocking pincode and property-highlight semantics;
+- Sheet-independence of deterministic extraction.
 
-### `society_name` and `google_maps_url`
-The structured EFPS marker grammar `📍 Name:` + Maps URL is now explicitly parsed. The marker name is the society/property candidate and the URL is the Maps candidate. Existing projection evidence already showed this working for records such as `Sonestaa Silver Oak` before the stale manual review was produced.
+These findings are closed. They should not be reclassified unless a future projection demonstrates an actual regression against their contracts.
 
-### `locality`
-`Location:` is a deterministic source field. The 98d657b production artifact shows `Location: Thubarahalli, Whitefield` projecting to `locality = Thubarahalli, Whitefield`, so locality was not an extraction defect in that artifact. Maps replacement is a separate enrichment stage. Locality must not be downgraded merely because pincode/Maps enrichment was not run by the read-only projection harness.
+## Remaining RED: `google_maps_url`
 
-### `pincode`
-Pincode is enrichment-owned unless explicitly present in source. A blank value is valid and non-blocking. `validate.py` does not require a nonblank pincode, and the new production gate explicitly treats blank pincode as PASS.
+The remaining issue was isolated to a source URL grammar gap. A raw inventory message contained:
 
-### `maintenance`
-The production projection already demonstrated correct numeric maintenance and `+ Water` preservation. Current resolver/normalizer also covers `Included` and `Included + Water` semantics. Maintenance should be graded against the source contract, not against historical Sheet formatting.
+```text
+📍 SM ART Apartments:
+https://share.google/oo7aBEUjVMGWUQzPm
+```
 
-### `property_highlights`
-Blank is valid when there is no explicit highlight and no supported deterministic fragment. A prior PARTIAL classification therefore did not establish a parser defect by itself.
+The deterministic extractor originally recognized common Maps hosts but omitted `share.google`. That made a real source URL invisible at extraction time even though the URL was present in `raw_message_text`.
 
-## Genuine remaining defect found by this audit
+The repository now recognizes `share.google` in both the shared Maps adapter and the production projection gate. A regression test also covers the source form.
 
-### `internal_property_type`
-The resolver previously ended with `return "Standalone"` when neither gating nor standalone evidence existed. That is a false fact: absence of evidence does not prove Standalone. This specifically misclassified `Prima Hilife`, whose raw source contains the community name but no gating keyword.
+`share.google` is a Google short-link domain generated by the Google app. The short link is designed to redirect to the underlying page through the Google app. The important architectural point is that **recognition of the source URL must be deterministic and must not depend on network expansion**.
 
-Independent current property evidence describes Prima Hi-Life as an exclusive gated community, and current rental inventory lists it with the `Gated Community` highlight. citeturn919629search0turn919629search6
+## Dedicated Maps capability
 
-**Permanent fix:**
-1. Explicit source gating/standalone evidence remains highest priority.
-2. Independently adjudicated community names are resolved through `src/community_property_types.py`.
-3. `Prima Hi-Life`/`Prima Hilife` is explicitly registered as `Gated Community`.
-4. Unknown/no-evidence communities now remain blank instead of being falsely labelled Standalone.
-5. Downstream parking/amenity defaults do not invent a classification when the parent type is unresolved.
+`shared/google_maps/` is the canonical home for Maps-specific technical behaviour:
 
-This preserves the three business values while separating an actual `Standalone` fact from an unresolved enrichment state.
+1. source URL extraction;
+2. short-link expansion when runtime/network access exists;
+3. Maps query derivation;
+4. Geocoding resolution;
+5. normalized resolution/confidence output.
 
-## Regression-control fix
+Inventory remains responsible for business interpretation and field projection.
 
-The old projection harness was observational: it dumped 48 fields but had no field-level assertion against the deterministic contract. This allowed a manually maintained 10/11-field classification to drift independently of code state.
+## Acceptance rule from this point
 
-Current repository adds:
+The control matrix is intentionally frozen around the current state until new evidence arrives. The next rows 2:26 read-only projection must use the current merged `main` commit.
+
+There are only two valid outcomes for the remaining Maps field:
+
+- **GREEN:** the source `google_maps_url` is projected correctly across the applicable rows; promote `google_maps_url` from RED to GREEN and record the evidence.
+- **RED:** the projection still fails the Maps URL contract; keep it RED and diagnose only the demonstrated failure.
+
+A Maps failure must not reopen unrelated GREEN fields without independent regression evidence.
+
+## Regression controls
+
+The repository contains:
 
 - `tools/test_deterministic_edge_cases.py` for exact source-shape regressions;
-- `tools/projection_regression_check.py` for pure deterministic regression assertions;
-- `tools/production_projection_gate.py` for the live 25-row source-backed contract gate;
-- CI execution of the deterministic regression tools.
+- `tools/projection_regression_check.py` for deterministic regression assertions;
+- `tools/production_projection_gate.py` for the live 25-row contract gate;
+- `tools/inventory_model_test.py` for the read-only full 48-field projection dump.
 
-The production gate treats valid blanks as valid results, including pincode and property highlights where the contract permits them, and checks selected previously-green fields for regression.
-
-## Acceptance rule
-
-The next live projection must be run from the actual fix commit/merged `main` SHA. Previous output from `98d657b` must not be reused as evidence for the current code. A clean result means the 11 previously recurring review labels are absent because their field contracts pass; it does **not** require every optional/enrichment field to be populated.
+The primary next audit remains `inventory_model_test.py --start-row 2 --end-row 26`. It must be executed against the current merged `main` before promoting the RED field.
