@@ -9,14 +9,16 @@ The current authorized implementation target is **Inventory Management Phase 1**
 - `extract.py` performs deterministic extraction from completed `raw_message_text`.
 - Direct source fields accept `:`, `-`, `|`, and `=` separators and stop at newline/HTML breaks or the next timestamped WhatsApp message marker.
 - Direct property type extraction is specific to property/gating classification labels; a generic `type:` match is intentionally avoided because it can capture unrelated text.
+- `source_consistency.py` now performs a second source-first reconciliation pass for `internal_property_type`. Labelled canonical values and complete canonical phrases are recognized before normalization; unrelated `type:` text cannot classify a property.
 - `normalize.py` applies deterministic business rules for direct-field fallbacks, pets, servant room, covered parking, amenities, maintenance, furnishing, subtype, tenant/bachelor dependency, highlights, title, and conservative property age.
-- `pipeline.py` orchestrates extraction → normalization → Maps → validation → optional AI wording/verification.
+- `pipeline.py` orchestrates extraction → source reconciliation → normalization → Maps → validation → optional AI wording/verification.
 - `Needs Review` is reserved for deterministic validation errors or explicit AI conflicts. Maps `PARTIAL_MATCH`, `NEEDS_RUNTIME_VERIFICATION`, and `NOT_FOUND` are recorded as issues but do not themselves create `Needs Review`.
 - `ai.py` remains advisory and cannot replace deterministic facts or bypass validation.
 
 ## Deterministic business rules now implemented
 
 - Explicit `internal_property_type` is preferred and normalized to `Gated Community`, `Semi Gated`, or `Standalone`; common source separators are accepted.
+- Source reconciliation recognizes labelled canonical property-type values and complete canonical phrases before fallback inference.
 - If explicit property type is absent, semi-gated wording wins, then gated community/society/property wording, then explicit standalone wording, otherwise Standalone.
 - `society_name` is direct when supplied; apartment/community/building-name aliases are accepted; placeholder-only values fall back to location/locality.
 - `landmark` is direct when supplied; placeholder-only values fall back to location/locality.
@@ -31,19 +33,17 @@ The current authorized implementation target is **Inventory Management Phase 1**
 
 ## Model-run findings addressed
 
-The 25-row read-only run identified three categories requiring attention:
+The previous 25-row read-only run exposed repeated differences in two distinct categories. First, many differences were expected because the selected Sheet rows remained at the pre-processed `Raw` state with Stage-1/2 fields blank. Existing Stage-2 Sheet values are deliberately not extraction input, so blank-versus-populated output is not a deterministic extraction failure. Second, nonblank conflicts such as `internal_property_type` and maintenance require source-first comparison rather than treating every projection difference as a failed update.
 
-1. Direct-field parsing was not sufficiently robust for timestamp-concatenated messages. This was fixed by making direct-field extraction stop at the next timestamped message and by expanding supported separators/field aliases.
-2. Property-type inference needed stronger source-first classification and protection against broad `type:` captures. This was tightened while preserving the documented semi-gated → gated → standalone precedence.
-3. Maintenance differences such as `2777` vs `2777 + Water` and `5000` vs `5000 + Water` were reviewed against the canonical contract. The source-preserving model behavior is intentional and is documented as such; no destructive numeric-only rewrite was introduced.
+The property-type recurrence is now addressed by an explicit source reconciliation layer placed between extraction and normalization. It accepts canonical labelled values such as `Property Type: Semi Gated`, `Property Type - Gated Community`, and `Property Type = Standalone`, plus complete canonical phrases, while continuing to reject unrelated `type:` text.
 
-The run also showed many differences that are expected because the selected Sheet rows remain at the pre-processed `Raw` state with Stage-1/2 fields blank. Existing Sheet values are not extraction input. `2.5 BHK` corrections and deterministic defaults such as pet/parking/amenities are therefore model outputs, not automatically regressions.
+Maintenance differences such as `2777` vs `2777 + Water` and `5000` vs `5000 + Water` remain source-preserving behavior unless a raw-source conflict proves otherwise. Decimal BHK corrections likewise remain source-derived until raw evidence establishes a different canonical value.
 
 ## Verification
 
-Regression coverage now includes timestamp-delimited direct fields, inline timestamp delimiters, explicit semi-gated classification, and mixed maintenance preservation.
+Regression coverage now includes timestamp-delimited direct fields, inline timestamp delimiters, explicit semi-gated classification, canonical property-type labels/phrases, unrelated `type:` rejection, and mixed maintenance preservation.
 
-The 25-row model run showed 17 Maps `PARTIAL_MATCH` issues but no Maps-induced `Needs Review` status. The current implementation keeps valid deterministic records at `Pending` while recording Maps uncertainty as an issue.
+The previous 25-row model run showed 17 Maps `PARTIAL_MATCH` issues but no Maps-induced `Needs Review` status. The current implementation keeps valid deterministic records at `Pending` while recording Maps uncertainty as an issue.
 
 ## Current open pointers
 
