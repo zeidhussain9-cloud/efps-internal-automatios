@@ -1,5 +1,7 @@
 """DynamoDB-stream lead-card worker and scheduled dashboard worker."""
 from __future__ import annotations
+import sys
+sys.path.insert(0,"modules/efpd-lead-mgmnt/src")
 import config,db,digest,lead_card
 COSMETIC={"card_ts","updated_at"}
 def _plain(image):

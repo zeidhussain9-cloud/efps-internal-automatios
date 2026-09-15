@@ -1,6 +1,6 @@
 """Lead DynamoDB state access."""
 from __future__ import annotations
-import sys
+import sys,time
 from datetime import datetime,timezone
 import audit,config
 TABLES={config.DDB_LEADS:{"hash_key":"phone_number"},config.DDB_INTERACTIONS:{"hash_key":"phone_number","range_key":"timestamp"},config.DDB_SESSIONS:{"hash_key":"user_id"},config.DDB_AUDIT:{"hash_key":"phone_number","range_key":"changed_at"},config.DDB_BUGS:{"hash_key":"bug_id"}}
@@ -35,3 +35,15 @@ def interaction_exists(phone,message_id,*,_res=None):
  if not message_id:return False
  return bool(_table(config.DDB_INTERACTIONS,_res).query(KeyConditionExpression="phone_number = :p",FilterExpression="message_id = :m",ExpressionAttributeValues={":p":str(phone).strip(),":m":str(message_id)},ScanIndexForward=False,Limit=100).get("Items"))
 def set_card_ts(phone,card_ts,*,_res=None):_table(config.DDB_LEADS,_res).update_item(Key={"phone_number":str(phone).strip()},UpdateExpression="SET card_ts = :t",ExpressionAttributeValues={":t":card_ts})
+def claim_event(event_id,*,_res=None,ttl_seconds=7*86400):
+ """Atomically claim a Slack event ID using the existing sessions table."""
+ key=str(event_id or "").strip()
+ if not key:return True
+ table=_table(config.DDB_SESSIONS,_res)
+ try:
+  table.put_item(Item={"user_id":f"slack-event:{key}","event_id":key,"expires_at":int(time.time())+int(ttl_seconds)},ConditionExpression="attribute_not_exists(user_id)")
+  return True
+ except Exception as exc:
+  code=getattr(exc,"response",{}).get("Error",{}).get("Code")
+  if code=="ConditionalCheckFailedException":return False
+  raise

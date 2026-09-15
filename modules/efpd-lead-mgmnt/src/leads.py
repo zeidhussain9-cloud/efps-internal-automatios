@@ -76,17 +76,21 @@ def validate_action(value):
  for x in ACTIONS:
   if x.lower().replace("-"," ")==wanted:return x
  raise LeadError(f"unknown action {value!r} — use one of: "+", ".join(ACTIONS))
-def record_message(phone,direction,body,*,message_id="",sender_name="",group_name="",media_blobs=None,_uploader=None,_res=None):
+def record_message(phone,direction,body,*,message_id="",sender_name="",group_name="",media_reference="",media_blobs=None,_uploader=None,_res=None):
  if direction not in ("in","out"):raise LeadError("direction must be 'in' or 'out'")
  key=normalise_phone(phone)
  if not key:raise LeadError(f"unusable phone number: {phone!r}")
  existing=db.get_lead(key,_res=_res) or {};created=not existing
  if message_id and db.interaction_exists(key,message_id,_res=_res):existing["_created"]=False;existing["_duplicate"]=True;return existing
- media_urls=""
+ media_urls=str(media_reference or "").strip()
  if media_blobs:
-  try:media_urls=", ".join(x.url for x in media.upload_lead_images(key,message_id,list(media_blobs),_uploader=_uploader))
+  try:
+   uploaded=media.upload_lead_images(key,message_id,list(media_blobs),_uploader=_uploader)
+   uploaded_urls=", ".join(x.url for x in uploaded)
+   media_urls=", ".join(x for x in (media_urls,uploaded_urls) if x)
   except Exception as exc:log.warning("lead image upload failed: %s",exc)
- db.log_interaction(key,direction,body,message_id=message_id,group_name=group_name,has_media=bool(media_blobs),media_urls=media_urls,_res=_res)
+ has_media=bool(media_reference or media_blobs)
+ db.log_interaction(key,direction,body,message_id=message_id,group_name=group_name,has_media=has_media,media_urls=media_urls,_res=_res)
  lead=dict(existing);lead.update({"phone_number":key,"last_message":(body or "")[:400],"last_message_at":now_iso(),"last_direction":direction});name=clean_sender_name(sender_name)
  if name and not lead.get("customer_name"):lead["customer_name"]=name
  if group_name and not lead.get("source_group"):lead["source_group"]=group_name

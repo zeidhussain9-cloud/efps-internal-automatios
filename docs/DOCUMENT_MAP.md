@@ -25,6 +25,7 @@ This document is the canonical map of maintained repository documentation. It te
 | `DOCUMENT_MAP.md` | Maintained-document ownership map |
 | `DOCUMENT_UPDATE_MATRIX.md` | Routing table for documentation review/update decisions |
 | `OPEN_POINTERS.md` | Unresolved decisions and verified unknowns |
+| `MIGRATION_LIVE_SYSTEM_MAP_20260916.md` | Canonical live-system migration scope, source authority, and verification map for the 2026-09-16 migration |
 | `INVENTORY_SOURCE_EXTRACTION.md` | Canonical Stage-2 source segmentation and deterministic extraction contract |
 | `DETERMINISTIC_FIELD_RESOLUTION.md` | Canonical candidate extraction/resolution/normalization contract for deterministic Stage-2 fields |
 
@@ -43,16 +44,10 @@ Established shared capabilities include:
 - `shared/google_maps/`
 - `shared/google_sheets/`
 - `shared/slack/`
+- `shared/webhook/`
 - `shared/whatsapp_whapi/`
 
 `shared/credentials/` is the canonical technical credential-provider boundary; credential values are never repository documentation.
-
-### `shared/google_maps/` canonical documents
-
-- `README.md` — capability boundary, authentication references, runtime behavior, resolution states, and verified Phase-1 acceptance.
-- `CREDENTIALS.md` — non-secret Google Maps credential registry.
-- `client.py` — reusable Maps API transport and normalized `MapsResolution` adapter.
-- `test_google_maps.py` — unit coverage for credential precedence/fallback behavior.
 
 ### `shared/slack/` canonical documents
 
@@ -70,9 +65,15 @@ Established shared capabilities include:
 - `IMPLEMENTATION_MAP.md` — legacy-to-new capability mapping and boundaries.
 - `HANDOFF.md` — migration status and remaining activation work.
 - `client.py` — reusable Slack Web API transport.
-- `security.py` — inbound request signature verification.
+- `security.py` — inbound request signature verification and runtime secret resolution.
 - `safety.py` — safe text and thread-control helpers.
 - `routing.py` — channel/workspace routing constants.
+
+### `shared/google_maps/` canonical documents
+
+- `README.md` — capability boundary and runtime notes.
+- `CREDENTIALS.md` — non-secret credential registry.
+- `client.py` — reusable Maps API transport and normalized resolution adapter.
 
 ## Single-source rule
 

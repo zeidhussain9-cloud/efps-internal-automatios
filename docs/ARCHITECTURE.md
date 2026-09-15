@@ -13,8 +13,13 @@ This is the canonical cross-repository architecture reference.
 - `shared/google_sheets/` — Sheets transport and the canonical 48-column `Housing_Listings` contract.
 - `shared/google_maps/` — reusable Maps URL extraction and Google Geocoding resolution capability; inventory decides when it is required.
 - `shared/whatsapp_whapi/` — WhAPI transport, webhook normalization/verification, and the two-listener source boundary.
-- `shared/slack/` — reusable Slack transport, security, routing, and authorized Inventory Phase-1 operational capability.
-- `shared/credentials/` — local macOS Keychain credential provider used by shared adapters.
+- `shared/slack/` — reusable Slack transport, runtime signature security, routing, and operational capability.
+- `shared/webhook/` — generic HTTP request/response primitives used by entry boundaries.
+- `shared/credentials/` — local macOS Keychain credential provider used as the local fallback by shared adapters.
+
+## Business modules
+- `modules/efpd-lead-mgmnt/` owns Lead state, persistence access, cards, audit, media handling, and dashboard behavior.
+- `modules/efps-inventory-mgmnt/` owns Inventory Stage-1 intake and the canonical Stage-2 implementation.
 
 ## Inventory top-level stages
 
@@ -37,36 +42,27 @@ raw_message_text
 
 The authoritative deterministic entry point is `modules/efps-inventory-mgmnt/src/pipeline.py:deterministic()`. The authoritative full Stage-2 entry point is `process_closed_session()`.
 
-`src/source_segments.py` prevents labelled extraction from consuming a later WhatsApp message. `src/field_resolution.py` owns recurring multi-candidate resolution for BHK, maintenance, and internal property type. `normalize.py` consumes canonical resolved values and does not independently rediscover property type.
-
 Existing persisted Sheet Stage-2 values are never extraction input. The raw source remains authoritative for deterministic facts.
 
-### Stage 3 — Downstream Operations
+The live-system migration does not import legacy Inventory extraction, normalization, resolution, validation, or pipeline behavior. Only the Stage-1 live intake boundary is integrated with the migration.
+
+## Stage 3 — Downstream Operations
 Stage 3 is the downstream boundary for later consumers. It is not part of the current Inventory Phase-1 publishing implementation.
 
 ## Canonical sheet
 The single physical shape is `shared/google_sheets/schema.py`: 48 columns A:AV. The schema records owner, stage, allowed values where verified, and declared dependencies.
 
-## Deterministic business dependency graph
+## Lead and Slack runtime boundary
+WhAPI inbound delivery enters the root webhook routing boundary. Inventory-listener traffic goes to Inventory Stage 1; other direct inbound traffic goes to Lead Management. Slack slash commands, Events API delivery, and interactive actions are public adapters that use the shared Slack signature verifier. AWS resolves the signing secret from `SLACK_SIGNING_SECRET`; local development may fall back to the canonical Keychain credential.
 
-```text
-internal_property_type -> society_amenities
-internal_property_type -> covered_parking (blank-only default)
-furnish_type -> flat_furnishings (blank-only default)
-preferred_tenant_type -> bachelor_preference
-maintenance -> maintenance_included
-built_up_area -> carpet_area (blank-only fallback)
-monthly_rent -> security_deposit (month-based source form)
-```
-
-`internal_property_type` has exactly three business values: `Gated Community`, `Semi Gated`, `Standalone`.
+Slack Events are idempotent by `event_id` using an atomic claim in the existing `efps-sessions` table. Lead inbound media references are retained in the existing interaction media fields. Lead card delivery edits the existing card where possible and recreates a deleted card when an update fails.
 
 ## Stage-1/2 write boundary
 Inventory Stage 1/2 may write A:D, F:AO, and AU. It must not write E (`listing_state`), AP:AT (Housing/Meta downstream fields), or AV (`inventory_locked`). Stage-3 writers are responsible for those protected fields.
 
 ## Runtime boundary
-Inventory Phase-1 runtime verification has completed successfully for the canonical Google Sheets read/write boundary and for Google Maps direct API access plus application-path consumption. WhAPI live channel identity/subscription/deployment, Cloudinary live upload, and Slack live deployment remain separate runtime acceptance items.
+Repository-side remediation is distinct from live acceptance. AWS deployment, Slack runtime registration/permissions, WhAPI destination configuration, destination webhook delivery, and target Google Sheets access must be verified against the destination deployment before the old runtime is retired.
 
 ## Documentation authority
 
-`docs/DATA_CONTRACTS.md` owns cross-module field semantics and dependencies. `docs/DETERMINISTIC_FIELD_RESOLUTION.md` owns candidate resolution and precedence. `docs/INVENTORY_SOURCE_EXTRACTION.md` owns source segmentation and extraction boundaries. `docs/DOCUMENT_MAP.md` owns documentation roles.
+`docs/DATA_CONTRACTS.md` owns cross-module field semantics and dependencies. `docs/DETERMINISTIC_FIELD_RESOLUTION.md` owns candidate resolution and precedence. `docs/INVENTORY_SOURCE_EXTRACTION.md` owns source segmentation and extraction boundaries. `docs/MIGRATION_LIVE_SYSTEM_MAP_20260916.md` owns the current live-system migration scope and source-authority classification. `docs/DOCUMENT_MAP.md` owns documentation roles.

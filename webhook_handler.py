@@ -1,8 +1,4 @@
-"""Canonical WhAPI webhook entry point for the new runtime.
-
-WhAPI parsing and authentication are shared technical capabilities. Inventory
-and Lead behavior stay in their owning modules.
-"""
+"""Canonical WhAPI webhook entry point for the new runtime."""
 from __future__ import annotations
 import json,os,sys
 from shared.webhook.request import json_body,response
@@ -37,12 +33,12 @@ def _process(payload:dict)->dict:
             phone=normalise_phone(message.chat_id or message.sender)
             if not phone:results.append({"skipped":"no usable phone number"});continue
             direction="out" if message.from_me else "in"
-            lead=record_message(phone,direction,message.body,message_id=message.message_id,sender_name="" if message.from_me else message.sender_name)
+            lead=record_message(phone,direction,message.body,message_id=message.message_id,sender_name="" if message.from_me else message.sender_name,media_reference=message.media_reference)
             if lead.get("_duplicate"):results.append({"phone":phone,"duplicate":True});continue
             ts=post_or_update(lead)
             if ts and not lead.get("card_ts"):lead["card_ts"]=ts
-            post_history(lead,history_line({"direction":direction,"message_body":message.body,"timestamp":lead.get("last_message_at", ""),"has_media":message.has_media}))
-            results.append({"phone":phone,"created":bool(lead.get("_created")),"direction":direction})
+            post_history(lead,history_line({"direction":direction,"message_body":message.body,"timestamp":lead.get("last_message_at",""),"has_media":message.has_media}))
+            results.append({"phone":phone,"created":bool(lead.get("_created")),"direction":direction,"has_media":message.has_media})
         except Exception as exc:
             crash_report.report("webhook",exc,reference=message.message_id);results.append({"error":str(exc)})
     return {"handled":len(results),"results":results}

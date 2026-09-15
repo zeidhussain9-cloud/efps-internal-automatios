@@ -2,7 +2,7 @@
 from __future__ import annotations
 import json,time
 from dataclasses import dataclass
-from . import intake,pipeline
+import intake,pipeline
 from shared.google_sheets import schema
 from shared.google_sheets.client import GoogleSheetsClient
 from shared.whatsapp_whapi.webhook import IncomingMessage
@@ -21,7 +21,7 @@ class DynamoSessionStore:
  def get(self,sender):
   item=self._table().get_item(Key={"user_id":SESSION_PREFIX+sender}).get("Item")
   if not item:return None
-  return StoredSession(sender, str(item.get("listing_id") or ""),str(item.get("source_group") or ""),str(item.get("started_at") or ""),json.loads(item.get("messages_json") or "[]"),json.loads(item.get("seen_ids_json") or "[]"))
+  return StoredSession(sender,str(item.get("listing_id") or ""),str(item.get("source_group") or ""),str(item.get("started_at") or ""),json.loads(item.get("messages_json") or "[]"),json.loads(item.get("seen_ids_json") or "[]"))
  def put(self,s):self._table().put_item(Item={"user_id":SESSION_PREFIX+s.sender,"listing_id":s.listing_id,"source_group":s.source_group,"started_at":s.started_at,"messages_json":json.dumps(s.messages),"seen_ids_json":json.dumps(s.seen_message_ids),"expires_at":int(time.time())+86400})
  def delete(self,sender):self._table().delete_item(Key={"user_id":SESSION_PREFIX+sender})
 def _rows(c):
