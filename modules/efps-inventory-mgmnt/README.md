@@ -10,16 +10,24 @@
 
 Stage 2 first segments `raw_message_text` into source-message units using `src/source_segments.py`. All labelled direct-field extraction must operate inside those units. This prevents a field in one WhatsApp message from consuming a value from a later message and prevents fixes from depending on one particular timestamp/line representation.
 
-The canonical detailed contract is `docs/INVENTORY_SOURCE_EXTRACTION.md`.
+The canonical detailed contracts are `docs/INVENTORY_SOURCE_EXTRACTION.md` and `docs/DETERMINISTIC_FIELD_RESOLUTION.md`.
+
+## Canonical deterministic field resolution
+
+`src/field_resolution.py` is the sole candidate-resolution layer for recurring multi-candidate fields. Extractors discover candidates; the resolver selects the authoritative source candidate; normalization canonicalizes it. Existing Sheet values are never candidates.
+
+- `BHK`: preserve integer and decimal values; later explicit BHK messages supersede earlier values.
+- `maintenance`: require maintenance-specific context; normalize K/lakh; preserve qualifiers such as `+ Water`; in `rent + maintenance`, use the second amount as maintenance.
+- `internal_property_type`: one resolver owns Gated Community, Semi Gated, and Standalone. Explicit negative gating cannot be overridden by generic positive wording.
 
 ## Deterministic direct-field rules
 
-- `internal_property_type`: read the explicit source field when supplied; accept common `:` or `-` label separators and normalize to `Gated Community`, `Semi Gated`, or `Standalone`. Boolean gating labels are explicit evidence; negative boolean values do not classify a property as gated. If absent, explicit semi-gated wording wins, explicit gated-community/society wording maps to Gated Community, otherwise Standalone.
+- `internal_property_type`: read the explicit source field when supplied; accept common `:`, `-`, `|`, and `=` label separators and normalize to `Gated Community`, `Semi Gated`, or `Standalone`.
 - `society_name`: take the directly supplied society name. Markdown decoration and placeholder-only values such as `*` or `-` are treated as blank. If missing, use the resulting location/locality.
 - `landmark`: take the directly supplied landmark. Markdown decoration and placeholder-only values such as `*` or `-` are treated as blank. If missing, use the resulting location/locality.
 - `locality`: take explicit `Location`, `Locality`, or `Area`. Verified Maps locality may replace it.
 - `property_subtype`: take explicit subtype and normalize supported aliases. If absent, default to `Apartment` only for a normal floor-bearing apartment-style record; standalone wording does not invent Apartment.
-- `property_highlights`: preserve explicit highlights; otherwise generate only factual fragments supported by source, such as Utility area, subtype alias wording, multiple-unit/floor availability, or RK wording.
+- `property_highlights`: preserve explicit highlights; otherwise generate only factual fragments supported by source.
 - `catalog_title`: when blank, construct a factual title from furnishing type, BHK, and location. AI may rewrite wording only.
 - `age_of_property_years`: populate only from an explicit/authoritative age fact; otherwise blank.
 
@@ -41,7 +49,7 @@ The canonical detailed contract is `docs/INVENTORY_SOURCE_EXTRACTION.md`.
 ## Stage-2 sequence
 
 1. canonical source-message segmentation
-2. deterministic extraction
+2. deterministic candidate extraction and resolution
 3. deterministic normalization/business rules
 4. Google Maps resolution when supplied/extracted
 5. deterministic validation
@@ -55,4 +63,4 @@ The inventory contract is 48 columns A:AV. Stage 1/2 writes are restricted to A:
 
 ## Verification
 
-Source-boundary extraction, direct-field extraction, placeholder fallbacks, pet fallback, covered-parking default, tenant normalization, amenity defaults, subtype fallback, title/highlight fallback, and Maps status separation have regression coverage in the Inventory tests. The canonical source-shape rule requires a regression fixture for every production extraction defect. External AI runtime remains a separate acceptance boundary.
+Regression coverage includes source-boundary extraction, explicit/negative property-type resolution, decimal/later-correction BHK, maintenance K/lakh and mixed-suffix parsing, placeholder fallbacks, pet fallback, covered-parking default, tenant normalization, amenity defaults, subtype fallback, title/highlight fallback, and Maps status separation. The canonical source-shape rule requires a regression fixture for every production extraction defect. External AI runtime remains a separate acceptance boundary.
