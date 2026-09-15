@@ -27,13 +27,13 @@ Stage 2 first segments `raw_message_text`, discovers candidates, resolves multi-
 
 - Decimal BHK values such as `2.5 BHK` are preserved; later explicit source corrections supersede earlier values.
 - Maintenance is read only from maintenance-specific source context or the specific rent-plus-maintenance format. `K`/lakh units normalize to rupees. Qualifiers such as `+ Water` are preserved. `Included` means maintenance `0` and `maintenance_included = Yes`; an amount alone does not imply inclusion.
-- `internal_property_type` uses explicit source evidence first, then specific deterministic wording, then the declared `Standalone` fallback only when no property-type evidence exists. Explicit negative gating evidence resolves to `Standalone` and remains authoritative against generic positive wording.
+- `internal_property_type` uses explicit source evidence first, then specific/generic deterministic gating wording, then the independently adjudicated community registry when available. Explicit negative gating evidence resolves to `Standalone`; absence of authoritative property-type evidence remains blank/unresolved and is never fabricated as `Standalone`.
 - `internal_property_type` drives dependent business defaults: `society_amenities`, and the covered-parking default when parking is blank.
 - `furnish_type` drives default `flat_furnishings` only when explicit furnishings are absent.
 - `preferred_tenant_type` drives the `bachelor_preference` fallback/interpretation; explicit bachelor source evidence remains authoritative.
 - `built_up_area` drives the carpet-area fallback at 90% when carpet area is blank.
 - `monthly_rent` is used to calculate month-based security deposits when the source expresses the deposit in months.
-- `society_name`, `landmark`, and other direct fields preserve explicit source values and apply only the documented deterministic fallbacks.
+- `society_name` preserves explicit source evidence, then uses the documented Maps/location opportunity, and finally the resolved locality as the last-resort identity fallback. `landmark` is never populated from locality and never stores a Maps URL.
 - `servant_room` defaults to `No` only when the source does not explicitly state `Yes`.
 - `pet_friendly` is `No` for explicit no-pet wording; otherwise the established last-resort value is `Yes`.
 - `property_subtype`, highlights, title, and age follow the canonical source and normalization contracts.
@@ -58,7 +58,7 @@ Dependencies describe downstream business correctness. They do not authorize the
 
 ## Google Maps
 
-Google Maps is a technical Stage-2 processing capability, not a separate business stage. When verified, Maps may supply locality, pincode, and canonical Maps URL and may complete blank society/landmark fallbacks through the verified locality.
+Google Maps is a technical Stage-2 processing capability, not a separate business stage. During deterministic projection the exact source Maps URL is preserved without network access. During the separate enrichment step, a verified Maps result may supply locality, pincode, and a canonical Maps URL. It may also give the system another opportunity to complete a blank society-name fallback through the resolved locality. Landmark does not inherit locality.
 
 ## Marketplace business rules
 
