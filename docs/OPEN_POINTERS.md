@@ -16,17 +16,21 @@ This is the canonical list of unresolved decisions and verified unknowns for the
 - `preferred_tenant_type` normalization is closed for the observed source variants: family variants normalize to `Family`; anyone/open-for-all variants normalize to `Open For All`.
 - `pet_friendly` contract is closed: explicit no-pet wording emits `No`; absence of a pet restriction emits `Yes` as the established last-resort rule.
 - `servant_room` behavior is closed: explicit source `Yes` is preserved; missing source value defaults to `No`.
-- `covered_parking` behavior is closed: Gated Community and Semi Gated default to `1` when no covered-parking value is supplied; Standalone does not receive that default.
-- `internal_property_type` direct-field extraction is closed: explicit source values are accepted with common label separators and normalized to the canonical three values; absent explicit values use the documented gating-wording fallback.
-- `society_name` and `landmark` direct extraction/fallback behavior is closed: direct values are preserved after presentation cleanup; placeholder-only values fall back to location/locality.
+- `covered_parking` behavior is closed: Gated Community and Semi Gated default to `1` when no covered-parking value is supplied; an explicit source value remains authoritative; Standalone does not receive that default.
+- `internal_property_type` direct-field extraction is closed: explicit source values are accepted with common label separators and normalized to the canonical three values; `Gated: Community` and `Semi Gated: Community` are supported positive forms; absent explicit values use the documented gating-wording fallback.
+- `society_name` direct extraction/fallback behavior is closed: direct values and structured `📍 Name:` markers are preserved after presentation cleanup; if exhaustive raw-source and Maps enrichment do not establish a name, locality is the allowed last-resort society-name fallback.
+- `landmark` behavior is closed: a Maps URL following `📍 Landmark:` belongs to `google_maps_url`, not `landmark`; landmark never inherits locality.
+- `google_maps_url` deterministic extraction is closed: supported Maps URLs present in `raw_message_text` are extracted without network access; Maps verification remains a separate enrichment step.
 - `internal_property_type` → `society_amenities` is closed: Gated Community and Semi Gated use exact verified Sheet combinations; Standalone uses `-` when blank.
-- Property subtype behavior is closed for the current Phase-1 contract: explicit subtype is authoritative after alias normalization; `Apartment` is only the normal floor-bearing fallback; standalone wording does not invent Apartment.
+- Property subtype behavior is closed for the current operational contract: normal apartment/flat/building inventory uses `Apartment`; villa wording, including `Duplex Villa`, uses `Villa`; `Studio` is reserved for 1 RK; explicit supported portal subtype wording remains authoritative.
 - Property highlights and catalog title fallback behavior is closed for the current deterministic contract: explicit values are preserved; otherwise only factual supported fragments are generated. AI remains optional wording-only processing.
 - `age_of_property_years` remains non-blocking and conservative: populate only from an explicit/authoritative source fact; otherwise blank.
 - The `furnish_type` mismatch is closed: live Sheet values are exactly `Fully Furnished` and `Semi Furnished`; Unfurnished source wording leaves the field blank.
 - Exact `bachelor_preference` vocabulary formatting remains closed. The live `Female Only ` trailing space is intentionally preserved.
 - Exact live Sheet values and application dependencies for D, M, Y, Z, AA, AE, and AF remain verified.
-- Maps status handling is closed for deterministic extraction: `PARTIAL_MATCH`, `NEEDS_RUNTIME_VERIFICATION`, and `NOT_FOUND` are recorded as issues but do not by themselves convert a valid deterministic extraction to `Needs Review`. `Needs Review` is reserved for deterministic validation errors or explicit AI conflicts.
+- Maps status handling is closed for deterministic extraction: `PARTIAL_MATCH`, `NEEDS_RUNTIME_VERIFICATION`, and `NOT_FOUND` are recorded as issues but do not by themselves convert a valid deterministic extraction to `Needs Review`.
+- Maintenance business semantics are closed: `Included` → maintenance `0` + `Yes`; `Included + Water` → `Water Charges Additional` + `Yes`; a separately stated maintenance amount → `No`; amount qualifiers such as `+ Water` remain preserved.
+- Pincode is explicitly non-blocking: a blank pincode does not by itself produce `Needs Review`; when available, verified Maps enrichment may populate it.
 
 ## Deferred by current Phase-1 boundary
 
@@ -37,4 +41,4 @@ This is the canonical list of unresolved decisions and verified unknowns for the
 
 ## Governance
 
-When any pointer is resolved, update this document and the affected architecture/contracts/handoff in the same implementation session.
+When any pointer is resolved, update this document and the affected architecture/contracts/handoff in the same implementation session. The deterministic field contract, regression suite, handoff, and control matrix must remain synchronized with approved business-rule changes.
