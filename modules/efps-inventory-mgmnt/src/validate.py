@@ -60,19 +60,18 @@ def validate(row: dict) -> list[str]:
     for key in NUMERIC:
         if row[key] and not _numeric(row[key]):
             errors.append(f"{key} must be numeric")
-    if row["maintenance"] and not _numeric(row["maintenance"]):
-        if str(row["maintenance"]).strip().lower() == "included":
-            errors.append("maintenance must be 0 when included")
+    if row["maintenance"] and not re.fullmatch(r"\d+(?: \+ .+)?", str(row["maintenance"]).strip()):
+        errors.append("maintenance must be a normalized amount with an optional source qualifier")
+    if row["maintenance_included"] not in ("Yes", "No", ""):
+        errors.append("maintenance_included must be Yes/No/blank")
+    if row["maintenance_included"] == "Yes" and row["maintenance"] != "0":
+        errors.append("maintenance must be 0 when included")
     if row["flat_furnishings"]:
         bad = [x.strip() for x in str(row["flat_furnishings"]).split(",") if x.strip() and x.strip() not in FURNISHINGS]
         if bad:
             errors.append(f"flat_furnishings invalid values: {bad}")
     if row["society_amenities"] and str(row["society_amenities"]).strip() not in SHEET_AMENITY_COMBINATIONS:
         errors.append("society_amenities must match an exact verified Sheet dropdown value")
-    if row["maintenance_included"] not in ("Yes", "No", ""):
-        errors.append("maintenance_included must be Yes/No/blank")
-    if row["maintenance_included"] == "Yes" and row["maintenance"] != "0":
-        errors.append("maintenance must be 0 when included")
     if row["internal_property_type"] and row["internal_property_type"] not in {"Gated Community", "Semi Gated", "Standalone"}:
         errors.append("invalid internal_property_type")
     if row["servant_room"] and row["servant_room"] not in {"Yes", "No"}:

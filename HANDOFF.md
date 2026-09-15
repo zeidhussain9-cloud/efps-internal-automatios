@@ -6,48 +6,49 @@ The current authorized implementation target is **Inventory Management Phase 1**
 
 ## Stage-2 implementation
 
-- `extract.py` performs deterministic extraction from completed `raw_message_text`.
+- `extract.py` discovers deterministic source facts from completed `raw_message_text`.
 - `source_segments.py` is the canonical source-message boundary parser for concatenated WhatsApp inventory messages.
-- Labelled direct fields are extracted one source unit at a time and therefore cannot consume a value from a later timestamped message.
-- Direct property type extraction is specific to property/gating classification labels; a generic `type:` match is intentionally avoided.
-- `source_consistency.py` performs source-first reconciliation for `internal_property_type` using the same canonical source-unit boundary.
-- `normalize.py` applies deterministic business rules for direct-field fallbacks, pets, servant room, covered parking, amenities, maintenance, furnishing, subtype, tenant/bachelor dependency, highlights, title, and conservative property age.
-- `pipeline.py` orchestrates extraction → source reconciliation → normalization → Maps → validation → optional AI wording/verification.
-- `Needs Review` is reserved for deterministic validation errors or explicit AI conflicts. Maps `PARTIAL_MATCH`, `NEEDS_RUNTIME_VERIFICATION`, and `NOT_FOUND` are recorded as issues but do not themselves create `Needs Review`.
-- `ai.py` remains advisory and cannot replace deterministic facts or bypass validation.
+- `field_resolution.py` is the canonical candidate-resolution layer for BHK, maintenance, and internal property type.
+- `pipeline.py` is the authoritative deterministic processing boundary and passes the resolved internal property type explicitly into normalization.
+- `normalize.py` consumes canonical resolved property type and must not independently reclassify it.
+- BHK preserves decimals and later explicit corrections.
+- Maintenance requires maintenance-specific context, normalizes K/lakh units, independently evaluates inclusion, and preserves source qualifiers such as `+ Water`.
+- Internal property type has exactly three business values: Gated Community, Semi Gated, and Standalone. Explicit negative gating is authoritative against generic positive wording.
+- Existing Sheet Stage-2 values are never deterministic extraction input.
+- `Needs Review` is reserved for deterministic validation errors or explicit AI conflicts. Maps uncertainty remains informational.
 
-## Deterministic business rules now implemented
+## Canonical dependency contract
 
-- Explicit `internal_property_type` is preferred and normalized to `Gated Community`, `Semi Gated`, or `Standalone`; common source separators are accepted.
-- Boolean gating labels are explicit evidence; negative values do not classify a property as gated.
-- Source reconciliation recognizes labelled canonical property-type values and complete canonical phrases within source-message boundaries.
-- `society_name` is direct when supplied; apartment/community/building-name aliases are accepted; placeholder-only values fall back to location/locality.
-- `landmark` is direct when supplied; placeholder-only values fall back to location/locality.
-- `pet_friendly` is `No` for explicit no-pet wording and `Yes` when no pet restriction is mentioned.
-- `servant_room` is `Yes` only when explicitly stated; otherwise `No`.
-- `covered_parking` defaults to `1` for Gated Community/Semi Gated when absent.
-- `internal_property_type` controls exact Sheet-compatible default `society_amenities`.
-- `property_subtype` is explicit/alias-normalized first; `Apartment` is only the normal floor-bearing fallback and is not invented for standalone wording.
-- `property_highlights` and `catalog_title` remain deterministic and factual; no unsupported marketing facts are added.
-- `age_of_property_years` is populated only from an explicit/authoritative fact and otherwise remains blank.
-- Maintenance and month-based deposit rules remain deterministic. Mixed maintenance values such as `2777 + Water` are intentionally preserved as source facts.
+```text
+internal_property_type -> society_amenities
+internal_property_type -> covered_parking (blank-only default)
+furnish_type -> flat_furnishings (blank-only default)
+preferred_tenant_type -> bachelor_preference
+maintenance -> maintenance_included
+built_up_area -> carpet_area (blank-only fallback)
+monthly_rent -> security_deposit (month-based source form)
+```
 
-## Recurring extraction-failure prevention
-
-The repository no longer treats timestamp handling as a field-specific regex concern. Canonical segmentation is a shared Inventory extraction primitive and is used by both direct field extraction and property-type reconciliation. Any future production extraction defect must add a regression fixture for the actual source-message shape before the fix is considered complete.
+These are application/business dependencies. Explicit child source evidence remains authoritative where the field contract permits it.
 
 ## Model-run interpretation
 
-The prior 25-row read-only run contained many blank-Sheet versus populated-model differences because Stage-2 projection is intentionally computed without writing the Sheet. Nonblank Sheet conflicts such as property type, maintenance, and BHK require raw-source evidence before being labelled model defects. The canonical source extraction contract now requires the model test/report to distinguish expected blank-cell projection differences, populated-cell conflicts, formatting-only differences, and Maps verification issues.
+`tools/inventory_model_test.py` is read-only. It separates expected blank projections, lifecycle projections, formatting-only differences, populated source conflicts, and protected-column changes. A populated Sheet mismatch is not by itself a parser defect; it must be adjudicated against `raw_message_text` and the canonical contract. The raw source remains authoritative for deterministic extraction.
+
+## Historical 25-row conflict conclusion
+
+The previously observed 17 populated conflicts are not a single parser failure:
+
+- BHK conflicts contain explicit `2.5 BHK` source evidence while the existing Sheet contains `5 BHK`; these are source-vs-historical-Sheet conflicts.
+- Maintenance conflicts include unit representation differences such as `3.7K` versus `3`, and intentional qualifier differences such as `2777` versus `2777 + Water`.
+- Internal property type conflicts often occur because the existing Sheet contains a classification while the raw message does not state one; the deterministic contract therefore applies its declared fallback rather than importing the Sheet value.
+
+No production Sheet values are silently overwritten by the deterministic model.
 
 ## Verification
 
-Regression coverage includes bracketed timestamps, inline timestamp delimiters, source-boundary isolation, explicit semi/gated classification, negative gating values, canonical property-type labels, and mixed maintenance preservation. CI now executes the complete Inventory test directory in addition to the Sheet contract and pipeline tests.
-
-## Current open pointers
-
-See `docs/OPEN_POINTERS.md`. Current unresolved items remain limited to the already-recorded runtime/governance items; no future downstream Stage-3 feature is treated as an open pointer for Inventory Phase 1.
+Regression coverage includes source-boundary extraction, canonical resolution, later corrections, decimal BHK, maintenance units/qualifiers/inclusion, positive and negative gating, Sheet-independence, dependent defaults, and normalized maintenance validation.
 
 ## Safety boundary
 
-No production Sheet write, WhAPI setting change, or real inventory message was performed as part of these changes. The next step is local synchronization followed by the 25-row read-only model run; production extraction remains unauthorized until that verification is reviewed.
+No production Sheet write, WhAPI setting change, or real inventory message was performed as part of this implementation. Production extraction remains unauthorized until the complete repository test suite and the read-only model audit are verified against the final branch state.

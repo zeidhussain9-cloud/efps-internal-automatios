@@ -12,9 +12,6 @@ NO_FLOOR_SUBTYPES={"Villa","Independent House","Farm House","Duplex"}
 GATED_COMMUNITY_DEFAULTS=("Club House","Lift","Gym","CCTV","Power Backup","Swimming Pool","Garden","Sports","Kids Area")
 SEMI_GATED_AMENITIES=("Security","Lift","CCTV","Power Backup")
 STANDALONE_AMENITIES=("-")
-_GATED_KW=re.compile(r"\bgated\s*(?:[:\-]\s*)?(?:community|society|property)\b",re.I)
-_SEMI_GATED_KW=re.compile(r"\bsemi[-\s]*gated\b",re.I)
-_STANDALONE_WORDS=re.compile(r"\b(villa|independent house|independent floor|builder floor|farm ?house|duplex|triplex|penthouse|studio)\b",re.I)
 _RK_RE=re.compile(r"\b(\d)\s*rk\b",re.I)
 _MONTHS=re.compile(r"^\s*(\d+(?:\.\d+)?)\s*(?:months?|mnths?|mos?)\s*$",re.I)
 _MAINT_NUMERIC=re.compile(r"^\s*([\d.,]+)\s*(k|l|lakh|lakhs)?\s*(?:\+\s*(.+))?\s*$",re.I)
@@ -23,6 +20,7 @@ _SLACK_LINK=re.compile(r"^<(?P<url>[^|>]+)(\|[^>]*)?>$")
 _PLACEHOLDERS={"*","-","—","n/a","na","none","not available","not mentioned","nil"}
 _YES_VALUES={"yes","y","true","1","allowed"}
 _NO_VALUES={"no","n","false","0","not allowed","not permitted","none"}
+_STANDALONE_WORDS=re.compile(r"\b(villa|independent house|independent floor|builder floor|farm ?house|duplex|triplex|penthouse|studio)\b",re.I)
 
 
 def strip_slack_markup(value:str)->str:
@@ -64,48 +62,8 @@ def _verified_in_text(value:str,raw_text:str)->bool:
     needle=norm(value); return bool(needle) and needle in norm(raw_text)
 
 
-def _direct_value(row:dict, key:str, raw_text:str)->str:
-    return str(row.get(key,"")).strip()
-
-
 def _usable(value:str)->bool:
     return bool(str(value or "").strip()) and str(value or "").strip().lower() not in _PLACEHOLDERS
-
-
-def _explicit_gating_label(text:str)->str:
-    """Resolve boolean-style gating fields used in inventory source messages.
-
-    Real inventory messages can say e.g. ``Gated: Yes`` or
-    ``Gated Community: Yes`` rather than putting the canonical Sheet value in
-    ``Property Type``. These are explicit source facts and must outrank the
-    generic Standalone fallback. Explicit negative values do not classify the
-    property as gated.
-    """
-    patterns=(
-        (r"\bsemi[-\s]*gated\s*(?:community|society|property)?\s*[:=|\-]\s*([^\n|<]+)","Semi Gated"),
-        (r"\bgated\s*(?:community|society|property)?\s*[:=|\-]\s*([^\n|<]+)","Gated Community"),
-    )
-    for pattern, canonical in patterns:
-        match=re.search(pattern,text,re.I)
-        if not match:continue
-        value=re.sub(r"[*_`~]","",match.group(1)).strip().lower()
-        value=re.sub(r"\s+"," ",value)
-        if value in _YES_VALUES:return canonical
-        if value in _NO_VALUES:continue
-    return ""
-
-
-def _gating_level_from_text(raw_text:str,row:dict)->str:
-    text=str(raw_text or "")
-    direct=_direct_value(row,"internal_property_type",text).lower()
-    if "semi" in direct and "gated" in direct:return "Semi Gated"
-    if "gated" in direct:return "Gated Community"
-    if direct in {"standalone","stand alone"}:return "Standalone"
-    explicit_boolean=_explicit_gating_label(text)
-    if explicit_boolean:return explicit_boolean
-    if _SEMI_GATED_KW.search(text):return "Semi Gated"
-    if _GATED_KW.search(text):return "Gated Community"
-    return "Standalone"
 
 
 def _canonical_tenant(value:str)->str:
@@ -120,47 +78,7 @@ def _pet_value(raw_text:str)->str:
     text=str(raw_text or "")
     if re.search(r"\b(?:pets?|animals?)\s*(?:are\s*)?(?:not\s*allowed|not\s*permitted|prohibited|banned)\b",text,re.I):return "No"
     if re.search(r"\b(?:no|without)\s+pets?\b",text,re.I):return "No"
-    # Established EFPS last-resort rule: silence on pets means Yes.
     return "Yes"
-
-
-def _direct_property_type(row:dict)->str:
-    raw=str(row.get("internal_property_type","")).strip().lower()
-    if "semi" in raw and "gated" in raw:return "Semi Gated"
-    if "gated" in raw:return "Gated Community"
-    if raw in {"standalone","stand alone"}:return "Standalone"
-    return ""
-
-
-def set_internal_type(row:dict,raw_text:str)->dict:
-    classification=_direct_property_type(row) or _gating_level_from_text(raw_text,row)
-    row["internal_property_type"]=classification
-    if not _usable(row.get("society_amenities","")):
-        if classification=="Gated Community":row["society_amenities"]="Club House, Lift, Gym, CCTV, Power Backup, Swimming Pool, Garden, Sports, Kids Area"
-        elif classification=="Semi Gated":row["society_amenities"]="Security, Lift, CCTV, Power Backup"
-        else:row["society_amenities"]="-"
-    return row
-
-
-def apply_tenant_bachelor_rule(row:dict,raw_text:str)->dict:
-    tenant=_canonical_tenant(row.get("preferred_tenant_type",""))
-    row["preferred_tenant_type"]=tenant
-    lower_raw=str(raw_text or "").lower()
-    if ("family" in lower_raw and "female" in lower_raw and "bachelor" in lower_raw) or re.search(r"\bfamily\s*&\s*female\b",lower_raw):
-        row["preferred_tenant_type"]="Open For All"; row["bachelor_preference"]="Female Only "; return row
-    current=str(row.get("bachelor_preference","")).strip()
-    if current and not _verified_in_text(current,raw_text):current=""
-    if current:row["bachelor_preference"]=current
-    elif tenant=="Family":row["bachelor_preference"]=""
-    return row
-
-
-def normalize_bachelor_preference(row:dict)->dict:
-    value=str(row.get("bachelor_preference","")).strip().lower()
-    if value=="female only":row["bachelor_preference"]="Female Only "
-    elif value=="male only":row["bachelor_preference"]="Male Only"
-    elif value=="open for both":row["bachelor_preference"]="Open for both"
-    return row
 
 
 def _canonical_subtype(value:str)->str:
@@ -174,12 +92,10 @@ def _canonical_subtype(value:str)->str:
 
 
 def default_property_subtype(row:dict,raw_text:str)->dict:
-    explicit=_canonical_subtype(row.get("property_subtype",""))
-    row["property_subtype"]=explicit
+    explicit=_canonical_subtype(row.get("property_subtype","")); row["property_subtype"]=explicit
     if explicit or not str(row.get("floor_number","")).strip():return row
     if _STANDALONE_WORDS.search(raw_text or ""):return row
-    row["property_subtype"]="Apartment"
-    return row
+    row["property_subtype"]="Apartment"; return row
 
 
 def floor_for_standalone(row:dict)->dict:
@@ -205,8 +121,7 @@ def apply_parking_defaults(row:dict)->dict:
 
 
 def construct_deterministic_highlights(row:dict,raw_text:str,original_subtype:str)->list[str]:
-    fragments=[]
-    explicit=str(row.get("property_highlights","")).strip()
+    fragments=[]; explicit=str(row.get("property_highlights","")).strip()
     if _usable(explicit):return [explicit]
     if _UTILITY.search(raw_text or ""):fragments.append("Utility area")
     if original_subtype and original_subtype in PORTAL_SUBTYPE_MAP:fragments.append(original_subtype)
@@ -219,14 +134,10 @@ def construct_deterministic_highlights(row:dict,raw_text:str,original_subtype:st
 
 def build_catalog_title(row:dict)->str:
     if _usable(row.get("catalog_title","")):return str(row["catalog_title"]).strip()
-    parts=[]
-    furnish=str(row.get("furnish_type","")).strip()
-    bhk=str(row.get("BHK","")).strip()
-    location=str(row.get("locality","")).strip()
+    parts=[]; furnish=str(row.get("furnish_type","")).strip(); bhk=str(row.get("BHK","")).strip(); location=str(row.get("locality","")).strip()
     if furnish:parts.append(furnish)
     if bhk:parts.append(bhk)
-    if parts:title=" ".join(parts)+" for Rent"
-    else:title="Property for Rent"
+    title=" ".join(parts)+" for Rent" if parts else "Property for Rent"
     return f"{title} - {location}" if location else title
 
 
@@ -241,7 +152,7 @@ def preserve_rk_wording(row:dict,raw_text:str)->dict:
     return row
 
 
-def normalize(row:dict,raw_text:str="")->dict:
+def normalize(row:dict,raw_text:str="",*,resolved_internal_property_type:str="")->dict:
     out={k:str(v or "").strip() for k,v in row.items()}
     for field,value in list(out.items()):
         out[field]=strip_slack_markup(value)
@@ -266,7 +177,11 @@ def normalize(row:dict,raw_text:str="")->dict:
         elif out.get("furnish_type")=="Fully Furnished":out["flat_furnishings"]=", ".join(FULLY_FURNISHED_DEFAULTS)
     if not out.get("carpet_area") and out.get("built_up_area","").isdigit():out["carpet_area"]=str(int(round(int(out["built_up_area"])*CARPET_RATIO)))
     if not out.get("servant_room"):out["servant_room"]="No"
-    set_internal_type(out,raw_text)
+    if resolved_internal_property_type not in {"Gated Community","Semi Gated","Standalone"}:
+        raise ValueError("normalize requires canonical resolved_internal_property_type")
+    out["internal_property_type"]=resolved_internal_property_type
+    if not _usable(out.get("society_amenities","")):
+        out["society_amenities"]=("Club House, Lift, Gym, CCTV, Power Backup, Swimming Pool, Garden, Sports, Kids Area" if resolved_internal_property_type=="Gated Community" else "Security, Lift, CCTV, Power Backup" if resolved_internal_property_type=="Semi Gated" else "-")
     apply_parking_defaults(out)
     out["pet_friendly"]=_pet_value(raw_text)
     apply_tenant_bachelor_rule(out,raw_text);normalize_bachelor_preference(out)

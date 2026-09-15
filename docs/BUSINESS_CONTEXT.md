@@ -17,41 +17,48 @@ The automation exists to reduce repetitive operational work without silently cha
 
 ## Inventory Phase-1 deterministic rules
 
-Inventory property processing uses deterministic extraction and normalization before any optional AI step. The completed `raw_message_text` is the source of truth for extraction; existing Sheet values are not extraction input.
+Inventory property processing uses deterministic extraction and normalization before any optional AI step. The completed `raw_message_text` is the source of truth for deterministic extraction. Existing Sheet values are not extraction input.
 
-### Direct source fields
+### Canonical deterministic field boundary
 
-- `internal_property_type`: extract the explicit source field first. Common `:` and `-` label separators are accepted. Normalize to `Gated Community`, `Semi Gated`, or `Standalone`. If absent, explicit semi-gated wording wins, then gated-community/society wording, otherwise Standalone.
-- `society_name`: use the directly supplied society name. Presentation-only markdown and placeholder-only values such as `*` or `-` are blank. If missing, use the resulting location/locality.
-- `landmark`: use the directly supplied landmark. Presentation-only markdown and placeholder-only values such as `*` or `-` are blank. If missing, use the resulting location/locality.
-- `locality`: use explicit `Location`, `Locality`, or `Area`; verified Maps locality may replace it.
-- `property_subtype`: explicit subtype is authoritative after supported alias normalization. If absent, `Apartment` is used only for a normal floor-bearing apartment-style record; standalone-property wording does not invent Apartment.
-- `property_highlights`: preserve explicit source highlights. Otherwise generate only factual supported fragments such as Utility area, subtype alias wording, multiple-unit/floor availability, or RK wording.
-- `catalog_title`: when blank, construct a factual fallback from furnishing type, BHK, and location. Optional AI can rewrite wording only.
-- `age_of_property_years`: populate only from an explicit/authoritative age fact. Do not infer age from Maps; blank is valid.
+Stage 2 first segments `raw_message_text`, discovers candidates, resolves multi-candidate fields through `modules/efps-inventory-mgmnt/src/field_resolution.py`, then normalizes the resolved values. `internal_property_type` has one canonical resolver and exactly three business values: `Gated Community`, `Semi Gated`, and `Standalone`.
 
 ### Core deterministic rules
 
-- Decimal BHK values such as `2.5 BHK` are preserved.
-- `G`/`Ground` floor normalizes to `0`.
-- When carpet area is blank and built-up area is known, carpet area is derived as 90% of built-up area.
-- Maintenance is read directly from source. Numeric `k`/lakh values are normalized to rupees. Mixed values such as `2777 + Water` preserve the stated suffix. `Included` means maintenance `0` and `maintenance_included = Yes`.
-- Deposit expressed in months is calculated from monthly rent.
-- Semi Furnished and Fully Furnished receive deterministic furnishing defaults only when explicit furnishings are absent. Unfurnished source wording leaves furnish fields blank because the live Sheet has no Unfurnished value.
-- `servant_room` is `Yes` only when explicitly stated; otherwise `No`.
-- `pet_friendly` is `No` when source explicitly says pets are not allowed/not permitted/prohibited or equivalent no-pet wording. If no pet restriction is mentioned, the established last-resort value is `Yes`.
-- `covered_parking` defaults to `1` for Gated Community and Semi Gated when no covered-parking value is explicitly supplied. Standalone does not receive this default.
-- `preferred_tenant_type` normalizes family variants to `Family` and anyone/open-for-all variants to `Open For All`.
-- `bachelor_preference` is populated only from an explicit source preference or the established female-bachelor rule.
-- `internal_property_type` determines default `society_amenities`: Gated Community → exact gated Sheet combination; Semi Gated → exact semi-gated Sheet combination; Standalone → `-`.
+- Decimal BHK values such as `2.5 BHK` are preserved; later explicit source corrections supersede earlier values.
+- Maintenance is read only from maintenance-specific source context or the specific rent-plus-maintenance format. `K`/lakh units normalize to rupees. Qualifiers such as `+ Water` are preserved. `Included` means maintenance `0` and `maintenance_included = Yes`; an amount alone does not imply inclusion.
+- `internal_property_type` uses explicit source evidence first, then specific deterministic wording, then the declared `Standalone` fallback only when no property-type evidence exists. Explicit negative gating evidence resolves to `Standalone` and remains authoritative against generic positive wording.
+- `internal_property_type` drives dependent business defaults: `society_amenities`, and the covered-parking default when parking is blank.
+- `furnish_type` drives default `flat_furnishings` only when explicit furnishings are absent.
+- `preferred_tenant_type` drives the `bachelor_preference` fallback/interpretation; explicit bachelor source evidence remains authoritative.
+- `built_up_area` drives the carpet-area fallback at 90% when carpet area is blank.
+- `monthly_rent` is used to calculate month-based security deposits when the source expresses the deposit in months.
+- `society_name`, `landmark`, and other direct fields preserve explicit source values and apply only the documented deterministic fallbacks.
+- `servant_room` defaults to `No` only when the source does not explicitly state `Yes`.
+- `pet_friendly` is `No` for explicit no-pet wording; otherwise the established last-resort value is `Yes`.
+- `property_subtype`, highlights, title, and age follow the canonical source and normalization contracts.
+
+## Dependency graph
+
+```text
+internal_property_type -> society_amenities
+internal_property_type -> covered_parking (blank-only default)
+furnish_type -> flat_furnishings (blank-only default)
+preferred_tenant_type -> bachelor_preference
+maintenance -> maintenance_included
+built_up_area -> carpet_area (blank-only fallback)
+monthly_rent -> security_deposit (month-based source form)
+```
+
+Dependencies describe downstream business correctness. They do not authorize the child to ignore explicit source evidence.
 
 ## Review-status business rule
 
-`Needs Review` is not a normal deterministic-extraction outcome. A valid deterministic extraction remains `Pending` after processing. `Needs Review` is reserved for deterministic validation errors or explicit AI conflicts. Google Maps `PARTIAL_MATCH`, `NEEDS_RUNTIME_VERIFICATION`, or `NOT_FOUND` is an informational processing issue and does not itself create a review state; downstream publication may separately require verified Maps data.
+`Needs Review` is reserved for deterministic validation errors or explicit AI conflicts. Maps uncertainty is an informational processing issue and does not by itself create `Needs Review`.
 
 ## Google Maps
 
-Google Maps is a technical Stage-2 processing capability, not a separate business stage. When verified, Maps may supply locality, pincode, and canonical Maps URL. It may also complete blank society/landmark fallbacks through the verified locality.
+Google Maps is a technical Stage-2 processing capability, not a separate business stage. When verified, Maps may supply locality, pincode, and canonical Maps URL and may complete blank society/landmark fallbacks through the verified locality.
 
 ## Marketplace business rules
 
@@ -78,7 +85,7 @@ Google Maps is a technical Stage-2 processing capability, not a separate busines
 
 ## Current automation implementation scope
 
-Inventory Phase 1 currently establishes the inbound/property-processing path through deterministic Stage-2 processing, Maps resolution, validation, and protected Sheet persistence boundaries. Future portal/catalogue publishing requires separate explicit implementation requirements and authorization.
+Inventory Phase 1 establishes the inbound/property-processing path through deterministic Stage-2 processing, Maps resolution, validation, and protected Sheet persistence boundaries. Future portal/catalogue publishing requires separate explicit implementation requirements and authorization.
 
 ## Canonical principle
 
