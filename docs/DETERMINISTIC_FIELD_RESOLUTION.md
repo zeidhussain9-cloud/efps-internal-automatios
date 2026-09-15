@@ -100,6 +100,16 @@ For `Gated Community` and `Semi Gated`, `covered_parking` defaults to `1` only w
 
 Pincode is an enrichment field when it is not explicitly present in source text. A verified Maps result may supply it from the postal-code component. A blank pincode is valid and non-blocking; it must not by itself create `Needs Review` or a deterministic extraction failure.
 
+### Tenant eligibility dependency
+
+`preferred_tenant_type` is the parent field and `bachelor_preference` is its dependent field.
+
+- `Family` -> `bachelor_preference` must be blank.
+- `Open For All` -> `bachelor_preference` defaults exactly to `Open for both`.
+- Explicit valid source evidence for bachelor preference overrides that default, preserving `Female Only` or `Male Only` when explicitly stated.
+
+The canonical Sheet vocabulary is exactly `Female Only`, `Male Only`, `Open for both`. The implementation must not carry the historical trailing-space variant `Female Only `.
+
 ### Property highlights
 
 Explicit source highlights remain authoritative. When no explicit highlight exists, only supported deterministic factual fragments may be generated. Blank is valid when there is no supported fragment; this is not a parser failure.
@@ -140,7 +150,7 @@ Dependency means downstream correctness depends on the parent decision; it does 
 
 `tools/inventory_model_test.py` is read-only. It projects the exact deterministic Stage-2 path against existing Sheet rows without feeding Sheet values back into extraction and without writing to the Sheet.
 
-The projection artifact must record the exact Git commit used to execute it. A projection generated from an older commit is evidence of that older implementation only and must not be used to adjudicate a later fix. The 2026-09-15 recurring projection was executed from `98d657b`; the later deterministic fixes were merged through `c096445` and current `main` advanced to `60e167a`. This version mismatch was the principal process reason the same historical findings were repeatedly re-reported.
+The projection artifact must record the exact Git commit used to execute it. A projection generated from an older commit is evidence of that older implementation only and must not be used to adjudicate a later fix.
 
 A populated Sheet mismatch is a source/historical conflict, not proof that the model is wrong. It must be adjudicated against `raw_message_text` and the established contract. Blank Stage-2 cells becoming populated are expected projections. Lifecycle changes, formatting-only differences, populated conflicts, and protected-column changes remain separate categories.
 
@@ -162,7 +172,7 @@ Every production extraction/resolution defect must have a fixture for the exact 
 - singular/decimal balcony source forms;
 - explicit positive and negative pet forms;
 - Sheet-independence;
-- dependent-value generation;
+- dependent-value generation, including `Open For All -> Open for both`;
 - non-blocking pincode absence;
 - valid blank property highlights;
 - validation of the normalized output shape.
