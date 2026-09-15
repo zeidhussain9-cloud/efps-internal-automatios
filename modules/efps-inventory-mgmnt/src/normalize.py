@@ -120,6 +120,27 @@ def apply_parking_defaults(row:dict)->dict:
     return row
 
 
+def apply_tenant_bachelor_rule(row:dict,raw_text:str)->dict:
+    tenant=_canonical_tenant(row.get("preferred_tenant_type",""))
+    row["preferred_tenant_type"]=tenant
+    lower_raw=str(raw_text or "").lower()
+    if ("family" in lower_raw and "female" in lower_raw and "bachelor" in lower_raw) or re.search(r"\bfamily\s*&\s*female\b",lower_raw):
+        row["preferred_tenant_type"]="Open For All"; row["bachelor_preference"]="Female Only "; return row
+    current=str(row.get("bachelor_preference","")).strip()
+    if current and not _verified_in_text(current,raw_text):current=""
+    if current:row["bachelor_preference"]=current
+    elif tenant=="Family":row["bachelor_preference"]=""
+    return row
+
+
+def normalize_bachelor_preference(row:dict)->dict:
+    value=str(row.get("bachelor_preference","")).strip().lower()
+    if value=="female only":row["bachelor_preference"]="Female Only "
+    elif value=="male only":row["bachelor_preference"]="Male Only"
+    elif value=="open for both":row["bachelor_preference"]="Open for both"
+    return row
+
+
 def construct_deterministic_highlights(row:dict,raw_text:str,original_subtype:str)->list[str]:
     fragments=[]; explicit=str(row.get("property_highlights","")).strip()
     if _usable(explicit):return [explicit]
