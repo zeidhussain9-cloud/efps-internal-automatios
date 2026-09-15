@@ -16,7 +16,11 @@ BACHELOR_PREFERENCES = {"Female Only ", "Male Only", "Open for both"}
 PET_FRIENDLY = {"Yes", "No"}
 COVERED_PARKING = {"0", "1", "2", "3", "3+"}
 FURNISHINGS = {"AC", "Wardrobe", "Geyser", "Fan", "Light", "Fridge", "TV", "Bed", "Sofa", "Dining Table", "Washing Machine", "Cupboard", "Microwave", "Stove", "Water Purifier", "Gas Pipeline", "Chimney", "Modular Kitchen"}
-AMENITIES = {"Security", "Semi Gated", "Standalone", "Lift", "Gym", "CCTV", "Power Backup", "Swimming Pool", "Gated Community", "Club House", "Garden", "Intercom", "Sports", "Kids Area", "Community Hall", "Regular Water Supply", "Attached Balcony"}
+SHEET_AMENITY_COMBINATIONS = {
+    "Security, Lift, CCTV, Power Backup",
+    "Club House, Lift, Gym, CCTV, Power Backup, Swimming Pool, Garden, Sports, Kids Area",
+    "-",
+}
 NUMERIC = {"pincode", "built_up_area", "carpet_area", "age_of_property_years", "total_floors", "bathrooms", "balconies", "open_parking", "monthly_rent", "security_deposit"}
 
 
@@ -47,7 +51,7 @@ def validate(row: dict) -> list[str]:
         errors.append("invalid furnish_type")
     if row["preferred_tenant_type"] and row["preferred_tenant_type"] not in PREFERRED_TENANT_TYPES:
         errors.append("invalid preferred_tenant_type")
-    if row["bachelor_preference"] and row["bachelor_preference"] not in BACHELOR_PREFERENCES and row["bachelor_preference"] != "Not Allowed":
+    if row["bachelor_preference"] and row["bachelor_preference"] not in BACHELOR_PREFERENCES:
         errors.append("invalid bachelor_preference")
     if row["pet_friendly"] and row["pet_friendly"] not in PET_FRIENDLY:
         errors.append("invalid pet_friendly")
@@ -59,10 +63,12 @@ def validate(row: dict) -> list[str]:
     if row["maintenance"] and not _numeric(row["maintenance"]):
         if str(row["maintenance"]).strip().lower() == "included":
             errors.append("maintenance must be 0 when included")
-    for key, allowed in (("flat_furnishings", FURNISHINGS), ("society_amenities", AMENITIES)):
-        bad = [x.strip() for x in str(row[key]).split(",") if x.strip() and x.strip() not in allowed]
+    if row["flat_furnishings"]:
+        bad = [x.strip() for x in str(row["flat_furnishings"]).split(",") if x.strip() and x.strip() not in FURNISHINGS]
         if bad:
-            errors.append(f"{key} invalid values: {bad}")
+            errors.append(f"flat_furnishings invalid values: {bad}")
+    if row["society_amenities"] and str(row["society_amenities"]).strip() not in SHEET_AMENITY_COMBINATIONS:
+        errors.append("society_amenities must match an exact verified Sheet dropdown value")
     if row["maintenance_included"] not in ("Yes", "No", ""):
         errors.append("maintenance_included must be Yes/No/blank")
     if row["maintenance_included"] == "Yes" and row["maintenance"] != "0":
