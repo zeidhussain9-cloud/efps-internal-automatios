@@ -8,11 +8,13 @@ The current authorized implementation target is **Inventory Management Phase 1**
 
 - `extract.py` performs deterministic extraction from completed `raw_message_text`.
 - `source_segments.py` is the canonical source-message boundary parser for concatenated WhatsApp inventory messages.
+- `field_resolution.py` is the single candidate-resolution layer for recurring multi-candidate deterministic fields.
 - Labelled direct fields are extracted one source unit at a time and therefore cannot consume a value from a later timestamped message.
-- Direct property type extraction is specific to property/gating classification labels; a generic `type:` match is intentionally avoided.
-- `source_consistency.py` performs source-first reconciliation for `internal_property_type` using the same canonical source-unit boundary.
-- `normalize.py` applies deterministic business rules for direct-field fallbacks, pets, servant room, covered parking, amenities, maintenance, furnishing, subtype, tenant/bachelor dependency, highlights, title, and conservative property age.
-- `pipeline.py` orchestrates extraction → source reconciliation → normalization → Maps → validation → optional AI wording/verification.
+- BHK resolution preserves decimals and treats a later explicit BHK message as a deterministic correction.
+- Maintenance resolution requires maintenance-specific context and preserves qualifiers such as `+ Water`; the `rent + maintenance` format uses only the second amount as maintenance.
+- Internal property type has one canonical resolver for Gated Community, Semi Gated, and Standalone. Explicit negative gating cannot be overridden by generic positive wording.
+- `normalize.py` applies deterministic business rules for non-resolution concerns such as pets, servant room, covered parking, amenities, furnishing, subtype, tenant/bachelor dependency, highlights, title, and conservative property age.
+- `pipeline.py` orchestrates extraction → canonical resolution/normalization → Maps → validation → optional AI wording/verification.
 - `Needs Review` is reserved for deterministic validation errors or explicit AI conflicts. Maps `PARTIAL_MATCH`, `NEEDS_RUNTIME_VERIFICATION`, and `NOT_FOUND` are recorded as issues but do not themselves create `Needs Review`.
 - `ai.py` remains advisory and cannot replace deterministic facts or bypass validation.
 
@@ -20,7 +22,6 @@ The current authorized implementation target is **Inventory Management Phase 1**
 
 - Explicit `internal_property_type` is preferred and normalized to `Gated Community`, `Semi Gated`, or `Standalone`; common source separators are accepted.
 - Boolean gating labels are explicit evidence; negative values do not classify a property as gated.
-- Source reconciliation recognizes labelled canonical property-type values and complete canonical phrases within source-message boundaries.
 - `society_name` is direct when supplied; apartment/community/building-name aliases are accepted; placeholder-only values fall back to location/locality.
 - `landmark` is direct when supplied; placeholder-only values fall back to location/locality.
 - `pet_friendly` is `No` for explicit no-pet wording and `Yes` when no pet restriction is mentioned.
@@ -34,15 +35,15 @@ The current authorized implementation target is **Inventory Management Phase 1**
 
 ## Recurring extraction-failure prevention
 
-The repository no longer treats timestamp handling as a field-specific regex concern. Canonical segmentation is a shared Inventory extraction primitive and is used by both direct field extraction and property-type reconciliation. Any future production extraction defect must add a regression fixture for the actual source-message shape before the fix is considered complete.
+The repository no longer treats timestamp handling as a field-specific regex concern. Canonical segmentation is a shared Inventory extraction primitive. Candidate extraction and resolution are now separated from normalization. Existing Sheet values are never used as deterministic source evidence. Any future production extraction defect must add a regression fixture for the actual source-message shape before the fix is considered complete.
 
 ## Model-run interpretation
 
-The prior 25-row read-only run contained many blank-Sheet versus populated-model differences because Stage-2 projection is intentionally computed without writing the Sheet. Nonblank Sheet conflicts such as property type, maintenance, and BHK require raw-source evidence before being labelled model defects. The canonical source extraction contract now requires the model test/report to distinguish expected blank-cell projection differences, populated-cell conflicts, formatting-only differences, and Maps verification issues.
+`tools/inventory_model_test.py` is the canonical read-only audit. It does not write the Sheet. It separates expected blank-cell projections, lifecycle projections, formatting-only differences, and populated Sheet/source conflicts. A populated Sheet value that disagrees with a source-grounded deterministic result must be treated as a stale/historical Sheet conflict rather than silently changing the deterministic rule; the raw source remains authoritative.
 
 ## Verification
 
-Regression coverage includes bracketed timestamps, inline timestamp delimiters, source-boundary isolation, explicit semi/gated classification, negative gating values, canonical property-type labels, and mixed maintenance preservation. CI now executes the complete Inventory test directory in addition to the Sheet contract and pipeline tests.
+Regression coverage includes bracketed timestamps, inline timestamp delimiters, source-boundary isolation, explicit semi/gated classification, negative gating values, decimal BHK, later BHK corrections, maintenance K/lakh normalization, mixed maintenance preservation, rent-plus-maintenance parsing, and Sheet-independence.
 
 ## Current open pointers
 
@@ -50,4 +51,4 @@ See `docs/OPEN_POINTERS.md`. Current unresolved items remain limited to the alre
 
 ## Safety boundary
 
-No production Sheet write, WhAPI setting change, or real inventory message was performed as part of these changes. The next step is local synchronization followed by the 25-row read-only model run; production extraction remains unauthorized until that verification is reviewed.
+No production Sheet write, WhAPI setting change, or real inventory message was performed as part of these changes. The next step is local synchronization followed by the read-only model run; production extraction remains unauthorized until that verification is reviewed.
