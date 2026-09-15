@@ -40,6 +40,7 @@ def normalize_maintenance(value:str)->str:
     if not raw:return ""
     if raw.lower()=="included":return "0"
     if re.fullmatch(r"included\s*\+\s*(?:water|water\s*charges?)",raw,re.I):return "Water Charges Additional"
+    if re.fullmatch(r"0\s*\+\s*(?:water|water\s*charges?)",raw,re.I):return "Water Charges Additional"
     m=_MAINT_NUMERIC.fullmatch(raw)
     if not m:return re.sub(r"(?<=\d),(?=\d)","",raw)
     n=float(m.group(1).replace(",","")); unit=(m.group(2) or "").lower()
@@ -95,10 +96,9 @@ def _canonical_subtype(value:str)->str:
 def default_property_subtype(row:dict,raw_text:str)->dict:
     explicit=_canonical_subtype(row.get("property_subtype","")); row["property_subtype"]=explicit
     if explicit:return row
-    # EFPS portal usage: Studio is only for 1 RK; villas remain Villa; normal
-    # apartment/building inventory uses Apartment when no non-apartment subtype
-    # is explicitly present. Standalone wording alone must not force a blank.
-    if re.search(r"\b(?:1\s*[- ]?\s*rk|studio)\b",raw_text or "",re.I):row["property_subtype"]="Studio"
+    # Operational EFPS subtype usage: Apartment is the normal building/flat
+    # selection; Villa is used for villas; Studio is reserved for 1 RK.
+    if re.search(r"\b1\s*[- ]?\s*rk\b",raw_text or "",re.I):row["property_subtype"]="Studio"
     elif re.search(r"\b(?:duplex\s+)?villa\b",raw_text or "",re.I):row["property_subtype"]="Villa"
     elif _STANDALONE_WORDS.search(raw_text or ""):
         return row
@@ -117,9 +117,9 @@ def _fallback_location(row:dict)->str:
 
 
 def apply_location_fallbacks(row:dict)->dict:
-    # Society fallback is intentionally last-resort. It is called only after
-    # Maps enrichment in the production path. Landmark must never inherit
-    # locality because the fields have different business meanings.
+    # Society fallback is intentionally last-resort and runs only after raw
+    # extraction and Maps enrichment have had an opportunity to find a name.
+    # Landmark never inherits locality.
     location=_fallback_location(row)
     if not _usable(row.get("society_name","")) and location:row["society_name"]=location
     return row
@@ -196,7 +196,7 @@ def normalize(row:dict,raw_text:str="",*,resolved_internal_property_type:str="")
     if out.get("maintenance"):out["maintenance"]=normalize_maintenance(out["maintenance"])
     if out.get("maintenance_included","").lower()=="yes":
         out["maintenance_included"]="Yes"
-        if out.get("maintenance","").strip().lower() in {"included","included + water","included + water charges"}:
+        if out.get("maintenance","").strip().lower() in {"included","included + water","included + water charges","0 + water","0 + water charges"}:
             out["maintenance"]="Water Charges Additional" if "water" in out["maintenance"].lower() else "0"
         elif not out.get("maintenance"):
             out["maintenance"]="0"
