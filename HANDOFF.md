@@ -18,7 +18,7 @@ The current authorized implementation target is **Inventory Management Phase 1**
 - Explicit no-pet source wording is authoritative during final normalization.
 - `📍 Landmark:` followed only by a Maps URL remains a blank landmark; the URL belongs to `google_maps_url`.
 - Existing Sheet Stage-2 values are never deterministic extraction input.
-- `Needs Review` is reserved for deterministic validation errors or explicit AI conflicts. Maps uncertainty remains informational under the current contract.
+- `Needs Review` is governed by `docs/NEEDS_REVIEW_CONTRACT.md`; non-blocking field gaps do not become property-processing blockers by themselves.
 
 ## Canonical dependency contract
 
@@ -40,20 +40,19 @@ Explicit child source evidence remains authoritative where the field contract pe
 
 Supported source URL forms include `maps.app.goo.gl`, `goo.gl`, `maps.google.com`, `www.google.com/maps`, and `share.google`.
 
-The 2026-09-15 audit currently leaves exactly one RED deterministic field: `google_maps_url`. All other deterministic-scope fields are GREEN; there are no YELLOW deterministic fields. The next read-only rows 2:26 projection must be run from the current merged `main` commit. Its result is the acceptance evidence for this remaining RED.
+The latest 25-row projection provides direct acceptance evidence for the formerly failing Maps case: row 10 / `EF-2609-JCN1` contains `https://share.google/oo7aBEUjVMGWUQzPm` in the raw source and projects the exact same URL into `google_maps_url`; `SM ART Apartments` is simultaneously retained as `society_name`. The production gate no longer reports a Maps failure.
 
-Do not re-open previously closed deterministic findings unless a new projection demonstrates an actual regression against their contracts.
+Do not re-open the Maps or society contracts unless a new projection demonstrates an actual regression against their contracts.
+
+## Current deterministic blocker
+
+The latest production gate reports 19 row failures, all from one dependency contract: `preferred_tenant_type = Open For All` with blank `bachelor_preference`. This is one field-level blocker, not 19 independent property-field defects.
+
+The correct resolution is not to invent a bachelor preference. Either the source must contain a valid dependent value or the business contract must explicitly authorize a deterministic default. Until that rule is established, the dependent field remains unresolved and blocking.
 
 ## Verification status
 
-Current merged `main` includes the Google Maps `share.google` extraction and production-gate alignment fixes. The implementation change is complete; deterministic acceptance is intentionally evidence-gated. The same 25-row read-only projection is the authoritative next check.
-
-The accepted outcome is binary for this field:
-
-- **PASS:** `google_maps_url` is populated correctly from source and the field moves RED -> GREEN.
-- **FAIL:** the projection still violates the Maps URL contract and the field remains RED for targeted diagnosis.
-
-A failed Maps test must not cause unrelated deterministic fields to be reclassified without evidence of their own regression.
+The current main branch contains the Maps source-preservation hardening, regression coverage, and the canonical Needs Review contract. Local acceptance still requires the complete test suite and the 25-row read-only projection/gate to be run from this exact merged commit.
 
 ## Safety boundary
 
