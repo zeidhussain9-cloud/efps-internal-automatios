@@ -64,6 +64,23 @@ def test_parking_default_follows_property_type():
     normalize.apply_parking_defaults(row)
     assert row["covered_parking"] == "1"
 
+def test_open_for_all_defaults_to_exact_sheet_dropdown_value():
+    row={"preferred_tenant_type":"Open For All","bachelor_preference":""}
+    normalize.apply_tenant_bachelor_rule(row,"Preferred Tenant: Open For All")
+    assert row["preferred_tenant_type"] == "Open For All"
+    assert row["bachelor_preference"] == "Open for both"
+
+def test_explicit_bachelor_source_overrides_open_for_all_default():
+    row={"preferred_tenant_type":"Open For All","bachelor_preference":"Female Only "}
+    normalize.apply_tenant_bachelor_rule(row,"Preferred Tenant: Open For All\nBachelor Preference: Female Only")
+    normalize.normalize_bachelor_preference(row)
+    assert row["bachelor_preference"] == "Female Only "
+
+def test_family_clears_bachelor_preference():
+    row={"preferred_tenant_type":"Family","bachelor_preference":"Male Only"}
+    normalize.apply_tenant_bachelor_rule(row,"Preferred Tenant: Family")
+    assert row["bachelor_preference"] == ""
+
 if __name__ == "__main__":
     for name,fn in sorted(globals().items()):
         if name.startswith("test_"):fn()
