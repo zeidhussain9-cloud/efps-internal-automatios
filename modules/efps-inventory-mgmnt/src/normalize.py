@@ -104,7 +104,7 @@ def apply_parking_defaults(row:dict)->dict:
     return row
 
 def apply_tenant_bachelor_rule(row:dict,raw_text:str)->dict:
-    tenant=_canonical_tenant(row.get("preferred_tenant_type","")); row["preferred_tenant_type"]=tenant; lower_raw=str(raw_text or "").lower()
+    tenant=_canonical_tenant(row.get("preferred_tenant_type", "")); row["preferred_tenant_type"]=tenant; lower_raw=str(raw_text or "").lower()
     if ("family" in lower_raw and "female" in lower_raw and "bachelor" in lower_raw) or re.search(r"\bfamily\s*&\s*female\b",lower_raw):row["preferred_tenant_type"]="Open For All";row["bachelor_preference"]="Female Only ";return row
     current=str(row.get("bachelor_preference","")).strip()
     if current and not _verified_in_text(current,raw_text):current=""
@@ -175,9 +175,9 @@ def normalize(row:dict,raw_text:str="",*,resolved_internal_property_type:str="")
         elif out.get("furnish_type")=="Fully Furnished":out["flat_furnishings"]=", ".join(FULLY_FURNISHED_DEFAULTS)
     if not out.get("carpet_area") and out.get("built_up_area","").isdigit():out["carpet_area"]=str(int(round(int(out["built_up_area"])*CARPET_RATIO)))
     if not out.get("servant_room"):out["servant_room"]="No"
-    if resolved_internal_property_type not in {"Gated Community","Semi Gated","Standalone"}:raise ValueError("normalize requires canonical resolved_internal_property_type")
+    if resolved_internal_property_type not in {"Gated Community","Semi Gated","Standalone",""}:raise ValueError("normalize requires canonical resolved_internal_property_type")
     out["internal_property_type"]=resolved_internal_property_type
-    if not _usable(out.get("society_amenities","")):
+    if not _usable(out.get("society_amenities","")) and resolved_internal_property_type in {"Gated Community","Semi Gated","Standalone"}:
         out["society_amenities"]=("Club House, Lift, Gym, CCTV, Power Backup, Swimming Pool, Garden, Sports, Kids Area" if resolved_internal_property_type=="Gated Community" else "Security, Lift, CCTV, Power Backup" if resolved_internal_property_type=="Semi Gated" else "-")
     apply_parking_defaults(out)
     out["pet_friendly"]="No" if re.search(r"\b(?:pets?|animals?)\s*(?::|=|-)?\s*(?:are\s*)?(?:not\s*allowed|not\s*permitted|prohibited|banned)\b|\b(?:no|without)\s+pets?\b",raw_text or "",re.I) else "Yes"
