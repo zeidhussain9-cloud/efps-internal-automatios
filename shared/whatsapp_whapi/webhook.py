@@ -113,11 +113,14 @@ def parse_delivery(payload: Mapping[str, Any]) -> tuple[IncomingMessage, ...]:
     messages = payload.get("messages")
     if not isinstance(messages, list):
         return ()
-    return tuple(
-        parse_message(item)
-        for item in messages[:100]
-        if isinstance(item, Mapping) and str(item.get("id") or "")
-    )
+    parsed: list[IncomingMessage] = []
+    for item in messages:
+        if not isinstance(item, Mapping) or not str(item.get("id") or ""):
+            continue
+        parsed.append(parse_message(item))
+        if len(parsed) >= 100:
+            break
+    return tuple(parsed)
 
 
 def authorize_query_token(query: Mapping[str, Any] | None, expected: str) -> bool:

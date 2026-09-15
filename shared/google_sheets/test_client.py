@@ -3,13 +3,14 @@ from __future__ import annotations
 import pytest
 
 from . import schema
+from . import client
 from .client import GoogleSheetsClient, GoogleSheetsCredentials, MissingGoogleSheetsCredentials
 
 
 def test_missing_credentials(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("GOOGLE_APPLICATION_CREDENTIALS", raising=False)
     monkeypatch.delenv("GOOGLE_SERVICE_ACCOUNT_JSON", raising=False)
-    monkeypatch.setattr("shared.google_sheets.client._secret_from_keychain", lambda: None)
+    monkeypatch.setattr(client, "_secret_from_keychain", lambda: None)
     with pytest.raises(MissingGoogleSheetsCredentials):
         GoogleSheetsCredentials.from_environment()
 

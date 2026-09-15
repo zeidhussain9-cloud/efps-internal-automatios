@@ -27,9 +27,21 @@ class SlackConfig:
     @classmethod
     def from_env(cls) -> "SlackConfig":
         token = os.getenv("SLACK_BOT_TOKEN", "").strip()
-        if not token:
-            raise SlackError("SLACK_BOT_TOKEN is not configured")
-        return cls(bot_token=token)
+        if token:
+            return cls(bot_token=token)
+
+        try:
+            from shared.credentials.keychain import get_secret, MissingKeychainSecret
+            token = get_secret("efps-whapi-panel-slack")
+            if token:
+                return cls(bot_token=token)
+        except (ImportError, MissingKeychainSecret):
+            pass  # Fall through to the final error
+
+        raise SlackError(
+            "Slack bot token is not configured. "
+            "Set SLACK_BOT_TOKEN or store in Keychain under 'efps-whapi-panel-slack'."
+        )
 
 
 class SlackClient:
