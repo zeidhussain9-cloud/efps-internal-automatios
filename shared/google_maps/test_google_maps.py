@@ -47,3 +47,8 @@ def test_maps_resolve_contract_is_keyword_only():
     signature = inspect.signature(GoogleMapsClient.resolve)
     assert signature.parameters["maps_url"].kind is inspect.Parameter.KEYWORD_ONLY
     assert signature.parameters["address"].kind is inspect.Parameter.KEYWORD_ONLY
+
+
+def test_extracts_google_share_short_link():
+    raw = "📍 Landmark: https://share.google/AbCdEf123"
+    assert GoogleMapsClient.extract_url(raw) == "https://share.google/AbCdEf123"
