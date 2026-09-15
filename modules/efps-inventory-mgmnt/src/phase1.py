@@ -23,10 +23,7 @@ GATED_AMENITIES = "Club House, Lift, Gym, CCTV, Power Backup, Swimming Pool, Gar
 SEMI_GATED_AMENITIES = "Security, Lift, CCTV, Power Backup"
 STANDALONE_AMENITIES = "-"
 PLACEHOLDERS = {"", "-", "—", "n/a", "na", "none", "nil", "not available", "not mentioned"}
-REPORT_UNRESOLVED_FIELDS = (
-    "internal_property_type",
-    "locality",
-)
+REPORT_UNRESOLVED_FIELDS = ("internal_property_type", "locality")
 
 
 @dataclass(frozen=True)
@@ -206,7 +203,6 @@ def project(raw_text: str, row: dict[str, Any] | None = None) -> dict[str, str]:
     for name, value in coupled.items():
         base[name] = value
 
-    # Deterministic Maps URL extraction is always executed explicitly here.
     maps_url = GoogleMapsClient.extract_url(raw_text)
     if maps_url:
         base["google_maps_url"] = maps_url
@@ -220,16 +216,24 @@ def project(raw_text: str, row: dict[str, Any] | None = None) -> dict[str, str]:
 def run_phase1(raw_text: str, *, row: dict[str, Any] | None = None) -> Phase1Result:
     """Canonical Phase-1 runner shared by batch rows and closed webhook sessions."""
     projected = project(raw_text, row=row)
+    projected["status"] = "Pending"
+    projected["intake_status"] = "Processed"
     issues = validate.validate(projected)
     if issues:
         projected["status"] = "Needs Review"
-    else:
-        projected["status"] = "Pending"
-    projected["intake_status"] = "Processed"
+
+    extracted = extract.scan(raw_text)
+    review_flags: list[str] = []
+    if projected.get("society_name", "").strip() == projected.get("locality", "").strip():
+        source_society = str(extracted.get("society_name", "") or "").strip()
+        if not source_society or source_society.lower() in PLACEHOLDERS:
+            review_flags.append("society_name_locality_fallback")
+    if not projected.get("internal_property_type", "").strip():
+        review_flags.append("internal_property_type_unresolved")
 
     trace = {
         "source_segments": split_source_messages(raw_text),
-        "extracted_candidates": extract.scan(raw_text),
+        "extracted_candidates": extracted,
         "resolved": {
             "BHK": projected.get("BHK", ""),
             "maintenance": projected.get("maintenance", ""),
@@ -239,13 +243,6 @@ def run_phase1(raw_text: str, *, row: dict[str, Any] | None = None) -> Phase1Res
             "google_maps_url": projected.get("google_maps_url", ""),
         },
     }
-    review_flags: list[str] = []
-    if projected.get("society_name", "").strip() and projected.get("society_name", "").strip() == projected.get("locality", "").strip():
-        source_society = str(extract.scan(raw_text).get("society_name", "") or "").strip()
-        if not source_society or source_society.lower() in PLACEHOLDERS:
-            review_flags.append("society_name_locality_fallback")
-    if not projected.get("internal_property_type", "").strip():
-        review_flags.append("internal_property_type_unresolved")
     return Phase1Result(
         row=projected,
         issues=tuple(issues),
