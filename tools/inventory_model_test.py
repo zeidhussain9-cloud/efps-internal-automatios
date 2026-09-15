@@ -1,8 +1,8 @@
-"""Read-only Inventory Phase-1 model audit.
+"""Read-only Inventory Phase-1 deterministic model audit.
 
-Compares deterministic Stage-2 output with existing populated Sheet values.
-Blank Sheet cells and lifecycle transitions are not failures. No Sheet writes
-are performed by this script.
+The audit compares deterministic Stage-2 output with persisted Sheet values but
+never uses persisted Stage-2 values as extraction input. Differences are
+classified so stale/historical Sheet values are not mistaken for parser bugs.
 """
 from __future__ import annotations
 
