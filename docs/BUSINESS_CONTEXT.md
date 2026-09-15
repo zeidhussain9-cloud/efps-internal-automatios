@@ -23,6 +23,27 @@ Established website positioning:
 - Public-facing information must follow the intended EFPS disclosure rules.
 - Prefer simple, controlled automation over unnecessary complexity.
 
+## Inventory Phase-1 deterministic rules
+
+Inventory property processing uses deterministic extraction and normalization before any optional AI step. The completed `raw_message_text` is the source of truth for extraction; existing Sheet values are not replay/extraction input.
+
+Established deterministic rules include:
+
+- Decimal BHK values such as `2.5 BHK` are preserved as `2.5 BHK`.
+- `G`/`Ground` floor normalizes to `0`.
+- When carpet area is blank and built-up area is known, carpet area is derived as 90% of built-up area.
+- When maintenance is included, maintenance is normalized to `0`; otherwise stated nonnumeric maintenance text is preserved.
+- Deposit expressed in months is calculated from monthly rent.
+- Semi Furnished and Fully Furnished have deterministic default furnishing sets; explicit source furnishings are preserved.
+- Property subtype aliases normalize to the canonical subtype vocabulary.
+- Internal property type values are `Gated Community`, `Semi Gated`, and `Standalone`.
+- Explicit gated-community wording establishes `Gated Community`; explicit semi-gated wording establishes `Semi Gated`; independent-house/floor/farm-house wording establishes `Standalone`; otherwise the documented fallback applies without inventing a gating fact.
+- Gated-community and semi-gated amenity defaults are deterministic and are not themselves evidence that a property is gated.
+- Family/family-only tenant preference sets `bachelor_preference = Not Allowed` only when an explicit bachelor value is absent.
+- Deterministic processing fails closed rather than guessing missing property facts.
+
+Google Maps is a technical Stage-2 capability, not a separate business stage. When a Maps URL is supplied/extracted, only a `VERIFIED` resolution is accepted for location fields; incomplete or failed resolution sends the property to review.
+
 ## Marketplace business rules
 
 1. Do not disclose the society name in a Facebook Marketplace listing unless explicitly requested.
@@ -75,7 +96,7 @@ These systems are context. Their existence does not automatically authorize an a
 
 ## Current automation implementation scope
 
-The repository now has established shared technical capability boundaries for Cloudinary, Google Sheets, and WhatsApp/WhAPI. These shared layers provide technical access only; EFPS business decisions remain with the owning modules.
+The repository has established shared technical capability boundaries for Cloudinary, credentials, Google Maps, Google Sheets, Slack, and WhatsApp/WhAPI. Inventory Phase 1 currently establishes the inbound/property-processing path through deterministic Stage 2 processing, Maps resolution, validation, and protected Sheet persistence boundaries. Future portal/catalogue publishing requires separate explicit implementation requirements and authorization.
 
 ## Open business decisions
 
