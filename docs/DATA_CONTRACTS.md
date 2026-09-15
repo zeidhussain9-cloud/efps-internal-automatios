@@ -22,16 +22,19 @@ The completed `raw_message_text` is the only extraction source. Existing Sheet v
 
 - `internal_property_type`: extract and resolve source evidence to exactly `Gated Community`, `Semi Gated`, or `Standalone`. Boolean gating labels are explicit evidence. Explicit negative boolean values resolve to `Standalone`. When no source evidence exists, the declared fallback is `Standalone`.
 - `society_name`: use the directly supplied society name. Also accept apartment/community/building-name labels. Strip presentation-only markdown. Placeholder-only values such as `*` or `-` count as blank. If blank, use the resulting location/locality.
-- `landmark`: use the directly supplied landmark. Also accept landmark labels. Strip presentation-only markdown. Placeholder-only values such as `*` or `-` count as blank. If blank, use the resulting location/locality.
+- `landmark`: use the directly supplied landmark. Also accept landmark labels. Strip presentation-only markdown. Placeholder-only values such as `*` or `-` count as blank. A `📍 Landmark:` marker followed only by a Maps URL remains blank; the URL belongs to `google_maps_url`.
 - `locality`: use explicit `Property Location`, `Location`, `Locality`, or `Area`; a verified Maps locality may replace it.
+- `google_maps_url`: extract deterministic source URLs, including common short-link and Google Maps forms supported by the shared adapter; read-only deterministic projection must not require network resolution.
 - `property_subtype`: use explicit subtype and normalize supported aliases. If absent, default to `Apartment` only for a normal floor-bearing apartment-style record; standalone-property wording does not invent Apartment.
 - `property_highlights`: preserve explicit highlights. Otherwise construct only factual deterministic fragments supported by source.
 - `catalog_title`: construct a factual fallback from furnishing type, BHK, and location when blank. AI may rewrite wording only.
 - `age_of_property_years`: populate only from an explicit/authoritative property-age fact; otherwise blank.
+- `balconies`: accept explicit numeric `Balcony`/`Balconies` source forms; a bare singular `Balcony` is one balcony.
+- `pet_friendly`: explicit no-pet wording is authoritative and resolves to `No`; explicit positive wording resolves to `Yes`; source silence uses the established `Yes` last-resort value.
 
 ### Canonical source-message parsing
 
-Inventory sessions can concatenate multiple WhatsApp messages. `modules/efps-inventory-mgmnt/src/source_segments.py` is the canonical segmentation implementation. Labelled extraction operates inside source-message units so a field cannot consume a later message's value.
+Inventory sessions can concatenate multiple WhatsApp messages. `modules/efps-inventory-mgmnt/src/source_segments.py` is the canonical segmentation implementation. Labelled extraction operates inside source-message units so a field cannot consume a later source message.
 
 ### Canonical field resolution
 
@@ -40,7 +43,7 @@ Inventory sessions can concatenate multiple WhatsApp messages. `modules/efps-inv
 For repeated source evidence, later explicit values supersede earlier explicit values. Explicit labelled/boolean evidence outranks generic wording. Explicit negative gating is authoritative against generic positive wording.
 
 - `BHK`: preserve decimal values and later explicit corrections.
-- `maintenance`: only maintenance-labelled context or the specific `rent + maintenance` form can create a maintenance candidate. Normalize `K`/lakh units. Preserve source qualifiers such as `+ Water`.
+- `maintenance`: only maintenance-labelled context or the specific `rent + maintenance` form can create a maintenance candidate. Normalize `K`/lakh units. Preserve qualifiers such as `+ Water`. `Included` means `0` plus `maintenance_included = Yes`; `Included + Water` means `0 + Water` plus `maintenance_included = Yes`.
 - `internal_property_type`: one canonical resolver owns Gated Community, Semi Gated, and Standalone. Downstream normalization consumes the resolved value and does not rediscover it.
 
 ### Dependency graph
@@ -68,27 +71,12 @@ These are application/business dependencies. A dependent field may still have ex
 - `3.7K` → `3700`
 - `2777 + Water` → `2777 + Water`
 - `Included` → `0`, with `maintenance_included = Yes`
+- `Included + Water` → `0 + Water`, with `maintenance_included = Yes`
 - `5K + Water` → `5000 + Water`
-
-`maintenance_included` is an independently evaluated fact. The presence of an amount does not imply inclusion.
-
-### Core deterministic rules
-
-- Decimal BHK values such as `2.5 BHK` are preserved.
-- `G`/`Ground` floor normalizes to `0`.
-- Carpet area defaults to 90% of built-up area when carpet area is blank.
-- Deposit expressed in months is calculated from monthly rent.
-- Semi Furnished and Fully Furnished receive deterministic furnishing defaults only when explicit furnishings are absent. Unfurnished leaves furnish fields blank because the live Sheet has no Unfurnished value.
-- `servant_room` is `Yes` only when explicitly stated; otherwise `No`.
-- `pet_friendly` is `No` when pets are explicitly not allowed/not permitted/prohibited; absent restriction retains the established `Yes` fallback.
-- `covered_parking` defaults to `1` for Gated Community/Semi Gated when blank; Standalone does not receive this default.
-- `preferred_tenant_type` normalizes family variants to `Family` and anyone/open-for-all variants to `Open For All`.
-- `bachelor_preference` is populated only from explicit source preference or the established female-bachelor rule.
-- `internal_property_type` determines the exact default `society_amenities`: Gated Community → gated combination; Semi Gated → semi-gated combination; Standalone → `-`.
 
 ## Review-status contract
 
-`Needs Review` is reserved for deterministic validation errors or explicit AI conflicts after the deterministic gate. Google Maps uncertainty is recorded as an issue but does not by itself set `Needs Review`.
+`Needs Review` is reserved for deterministic validation errors or explicit AI conflicts after the deterministic gate. Google Maps uncertainty is recorded as an issue but does not by itself create `Needs Review`.
 
 ## Verified live Sheet vocabulary
 
