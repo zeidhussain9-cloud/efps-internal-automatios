@@ -9,20 +9,20 @@ FIXED = {
     "whatsapp_contact_link": "https://wa.me/919148338801",
     "whatsapp_group_link": "https://chat.whatsapp.com/FxOPO0xAOsD6lNwPcIDdFM",
 }
-PROPERTY_SUBTYPES = {"Apartment", "Independent House", "Duplex", "Independent Floor", "Villa", "Penthouse", "Studio", "Farm House"}
-FURNISH_TYPES = {"Fully Furnished", "Semi Furnished"}
-PREFERRED_TENANT_TYPES = {"Family", "Open For All"}
-# Schema is the single source of truth for exact Sheet dropdown vocabulary.
+PROPERTY_TYPES = set(schema.BY_NAME["internal_property_type"].allowed_values)
+PROPERTY_SUBTYPES = set(schema.BY_NAME["property_subtype"].allowed_values)
+FURNISH_TYPES = set(schema.BY_NAME["furnish_type"].allowed_values)
+PREFERRED_TENANT_TYPES = set(schema.BY_NAME["preferred_tenant_type"].allowed_values)
 BACHELOR_PREFERENCES = set(schema.BY_NAME["bachelor_preference"].allowed_values)
-PET_FRIENDLY = {"Yes", "No"}
-COVERED_PARKING = {"0", "1", "2", "3", "3+"}
-FURNISHINGS = {"AC", "Wardrobe", "Geyser", "Fan", "Light", "Fridge", "TV", "Bed", "Sofa", "Dining Table", "Washing Machine", "Cupboard", "Microwave", "Stove", "Water Purifier", "Gas Pipeline", "Chimney", "Modular Kitchen"}
-SHEET_AMENITY_COMBINATIONS = {
-    "Security, Lift, CCTV, Power Backup",
-    "Club House, Lift, Gym, CCTV, Power Backup, Swimming Pool, Garden, Sports, Kids Area",
-    "-",
+PET_FRIENDLY = set(schema.BY_NAME["pet_friendly"].allowed_values)
+COVERED_PARKING = set(schema.BY_NAME["covered_parking"].allowed_values)
+SOCIETY_AMENITIES = set(schema.BY_NAME["society_amenities"].allowed_values)
+FURNISHINGS = {
+    "AC", "Wardrobe", "Geyser", "Fan", "Light", "Fridge", "TV", "Bed", "Sofa",
+    "Dining Table", "Washing Machine", "Cupboard", "Microwave", "Stove", "Water Purifier",
+    "Gas Pipeline", "Chimney", "Modular Kitchen",
 }
-NUMERIC = {"pincode", "built_up_area", "carpet_area", "age_of_property_years", "total_floors", "bathrooms", "balconies", "open_parking", "monthly_rent", "security_deposit"}
+NUMERIC = {"pincode", "built_up_area", "carpet_area", "age_of_property_years", "total_floors", "bathrooms", "balconies", "monthly_rent", "security_deposit"}
 MAINTENANCE_NON_NUMERIC = "Water Charges Additional"
 
 
@@ -38,7 +38,7 @@ def validate(row: dict) -> list[str]:
         if row[key] != value:
             errors.append(f"{key} must be {value}")
     if row["status"] not in ("Pending", "Needs Review"):
-        errors.append("status must be Pending or Needs Review after extraction")
+        errors.append("status must be Pending or Needs Review after deterministic extraction")
     if row["intake_status"] not in ("Raw", "Processed"):
         errors.append("intake_status must be Raw or Processed")
     if not row["listing_id"]:
@@ -55,21 +55,25 @@ def validate(row: dict) -> list[str]:
         errors.append("invalid preferred_tenant_type")
     if row["bachelor_preference"] and row["bachelor_preference"] not in BACHELOR_PREFERENCES:
         errors.append("invalid bachelor_preference")
-    # Y -> Z dependent dropdown contract. Family deliberately clears Z;
-    # Open For All requires a canonical dependent value. The deterministic
-    # normalizer supplies Open for both when source evidence does not override it.
     if row["preferred_tenant_type"] == "Family" and row["bachelor_preference"]:
         errors.append("bachelor_preference must be blank when preferred_tenant_type is Family")
     elif row["preferred_tenant_type"] == "Open For All" and row["bachelor_preference"] not in BACHELOR_PREFERENCES:
         errors.append("bachelor_preference must be a canonical value when preferred_tenant_type is Open For All")
     if row["pet_friendly"] and row["pet_friendly"] not in PET_FRIENDLY:
         errors.append("invalid pet_friendly")
+
+    if row["internal_property_type"] not in PROPERTY_TYPES:
+        errors.append("internal_property_type must be exactly one of Gated Community, Semi Gated, Standalone")
     if row["covered_parking"] not in COVERED_PARKING | {""}:
         errors.append("invalid covered_parking")
+    open_parking = str(row["open_parking"] or "").strip()
+    if open_parking and open_parking != "-" and not _numeric(open_parking):
+        errors.append("open_parking must be a numeric explicit count or '-'")
+
     for key in NUMERIC:
         if row[key] and not _numeric(row[key]):
             errors.append(f"{key} must be numeric")
-    maintenance=str(row["maintenance"]).strip()
+    maintenance = str(row["maintenance"]).strip()
     if maintenance and maintenance != MAINTENANCE_NON_NUMERIC and not re.fullmatch(r"\d+(?: \+ .+)?", maintenance):
         errors.append("maintenance must be a normalized amount with an optional source qualifier")
     if row["maintenance_included"] not in ("Yes", "No", ""):
@@ -80,12 +84,10 @@ def validate(row: dict) -> list[str]:
         bad = [x.strip() for x in str(row["flat_furnishings"]).split(",") if x.strip() and x.strip() not in FURNISHINGS]
         if bad:
             errors.append(f"flat_furnishings invalid values: {bad}")
-    if row["society_amenities"] and str(row["society_amenities"]).strip() not in SHEET_AMENITY_COMBINATIONS:
+    amenities = str(row["society_amenities"] or "").strip()
+    if amenities and amenities not in SOCIETY_AMENITIES:
         errors.append("society_amenities must match an exact verified Sheet dropdown value")
-    if row["internal_property_type"] and row["internal_property_type"] not in {"Gated Community", "Semi Gated", "Standalone"}:
-        errors.append("invalid internal_property_type")
-    if row["servant_room"] and row["servant_room"] not in {"Yes", "No"}:
-        errors.append("servant_room must be Yes/No")
+
     for key in ("posted_url", "posted_at", "error_notes", "meta_catalog_id", "meta_catalog_status"):
         if row[key]:
             errors.append(f"{key} must remain empty before downstream stages")
