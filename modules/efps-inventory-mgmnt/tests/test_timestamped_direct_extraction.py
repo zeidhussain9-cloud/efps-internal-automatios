@@ -83,9 +83,10 @@ def test_boolean_semi_gated_field_is_authoritative():
     assert out["society_amenities"] == "Security, Lift, CCTV, Power Backup"
 
 
-def test_negative_boolean_gated_field_does_not_classify_as_gated():
+def test_negative_boolean_gated_field_is_not_positive_gating_evidence():
     raw = "[2026-09-15 10:00] Gated Community: No"
-    row = {"internal_property_type": "", "society_amenities": ""}
+    extracted = scan(raw)
+    row = {"internal_property_type": extracted.get("internal_property_type", ""), "society_amenities": ""}
     out = normalize(row, raw)
     assert out["internal_property_type"] == "Standalone"
     assert out["society_amenities"] == "-"
@@ -102,6 +103,5 @@ def test_property_type_normalization_prefers_explicit_semi_gated():
 def test_mixed_maintenance_is_preserved_as_source_fact():
     raw = "[2026-09-15 10:00] Maintenance: 2777 + Water"
     extracted = scan(raw)
-    out = normalize({"maintenance": extracted.get("maintenance", "")}, raw)
-    assert out["maintenance"] == "2777 + Water"
-    assert out["maintenance_included"] == "No"
+    assert extracted["maintenance"] == "2777 + Water"
+    assert extracted["maintenance_included"] == "No"
