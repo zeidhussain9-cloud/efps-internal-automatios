@@ -7,6 +7,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 from .source_segments import split_source_messages
+from .community_property_types import resolve_known_community_property_type
 
 @dataclass(frozen=True)
 class Candidate:
@@ -31,6 +32,17 @@ def _label_candidates(text: str, label: str, field: str) -> list[Candidate]:
             value=_clean(match.group(1))
             if value: out.append(Candidate(field,value,i,"label",True,match.start()))
     return out
+
+def _community_name_candidates(text: str) -> list[Candidate]:
+    """Collect source community/property-name candidates without importing extract."""
+    out: list[Candidate] = []
+    marker=re.compile(r"📍\s*([^:\n|]+?)\s*:\s*", re.I)
+    for match in marker.finditer(text or ""):
+        name=_clean(match.group(1))
+        if name and not re.fullmatch(r"(?:landmark|location)\s*",name,re.I):
+            out.append(Candidate("society_name",name,0,"marker",True,match.start()))
+    out.extend(_label_candidates(text,r"society\s*name|society|apartment\s*name|community\s*name|building\s*name","society_name"))
+    return sorted(out,key=lambda c:c.position)
 
 def resolve_bhk(text: str) -> str:
     candidates=[]
@@ -69,7 +81,13 @@ def resolve_maintenance(text: str) -> tuple[str,str]:
     return (f"{result} + {suffix}" if suffix else result),"No"
 
 def resolve_internal_property_type(text: str) -> str:
-    """Resolve only from explicit source evidence; never treat missing evidence as proof of Standalone."""
+    """Resolve property type without inventing Standalone from missing evidence.
+
+    Precedence is explicit source evidence, explicit negative evidence, specific
+    wording, an independently adjudicated community registry, then blank when
+    no authoritative classification exists. Blank means unresolved/enrichment-
+    owned; it is not evidence of Standalone.
+    """
     explicit=[]
     for label,method in ((r"internal\s*property\s*type","internal"),(r"property\s*(?:type|classification)","property_label"),(r"gating\s*type","gating_label")):
         for c in _label_candidates(text,label,"internal_property_type"):
@@ -98,7 +116,11 @@ def resolve_internal_property_type(text: str) -> str:
         elif re.search(r"\bgated\s*(?:community|society|property)\b",segment,re.I): generic.append(Candidate("internal_property_type","Gated Community",i,"generic",False,0))
         elif re.search(r"\b(?:independent\s+(?:house|floor)|farm\s*house|stand[-\s]*alone)\b",segment,re.I): generic.append(Candidate("internal_property_type","Standalone",i,"generic",False,0))
     if generic:return sorted(generic,key=lambda c:(c.segment_index,c.position))[-1].value
-    return "Standalone"
+
+    for c in _community_name_candidates(text):
+        known=resolve_known_community_property_type(c.value)
+        if known:return known
+    return ""
 
 def resolve_property_subtype(text: str) -> str:
     """EFPS operationally uses Apartment, Villa and Studio most often.

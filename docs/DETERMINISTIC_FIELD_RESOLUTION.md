@@ -26,7 +26,8 @@ Extraction discovers source candidates. Resolution selects the authoritative can
 2. Explicit boolean/negative evidence where the field supports it.
 3. Specific deterministic wording.
 4. Generic wording.
-5. Declared fallback only when no source evidence exists.
+5. Explicitly adjudicated external/source registry when the field contract allows it.
+6. Declared fallback only when the contract explicitly permits a fallback.
 
 When the same field is explicitly corrected in a later source message, the later explicit value wins. An explicit negative gating statement is authoritative and cannot be overridden by later generic positive wording.
 
@@ -52,15 +53,17 @@ Only maintenance-labelled values or the specific `rent + maintenance` form can c
 
 ### Internal property type
 
-`internal_property_type` has exactly three allowed values:
+`internal_property_type` has exactly three business output values:
 
 - `Gated Community`
 - `Semi Gated`
 - `Standalone`
 
-Apartment subtype does not by itself choose between Gated Community and Semi Gated; the internal property type is resolved from explicit gating evidence or the declared standalone fallback. The field has one authoritative deterministic resolver in `src/field_resolution.py`. Its result is consumed by normalization; normalization must not independently rediscover or reclassify property type.
+The resolver is authoritative. Apartment subtype does not itself decide gated vs semi-gated. Resolution precedence is explicit source evidence, explicit negative evidence, specific/generic gating wording, then an independently adjudicated community/property registry when available.
 
-`Gated: Community` and `Semi Gated: Community` are valid positive source forms. Explicit negative gating is authoritative. If no gating or standalone evidence exists, the documented fallback remains `Standalone`; this is a declared business fallback, not a claim that the source explicitly said standalone.
+`Gated: Community` and `Semi Gated: Community` are valid positive source forms. Explicit negative gating is authoritative. **Absence of gating evidence is not evidence of Standalone.** When there is no authoritative classification, the deterministic resolver returns blank/unresolved rather than fabricating `Standalone`. Downstream normalization must not invent a gated/standalone classification from the blank result.
+
+The community registry is intentionally explicit and evidence-driven. It is not a generic "society name means gated" heuristic. `Prima Hi-Life` / `Prima Hilife` is currently adjudicated as `Gated Community` in `src/community_property_types.py`.
 
 `internal_property_type` drives the default `society_amenities` bundle and the covered-parking default; therefore it is a parent business decision with downstream dependencies.
 
@@ -77,7 +80,9 @@ The marker name is a society/property-name candidate and the URL is a `google_ma
 
 `google_maps_url` is a deterministic source field because the URL is present in `raw_message_text`. Maps resolution is a separate enrichment step that may verify/replace locality and obtain pincode.
 
-`society_name` may fall back to locality only after raw source extraction and Maps verification have had an opportunity to establish a society/property name. `landmark` never inherits locality.
+`locality` is source-owned during deterministic extraction: explicit `Property Location`, `Location`, `Locality`, or `Area` text is authoritative for the projection. Verified Maps may replace it later during enrichment; absence of Maps enrichment must not downgrade correct raw-source locality extraction.
+
+`society_name` may fall back to locality only after direct source parsing and enrichment have had an opportunity to establish a society/property name. `landmark` never inherits locality.
 
 ### Numeric balcony source forms
 
@@ -93,7 +98,11 @@ For `Gated Community` and `Semi Gated`, `covered_parking` defaults to `1` only w
 
 ### Pincode
 
-Pincode is an enrichment field when it is not explicitly present in source text. A verified Maps result may supply it from the postal-code component. A blank pincode is non-blocking and must not by itself cause `Needs Review`.
+Pincode is an enrichment field when it is not explicitly present in source text. A verified Maps result may supply it from the postal-code component. A blank pincode is valid and non-blocking; it must not by itself create `Needs Review` or a deterministic extraction failure.
+
+### Property highlights
+
+Explicit source highlights remain authoritative. When no explicit highlight exists, only supported deterministic factual fragments may be generated. Blank is valid when there is no supported fragment; this is not a parser failure.
 
 ## Dependency graph
 
@@ -125,15 +134,15 @@ monthly_rent
         +----> security_deposit (when deposit is expressed in months)
 ```
 
-Dependency means downstream correctness depends on the parent decision; it does not mean the child can only ever be populated through the parent. Explicit child source evidence remains authoritative where the contract says so.
+Dependency means downstream correctness depends on the parent decision; it does not mean the child can only ever be populated through the parent. Explicit child source evidence remains authoritative where the field contract permits it.
 
 ## Model audit contract
 
 `tools/inventory_model_test.py` is read-only. It projects the exact deterministic Stage-2 path against existing Sheet rows without feeding Sheet values back into extraction and without writing to the Sheet.
 
-A populated Sheet mismatch is a source conflict, not proof that the model is wrong. It must be adjudicated against `raw_message_text` and the established contract. Blank Stage-2 cells becoming populated are expected projections. Lifecycle changes, formatting-only differences, populated conflicts, and protected-column changes remain separate categories.
+The projection artifact must record the exact Git commit used to execute it. A projection generated from an older commit is evidence of that older implementation only and must not be used to adjudicate a later fix. The 2026-09-15 recurring projection was executed from `98d657b`; the later deterministic fixes were merged through `c096445` and current `main` advanced to `60e167a`. This version mismatch was the principal process reason the same historical findings were repeatedly re-reported.
 
-The audit must fail closed while unresolved source conflicts or protected-column changes remain. Pincode absence alone is not a validation failure.
+A populated Sheet mismatch is a source/historical conflict, not proof that the model is wrong. It must be adjudicated against `raw_message_text` and the established contract. Blank Stage-2 cells becoming populated are expected projections. Lifecycle changes, formatting-only differences, populated conflicts, and protected-column changes remain separate categories.
 
 ## Regression contract
 
@@ -146,13 +155,16 @@ Every production extraction/resolution defect must have a fixture for the exact 
 - maintenance amount normalization;
 - maintenance included and included-plus-water semantics;
 - positive and negative gating evidence;
+- known community adjudication where source wording is insufficient;
 - `📍` society/property and landmark markers;
 - Maps URL extraction without network access;
+- locality extraction from explicit source labels;
 - singular/decimal balcony source forms;
 - explicit positive and negative pet forms;
 - Sheet-independence;
 - dependent-value generation;
 - non-blocking pincode absence;
+- valid blank property highlights;
 - validation of the normalized output shape.
 
 ## Non-goals
