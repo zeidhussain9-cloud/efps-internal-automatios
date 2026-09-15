@@ -14,7 +14,7 @@ The repository follows one simple operating model:
 
 ## Mandatory AI operating protocol
 
-- `CORE_STEERING.md` — mandatory core steering protocol applied by every AI agent before every response or action.
+- `CORE_STEERING.md` — mandatory core AI operating protocol applied by every AI agent before every response or action.
 - `GEMINI.md` — Gemini-specific operating adapter.
 - `AGENTS.md` — general AI-agent operating rules and enforcement of core steering.
 - `HANDOFF.md` — current working state between development sessions.
@@ -52,11 +52,13 @@ For every implementation, the agent must review all maintained root and `docs/` 
 Inventory uses three top-level stages:
 
 1. **Stage 1 — Initial / Webhook**: dedicated inventory listener, `NEW` property-session boundary, raw capture, and initial row.
-2. **Stage 2 — Deterministic Extraction / Property Processing**: deterministic extraction, normalization/business rules, Google Maps resolution, deterministic validation, optional AI verification, and wording-only AI beautification.
+2. **Stage 2 — Deterministic Extraction / Property Processing**: canonical source segmentation, deterministic candidate extraction/resolution, normalization/business rules, Google Maps resolution, deterministic validation, optional AI verification, and wording-only AI beautification.
 3. **Stage 3 — Downstream Operations**: a boundary for future/downstream consumers; it is not part of the current Inventory Phase-1 publishing implementation.
+
+The deterministic source contract is: `raw_message_text` is authoritative; persisted Stage-2 Sheet values are never extraction input. BHK, maintenance, and internal property type use canonical candidate resolution, and downstream defaults follow the documented dependency graph.
 
 Google Maps is a Stage-2 sub-step, not a separate stage. Google Sheets is transport/output, not a top-level stage.
 
 ## Production status
 
-Repository/source hardening is maintained separately from live external-system verification. Inventory Phase-1 Google Sheets and Google Maps runtime probes have been completed successfully. Other external integrations remain explicitly `NOT VERIFIED` until their applicable target-runtime acceptance probes succeed.
+Repository/source hardening is maintained separately from live external-system verification. Inventory Phase-1 Google Sheets and Google Maps runtime probes have been completed successfully. Production extraction remains gated on repository verification and the read-only model audit. Other external integrations remain explicitly `NOT VERIFIED` until their applicable target-runtime acceptance probes succeed.
