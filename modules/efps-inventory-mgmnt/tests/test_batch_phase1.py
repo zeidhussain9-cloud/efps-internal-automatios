@@ -24,7 +24,7 @@ def test_batch_phase1_uses_one_read_and_one_batch_write():
     client = FakeBatchClient(row)
     result = batch.run(client, start_row=2, end_row=2)
     assert result["considered"] == 1
-    assert result["processed"] == 1
+    assert result["processed"] == 1, result
     assert result["write_failed"] is False
     assert client.reads == ["A2:AV2"]
     assert len(client.writes) == 1
