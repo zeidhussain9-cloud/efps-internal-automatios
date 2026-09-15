@@ -22,44 +22,49 @@ _BOOLEAN_GATING = re.compile(
 def _canonical_value(value: str) -> str:
     value = re.sub(r"[*_`~]", "", str(value or "")).strip()
     for pattern, canonical in _CANONICAL:
-        if pattern.search(value):
-            return canonical
+        if pattern.search(value): return canonical
     return "Standalone" if re.fullmatch(r"stand[-\s]*alone", value, re.I) else ""
 
 
 def _boolean_value(value: str) -> bool | None:
     cleaned = re.sub(r"[*_`~]", "", str(value or "")).strip().lower()
-    if cleaned in {"yes", "y", "true", "1", "allowed"}: return True
-    if cleaned in {"no", "n", "false", "0", "not allowed", "not permitted", "none"}: return False
+    if cleaned in {"yes","y","true","1","allowed"}: return True
+    if cleaned in {"no","n","false","0","not allowed","not permitted","none"}: return False
     return None
 
 
 def extract_property_type(raw_text: str) -> str:
-    """Return an explicit canonical property type from source evidence.
-
-    Labelled values are authoritative. Boolean gating labels are handled as
-    explicit evidence. Free-text canonical phrases are accepted only when they
-    occur inside one source message, preventing cross-message contamination.
-    """
+    """Return explicit canonical property type from source evidence only."""
     for unit in split_source_messages(raw_text):
-        for match in _LABEL.finditer(unit):
-            value = _canonical_value(match.group(1))
-            if value: return value
-
+        # Boolean gating is checked before free-text canonical phrase matching;
+        # otherwise ``Gated Community: No`` would be mistaken for a positive
+        # canonical phrase merely because the label itself contains the phrase.
         for match in _BOOLEAN_GATING.finditer(unit):
             value = _boolean_value(match.group("value"))
             if value is True:
                 label = match.group("label").lower()
                 return "Semi Gated" if "semi" in label else "Gated Community"
+            if value is False:
+                continue
 
+        for match in _LABEL.finditer(unit):
+            value = _canonical_value(match.group(1))
+            if value: return value
+
+        # Standalone/semi-gated/gated phrases are accepted only within this
+        # source unit, never by concatenating evidence from different messages.
         value = _canonical_value(unit)
-        if value: return value
+        if value:
+            # A negative boolean form was already handled above. Reject any
+            # remaining explicit negative gating phrase defensively.
+            if re.search(r"\b(?:gated|semi[-\s]*gated)\b\s*(?:community|society|property)?\s*(?:[:=|\-])\s*(?:no|false|0|not\s+allowed|not\s+permitted)\b", unit, re.I):
+                continue
+            return value
     return ""
 
 
 def reconcile_property_type(row: dict, raw_text: str) -> dict:
     """Apply explicit source classification before downstream normalization."""
     value = extract_property_type(raw_text)
-    if value:
-        row["internal_property_type"] = value
+    if value: row["internal_property_type"] = value
     return row
