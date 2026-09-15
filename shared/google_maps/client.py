@@ -20,6 +20,8 @@ class GoogleMapsClient:
                 self.api_key=''
     @staticmethod
     def extract_url(text:str)->str:
+        # Capture all supported Google Maps/share short-link forms at the
+        # deterministic extraction boundary. Network expansion is separate.
         m=re.search(r'https?://(?:maps\.app\.goo\.gl|goo\.gl|www\.google\.com/maps|maps\.google\.com|share\.google)\S+',text or '',re.I);return m.group(0).rstrip('.,)') if m else ''
     @classmethod
     def expand(cls,url:str)->str:
