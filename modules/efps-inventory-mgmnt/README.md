@@ -4,11 +4,17 @@
 
 `Needs Review` is not a normal result of deterministic extraction. A valid deterministic extraction remains `Pending` after `intake_status = Processed`.
 
-`Needs Review` is reserved for a deterministic validation error or an explicit AI conflict after the deterministic gate. Google Maps `PARTIAL_MATCH`, `NEEDS_RUNTIME_VERIFICATION`, or `NOT_FOUND` is recorded as an issue but does not by itself change `status` to `Needs Review`. A downstream publishing consumer may separately require verified Maps data before publication.
+`Needs Review` is reserved for a deterministic validation error or an explicit AI conflict after the deterministic gate. Google Maps `PARTIAL_MATCH`, `NEEDS_RUNTIME_VERIFICATION`, or `NOT_FOUND` is recorded as an issue but does not by itself change `status` to `Needs Review`.
+
+## Canonical source extraction boundary
+
+Stage 2 first segments `raw_message_text` into source-message units using `src/source_segments.py`. All labelled direct-field extraction must operate inside those units. This prevents a field in one WhatsApp message from consuming a value from a later message and prevents fixes from depending on one particular timestamp/line representation.
+
+The canonical detailed contract is `docs/INVENTORY_SOURCE_EXTRACTION.md`.
 
 ## Deterministic direct-field rules
 
-- `internal_property_type`: read the explicit source field when supplied; accept common `:` or `-` label separators and normalize to `Gated Community`, `Semi Gated`, or `Standalone`. If absent, explicit semi-gated wording wins, explicit gated-community/society wording maps to Gated Community, otherwise Standalone.
+- `internal_property_type`: read the explicit source field when supplied; accept common `:` or `-` label separators and normalize to `Gated Community`, `Semi Gated`, or `Standalone`. Boolean gating labels are explicit evidence; negative boolean values do not classify a property as gated. If absent, explicit semi-gated wording wins, explicit gated-community/society wording maps to Gated Community, otherwise Standalone.
 - `society_name`: take the directly supplied society name. Markdown decoration and placeholder-only values such as `*` or `-` are treated as blank. If missing, use the resulting location/locality.
 - `landmark`: take the directly supplied landmark. Markdown decoration and placeholder-only values such as `*` or `-` are treated as blank. If missing, use the resulting location/locality.
 - `locality`: take explicit `Location`, `Locality`, or `Area`. Verified Maps locality may replace it.
@@ -34,11 +40,12 @@
 
 ## Stage-2 sequence
 
-1. deterministic extraction
-2. deterministic normalization/business rules
-3. Google Maps resolution when supplied/extracted
-4. deterministic validation
-5. optional AI verification/wording-only beautification
+1. canonical source-message segmentation
+2. deterministic extraction
+3. deterministic normalization/business rules
+4. Google Maps resolution when supplied/extracted
+5. deterministic validation
+6. optional AI verification/wording-only beautification
 
 Maps is a Stage-2 sub-step, not a top-level stage. Google Sheets persistence is transport/output.
 
@@ -48,4 +55,4 @@ The inventory contract is 48 columns A:AV. Stage 1/2 writes are restricted to A:
 
 ## Verification
 
-Direct-field extraction, placeholder fallbacks, pet fallback, covered-parking default, tenant normalization, amenity defaults, subtype fallback, title/highlight fallback, and Maps status separation have regression coverage in `src/test_deterministic_regressions.py`. External AI runtime remains a separate acceptance boundary.
+Source-boundary extraction, direct-field extraction, placeholder fallbacks, pet fallback, covered-parking default, tenant normalization, amenity defaults, subtype fallback, title/highlight fallback, and Maps status separation have regression coverage in the Inventory tests. The canonical source-shape rule requires a regression fixture for every production extraction defect. External AI runtime remains a separate acceptance boundary.

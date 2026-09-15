@@ -7,9 +7,10 @@ The current authorized implementation target is **Inventory Management Phase 1**
 ## Stage-2 implementation
 
 - `extract.py` performs deterministic extraction from completed `raw_message_text`.
-- Direct source fields accept `:`, `-`, `|`, and `=` separators and stop at newline/HTML breaks or the next timestamped WhatsApp message marker.
-- Direct property type extraction is specific to property/gating classification labels; a generic `type:` match is intentionally avoided because it can capture unrelated text.
-- `source_consistency.py` now performs a second source-first reconciliation pass for `internal_property_type`. Labelled canonical values and complete canonical phrases are recognized before normalization; unrelated `type:` text cannot classify a property.
+- `source_segments.py` is the canonical source-message boundary parser for concatenated WhatsApp inventory messages.
+- Labelled direct fields are extracted one source unit at a time and therefore cannot consume a value from a later timestamped message.
+- Direct property type extraction is specific to property/gating classification labels; a generic `type:` match is intentionally avoided.
+- `source_consistency.py` performs source-first reconciliation for `internal_property_type` using the same canonical source-unit boundary.
 - `normalize.py` applies deterministic business rules for direct-field fallbacks, pets, servant room, covered parking, amenities, maintenance, furnishing, subtype, tenant/bachelor dependency, highlights, title, and conservative property age.
 - `pipeline.py` orchestrates extraction → source reconciliation → normalization → Maps → validation → optional AI wording/verification.
 - `Needs Review` is reserved for deterministic validation errors or explicit AI conflicts. Maps `PARTIAL_MATCH`, `NEEDS_RUNTIME_VERIFICATION`, and `NOT_FOUND` are recorded as issues but do not themselves create `Needs Review`.
@@ -18,8 +19,8 @@ The current authorized implementation target is **Inventory Management Phase 1**
 ## Deterministic business rules now implemented
 
 - Explicit `internal_property_type` is preferred and normalized to `Gated Community`, `Semi Gated`, or `Standalone`; common source separators are accepted.
-- Source reconciliation recognizes labelled canonical property-type values and complete canonical phrases before fallback inference.
-- If explicit property type is absent, semi-gated wording wins, then gated community/society/property wording, then explicit standalone wording, otherwise Standalone.
+- Boolean gating labels are explicit evidence; negative values do not classify a property as gated.
+- Source reconciliation recognizes labelled canonical property-type values and complete canonical phrases within source-message boundaries.
 - `society_name` is direct when supplied; apartment/community/building-name aliases are accepted; placeholder-only values fall back to location/locality.
 - `landmark` is direct when supplied; placeholder-only values fall back to location/locality.
 - `pet_friendly` is `No` for explicit no-pet wording and `Yes` when no pet restriction is mentioned.
@@ -29,26 +30,24 @@ The current authorized implementation target is **Inventory Management Phase 1**
 - `property_subtype` is explicit/alias-normalized first; `Apartment` is only the normal floor-bearing fallback and is not invented for standalone wording.
 - `property_highlights` and `catalog_title` remain deterministic and factual; no unsupported marketing facts are added.
 - `age_of_property_years` is populated only from an explicit/authoritative fact and otherwise remains blank.
-- Maintenance and month-based deposit rules remain deterministic. Mixed maintenance values such as `2777 + Water` are intentionally preserved as source facts; a numeric-only existing Sheet value is not treated as a model defect solely because it omits the source suffix.
+- Maintenance and month-based deposit rules remain deterministic. Mixed maintenance values such as `2777 + Water` are intentionally preserved as source facts.
 
-## Model-run findings addressed
+## Recurring extraction-failure prevention
 
-The previous 25-row read-only run exposed repeated differences in two distinct categories. First, many differences were expected because the selected Sheet rows remained at the pre-processed `Raw` state with Stage-1/2 fields blank. Existing Stage-2 Sheet values are deliberately not extraction input, so blank-versus-populated output is not a deterministic extraction failure. Second, nonblank conflicts such as `internal_property_type` and maintenance require source-first comparison rather than treating every projection difference as a failed update.
+The repository no longer treats timestamp handling as a field-specific regex concern. Canonical segmentation is a shared Inventory extraction primitive and is used by both direct field extraction and property-type reconciliation. Any future production extraction defect must add a regression fixture for the actual source-message shape before the fix is considered complete.
 
-The property-type recurrence is now addressed by an explicit source reconciliation layer placed between extraction and normalization. It accepts canonical labelled values such as `Property Type: Semi Gated`, `Property Type - Gated Community`, and `Property Type = Standalone`, plus complete canonical phrases, while continuing to reject unrelated `type:` text.
+## Model-run interpretation
 
-Maintenance differences such as `2777` vs `2777 + Water` and `5000` vs `5000 + Water` remain source-preserving behavior unless a raw-source conflict proves otherwise. Decimal BHK corrections likewise remain source-derived until raw evidence establishes a different canonical value.
+The prior 25-row read-only run contained many blank-Sheet versus populated-model differences because Stage-2 projection is intentionally computed without writing the Sheet. Nonblank Sheet conflicts such as property type, maintenance, and BHK require raw-source evidence before being labelled model defects. The canonical source extraction contract now requires the model test/report to distinguish expected blank-cell projection differences, populated-cell conflicts, formatting-only differences, and Maps verification issues.
 
 ## Verification
 
-Regression coverage now includes timestamp-delimited direct fields, inline timestamp delimiters, explicit semi-gated classification, canonical property-type labels/phrases, unrelated `type:` rejection, and mixed maintenance preservation.
-
-The previous 25-row model run showed 17 Maps `PARTIAL_MATCH` issues but no Maps-induced `Needs Review` status. The current implementation keeps valid deterministic records at `Pending` while recording Maps uncertainty as an issue.
+Regression coverage includes bracketed timestamps, inline timestamp delimiters, source-boundary isolation, explicit semi/gated classification, negative gating values, canonical property-type labels, and mixed maintenance preservation. CI now executes the complete Inventory test directory in addition to the Sheet contract and pipeline tests.
 
 ## Current open pointers
 
-See `docs/OPEN_POINTERS.md`. Current unresolved items remain limited to Slack production runtime acceptance, exact `inventory_locked` vocabulary, and the decision/verification of the canonical WhAPI explicit User-Agent requirement.
+See `docs/OPEN_POINTERS.md`. Current unresolved items remain limited to the already-recorded runtime/governance items; no future downstream Stage-3 feature is treated as an open pointer for Inventory Phase 1.
 
 ## Safety boundary
 
-No production Sheet write, WhAPI setting change, or real inventory message was performed as part of these changes. The next step is local synchronization followed by the same 25-row read-only model run; production extraction remains unauthorized until that verification is reviewed.
+No production Sheet write, WhAPI setting change, or real inventory message was performed as part of these changes. The next step is local synchronization followed by the 25-row read-only model run; production extraction remains unauthorized until that verification is reviewed.

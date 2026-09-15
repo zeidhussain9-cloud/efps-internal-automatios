@@ -16,7 +16,7 @@ The completed `raw_message_text` is the only extraction source. Existing Sheet v
 
 ### Direct fields
 
-- `internal_property_type`: extract the explicit source field first. Accept `:`, `-`, `|`, or `=` label separators. Normalize to `Gated Community`, `Semi Gated`, or `Standalone`. If the explicit field is absent, semi-gated wording wins, then explicit gated-community/society/property wording, then explicit standalone-property wording, otherwise Standalone.
+- `internal_property_type`: extract the explicit source field first. Accept `:`, `-`, `|`, or `=` label separators. Normalize to `Gated Community`, `Semi Gated`, or `Standalone`. Boolean gating labels are explicit evidence. Explicit negative boolean values do not classify a property as gated. If the explicit field is absent, semi-gated wording wins, then explicit gated-community/society/property wording, then explicit standalone-property wording, otherwise Standalone.
 - `society_name`: use the directly supplied society name. Also accept apartment/community/building-name labels. Strip presentation-only markdown. Placeholder-only values such as `*` or `-` count as blank. If blank, use the resulting location/locality.
 - `landmark`: use the directly supplied landmark. Strip presentation-only markdown. Placeholder-only values such as `*` or `-` count as blank. If blank, use the resulting location/locality.
 - `locality`: use explicit `Property Location`, `Location`, `Locality`, or `Area`; a verified Maps locality may replace it.
@@ -25,9 +25,9 @@ The completed `raw_message_text` is the only extraction source. Existing Sheet v
 - `catalog_title`: construct a factual fallback from furnishing type, BHK, and location when blank. AI may rewrite wording only.
 - `age_of_property_years`: populate only from an explicit/authoritative property-age fact; otherwise blank. Do not infer it from Maps.
 
-### Timestamped raw-message parsing
+### Canonical timestamped raw-message parsing
 
-Inventory sessions may concatenate multiple WhatsApp messages with timestamp markers. Direct-field extraction must terminate at the next timestamped message as well as at newline/HTML breaks. This prevents a field such as `Society Name` or `Property Type` from absorbing later messages. Timestamped direct-field regression coverage is required for changes to this parser.
+Inventory sessions can concatenate multiple WhatsApp messages. The canonical segmentation implementation is `modules/efps-inventory-mgmnt/src/source_segments.py`. It recognizes bracketed and ISO/slash-date timestamp forms and preserves each message as an independent source unit. Direct labelled-field extraction operates inside these units only. A field must never consume a later message's value. This rule applies repository-wide to Inventory Stage-2 labelled extraction; adding a one-off regex exception is not an acceptable substitute.
 
 ### Core rules
 

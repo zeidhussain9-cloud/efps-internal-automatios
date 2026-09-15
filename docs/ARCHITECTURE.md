@@ -24,9 +24,9 @@ Verified inventory listener sender numbers are `917975102130` and `919902024973`
 Dedicated inventory-listener traffic enters the inventory module. `NEW` opens a property session; subsequent messages are collected until the next `NEW`, which closes the property. A listing identity is created and the raw record is persisted.
 
 ### Stage 2 — Deterministic Extraction / Property Processing
-The completed raw property is processed as one business stage. Its internal sub-steps are deterministic extraction, normalization/business rules, Google Maps resolution, deterministic validation, and optional AI verification/wording-only beautification. These sub-steps are intentionally not separate top-level stages.
+The completed raw property is processed as one business stage. Its internal sub-steps are canonical source-message segmentation, deterministic extraction, normalization/business rules, Google Maps resolution, deterministic validation, and optional AI verification/wording-only beautification. These sub-steps are intentionally not separate top-level stages.
 
-The actual Stage-2 inventory entry point is `modules/efps-inventory-mgmnt/src/pipeline.py:process_closed_session()`. When a Maps URL is supplied or extracted, it is resolved through `shared/google_maps`. A `VERIFIED` result populates `google_maps_url`, `locality`, and `pincode`; incomplete/unrecognized resolution fails closed to `Needs Review`.
+The actual Stage-2 inventory entry point is `modules/efps-inventory-mgmnt/src/pipeline.py:process_closed_session()`. Deterministic extraction uses `src/source_segments.py` before labelled fields are read, so a field cannot consume a later WhatsApp message. When a Maps URL is supplied or extracted, it is resolved through `shared/google_maps`. A `VERIFIED` result enriches `google_maps_url`, `locality`, and `pincode`; `PARTIAL_MATCH`, `NEEDS_RUNTIME_VERIFICATION`, and `NOT_FOUND` are informational issues and do not by themselves convert an otherwise valid deterministic result to `Needs Review`.
 
 ### Stage 3 — Downstream Operations
 Stage 3 is the downstream boundary for later consumers. It is not part of the current Inventory Phase-1 publishing implementation. Future Housing Portal and Meta Catalogue work requires explicit implementation requirements and authorization.
@@ -39,3 +39,7 @@ Inventory Stage 1/2 may write A:D, F:AO, and AU. It must not write E (`listing_s
 
 ## Runtime boundary
 Inventory Phase-1 runtime verification has completed successfully for the canonical Google Sheets read/write boundary and for Google Maps direct API access plus application-path consumption. WhAPI live channel identity/subscription/deployment, Cloudinary live upload, and Slack live deployment remain separate runtime acceptance items. No runtime secret is stored in the repository.
+
+## Stage-2 source extraction contract
+
+`docs/INVENTORY_SOURCE_EXTRACTION.md` is the canonical detailed contract. The repository must not solve a recurring extraction defect by adding an isolated regex exception without adding the corresponding source-shape regression fixture and checking the canonical segmentation boundary.

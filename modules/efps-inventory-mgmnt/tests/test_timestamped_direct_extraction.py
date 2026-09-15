@@ -6,6 +6,8 @@ sys.path.insert(0, str(MODULE_ROOT))
 
 from src.extract import scan
 from src.normalize import normalize
+from src.pipeline import deterministic
+from src.source_segments import split_source_messages
 
 
 def test_timestamped_direct_fields_stop_at_next_message():
@@ -36,6 +38,28 @@ def test_timestamped_direct_fields_support_inline_message_delimiters():
     assert extracted["locality"] == "Bellandur"
 
 
+def test_source_segmentation_handles_bracketed_and_inline_timestamps():
+    raw = (
+        "[2026-09-15 10:00] Property Type: Semi Gated\n"
+        "2026-09-15 10:01 Society Name: Example Heights | "
+        "2026-09-15 10:02 Location: Bellandur"
+    )
+    assert split_source_messages(raw) == [
+        "Property Type: Semi Gated",
+        "Society Name: Example Heights",
+        "Location: Bellandur",
+    ]
+
+
+def test_direct_field_does_not_consume_following_message():
+    raw = (
+        "[2026-09-15 10:00] Society Name: First Residency\n"
+        "[2026-09-15 10:01] Society Name: Second Residency\n"
+        "[2026-09-15 10:02] Location: Harlur"
+    )
+    assert scan(raw)["society_name"] == "First Residency"
+
+
 def test_boolean_gated_field_is_authoritative():
     raw = (
         "[2026-09-15 10:00] Property Type: Apartment\n"
@@ -60,10 +84,9 @@ def test_boolean_semi_gated_field_is_authoritative():
     assert out["society_amenities"] == "Security, Lift, CCTV, Power Backup"
 
 
-def test_negative_boolean_gated_field_does_not_classify_as_gated():
+def test_negative_boolean_gated_field_is_not_positive_gating_evidence():
     raw = "[2026-09-15 10:00] Gated Community: No"
-    row = {"internal_property_type": "", "society_amenities": ""}
-    out = normalize(row, raw)
+    out = deterministic(raw)
     assert out["internal_property_type"] == "Standalone"
     assert out["society_amenities"] == "-"
 
@@ -78,7 +101,6 @@ def test_property_type_normalization_prefers_explicit_semi_gated():
 
 def test_mixed_maintenance_is_preserved_as_source_fact():
     raw = "[2026-09-15 10:00] Maintenance: 2777 + Water"
-    row = {"maintenance": ""}
-    out = normalize(row, raw)
-    assert out["maintenance"] == "2777 + Water"
-    assert out["maintenance_included"] == "No"
+    extracted = scan(raw)
+    assert extracted["maintenance"] == "2777 + Water"
+    assert extracted["maintenance_included"] == "No"

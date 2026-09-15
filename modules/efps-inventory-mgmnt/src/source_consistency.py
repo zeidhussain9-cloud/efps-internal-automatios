@@ -2,15 +2,24 @@
 from __future__ import annotations
 import re
 
+from .source_segments import split_source_messages
+
 _CANONICAL = (
     (re.compile(r"\bsemi[-\s]*gated\s*(?:community|society|property)?\b", re.I), "Semi Gated"),
     (re.compile(r"\bgated\s*(?:community|society|property)\b", re.I), "Gated Community"),
     (re.compile(r"\bstand[-\s]*alone\b", re.I), "Standalone"),
 )
 _LABEL = re.compile(
-    r"\b(?:internal\s+property\s+type|property\s+(?:type|classification)|gating\s+type|gated\s*(?:community|society|property)?)\b"
-    r"\s*(?:[:=|\-])\s*(.*?)"
-    r"(?=(?:<br\s*/?>)|\n|\s*(?:\[(?:\d{4}[-/]\d{1,2}[-/]\d{1,2})[^\]]*\]|(?:\d{4}[-/]\d{1,2}[-/]\d{1,2}[ T]\d{1,2}:\d{2}(?::\d{2})?))|$)",
+    r"\b(?:internal\s+property\s+type|property\s+(?:type|classification)|gating\s+type)\b"
+    r"\s*(?:[:=|\-])\s*([^|\n<]+)", re.I,
+)
+_BOOLEAN_GATING = re.compile(
+    r"\b(?P<label>semi[-\s]*gated|gated\s*(?:community|society|property)?)\b"
+    r"\s*(?:[:=|\-])\s*(?P<value>[^|\n<]+)", re.I,
+)
+_NEGATIVE_GATING = re.compile(
+    r"\b(?:semi[-\s]*gated|gated\s*(?:community|society|property)?)\b"
+    r"\s*(?:[:=|\-])\s*(?:no|n|false|0|not\s+allowed|not\s+permitted|none)\b",
     re.I,
 )
 
@@ -18,37 +27,42 @@ _LABEL = re.compile(
 def _canonical_value(value: str) -> str:
     value = re.sub(r"[*_`~]", "", str(value or "")).strip()
     for pattern, canonical in _CANONICAL:
-        if pattern.search(value):
-            return canonical
+        if pattern.search(value): return canonical
     return "Standalone" if re.fullmatch(r"stand[-\s]*alone", value, re.I) else ""
 
 
+def _boolean_value(value: str) -> bool | None:
+    cleaned = re.sub(r"[*_`~]", "", str(value or "")).strip().lower()
+    if cleaned in {"yes","y","true","1","allowed"}: return True
+    if cleaned in {"no","n","false","0","not allowed","not permitted","none"}: return False
+    return None
+
+
 def extract_property_type(raw_text: str) -> str:
-    """Return an explicit canonical property type, never an inferred guess.
+    """Return explicit canonical property type from source evidence only."""
+    for unit in split_source_messages(raw_text):
+        for match in _BOOLEAN_GATING.finditer(unit):
+            value = _boolean_value(match.group("value"))
+            if value is True:
+                label = match.group("label").lower()
+                return "Semi Gated" if "semi" in label else "Gated Community"
+            if value is False:
+                return "Standalone"
 
-    Labelled values outrank free-text mentions. Free-text canonical phrases are
-    accepted only as complete source phrases; unrelated words such as ``type``
-    are never used as a classifier.
-    """
-    text = str(raw_text or "")
-    for match in _LABEL.finditer(text):
-        value = _canonical_value(match.group(1))
-        if value:
-            return value
+        for match in _LABEL.finditer(unit):
+            value = _canonical_value(match.group(1))
+            if value: return value
 
-    # Evaluate each source line/message independently so a later message cannot
-    # contaminate an earlier classification.
-    chunks = re.split(r"(?:<br\s*/?>|\n)", text, flags=re.I)
-    for chunk in chunks:
-        value = _canonical_value(chunk)
-        if value:
-            return value
+        if _NEGATIVE_GATING.search(unit):
+            return "Standalone"
+
+        value = _canonical_value(unit)
+        if value: return value
     return ""
 
 
 def reconcile_property_type(row: dict, raw_text: str) -> dict:
     """Apply explicit source classification before downstream normalization."""
     value = extract_property_type(raw_text)
-    if value:
-        row["internal_property_type"] = value
+    if value: row["internal_property_type"] = value
     return row

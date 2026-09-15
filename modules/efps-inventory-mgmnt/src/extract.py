@@ -2,6 +2,8 @@
 from __future__ import annotations
 import re
 
+from .source_segments import split_source_messages
+
 
 def _scale(n: str, s: str = "") -> str:
     v = float(n.replace(",", ""))
@@ -18,16 +20,20 @@ def _clean_source_value(value: str) -> str:
     return value.strip(" -–—")
 
 
-# Raw inventory sessions concatenate timestamped WhatsApp messages. A field value
-# must stop at the next message marker as well as a line/HTML break; otherwise a
-# direct field can absorb subsequent messages and become unusable.
-_NEXT_MESSAGE = r"(?=\s*(?:\[(?:\d{4}[-/]\d{1,2}[-/]\d{1,2})[^\]]*\]|(?:\d{4}[-/]\d{1,2}[-/]\d{1,2}[ T]\d{1,2}:\d{2}(?::\d{2})?))|$)"
-
-
 def _line_value(text: str, label: str) -> str:
-    pattern = rf"\b{label}\b\s*(?::|[-–—|=])\s*(.*?)(?=(?:<br\s*/?>)|\n|{_NEXT_MESSAGE})"
-    match = re.search(pattern, text, re.I)
-    return _clean_source_value(match.group(1)) if match else ""
+    """Extract a labelled value from one source unit at a time.
+
+    This is deliberately source-unit scoped. It prevents a label in one
+    WhatsApp message from consuming the value belonging to a later message.
+    """
+    pattern = re.compile(rf"\b{label}\b\s*(?::|[-–—|=])\s*([^|\n<]+)", re.I)
+    for unit in split_source_messages(text):
+        match = pattern.search(unit)
+        if match:
+            value = _clean_source_value(match.group(1))
+            if value:
+                return value
+    return ""
 
 
 def _first_line_value(text: str, labels: tuple[str, ...]) -> str:
@@ -79,9 +85,6 @@ def scan(text: str) -> dict[str, str]:
         if m: out[key] = m.group(1)
 
     direct = {
-        # Keep these labels specific. A generic "type:" match can capture an
-        # unrelated phrase and incorrectly turn a valid property into a gated
-        # classification during normalization.
         "internal_property_type": _first_line_value(text, (r"internal\s*property\s*type", r"property\s*type", r"property\s*classification", r"gating\s*type")),
         "society_name": _first_line_value(text, (r"society\s*name", r"society", r"apartment\s*name", r"community\s*name", r"building\s*name")),
         "landmark": _first_line_value(text, (r"landmark",)),
