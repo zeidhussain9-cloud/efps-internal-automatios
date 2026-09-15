@@ -15,6 +15,9 @@ EXCLUDED_PARTS = {".git"}
 KNOWN_STALE = (
     "declared Standalone fallback",
     "declared `Standalone` fallback",
+    "fallback is Standalone",
+    "fallback is `Standalone`",
+    "fallback is **Standalone**",
 )
 
 
