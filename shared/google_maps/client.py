@@ -9,7 +9,7 @@ class MapsResolution:
 
 class GoogleMapsClient:
     API='https://maps.googleapis.com/maps/api/geocode/json'
-    SHORT_HOSTS=('maps.app.goo.gl','goo.gl','maps.google.com')
+    SHORT_HOSTS=('maps.app.goo.gl','goo.gl','maps.google.com','share.google')
     def __init__(self,api_key=None):
         self.api_key=api_key or os.getenv('GOOGLE_MAPS_API_KEY','')
         if not self.api_key:
@@ -20,7 +20,7 @@ class GoogleMapsClient:
                 self.api_key=''
     @staticmethod
     def extract_url(text:str)->str:
-        m=re.search(r'https?://(?:maps\.app\.goo\.gl|goo\.gl|www\.google\.com/maps|maps\.google\.com)[^\s<>]+',text or '',re.I);return m.group(0).rstrip('.,)') if m else ''
+        m=re.search(r'https?://(?:maps\.app\.goo\.gl|goo\.gl|www\.google\.com/maps|maps\.google\.com|share\.google)\S+',text or '',re.I);return m.group(0).rstrip('.,)') if m else ''
     @classmethod
     def expand(cls,url:str)->str:
         if not any(h in url for h in cls.SHORT_HOSTS):return url
