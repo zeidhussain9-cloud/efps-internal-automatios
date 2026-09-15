@@ -30,6 +30,10 @@ Maps resolution, validation, AI verification, and wording-only AI beautification
 
 The completed `raw_message_text` is the authoritative deterministic extraction source. Existing canonical Sheet values must not become replay/extraction inputs. Deterministic rules must preserve explicit source facts and fail closed rather than invent missing facts.
 
+### Source-message extraction boundary
+
+Inventory raw sessions can contain multiple concatenated WhatsApp messages. `modules/efps-inventory-mgmnt/src/source_segments.py` is the canonical segmentation primitive. Labelled-field extraction must operate on one source unit at a time so a field cannot consume a later message. A recurring extraction defect must be fixed at the canonical source-boundary or field-contract level and must include a regression fixture for the triggering source shape; isolated one-off regex patches are not sufficient.
+
 ## Cloudinary
 
 `shared/cloudinary/` provides technical media storage/upload capabilities. Business modules decide which media is stored and why. The shared implementation uses deterministic property/lead namespaces, non-overwriting uploads, stable secure URLs, and optional media fingerprints.
@@ -40,7 +44,7 @@ The completed `raw_message_text` is the authoritative deterministic extraction s
 
 ## Google Maps
 
-`shared/google_maps/` is a reusable technical adapter. Inventory decides when Maps is required. The adapter uses `GOOGLE_MAPS_API_KEY` or the approved local Keychain credential, resolves through the Google Geocoding API, and returns a structured `MapsResolution`. `resolve()` is keyword-only. Inventory treats only `VERIFIED` as accepted; incomplete/unrecognized states fail closed into review. The current Inventory Phase-1 direct and application-path Maps verification has passed.
+`shared/google_maps/` is a reusable technical adapter. Inventory decides when Maps is required. The adapter uses `GOOGLE_MAPS_API_KEY` or the approved local Keychain credential, resolves through the Google Geocoding API, and returns a structured `MapsResolution`. `resolve()` is keyword-only. Inventory accepts only `VERIFIED` as a successful Maps enrichment; `PARTIAL_MATCH`, `NEEDS_RUNTIME_VERIFICATION`, and `NOT_FOUND` are recorded as informational issues and do not by themselves convert an otherwise valid deterministic extraction to `Needs Review`. The current Inventory Phase-1 direct and application-path Maps verification has passed.
 
 ## WhatsApp / WhAPI
 
