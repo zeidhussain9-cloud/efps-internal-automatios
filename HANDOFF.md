@@ -18,7 +18,7 @@ The current authorized implementation target is **Inventory Management Phase 1**
 - Explicit no-pet source wording is authoritative during final normalization.
 - `📍 Landmark:` followed only by a Maps URL remains a blank landmark; the URL belongs to `google_maps_url`.
 - Existing Sheet Stage-2 values are never deterministic extraction input.
-- `Needs Review` is governed by `docs/NEEDS_REVIEW_CONTRACT.md`; non-blocking field gaps do not become property-processing blockers by themselves.
+- `Needs Review` is governed by `docs/NEEDS_REVIEW_CONTRACT.md`; non-blocking field gaps do not become property-processing blockers by themselves, but they must still remain deterministic and contract-valid.
 
 ## Canonical dependency contract
 
@@ -32,7 +32,13 @@ built_up_area -> carpet_area (blank-only fallback)
 monthly_rent -> security_deposit (month-based source form)
 ```
 
-Explicit child source evidence remains authoritative where the field contract permits it.
+For tenant eligibility:
+
+- `Family` -> `bachelor_preference` is blank.
+- `Open For All` -> `bachelor_preference` defaults exactly to the Sheet dropdown value `Open for both`.
+- Explicit valid source evidence for `Female Only` or `Male Only` overrides the default.
+
+The canonical bachelor vocabulary is exactly `Female Only`, `Male Only`, and `Open for both`; the historical trailing-space variant is removed from the repository contract.
 
 ## Google Maps state
 
@@ -40,20 +46,24 @@ Explicit child source evidence remains authoritative where the field contract pe
 
 Supported source URL forms include `maps.app.goo.gl`, `goo.gl`, `maps.google.com`, `www.google.com/maps`, and `share.google`.
 
-The latest 25-row projection provides direct acceptance evidence for the formerly failing Maps case: row 10 / `EF-2609-JCN1` contains `https://share.google/oo7aBEUjVMGWUQzPm` in the raw source and projects the exact same URL into `google_maps_url`; `SM ART Apartments` is simultaneously retained as `society_name`. The production gate no longer reports a Maps failure.
+The latest 25-row projection previously provided direct acceptance evidence for the formerly failing Maps case: row 10 / `EF-2609-JCN1` contained `https://share.google/oo7aBEUjVMGWUQzPm` in the raw source and projected the exact same URL into `google_maps_url`; `SM ART Apartments` was simultaneously retained as `society_name`. The production gate no longer treats that source-preservation case as a Maps failure.
 
 Do not re-open the Maps or society contracts unless a new projection demonstrates an actual regression against their contracts.
 
-## Current deterministic blocker
+## Implementation completed in this change set
 
-The latest production gate reports 19 row failures, all from one dependency contract: `preferred_tenant_type = Open For All` with blank `bachelor_preference`. This is one field-level blocker, not 19 independent property-field defects.
-
-The correct resolution is not to invent a bachelor preference. Either the source must contain a valid dependent value or the business contract must explicitly authorize a deterministic default. Until that rule is established, the dependent field remains unresolved and blocking.
+- Canonicalized the `bachelor_preference` Sheet vocabulary by removing the historical trailing-space variant from schema and validation.
+- Implemented the missing deterministic dependency: `Open For All -> Open for both`.
+- Preserved explicit valid bachelor source evidence over the dependency default.
+- Kept `Family -> blank` deterministic behavior.
+- Aligned the production projection gate with the same canonical dependency contract.
+- Added regression tests for defaulting, explicit override, and Family clearing.
+- Synchronized `GEMINI.md`, `docs/NEEDS_REVIEW_CONTRACT.md`, `docs/DETERMINISTIC_FIELD_RESOLUTION.md`, and this handoff with the implementation.
 
 ## Verification status
 
-The current main branch contains the Maps source-preservation hardening, regression coverage, and the canonical Needs Review contract. Local acceptance still requires the complete test suite and the 25-row read-only projection/gate to be run from this exact merged commit.
+This change set has been implemented on the branch `deterministic-contract-sync-2026-09-15` from the current `main` baseline. Final acceptance is intentionally not claimed yet: the complete test suite and the 25-row read-only projection/gate must be run from the merged commit, and their actual output is the acceptance truth.
 
 ## Safety boundary
 
-No production Sheet write is part of the read-only projection audit. External Maps runtime verification and deterministic source projection are separate acceptance boundaries.
+No production Sheet write is part of the read-only projection audit. External Maps runtime verification and deterministic source projection are separate acceptance boundaries. No production credentials or secrets are part of this change set.
