@@ -69,10 +69,13 @@ Never commit secrets, credentials, tokens, passwords, private keys, or other sen
 
 ## Shared-capability rule
 
-The repository currently has three established shared capability boundaries:
+The repository currently has six established shared capability boundaries:
 
 - `shared/cloudinary/`
+- `shared/credentials/`
+- `shared/google_maps/`
 - `shared/google_sheets/`
+- `shared/slack/`
 - `shared/whatsapp_whapi/`
 
 A shared capability may be structurally established before every runtime feature is complete. Status must be stated accurately; capability boundaries must not be mistaken for proof that every feature is live.
