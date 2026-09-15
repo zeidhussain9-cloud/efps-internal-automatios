@@ -27,11 +27,11 @@ Existing Sheet Stage-2 values are never used as deterministic source evidence.
 
 - `BHK`: preserve integer and decimal values; later explicit BHK source corrections supersede earlier explicit values.
 - `maintenance`: accept only maintenance-specific source context or the specific rent-plus-maintenance form; normalize K/lakh; preserve qualifiers such as `+ Water`; evaluate `maintenance_included` independently. `Included + Water` resolves to `0 + Water` and `Yes`.
-- `internal_property_type`: exactly `Gated Community`, `Semi Gated`, or `Standalone`. Explicit source evidence is authoritative; explicit negative gating resolves to `Standalone`; the declared `Standalone` fallback applies only when no property-type evidence exists.
+- `internal_property_type`: exactly `Gated Community`, `Semi Gated`, or `Standalone`. Explicit source evidence is authoritative; explicit negative gating resolves to `Standalone`; specific/generic gating wording is used when present; known adjudicated communities may provide an explicit registry resolution. Absence of authoritative gating/standalone evidence remains unresolved/blank and must not be fabricated as `Standalone`.
 - `balconies`: accept explicit numeric singular/plural balcony forms; bare `Balcony` is one balcony.
 - `pet_friendly`: explicit no-pet wording such as `Pets: Not Allowed` is authoritative and resolves to `No`; absent restriction retains the established `Yes` fallback.
 - `google_maps_url`: deterministic source URLs are extracted independently of network Maps enrichment.
-- `landmark`: a `📍 Landmark:` marker followed only by a Maps URL remains blank; the URL belongs to `google_maps_url`.
+- `landmark`: a `📍 Landmark:` marker followed only by a Maps URL remains blank; the URL belongs to `google_maps_url` and locality is never inherited into landmark.
 
 ## Dependency contract
 
@@ -65,4 +65,4 @@ The inventory contract is 48 columns A:AV. Stage 1/2 writes are restricted to A:
 
 ## Verification
 
-Regression coverage includes canonical source segmentation, multi-candidate resolution, later corrections, decimal BHK, maintenance unit normalization/qualifiers/inclusion, positive/negative property-type evidence, singular/decimal balcony source forms, explicit pet negatives, Sheet-independence, dependent defaults, and normalized maintenance validation. Production extraction remains gated on repository verification plus the read-only live model audit.
+Regression coverage includes canonical source segmentation, multi-candidate resolution, later corrections, decimal BHK, maintenance unit normalization/qualifiers/inclusion, positive/negative property-type evidence, singular/decimal balcony source forms, explicit pet negatives, Sheet-independence, dependent defaults, and normalized maintenance validation. Production projection gating validates the committed deterministic path against rows 2–26 without Sheet-value feedback or writes; live external-system writes remain a separate acceptance boundary.
