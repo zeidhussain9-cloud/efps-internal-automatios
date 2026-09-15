@@ -36,6 +36,38 @@ def test_timestamped_direct_fields_support_inline_message_delimiters():
     assert extracted["locality"] == "Bellandur"
 
 
+def test_boolean_gated_field_is_authoritative():
+    raw = (
+        "[2026-09-15 10:00] Property Type: Apartment\n"
+        "[2026-09-15 10:01] Gated Community: Yes\n"
+        "[2026-09-15 10:02] Location: Whitefield"
+    )
+    row = {"internal_property_type": "", "society_amenities": ""}
+    out = normalize(row, raw)
+    assert out["internal_property_type"] == "Gated Community"
+    assert out["society_amenities"] == "Club House, Lift, Gym, CCTV, Power Backup, Swimming Pool, Garden, Sports, Kids Area"
+
+
+def test_boolean_semi_gated_field_is_authoritative():
+    raw = (
+        "[2026-09-15 10:00] Property Type: Apartment\n"
+        "[2026-09-15 10:01] Semi Gated: Yes\n"
+        "[2026-09-15 10:02] Location: Harlur"
+    )
+    row = {"internal_property_type": "", "society_amenities": ""}
+    out = normalize(row, raw)
+    assert out["internal_property_type"] == "Semi Gated"
+    assert out["society_amenities"] == "Security, Lift, CCTV, Power Backup"
+
+
+def test_negative_boolean_gated_field_does_not_classify_as_gated():
+    raw = "[2026-09-15 10:00] Gated Community: No"
+    row = {"internal_property_type": "", "society_amenities": ""}
+    out = normalize(row, raw)
+    assert out["internal_property_type"] == "Standalone"
+    assert out["society_amenities"] == "-"
+
+
 def test_property_type_normalization_prefers_explicit_semi_gated():
     raw = "[2026-09-15 10:00] Property Type: Semi Gated"
     row = {"internal_property_type": "", "society_amenities": ""}

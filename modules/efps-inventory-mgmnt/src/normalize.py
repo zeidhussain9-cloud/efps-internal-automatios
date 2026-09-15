@@ -12,7 +12,7 @@ NO_FLOOR_SUBTYPES={"Villa","Independent House","Farm House","Duplex"}
 GATED_COMMUNITY_DEFAULTS=("Club House","Lift","Gym","CCTV","Power Backup","Swimming Pool","Garden","Sports","Kids Area")
 SEMI_GATED_AMENITIES=("Security","Lift","CCTV","Power Backup")
 STANDALONE_AMENITIES=("-")
-_GATED_KW=re.compile(r"\bgated\s*(?:[:\-]\s*)?(?:community|society)\b",re.I)
+_GATED_KW=re.compile(r"\bgated\s*(?:[:\-]\s*)?(?:community|society|property)\b",re.I)
 _SEMI_GATED_KW=re.compile(r"\bsemi[-\s]*gated\b",re.I)
 _STANDALONE_WORDS=re.compile(r"\b(villa|independent house|independent floor|builder floor|farm ?house|duplex|triplex|penthouse|studio)\b",re.I)
 _RK_RE=re.compile(r"\b(\d)\s*rk\b",re.I)
@@ -21,6 +21,8 @@ _MAINT_NUMERIC=re.compile(r"^\s*([\d.,]+)\s*(k|l|lakh|lakhs)?\s*(?:\+\s*(.+))?\s
 _UTILITY=re.compile(r"\butilit(?:y|ies)\b",re.I)
 _SLACK_LINK=re.compile(r"^<(?P<url>[^|>]+)(\|[^>]*)?>$")
 _PLACEHOLDERS={"*","-","—","n/a","na","none","not available","not mentioned","nil"}
+_YES_VALUES={"yes","y","true","1","allowed"}
+_NO_VALUES={"no","n","false","0","not allowed","not permitted","none"}
 
 
 def strip_slack_markup(value:str)->str:
@@ -70,12 +72,37 @@ def _usable(value:str)->bool:
     return bool(str(value or "").strip()) and str(value or "").strip().lower() not in _PLACEHOLDERS
 
 
+def _explicit_gating_label(text:str)->str:
+    """Resolve boolean-style gating fields used in inventory source messages.
+
+    Real inventory messages can say e.g. ``Gated: Yes`` or
+    ``Gated Community: Yes`` rather than putting the canonical Sheet value in
+    ``Property Type``. These are explicit source facts and must outrank the
+    generic Standalone fallback. Explicit negative values do not classify the
+    property as gated.
+    """
+    patterns=(
+        (r"\bsemi[-\s]*gated\s*(?:community|society|property)?\s*[:=|\-]\s*([^\n|<]+)","Semi Gated"),
+        (r"\bgated\s*(?:community|society|property)?\s*[:=|\-]\s*([^\n|<]+)","Gated Community"),
+    )
+    for pattern, canonical in patterns:
+        match=re.search(pattern,text,re.I)
+        if not match:continue
+        value=re.sub(r"[*_`~]","",match.group(1)).strip().lower()
+        value=re.sub(r"\s+"," ",value)
+        if value in _YES_VALUES:return canonical
+        if value in _NO_VALUES:continue
+    return ""
+
+
 def _gating_level_from_text(raw_text:str,row:dict)->str:
     text=str(raw_text or "")
     direct=_direct_value(row,"internal_property_type",text).lower()
     if "semi" in direct and "gated" in direct:return "Semi Gated"
     if "gated" in direct:return "Gated Community"
     if direct in {"standalone","stand alone"}:return "Standalone"
+    explicit_boolean=_explicit_gating_label(text)
+    if explicit_boolean:return explicit_boolean
     if _SEMI_GATED_KW.search(text):return "Semi Gated"
     if _GATED_KW.search(text):return "Gated Community"
     return "Standalone"
