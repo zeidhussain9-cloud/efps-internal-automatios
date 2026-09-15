@@ -2,53 +2,42 @@
 
 ## Current state
 
-The current authorized implementation target is **Inventory Management Phase 1**. The workflow has three top-level stages: Stage 1 Initial/Webhook, Stage 2 Deterministic Extraction/Property Processing, and Stage 3 downstream boundary reserved for later consumers.
+The canonical Inventory implementation remains authoritative and is not being migrated from legacy. The approved live-system migration is in progress on the dedicated branch `migration/live-system-20260916`, created from the verified remote tip `4a83a395c097d66447d52b312f05d155a9afe284` because the previously reported local `a3139bf` state differed from the current remote branch state.
 
-## Stage-2 implementation
+## Migration boundary
 
-- `extract.py` discovers deterministic source facts from completed `raw_message_text`.
-- `source_segments.py` is the canonical source-message boundary parser for concatenated WhatsApp inventory messages.
-- `field_resolution.py` is the canonical candidate-resolution layer for BHK, maintenance, and internal property type.
-- `pipeline.py` is the authoritative deterministic processing boundary and passes the resolved internal property type explicitly into normalization.
-- `normalize.py` consumes canonical resolved property type and must not independently reclassify it.
-- BHK preserves decimals and later explicit corrections.
-- Maintenance requires maintenance-specific context, normalizes K/lakh units, independently evaluates inclusion, and preserves source qualifiers such as `+ Water`.
-- Internal property type has exactly three business values: Gated Community, Semi Gated, and Standalone. Explicit negative gating is authoritative against generic positive wording.
-- Existing Sheet Stage-2 values are never deterministic extraction input.
-- `Needs Review` is reserved for deterministic validation errors or explicit AI conflicts. Maps uncertainty remains informational.
+- Legacy Inventory processing, extraction, normalization, field resolution, business rules, pipeline behavior, and historical hacks are **out of scope**.
+- Inventory migration work is limited to the live intake/connection boundary feeding the canonical new Inventory implementation.
+- Lead Management is an approved migration and lives under `modules/efpd-lead-mgmnt/`.
+- Shared technical capabilities are reused under `shared/`; no duplicate legacy transport is introduced.
+- Slack operational behavior is migrated into the root Slack endpoints, `shared/slack/`, the Lead module, and the Inventory operator workflow where each capability belongs.
+- Meta Catalogue, Housing.com, website/downstream publishing, other Stage-3 operations, and Society Approvals are outside the current migration.
 
-## Canonical dependency contract
+## Current implementation additions
 
-```text
-internal_property_type -> society_amenities
-internal_property_type -> covered_parking (blank-only default)
-furnish_type -> flat_furnishings (blank-only default)
-preferred_tenant_type -> bachelor_preference
-maintenance -> maintenance_included
-built_up_area -> carpet_area (blank-only fallback)
-monthly_rent -> security_deposit (month-based source form)
-```
+- `webhook_handler.py` — canonical WhAPI webhook entry point and routing boundary.
+- `commands_handler.py` / `commands.py` — Slack slash-command adapter and approved command surface.
+- `events_handler.py` — Slack Events API adapter for photo, verification, and bug-report thread workflows.
+- `interactive_handler.py` — Lead card button/modal adapter.
+- `leads_worker.py` — Lead DynamoDB stream + dashboard worker entry point.
+- `handler.py` — canonical new Inventory batch entry point.
+- `modules/efpd-lead-mgmnt/src/` — migrated Lead business/state/card/audit/media/dashboard implementation.
+- `modules/efps-inventory-mgmnt/src/inventory_runtime.py` — new Stage-1 live intake adapter; it delegates processing to the existing Inventory package.
+- `modules/efps-inventory-mgmnt/src/slack_ops.py` — Inventory-owned Slack verification/photo workflow.
+- `shared/webhook/` — generic request/response primitives.
+- `shared/slack/bugs.py` and `shared/slack/crash_report.py` — shared Slack operational failure surface.
+- `template.yaml` — destination deployment contract for the migrated runtime resources.
 
-These are application/business dependencies. Explicit child source evidence remains authoritative where the field contract permits it.
+## Canonical Inventory implementation
 
-## Model-run interpretation
+The existing Inventory package remains untouched as the business-rule authority. `pipeline.py`, `field_resolution.py`, extraction, normalization, validation, Maps resolution, AI review/beautification, and the 48-column Sheet contract remain new-repository implementation.
 
-`tools/inventory_model_test.py` is read-only. It separates expected blank projections, lifecycle projections, formatting-only differences, populated source conflicts, and protected-column changes. A populated Sheet mismatch is not by itself a parser defect; it must be adjudicated against `raw_message_text` and the canonical contract. The raw source remains authoritative for deterministic extraction.
+## Verification state
 
-## Historical 25-row conflict conclusion
+Repository-side code review is in progress. Live external acceptance remains **NOT VERIFIED** in this execution environment because the requested Mac checkout path and local Keychain runtime are not available here. No real customer-facing WhatsApp message or production Sheet write is being used for migration validation.
 
-The previously observed 17 populated conflicts are not a single parser failure:
+Required remaining acceptance evidence includes target AWS deployment, Slack live registration/permissions, WhAPI live endpoint/token compatibility, safe synthetic webhook delivery through the deployed target, Lead end-to-end behavior, and old-runtime zero-traffic confirmation before retirement.
 
-- BHK conflicts contain explicit `2.5 BHK` source evidence while the existing Sheet contains `5 BHK`; these are source-vs-historical-Sheet conflicts.
-- Maintenance conflicts include unit representation differences such as `3.7K` versus `3`, and intentional qualifier differences such as `2777` versus `2777 + Water`.
-- Internal property type conflicts often occur because the existing Sheet contains a classification while the raw message does not state one; the deterministic contract therefore applies its declared fallback rather than importing the Sheet value.
+## Migration documentation
 
-No production Sheet values are silently overwritten by the deterministic model.
-
-## Verification
-
-Regression coverage includes source-boundary extraction, canonical resolution, later corrections, decimal BHK, maintenance units/qualifiers/inclusion, positive and negative gating, Sheet-independence, dependent defaults, and normalized maintenance validation.
-
-## Safety boundary
-
-No production Sheet write, WhAPI setting change, or real inventory message was performed as part of this implementation. Production extraction remains unauthorized until the complete repository test suite and the read-only model audit are verified against the final branch state.
+`docs/MIGRATION_LIVE_SYSTEM_MAP_20260916.md` is the canonical migration map for this changeset. It distinguishes MIGRATE, ALREADY PRESENT, NEW-REPOSITORY AUTHORITATIVE, OUT OF SCOPE, and NEEDS LIVE VERIFICATION.

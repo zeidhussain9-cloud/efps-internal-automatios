@@ -32,33 +32,38 @@ For every implementation, the agent must review all maintained root and `docs/` 
 
 ## Current modules
 
-- `modules/efps-inventory-mgmnt/` — property inventory business workflows and rules; current Inventory Phase-1 implementation.
-- `modules/efpd-lead-mgmnt/` — lead/enquiry business workflows and rules.
-- `modules/efps-meta-catalogue-mgmnt/` — reserved future Meta/WhatsApp catalogue business workflows.
-- `modules/efps-housing-portal-mgmnt/` — reserved future Housing.com automation.
-- `modules/efps-website-mgmnt/` — EasyFind website management and automation.
+- `modules/efps-inventory-mgmnt/` — canonical Inventory business workflows and deterministic processing.
+- `modules/efpd-lead-mgmnt/` — canonical Lead/Enquiry business workflows and migrated live lead-management behavior.
+- `modules/efps-meta-catalogue-mgmnt/` — reserved future Meta/WhatsApp catalogue business workflows; not part of the current migration.
+- `modules/efps-housing-portal-mgmnt/` — reserved future Housing.com automation; not part of the current migration.
+- `modules/efps-website-mgmnt/` — website management and automation.
 
 ## Established shared capabilities
 
-- `shared/cloudinary/` — reusable Cloudinary media storage/upload capability with deterministic property/lead namespaces and secure URL helpers.
+- `shared/cloudinary/` — reusable Cloudinary media storage/upload capability with deterministic property/lead namespaces.
 - `shared/credentials/` — canonical local macOS Keychain credential provider.
-- `shared/google_maps/` — reusable Google Maps URL extraction and Geocoding resolution capability; live application-path verified for Inventory Phase 1.
-- `shared/google_sheets/` — reusable Google Sheets technical access plus the canonical 48-column `Housing_Listings` A:AV contract; live read/write boundary verified for Inventory Phase 1.
-- `shared/slack/` — reusable Slack operational capability for the authorized Inventory Phase-1 workflows.
-- `shared/whatsapp_whapi/` — reusable WhAPI technical transport, live gate, channel/settings primitives, webhook normalization, and neutral messaging primitives.
+- `shared/google_maps/` — reusable Google Maps URL extraction and Geocoding resolution capability.
+- `shared/google_sheets/` — reusable Google Sheets technical access plus the canonical 48-column `Housing_Listings` A:AV contract.
+- `shared/slack/` — reusable Slack transport, security, routing, and the shared WhAPI/Slack operational integration surface.
+- `shared/whatsapp_whapi/` — provider-specific WhAPI transport and webhook/message primitives used by the shared operational surface.
+- `shared/webhook/` — generic HTTP webhook request/response primitives.
 
-## Inventory Phase-1 processing model
+## Inventory processing model
 
 Inventory uses three top-level stages:
 
 1. **Stage 1 — Initial / Webhook**: dedicated inventory listener, `NEW` property-session boundary, raw capture, and initial row.
 2. **Stage 2 — Deterministic Extraction / Property Processing**: canonical source segmentation, deterministic candidate extraction/resolution, normalization/business rules, Google Maps resolution, deterministic validation, optional AI verification, and wording-only AI beautification.
-3. **Stage 3 — Downstream Operations**: a boundary for future/downstream consumers; it is not part of the current Inventory Phase-1 publishing implementation.
+3. **Stage 3 — Downstream Operations**: a boundary for future/downstream consumers; it is not part of the current migration.
 
-The deterministic source contract is: `raw_message_text` is authoritative; persisted Stage-2 Sheet values are never extraction input. BHK, maintenance, and internal property type use canonical candidate resolution, and downstream defaults follow the documented dependency graph.
+The legacy repository is not an authority for any Inventory business rule or processing behavior. The current new-repository Inventory implementation remains authoritative.
 
-Google Maps is a Stage-2 sub-step, not a separate stage. Google Sheets is transport/output, not a top-level stage.
+## Live-system migration
+
+The current migration moves only approved live operational capabilities into the new architecture. Lead Management is migrated into `modules/efpd-lead-mgmnt/`; shared technical capabilities are reused rather than duplicated. Legacy Inventory logic, downstream publishing, and Society Approvals remain out of scope.
+
+See `docs/MIGRATION_LIVE_SYSTEM_MAP_20260916.md` for the explicit migration classification and current live-verification boundaries.
 
 ## Production status
 
-Repository/source hardening is maintained separately from live external-system verification. Inventory Phase-1 Google Sheets and Google Maps runtime probes have been completed successfully. Production extraction remains gated on repository verification and the read-only model audit. Other external integrations remain explicitly `NOT VERIFIED` until their applicable target-runtime acceptance probes succeed.
+Repository migration implementation and external-system live cutover are separate verification states. Code placement and integration can be reviewed from the repository; live WhAPI/Slack/AWS cutover remains `NOT VERIFIED` until the target runtime acceptance probes succeed.

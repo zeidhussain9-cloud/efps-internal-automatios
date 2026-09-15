@@ -1,0 +1,183 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: EFPS live operational runtime migrated to the canonical repository.
+Parameters:
+  WhApiToken: {Type: String, NoEcho: true}
+  WebhookToken: {Type: String, NoEcho: true}
+  SlackBotToken: {Type: String, NoEcho: true}
+  SlackSigningSecret: {Type: String, NoEcho: true}
+  GoogleServiceAccountJson: {Type: String, NoEcho: true}
+  CloudinaryCloudName: {Type: String, NoEcho: true}
+  CloudinaryApiKey: {Type: String, NoEcho: true}
+  CloudinaryApiSecret: {Type: String, NoEcho: true}
+  GoogleMapsApiKey: {Type: String, NoEcho: true}
+Globals:
+  Function:
+    Runtime: python3.12
+    MemorySize: 512
+    Timeout: 60
+    Environment:
+      Variables:
+        EFPS_DDB_PREFIX: efps
+        EFPS_WHAPI_LIVE: '1'
+        EFPS_WEBHOOK_LIVE: '1'
+        EFPS_WHAPI_INBOUND_MEDIA: '1'
+        WHAPI_API_TOKEN: !Ref WhApiToken
+        EFPS_WEBHOOK_TOKEN: !Ref WebhookToken
+        SLACK_BOT_TOKEN: !Ref SlackBotToken
+        SLACK_SIGNING_SECRET: !Ref SlackSigningSecret
+        GOOGLE_SERVICE_ACCOUNT_JSON: !Ref GoogleServiceAccountJson
+        CLOUDINARY_CLOUD_NAME: !Ref CloudinaryCloudName
+        CLOUDINARY_API_KEY: !Ref CloudinaryApiKey
+        CLOUDINARY_API_SECRET: !Ref CloudinaryApiSecret
+        GOOGLE_MAPS_API_KEY: !Ref GoogleMapsApiKey
+        INVENTORY_SENDERS: '917975102130,919902024973'
+        EFPS_LEADS_CHANNEL: 'C0BTM6PH55L'
+        EFPS_PANEL_CHANNEL: 'C0BTQGG8VT3'
+        EFPS_APPROVALS_CHANNEL: 'C0BUHUHRK0Q'
+        EFPS_BUGS_CHANNEL: 'C0BUHV01L8Y'
+        EFPS_SCHEDULE_RULES: 'efps-internal-automatios-morning,efps-internal-automatios-midday,efps-internal-automatios-evening'
+        EFPS_BATCH_FUNCTION: !Ref InventoryBatch
+        EFPS_EVENTS_FUNCTION: !Ref SlackEvents
+Resources:
+  LeadsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: efps-leads
+      BillingMode: PAY_PER_REQUEST
+      StreamSpecification: {StreamViewType: NEW_AND_OLD_IMAGES}
+      AttributeDefinitions: [{AttributeName: phone_number, AttributeType: S}]
+      KeySchema: [{AttributeName: phone_number, KeyType: HASH}]
+  InteractionsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: efps-interactions
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions: [{AttributeName: phone_number, AttributeType: S}, {AttributeName: timestamp, AttributeType: S}]
+      KeySchema: [{AttributeName: phone_number, KeyType: HASH}, {AttributeName: timestamp, KeyType: RANGE}]
+  SessionsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: efps-sessions
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions: [{AttributeName: user_id, AttributeType: S}]
+      KeySchema: [{AttributeName: user_id, KeyType: HASH}]
+      TimeToLiveSpecification: {AttributeName: expires_at, Enabled: true}
+  AuditTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: efps-lead-audit
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions: [{AttributeName: phone_number, AttributeType: S}, {AttributeName: changed_at, AttributeType: S}]
+      KeySchema: [{AttributeName: phone_number, KeyType: HASH}, {AttributeName: changed_at, KeyType: RANGE}]
+  BugsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: efps-bugs
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions: [{AttributeName: bug_id, AttributeType: S}]
+      KeySchema: [{AttributeName: bug_id, KeyType: HASH}]
+  InventoryBatch:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: efps-internal-automatios-batch
+      Handler: handler.lambda_handler
+      CodeUri: .
+      Timeout: 900
+      Policies:
+        - DynamoDBCrudPolicy: {TableName: !Ref LeadsTable}
+        - DynamoDBCrudPolicy: {TableName: !Ref InteractionsTable}
+        - DynamoDBCrudPolicy: {TableName: !Ref SessionsTable}
+        - DynamoDBCrudPolicy: {TableName: !Ref AuditTable}
+        - DynamoDBCrudPolicy: {TableName: !Ref BugsTable}
+      Events:
+        Morning: {Type: Schedule, Properties: {Name: efps-internal-automatios-morning, Schedule: 'cron(30 2 * * ? *)', Enabled: false}}
+        Midday: {Type: Schedule, Properties: {Name: efps-internal-automatios-midday, Schedule: 'cron(30 6 * * ? *)', Enabled: false}}
+        Evening: {Type: Schedule, Properties: {Name: efps-internal-automatios-evening, Schedule: 'cron(30 12 * * ? *)', Enabled: false}}
+  WhatsAppWebhook:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: efps-internal-automatios-webhook
+      Handler: webhook_handler.lambda_handler
+      CodeUri: .
+      Events: {Webhook: {Type: HttpApi, Properties: {Path: /whapi/webhook, Method: post}}}
+      Policies:
+        - DynamoDBCrudPolicy: {TableName: !Ref LeadsTable}
+        - DynamoDBCrudPolicy: {TableName: !Ref InteractionsTable}
+        - DynamoDBCrudPolicy: {TableName: !Ref SessionsTable}
+        - DynamoDBCrudPolicy: {TableName: !Ref AuditTable}
+        - DynamoDBCrudPolicy: {TableName: !Ref BugsTable}
+  SlackCommands:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: efps-internal-automatios-commands
+      Handler: commands_handler.lambda_handler
+      CodeUri: .
+      Events: {Command: {Type: HttpApi, Properties: {Path: /slack/commands, Method: post}}}
+      Policies:
+        - DynamoDBCrudPolicy: {TableName: !Ref LeadsTable}
+        - DynamoDBCrudPolicy: {TableName: !Ref InteractionsTable}
+        - DynamoDBCrudPolicy: {TableName: !Ref SessionsTable}
+        - DynamoDBCrudPolicy: {TableName: !Ref AuditTable}
+        - DynamoDBCrudPolicy: {TableName: !Ref BugsTable}
+        - Statement:
+            - Effect: Allow
+              Action: [lambda:InvokeFunction]
+              Resource: [!GetAtt InventoryBatch.Arn, !GetAtt SlackEvents.Arn]
+            - Effect: Allow
+              Action: [events:EnableRule, events:DisableRule, events:DescribeRule]
+              Resource: [!Sub 'arn:aws:events:${AWS::Region}:${AWS::AccountId}:rule/efps-internal-automatios-*']
+  SlackEvents:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: efps-internal-automatios-events
+      Handler: events_handler.lambda_handler
+      CodeUri: .
+      Events: {Events: {Type: HttpApi, Properties: {Path: /slack/events, Method: post}}}
+      Policies:
+        - DynamoDBCrudPolicy: {TableName: !Ref LeadsTable}
+        - DynamoDBCrudPolicy: {TableName: !Ref InteractionsTable}
+        - DynamoDBCrudPolicy: {TableName: !Ref SessionsTable}
+        - DynamoDBCrudPolicy: {TableName: !Ref AuditTable}
+        - DynamoDBCrudPolicy: {TableName: !Ref BugsTable}
+  SlackInteractive:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: efps-internal-automatios-interactive
+      Handler: interactive_handler.lambda_handler
+      CodeUri: .
+      Events: {Interactive: {Type: HttpApi, Properties: {Path: /slack/interactive, Method: post}}}
+      Policies:
+        - DynamoDBCrudPolicy: {TableName: !Ref LeadsTable}
+        - DynamoDBCrudPolicy: {TableName: !Ref InteractionsTable}
+        - DynamoDBCrudPolicy: {TableName: !Ref SessionsTable}
+        - DynamoDBCrudPolicy: {TableName: !Ref AuditTable}
+        - DynamoDBCrudPolicy: {TableName: !Ref BugsTable}
+  LeadsWorker:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: efps-internal-automatios-leads-worker
+      Handler: leads_worker.lambda_handler
+      CodeUri: .
+      Timeout: 120
+      Events:
+        LeadChanges:
+          Type: DynamoDB
+          Properties:
+            Stream: !GetAtt LeadsTable.StreamArn
+            StartingPosition: LATEST
+            BatchSize: 10
+            MaximumRetryAttempts: 2
+            BisectBatchOnFunctionError: true
+        DailyDigest: {Type: Schedule, Properties: {Name: efps-internal-automatios-leads-digest, Schedule: 'cron(30 3 * * ? *)'}}
+      Policies:
+        - DynamoDBCrudPolicy: {TableName: !Ref LeadsTable}
+        - DynamoDBCrudPolicy: {TableName: !Ref InteractionsTable}
+        - DynamoDBCrudPolicy: {TableName: !Ref SessionsTable}
+        - DynamoDBCrudPolicy: {TableName: !Ref AuditTable}
+        - DynamoDBCrudPolicy: {TableName: !Ref BugsTable}
+Outputs:
+  WebhookUrl: {Value: !Sub 'https://${ServerlessHttpApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/whapi/webhook'}
+  SlackCommandUrl: {Value: !Sub 'https://${ServerlessHttpApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/slack/commands'}
+  SlackEventsUrl: {Value: !Sub 'https://${ServerlessHttpApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/slack/events'}
+  SlackInteractiveUrl: {Value: !Sub 'https://${ServerlessHttpApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/slack/interactive'}
