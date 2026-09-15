@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from . import intake, pipeline
+from shared.google_maps.client import MapsResolution
 from shared.google_sheets import schema
 
 
@@ -81,6 +82,51 @@ def test_gated_colon_variant_is_classified_as_gated():
     raw = "3 BHK\nRent: 75000\nFloor: 1/14\nGated: Community"
     row = pipeline.deterministic(raw, pipeline.initial_row("EF-2609-0027"))
     assert row["internal_property_type"] == "Gated Community"
+
+
+def test_stage_two_maps_integration_accepts_only_verified_resolution():
+    raw = """2.5 BHK semi furnished apartment for rent in Harlur.
+Rent 60000 + maintenance.
+Deposit 6 months.
+2 bathrooms, 2 balconies.
+5th floor out of 10.
+Built-up area 1868 sqft.
+Family preferred.
+Gated community.
+Google Maps: https://www.google.com/maps/search/?api=1&query=12.9081,77.6476
+"""
+
+    class FakeMaps:
+        def extract_url(self, text):
+            return "https://www.google.com/maps/search/?api=1&query=12.9081,77.6476"
+
+        def resolve(self, *, maps_url="", address=""):
+            assert maps_url
+            return MapsResolution(
+                canonical_url="https://www.google.com/maps/search/?api=1&query=12.9080334,77.6475765&query_place_id=test-place",
+                formatted_address="1100, 23rd A Cross Rd, Garden Layout, Sector 2, HSR Layout, Bengaluru, Karnataka 560102, India",
+                locality="HSR Layout",
+                pincode="560102",
+                latitude=12.9080334,
+                longitude=77.6475765,
+                confidence="VERIFIED",
+            )
+
+    row = pipeline.initial_row("EF-TEST-STAGE2-MAPS", raw_text=raw, source_group="STAGE2_VERIFICATION")
+    processed, issues = pipeline.process_closed_session(raw, row=row, maps_client=FakeMaps(), ai_llm=None)
+
+    assert processed["status"] == "Pending"
+    assert processed["intake_status"] == "Processed"
+    assert processed["internal_property_type"] == "Gated Community"
+    assert processed["BHK"] == "2.5 BHK"
+    assert processed["built_up_area"] == "1868"
+    assert processed["carpet_area"] == "1681"
+    assert processed["monthly_rent"] == "60000"
+    assert processed["security_deposit"] == "360000"
+    assert processed["locality"] == "HSR Layout"
+    assert processed["pincode"] == "560102"
+    assert processed["google_maps_url"].startswith("https://www.google.com/maps/")
+    assert issues == []
 
 
 def test_new_marker_opens_then_closes_same_sender_session():
