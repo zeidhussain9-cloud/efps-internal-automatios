@@ -36,10 +36,20 @@ Repository-wide Gemini skills live under `.gemini/skills/`. Repository-specific 
 Established shared capabilities include:
 
 - `shared/cloudinary/`
-- `shared/google_sheets/`
-- `shared/whatsapp_whapi/`
+- `shared/credentials/`
 - `shared/google_maps/`
+- `shared/google_sheets/`
 - `shared/slack/`
+- `shared/whatsapp_whapi/`
+
+`shared/credentials/` is the canonical technical credential-provider boundary; credential values are never repository documentation.
+
+### `shared/google_maps/` canonical documents
+
+- `README.md` — capability boundary, authentication references, runtime behavior, resolution states, and verified Phase-1 acceptance.
+- `CREDENTIALS.md` — non-secret Google Maps credential registry.
+- `client.py` — reusable Maps API transport and normalized `MapsResolution` adapter.
+- `test_google_maps.py` — unit coverage for credential precedence/fallback behavior.
 
 ### `shared/slack/` canonical documents
 
