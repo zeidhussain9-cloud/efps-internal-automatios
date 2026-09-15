@@ -27,6 +27,7 @@ This document is the canonical map of maintained repository documentation. It te
 | `OPEN_POINTERS.md` | Unresolved decisions and verified unknowns |
 | `INVENTORY_SOURCE_EXTRACTION.md` | Canonical Stage-2 source segmentation and deterministic extraction contract |
 | `DETERMINISTIC_FIELD_RESOLUTION.md` | Canonical candidate extraction/resolution/normalization contract for deterministic Stage-2 fields |
+| `NEEDS_REVIEW_CONTRACT.md` | Blocking property-detail fields and deterministic `Needs Review` status contract |
 
 ## Local documentation
 

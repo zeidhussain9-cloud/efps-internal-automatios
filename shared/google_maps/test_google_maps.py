@@ -52,3 +52,30 @@ def test_maps_resolve_contract_is_keyword_only():
 def test_extracts_google_share_short_link():
     raw = "📍 Landmark: https://share.google/AbCdEf123"
     assert GoogleMapsClient.extract_url(raw) == "https://share.google/AbCdEf123"
+
+
+def test_extracts_supported_maps_urls_without_mutating_source_url():
+    cases = (
+        "https://maps.app.goo.gl/AzNBBPZrHBcTrnU3A?g_st=ic",
+        "https://goo.gl/maps/Example123",
+        "https://maps.google.com/?q=12.9716,77.5946",
+        "https://www.google.com/maps/place/Bengaluru",
+        "https://share.google/oo7aBEUjVMGWUQzPm",
+    )
+    for source_url in cases:
+        raw = f"📍 Society Name:\n{source_url}\n"
+        assert GoogleMapsClient.extract_url(raw) == source_url
+        assert GoogleMapsClient.is_maps_url(source_url)
+
+
+def test_extracts_maps_url_from_source_wrappers_and_terminal_punctuation():
+    source_url = "https://share.google/AbCdEf123"
+    raw = f"<*{source_url}*>)."
+    assert GoogleMapsClient.extract_url(raw) == source_url
+    assert GoogleMapsClient.is_maps_url(source_url)
+
+
+def test_does_not_capture_adjacent_text_as_part_of_maps_url():
+    source_url = "https://maps.app.goo.gl/Example123"
+    raw = f"{source_url}\nNext field: Bengaluru"
+    assert GoogleMapsClient.extract_url(raw) == source_url
