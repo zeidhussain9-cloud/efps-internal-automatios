@@ -10,15 +10,23 @@ This is the canonical list of unresolved decisions and verified unknowns for the
 ## Contract / implementation follow-up
 
 - The successful WhAPI Cloudflare diagnostic required an explicit `User-Agent: EFPS-Inventory-Phase1/1.0`. The current `WhApiClient` source has not yet been changed to add that header. Decide and verify whether the explicit user-agent should become part of the canonical client transport contract before treating the client itself as production-accepted for live API calls.
+- Google Maps `PARTIAL_MATCH` handling remains a production acceptance item. The current Stage-2 rule intentionally fails closed on non-`VERIFIED` Maps states; the 17 partial cases from the 25-row dry run must be analyzed before live extraction.
 
-## Closed in the current contract reconciliation
+## Closed in the current deterministic contract pass
 
-- `furnish_type` contract mismatch is closed. Live Sheet values are exactly `Fully Furnished` and `Semi Furnished`; repository extraction, schema, and validation no longer create or accept `Unfurnished`. Unfurnished source text leaves `furnish_type` and `flat_furnishings` blank.
-- `preferred_tenant_type` → `bachelor_preference` reconciliation is closed. The live Sheet vocabulary is authoritative: `Female Only `, `Male Only`, `Open for both`. Family/family-only with no explicit bachelor preference now leaves `bachelor_preference` blank rather than emitting the invalid intermediate `Not Allowed`. The `Family & Female Bachelors` legacy pattern and explicit female preference normalize to the exact live Sheet value `Female Only `, including its observed trailing space.
-- `internal_property_type` → `society_amenities` reconciliation is closed. Gated Community now defaults to the exact live Sheet combination `Club House, Lift, Gym, CCTV, Power Backup, Swimming Pool, Garden, Sports, Kids Area`; Semi Gated defaults to the exact live Sheet combination `Security, Lift, CCTV, Power Backup`; Standalone does not invent amenities. Validation rejects nonblank amenity combinations outside the verified Sheet vocabulary.
-- Exact `bachelor_preference` vocabulary formatting is closed. The repository intentionally preserves the live Sheet's `Female Only ` trailing space as part of the canonical contract and normalizes equivalent source wording to that exact value.
-- Exact live Sheet values for `internal_property_type`, `furnish_type`, `preferred_tenant_type`, `bachelor_preference`, `society_amenities`, and `flat_furnishings` have been read-only verified. `pet_friendly` has no Sheet data-validation rule, but populated live values `Yes` and `No` were verified.
-- No conditional/row-dependent Sheet dropdown validation was observed for the six dropdown-configured fields inspected. Their relationships are application/business dependencies, not conditional Sheet dropdown configuration.
+- `preferred_tenant_type` normalization is closed for the observed source variants: family variants normalize to `Family`; anyone/open-for-all variants normalize to `Open For All`.
+- `pet_friendly` contract mismatch is closed. The deterministic last-resort rule now emits `Yes` when no pet restriction is mentioned and `No` for explicit no-pet wording, matching the observed application vocabulary.
+- `servant_room` behavior is closed: explicit source `Yes` is preserved; missing source value defaults to `No`.
+- `covered_parking` behavior is closed: Gated Community and Semi Gated default to `1` when no covered-parking value is supplied; Standalone does not receive that default.
+- `internal_property_type` direct-field extraction and fallback behavior is closed. Explicit source values are normalized to the canonical three values; absent explicit values use the documented gating-wording fallback.
+- `society_name` and `landmark` direct extraction/fallback behavior is closed. Direct values are preserved; missing values use the resulting location/locality, including after verified Maps locality resolution.
+- `internal_property_type` → `society_amenities` is closed for the current deterministic contract: Gated Community and Semi Gated use the exact verified Sheet combinations; Standalone uses `-` when blank.
+- Property subtype behavior is documented and regression-covered: explicit subtype is authoritative after alias normalization; `Apartment` is only the normal floor-bearing fallback; standalone wording does not invent Apartment.
+- Property highlights and catalog title deterministic fallback behavior is documented and regression-covered. Explicit highlights/titles are preserved; otherwise only factual supported fragments/facts are used. AI remains optional wording-only processing.
+- `age_of_property_years` remains non-blocking and conservative: it is populated only from an explicit/authoritative source fact and otherwise remains blank.
+- The prior `furnish_type` mismatch remains closed: live Sheet values are exactly `Fully Furnished` and `Semi Furnished`; Unfurnished source wording leaves the field blank.
+- Exact `bachelor_preference` vocabulary formatting remains closed. The live `Female Only ` trailing space is intentionally preserved.
+- Exact live Sheet values and application dependencies for D, M, Y, Z, AA, AE, and AF remain verified.
 
 ## Deferred by current Phase-1 boundary
 

@@ -41,7 +41,6 @@ def _stage2_input_row(row: dict) -> dict:
     out = empty_row()
     for name in ("listing_id", "status", "intake_status", "onboarded_on", "raw_message_text", "whatsapp_contact_link", "whatsapp_group_link", "transaction_type", "city", "source_group"):
         out[name] = str(row.get(name, "") or "")
-    # Existing media associations are preserved; the current Phase-1 pass does not upload media.
     out["cloudinary_image_urls"] = str(row.get("cloudinary_image_urls", "") or "")
     for name in STAGE_3_PROTECTED:
         out[name] = str(row.get(name, "") or "")
@@ -71,6 +70,7 @@ def process_closed_session(raw_text: str, *, row: dict | None = None, maps_clien
                 "locality": resolved.locality,
                 "pincode": resolved.pincode,
             })
+            normalize.apply_location_fallbacks(out)
         elif resolved.confidence in ("PARTIAL_MATCH", "NEEDS_RUNTIME_VERIFICATION", "NOT_FOUND"):
             maps_unverified = True
             issues.append(f"Google Maps verification failed or is incomplete: {resolved.confidence}")
