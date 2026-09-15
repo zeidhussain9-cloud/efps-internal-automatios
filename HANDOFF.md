@@ -55,9 +55,34 @@ Verified application-path results:
 
 `GoogleMapsClient.resolve()` is keyword-only. The inventory package itself is under the hyphenated filesystem directory `modules/efps-inventory-mgmnt/src/`, which contains `__init__.py`; direct verification must load that package layout correctly rather than inventing an underscored module name.
 
+## WhAPI verified live state
+
+The connected WhAPI account and deployed webhook were verified with read-only/live diagnostics:
+
+- `GET /health`: HTTP 200.
+- Connected display identity: `Easyfind Property Solutions`.
+- Connected WhatsApp ID: `919148338801`.
+- Business channel: `true`.
+- Channel ID: `DRAXTH-J6HEU`.
+- `GET /settings`: HTTP 200.
+- A webhook is configured in `body` mode with `messages` / `POST` subscription.
+- `GET /settings/events`: HTTP 200 and `messages` / `post` is an allowed event.
+- A direct synthetic JSON POST to the configured deployed webhook returned HTTP 200 with `{"ok": true, "queued": 1}`.
+- The synthetic probe used non-inventory sender `919000000000`, so it could not open an Inventory Phase-1 property session.
+- The deployed webhook URL and its `?t=` authentication token are intentionally not recorded in repository documentation.
+- No WhAPI settings were modified and no customer message was sent during the acceptance checks.
+
+The initial `/health` request was blocked by Cloudflare browser-signature filtering. A subsequent single diagnostic request with explicit `User-Agent: EFPS-Inventory-Phase1/1.0` passed with HTTP 200. The current canonical `WhApiClient` has not yet been modified to add that header; therefore permanent client transport compatibility with the Cloudflare requirement remains an implementation follow-up.
+
+The live WhAPI configuration and deployed endpoint are verified, but a real inventory-listener message acceptance test has not been performed because that would exercise the real `NEW` session and production Sheet persistence path.
+
 ## Credential migration state
 
 The current repository uses the shared macOS Keychain provider under `shared/credentials/`. Seven baseline local services were independently hash-verified against their historical AWS source values as exact matches. The current Maps API credential is separately maintained under `efps-google-maps-api-key` and has independently passed live Google Geocoding verification. Secret values are never stored in the repository.
+
+## Cloudinary verified state
+
+The shared Cloudinary application path has passed live Inventory Phase-1 upload acceptance through the canonical local Keychain credential path. The acceptance returned the deterministic property public ID and an HTTPS `secure_url`. The temporary test asset remains a runtime artifact unless separately removed.
 
 ## Slack Phase-1 boundary
 
@@ -70,7 +95,14 @@ The current repository uses the shared macOS Keychain provider under `shared/cre
 
 ## Current open pointers
 
-See `docs/OPEN_POINTERS.md`. The current unresolved items are limited to Inventory Phase-1 runtime acceptance and unverified sheet-control vocabularies. Future Meta Catalogue and Housing Portal work is outside the current pointer list.
+See `docs/OPEN_POINTERS.md`. The current unresolved items are:
+
+1. Slack production runtime acceptance.
+2. Exact Google Sheet dropdown vocabularies for `preferred_tenant_type`, `bachelor_preference`, and `pet_friendly`.
+3. Exact `inventory_locked` sheet control vocabulary.
+4. Decide and verify whether the explicit WhAPI user-agent required by the successful Cloudflare diagnostic should become part of the canonical `WhApiClient` transport contract.
+
+Future Meta Catalogue, Housing Portal, and website production integrations are outside the current Inventory Phase-1 pointer list.
 
 ## Next development rule
 
