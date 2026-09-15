@@ -37,6 +37,38 @@ The current repository resolves the canonical local macOS Keychain service after
 - Physical contract: **48 columns, A:AV**
 - Physical order: maintained exclusively in `schema.py` and locked by tests to the latest supplied order.
 
+## Verified dropdown/value contract
+
+Live read-only inspection of the production worksheet established the following:
+
+| Column | Field | Exact observed validation/value contract |
+|---|---|---|
+| D | `internal_property_type` | strict `ONE_OF_LIST`: `Gated Community`, `Semi Gated`, `Standalone` |
+| M | `furnish_type` | strict `ONE_OF_LIST`: `Fully Furnished`, `Semi Furnished` |
+| Y | `preferred_tenant_type` | strict `ONE_OF_LIST`: `Family`, `Open For All` |
+| Z | `bachelor_preference` | strict `ONE_OF_LIST`: `Female Only `, `Male Only`, `Open for both` |
+| AA | `pet_friendly` | no Sheet data-validation rule; populated values observed: `Yes`, `No` |
+| AE | `society_amenities` | strict `ONE_OF_LIST`: `Security, Lift, CCTV, Power Backup`; `Club House, Lift, Gym, CCTV, Power Backup, Swimming Pool, Garden, Sports, Kids Area`; `-` |
+| AF | `flat_furnishings` | strict `ONE_OF_LIST`: `Wardrobe, Modular Kitchen, Geyser, Fan, Light`; `Wardrobe, Modular Kitchen, Geyser, Fan, Light, Fridge, Washing Machine, TV, Sofa, Bed, Dining Table` |
+
+The live `Female Only ` validation value contains a trailing space; the exact observation is retained in the contract documentation rather than silently altered.
+
+No conditional/row-dependent dropdown validation was observed for D, M, Y, Z, AE, or AF in the inspected range. Dependencies between these fields are therefore implemented as application/business rules rather than Google Sheets conditional dropdown rules.
+
+## Furnish-type reconciliation
+
+The live Sheet does not allow `Unfurnished` as a `furnish_type` value. The repository contract is aligned accordingly. Source text indicating an unfurnished property leaves `furnish_type` and `flat_furnishings` blank rather than introducing a third Sheet value.
+
+## Business dependencies represented by the canonical schema
+
+- `society_amenities` depends on `internal_property_type`.
+- `flat_furnishings` depends on `furnish_type`.
+- `bachelor_preference` depends on `preferred_tenant_type`.
+- `maintenance` depends on `maintenance_included`.
+- `security_deposit` depends on `monthly_rent`.
+
+The current deterministic implementation supplies tiered amenity defaults and furnishing defaults only when the target field is blank. The family/bachelor rule currently has an internal `Not Allowed` outcome that is not a live Sheet dropdown value and therefore remains a contract-reconciliation item. The deterministic amenity default strings likewise require reconciliation with the Sheet's exact combined amenity dropdown options.
+
 ## Ownership and downstream boundary
 
 - Inventory/panel owns the Stage-1/2 fields and `source_group` at AU.
@@ -55,12 +87,11 @@ Inventory Stage-1/2 writes are explicitly restricted to A:D, F:AO, and AU so lif
 - owner of every column
 - top-level population stage
 - writable permissions
-- explicitly verified allowed values
+- verified allowed values
+- declared dependencies
 - row identity
 - derived ranges
 - row-width and ownership integrity checks
-
-Exact sheet dropdown vocabularies that are not verified in repository source are intentionally left unclaimed rather than guessed.
 
 ## Verified Phase-1 runtime state
 
@@ -72,7 +103,7 @@ The canonical spreadsheet connection has been live-read successfully and the pro
 
 The protected Stage-3 ranges are `E`, `AP:AT`, and `AV`.
 
-The verified production worksheet contains the expected 48-column `Housing_Listings` contract. This establishes the current runtime authorization and contract boundary for Inventory Phase 1; it does not authorize Stage-3 writers or invent unverified sheet control vocabularies.
+The verified production worksheet contains the expected 48-column `Housing_Listings` contract. This establishes the current runtime authorization and contract boundary for Inventory Phase 1; it does not authorize Stage-3 writers.
 
 ## Documentation impact for contract changes
 
