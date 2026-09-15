@@ -12,13 +12,13 @@ This is the canonical registry for external systems and verified resource identi
 - `shared/cloudinary/` — technical media storage/upload and stable media-reference helpers.
 - `shared/google_sheets/` — technical Google Sheets connectivity and the canonical `Housing_Listings` schema/ownership contract.
 - `shared/whatsapp_whapi/` — technical WhAPI authentication, transport, channel/settings primitives, webhook normalization, and neutral message primitives.
-- `shared/google_maps/` — reusable Google Maps resolution capability.
+- `shared/google_maps/` — reusable Google Maps URL extraction and Geocoding resolution capability.
 - `shared/slack/` — reusable Slack transport, security, routing, and Phase-1 operational capability.
 - `shared/credentials/` — canonical local macOS Keychain credential provider.
 
 ## Credential provider map
 
-| Shared capability | Canonical local Keychain service | Keychain account | Historical AWS source |
+| Shared capability | Canonical local Keychain service | Keychain account | Historical migration source |
 |---|---|---|---|
 | Cloudinary | `efps-whapi-panel-cloudinary` | `efps` | `efps-whapi-panel-cloudinary` |
 | Google Sheets | `efps-whapi-panel-sheet` | `efps` | `efps-whapi-panel-sheet` |
@@ -26,9 +26,10 @@ This is the canonical registry for external systems and verified resource identi
 | WhAPI webhook | `efps-whapi-panel-webhook` | `efps` | `easyfind/whatsapp-webhook-credentials` |
 | Gemini/Vertex | `efps-whapi-panel-gemini` | `efps` | `easyfind/gemini-api-key` |
 | Slack | `efps-whapi-panel-slack` | `efps` | `easyfind/slack-api-credentials` |
-| Google Maps | `efps-whapi-panel-maps` | `efps` | `efps-whapi-panel-maps` |
+| Google Maps baseline migration service | `efps-whapi-panel-maps` | `efps` | `efps-whapi-panel-maps` |
+| Google Maps current API credential | `efps-google-maps-api-key` | `efps` | dedicated Maps credential registry |
 
-The AWS entries above identify the historical migration source only. Runtime resolution in the current repository uses the local Keychain provider. Secret values are never stored in GitHub or this document.
+The AWS entries identify historical migration sources only. Runtime resolution in the current repository uses the local Keychain provider. Secret values are never stored in GitHub or this document.
 
 ## Google Sheets
 
@@ -38,9 +39,10 @@ The AWS entries above identify the historical migration source only. Runtime res
 - Recorded service-account identity: `gcpnew@easyfind-automations.iam.gserviceaccount.com`
 - Canonical local schema: `shared/google_sheets/schema.py`
 - Verified physical contract: 48 columns, `A:AV`
-- Stage-1/2 inventory write boundary: `A:D`, `F:AO`, `AU`
+- Verified Stage-1/2 inventory write boundary: `A:D`, `F:AO`, `AU`
 - Protected Stage-3 fields: `E`, `AP:AT`, `AV`
 - Housing Portal owns `AP:AR`; Meta Catalogue owns `AS:AT`; Panel owns `A:AO` and `AU:AV` physically, subject to the Stage-3 ownership boundary.
+- Runtime state: canonical read and write-boundary verification completed for Inventory Phase 1.
 
 ## WhatsApp / WhAPI
 
@@ -60,11 +62,19 @@ The shared webhook builder requires explicit event definitions discovered from `
 
 ## Google Maps
 
-- Canonical Keychain service: `efps-whapi-panel-maps`
+- Google Cloud project: `easyfind-automations`
+- Current API key display name: `Google Maps Key`
+- Current key resource UID: `2334a827-466f-4a7a-8962-68c2afa29e34`
+- Canonical Keychain service: `efps-google-maps-api-key`
 - Keychain account: `efps`
 - Runtime variable accepted by the adapter: `GOOGLE_MAPS_API_KEY`
-- Live resolution is required before a supplied Maps URL can be treated as verified.
-- Missing credentials or incomplete/partial resolution must fail closed into review; no location is guessed.
+- Geocoding endpoint: `https://maps.googleapis.com/maps/api/geocode/json`
+- API restriction: `geocoding-backend.googleapis.com`
+- Runtime state: live direct API access, application-path resolution, and Inventory Stage-2 consumption verified.
+- Verified Maps URL resolution returned `VERIFIED` confidence and structured locality/pincode/coordinates for the test location.
+- Missing/incomplete Maps resolution fails closed into Inventory `Needs Review`; no location is guessed.
+
+The separate existing `Maps Platform API Key` resource remains documented in `shared/google_maps/CREDENTIALS.md` with its secret-storage mapping marked `NOT VERIFIED`.
 
 ## Cloudinary
 
@@ -90,4 +100,4 @@ Actual account access and a successful live upload remain runtime verification i
 
 Only secret names and non-sensitive identifiers may be documented here. Secret values, WhAPI tokens, Cloudinary API secrets, Google service-account private keys, webhook secrets, Slack signing secrets, and production credentials must remain outside version control.
 
-The current credential migration is: AWS Secrets Manager source values → local macOS Keychain services under account `efps` → shared adapters. The migration itself does not prove live third-party connectivity; each integration still requires its own runtime acceptance probe.
+The credential migration pattern is: historical AWS source values → local macOS Keychain services under account `efps` → shared adapters. The migration itself does not prove live third-party connectivity; each integration requires its own runtime acceptance probe.
