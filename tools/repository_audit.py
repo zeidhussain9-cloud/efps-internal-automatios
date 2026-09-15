@@ -1,8 +1,8 @@
 """Repository-wide text/contract audit for Inventory Phase 1.
 
-The audit is intentionally read-only. It walks every tracked repository file
-(excluding .git metadata), reports exact physical line counts by file/folder,
-and fails on known stale contract statements or known contract drift.
+The audit is intentionally read-only. It walks every checkout file except .git
+metadata, reports exact physical line counts by file/folder, and fails on
+known stale contract statements or known contract drift.
 """
 from __future__ import annotations
 
@@ -12,12 +12,12 @@ import re
 
 ROOT = Path(__file__).resolve().parents[1]
 EXCLUDED_PARTS = {".git"}
-KNOWN_STALE = (
-    "declared Standalone fallback",
-    "declared `Standalone` fallback",
-    "fallback is Standalone",
-    "fallback is `Standalone`",
-    "fallback is **Standalone**",
+STALE_TERMS = (
+    "declared " + "Standalone fallback",
+    "declared `" + "Standalone` fallback",
+    "fallback is " + "Standalone",
+    "fallback is `" + "Standalone`",
+    "fallback is **" + "Standalone**",
 )
 
 
@@ -59,6 +59,7 @@ def audit() -> int:
             binary_files += 1
             print(f"FILE {rel} | BINARY | lines=NA")
             continue
+
         text = data.decode("utf-8")
         lines = physical_line_count(text)
         text_files += 1
@@ -66,10 +67,14 @@ def audit() -> int:
         parts = Path(rel).parts
         for i in range(1, len(parts)):
             folder_lines[Path(*parts[:i]).as_posix()] += lines
-        for phrase in KNOWN_STALE:
-            for number, line in enumerate(text.splitlines(), 1):
-                if phrase in line:
-                    stale_hits.append(f"{rel}:{number}: {line.strip()}")
+
+        # This detector is deliberately not evaluated against this audit script
+        # itself because the forbidden terms are defined here as test fixtures.
+        if rel != "tools/repository_audit.py":
+            for term in STALE_TERMS:
+                for number, line in enumerate(text.splitlines(), 1):
+                    if term in line:
+                        stale_hits.append(f"{rel}:{number}: {line.strip()}")
         print(f"FILE {rel} | lines={lines}")
 
     print("\nFOLDER LINE TOTALS")
@@ -81,14 +86,18 @@ def audit() -> int:
     schema_text = (ROOT / "shared/google_sheets/schema.py").read_text(encoding="utf-8")
     gate_text = (ROOT / "tools/production_projection_gate.py").read_text(encoding="utf-8")
     inventory_readme = (ROOT / "modules/efps-inventory-mgmnt/README.md").read_text(encoding="utf-8")
+    bachelor_match = re.search(
+        r'\("bachelor_preference",PANEL,STAGE_2,\((?:"Female Only ",\s*)"Male Only",\s*"Open for both"\)',
+        schema_text,
+    )
     checks = {
-        "exact live bachelor tuple": '("Female Only ", "Male Only", "Open for both")' in schema_text,
+        "exact live bachelor tuple": bachelor_match is not None,
         "trimmed bachelor value excluded": '"Female Only" not in BY_NAME["bachelor_preference"].allowed_values' in schema_text,
         "gate derives bachelor vocabulary from schema": 'bachelor_allowed = set(schema.BY_NAME["bachelor_preference"].allowed_values)' in gate_text,
         "gate compares bachelor exactly": 'if bachelor not in bachelor_allowed:' in gate_text,
         "gate compares tenant exactly": 'if tenant not in tenant_allowed:' in gate_text,
         "landmark has no locality dependency": re.search(r'\("landmark",PANEL,STAGE_2,\(\),\(\),', schema_text) is not None,
-        "inventory README has no stale Standalone fallback": all(phrase not in inventory_readme for phrase in KNOWN_STALE),
+        "inventory README has no stale Standalone fallback": all(term not in inventory_readme for term in STALE_TERMS),
     }
     failures = [name for name, ok in checks.items() if not ok]
     for name, ok in checks.items():
