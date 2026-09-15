@@ -39,9 +39,9 @@ Gated Community"""
     assert row["maintenance"] == "Water Charges"
     assert row["maintenance_included"] == "No"
     assert row["preferred_tenant_type"] == "Family"
-    assert row["bachelor_preference"] == "Not Allowed"
+    assert row["bachelor_preference"] == ""
     assert row["internal_property_type"] == "Gated Community"
-    assert "Swimming Pool" in row["society_amenities"]
+    assert row["society_amenities"] == "Club House, Lift, Gym, CCTV, Power Backup, Swimming Pool, Garden, Sports, Kids Area"
     assert "Utility area" in row["property_highlights"]
     assert "Wardrobe" in row["flat_furnishings"]
     assert "Fridge" in row["flat_furnishings"]
@@ -52,6 +52,20 @@ def test_family_bachelor_explicit_value_is_not_overwritten():
     row = pipeline.deterministic(raw, pipeline.initial_row("EF-2609-0003"))
     assert row["preferred_tenant_type"] == "Family"
     assert row["bachelor_preference"] == "Open for both"
+
+
+def test_family_female_bachelors_uses_exact_sheet_vocabulary():
+    raw = "2 BHK\nRent: 40000\nPreferred Tenant: Family & Female Bachelors"
+    row = pipeline.deterministic(raw, pipeline.initial_row("EF-2609-0005"))
+    assert row["preferred_tenant_type"] == "Open For All"
+    assert row["bachelor_preference"] == "Female Only "
+    assert row["bachelor_preference"] in schema.BY_NAME["bachelor_preference"].allowed_values
+
+
+def test_explicit_female_bachelor_preference_is_normalized_to_exact_sheet_value():
+    raw = "2 BHK\nRent: 40000\nPreferred Tenant: Open For All\nBachelor: Female Only"
+    row = pipeline.deterministic(raw, pipeline.initial_row("EF-2609-0006"))
+    assert row["bachelor_preference"] == "Female Only "
 
 
 def test_real_message_formats_are_extracted_deterministically():
@@ -67,6 +81,20 @@ def test_real_message_formats_are_extracted_deterministically():
     assert row["preferred_tenant_type"] == "Open For All"
     assert row["pet_friendly"] == "Allowed"
     assert row["internal_property_type"] == "Gated Community"
+    assert row["society_amenities"] == "Club House, Lift, Gym, CCTV, Power Backup, Swimming Pool, Garden, Sports, Kids Area"
+
+
+def test_semi_gated_uses_exact_sheet_amenity_combination():
+    raw = "2 BHK\nRent: 40000\nSemi Gated"
+    row = pipeline.deterministic(raw, pipeline.initial_row("EF-2609-0007"))
+    assert row["internal_property_type"] == "Semi Gated"
+    assert row["society_amenities"] == "Security, Lift, CCTV, Power Backup"
+
+
+def test_explicit_society_amenities_are_preserved_for_validation():
+    raw = "2 BHK\nRent: 40000\nGated Community\nAmenities: Club House, Lift, Gym, CCTV, Power Backup, Swimming Pool, Garden, Sports, Kids Area"
+    row = pipeline.deterministic(raw, pipeline.initial_row("EF-2609-0008"))
+    assert row["society_amenities"] == "Club House, Lift, Gym, CCTV, Power Backup, Swimming Pool, Garden, Sports, Kids Area"
 
 
 def test_ground_floor_and_mixed_maintenance_are_normalized():
@@ -82,6 +110,7 @@ def test_gated_colon_variant_is_classified_as_gated():
     raw = "3 BHK\nRent: 75000\nFloor: 1/14\nGated: Community"
     row = pipeline.deterministic(raw, pipeline.initial_row("EF-2609-0027"))
     assert row["internal_property_type"] == "Gated Community"
+    assert row["society_amenities"] == "Club House, Lift, Gym, CCTV, Power Backup, Swimming Pool, Garden, Sports, Kids Area"
 
 
 def test_unfurnished_source_does_not_create_non_sheet_furnish_value():
