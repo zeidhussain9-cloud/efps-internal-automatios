@@ -7,7 +7,7 @@ truth. Resolution traces are diagnostic artifacts and are not written to the
 """
 from __future__ import annotations
 import re
-from dataclasses import dataclass, asdict
+from dataclasses import dataclass
 from .source_segments import split_source_messages
 
 @dataclass(frozen=True)
@@ -39,7 +39,7 @@ def resolve_bhk(text: str) -> str:
         for m in re.finditer(r"\bbed\s*rooms?\s*[:\-]\s*(\d+(?:\.\d+)?)\b",segment,re.I): candidates.append(Candidate("BHK",f"{m.group(1)} BHK",i,"label",True,m.start()))
         for m in re.finditer(r"\b(\d+(?:\.\d+)?)\s*[- ]?\s*bed\s*rooms?\b",segment,re.I): candidates.append(Candidate("BHK",f"{m.group(1)} BHK",i,"direct",True,m.start()))
     if candidates: return sorted(candidates,key=lambda c:(c.segment_index,c.position))[-1].value
-    return "1 RK" if re.search(r"\bstudio\b",text,re.I) else ""
+    return "1 RK" if re.search(r"\bstudio\b",text,re.I) or re.search(r"\b1\s*[- ]?\s*rk\b",text,re.I) else ""
 
 def _scale_number(value:str,unit:str="") -> str:
     n=float(value.replace(",","")); u=(unit or "").lower()
@@ -58,7 +58,10 @@ def resolve_maintenance(text: str) -> tuple[str,str]:
         for m in pattern.finditer(segment): candidates.append(Candidate("maintenance",_scale_number(m.group(1),m.group(2)),i,"rent_suffix",True,m.start()))
     if not candidates:return "",""
     chosen=sorted(candidates,key=lambda c:(c.segment_index,c.position))[-1]; raw=chosen.value.strip()
-    if raw.lower()=="included":return "0","Yes"
+    low=raw.lower()
+    if re.fullmatch(r"included(?:\s*\+\s*(?:water|water\s*charges?|utilities?|utility))?",low):
+        qualifier=re.search(r"\+\s*(.+)$",raw,re.I)
+        return ("0" if not qualifier else f"0 + {qualifier.group(1).strip()}"),"Yes"
     m=re.fullmatch(r"([\d.,]+)\s*(k|lakh|l)?\s*(?:\+\s*(.+))?",raw,re.I)
     if not m:return re.sub(r"(?<=\d),(?=\d)","",raw),"No"
     result=_scale_number(m.group(1),m.group(2)); suffix=_clean(m.group(3) or "")
@@ -73,7 +76,7 @@ def resolve_internal_property_type(text: str) -> str:
             elif "gated" in value:explicit.append(Candidate(candidate.field,"Gated Community",candidate.segment_index,method,True,candidate.position))
             elif "stand" in value:explicit.append(Candidate(candidate.field,"Standalone",candidate.segment_index,method,True,candidate.position))
     boolean=[]; pattern=re.compile(r"\b(?P<label>semi[-\s]*gated|gated\s*(?:community|society|property)?)\b\s*(?:[:=|\-])\s*(?P<value>[^|\n<]+)",re.I)
-    yes={"yes","y","true","1","allowed"}; no={"no","n","false","0","not allowed","not permitted","none"}
+    yes={"yes","y","true","1","allowed","community","society","property"}; no={"no","n","false","0","not allowed","not permitted","none"}
     for i,segment in enumerate(_segments(text)):
         for m in pattern.finditer(segment):
             value=_clean(m.group("value")).lower()
@@ -88,12 +91,35 @@ def resolve_internal_property_type(text: str) -> str:
         elif re.search(r"\b(?:independent\s+(?:house|floor)|farm\s*house|stand[-\s]*alone)\b",segment,re.I):generic.append(Candidate("internal_property_type","Standalone",i,"generic",False,0))
     return sorted(generic,key=lambda c:(c.segment_index,c.position))[-1].value if generic else "Standalone"
 
+def resolve_property_subtype(text: str) -> str:
+    """Resolve the portal subtype from explicit source wording.
+
+    EFPS primarily uses Apartment, Villa and Studio. Other portal categories
+    remain supported when explicitly stated so the resolver does not erase
+    source facts. Compound villa wording such as "Duplex Villa" resolves to
+    Villa; 1 RK/studio resolves to Studio.
+    """
+    text=text or ""
+    labels=_label_candidates(text,r"property\s*subtype|subtype","property_subtype")
+    values=[c.value for c in labels]
+    source=" ".join(values)
+    if re.search(r"\b(?:1\s*[- ]?\s*rk|studio)\b",source,re.I) or re.search(r"\b1\s*[- ]?\s*rk\b",text,re.I) or re.search(r"\bstudio\b",text,re.I): return "Studio"
+    if re.search(r"\b(?:duplex\s+)?villa\b",source,re.I) or re.search(r"\b(?:duplex\s+)?villa\b",text,re.I): return "Villa"
+    aliases=(
+        (r"independent\s+house|independent\s+building","Independent House"),
+        (r"independent\s+floor|builder\s+floor","Independent Floor"),
+        (r"penthouse","Penthouse"),
+        (r"farm\s*house","Farm House"),
+        (r"\bduplex\b","Duplex"),
+        (r"\bapartment\b|\bflat\b","Apartment"),
+    )
+    for pattern,canonical in aliases:
+        if re.search(pattern,source,re.I): return canonical
+    for pattern,canonical in aliases:
+        if re.search(pattern,text,re.I): return canonical
+    return ""
+
 def trace(text: str) -> dict:
     """Return diagnostic source candidates and selected values without side effects."""
-    bhk=resolve_bhk(text); maintenance,maintenance_included=resolve_maintenance(text); property_type=resolve_internal_property_type(text)
-    return {
-        "BHK":{"selected":bhk},
-        "maintenance":{"selected":maintenance,"maintenance_included":maintenance_included},
-        "internal_property_type":{"selected":property_type},
-        "source_segments":_segments(text),
-    }
+    bhk=resolve_bhk(text); maintenance,maintenance_included=resolve_maintenance(text); property_type=resolve_internal_property_type(text); subtype=resolve_property_subtype(text)
+    return {"BHK":{"selected":bhk},"maintenance":{"selected":maintenance,"maintenance_included":maintenance_included},"internal_property_type":{"selected":property_type},"property_subtype":{"selected":subtype},"source_segments":_segments(text)}

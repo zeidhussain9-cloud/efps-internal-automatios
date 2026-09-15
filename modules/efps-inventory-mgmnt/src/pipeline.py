@@ -33,12 +33,11 @@ def _stage2_input_row(row:dict) -> dict:
 
 
 def deterministic(raw_text:str, row:dict|None=None) -> dict:
-    """Stage 2: source extraction -> canonical resolution -> normalization.
+    """Stage 2 deterministic projection: source extraction -> resolution -> normalization.
 
-    Existing Stage-2 Sheet values are never deterministic evidence. The only
-    property-type resolver is field_resolution.resolve_internal_property_type;
-    downstream normalization must consume that result rather than rediscovering
-    the field independently.
+    Existing Stage-2 Sheet values are never deterministic evidence. Raw text is
+    the source of truth. Raw Maps URLs are extracted deterministically; Maps
+    network enrichment is deliberately performed only by process_closed_session.
     """
     base=_stage2_input_row(row) if row is not None else empty_row()
     base["raw_message_text"]=raw_text or base.get("raw_message_text","")
@@ -52,9 +51,16 @@ def process_closed_session(raw_text:str, *, row:dict|None=None, maps_client=None
     out=deterministic(raw_text,row); issues:list[str]=[]; maps=maps_client or GoogleMapsClient(); maps_url=out.get("google_maps_url","") or maps.extract_url(raw_text)
     if maps_url:
         resolved=maps.resolve(maps_url=maps_url)
-        if resolved.confidence=="VERIFIED": out.update({"google_maps_url":resolved.canonical_url or maps_url,"locality":resolved.locality,"pincode":resolved.pincode}); normalize.apply_location_fallbacks(out)
-        elif resolved.confidence in ("PARTIAL_MATCH","NEEDS_RUNTIME_VERIFICATION","NOT_FOUND"): issues.append(f"Google Maps verification failed or is incomplete: {resolved.confidence}")
-        else: issues.append(f"Google Maps resolution returned an unrecognized verification state: {resolved.confidence}")
+        if resolved.confidence=="VERIFIED":
+            out.update({"google_maps_url":resolved.canonical_url or maps_url,"locality":resolved.locality,"pincode":resolved.pincode})
+        elif resolved.confidence in ("PARTIAL_MATCH","NEEDS_RUNTIME_VERIFICATION","NOT_FOUND"):
+            issues.append(f"Google Maps verification failed or is incomplete: {resolved.confidence}")
+        else:
+            issues.append(f"Google Maps resolution returned an unrecognized verification state: {resolved.confidence}")
+    # Society-name locality fallback is explicitly last-resort: raw extraction
+    # has already run and Maps verification has already had the opportunity to
+    # provide a verified locality. Landmark never inherits locality.
+    normalize.apply_location_fallbacks(out)
     out["status"]="Pending"; errors=validate.validate(out)
     if errors: out["status"]="Needs Review"; issues.extend(errors)
     if out["status"]=="Pending":

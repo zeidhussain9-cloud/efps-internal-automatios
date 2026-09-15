@@ -22,6 +22,7 @@ SHEET_AMENITY_COMBINATIONS = {
     "-",
 }
 NUMERIC = {"pincode", "built_up_area", "carpet_area", "age_of_property_years", "total_floors", "bathrooms", "balconies", "open_parking", "monthly_rent", "security_deposit"}
+MAINTENANCE_NON_NUMERIC = "Water Charges Additional"
 
 
 def _numeric(value: object) -> bool:
@@ -60,12 +61,13 @@ def validate(row: dict) -> list[str]:
     for key in NUMERIC:
         if row[key] and not _numeric(row[key]):
             errors.append(f"{key} must be numeric")
-    if row["maintenance"] and not re.fullmatch(r"\d+(?: \+ .+)?", str(row["maintenance"]).strip()):
+    maintenance=str(row["maintenance"]).strip()
+    if maintenance and maintenance != MAINTENANCE_NON_NUMERIC and not re.fullmatch(r"\d+(?: \+ .+)?", maintenance):
         errors.append("maintenance must be a normalized amount with an optional source qualifier")
     if row["maintenance_included"] not in ("Yes", "No", ""):
         errors.append("maintenance_included must be Yes/No/blank")
-    if row["maintenance_included"] == "Yes" and row["maintenance"] != "0":
-        errors.append("maintenance must be 0 when included")
+    if row["maintenance_included"] == "Yes" and maintenance not in {"0", MAINTENANCE_NON_NUMERIC}:
+        errors.append("maintenance must be 0 or Water Charges Additional when included")
     if row["flat_furnishings"]:
         bad = [x.strip() for x in str(row["flat_furnishings"]).split(",") if x.strip() and x.strip() not in FURNISHINGS]
         if bad:

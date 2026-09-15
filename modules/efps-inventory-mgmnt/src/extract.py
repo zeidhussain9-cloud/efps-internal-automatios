@@ -2,8 +2,9 @@
 from __future__ import annotations
 import re
 
+from shared.google_maps import GoogleMapsClient
 from .source_segments import split_source_messages
-from .field_resolution import resolve_bhk, resolve_internal_property_type, resolve_maintenance
+from .field_resolution import resolve_bhk, resolve_internal_property_type, resolve_maintenance, resolve_property_subtype
 
 
 def _scale(n: str, s: str = "") -> str:
@@ -38,13 +39,28 @@ def _first_line_value(text: str, labels: tuple[str, ...]) -> str:
     return ""
 
 
+def _marker_candidates(text: str) -> tuple[str, str, str]:
+    """Read the common EFPS '📍 Name:' source marker without swallowing URLs."""
+    society=""; landmark=""; maps_url=GoogleMapsClient.extract_url(text)
+    pattern=re.compile(r"📍\s*([^:\n|]+?)\s*:\s*(?:\n\s*)?",re.I)
+    for match in pattern.finditer(text or ""):
+        name=_clean_source_value(match.group(1))
+        tail=(text[match.end():match.end()+500] if match.end() < len(text or "") else "")
+        if re.fullmatch(r"(?:landmark|location)\s*",name,re.I):
+            if not maps_url:
+                lm=re.split(r"\s+",tail,1)[0].strip()
+                landmark=lm if lm and not GoogleMapsClient.extract_url(lm) else landmark
+            continue
+        if name and not society: society=name
+    return society, landmark, maps_url
+
+
 def scan(text: str) -> dict[str, str]:
     out: dict[str, str] = {}
     text = text or ""
 
     bhk = resolve_bhk(text)
     if bhk: out["BHK"] = bhk
-    elif re.search(r"\bstudio\b", text, re.I): out["property_subtype"] = "Studio"
 
     m = (re.search(r"(?:rent|rental)\D{0,12}?(?:rs\.?|inr|₹)?\s*(\d[\d,]*\.?\d*)\s*(k|lakh|l)?\b", text, re.I)
          or re.search(r"(?:rs\.?|inr|₹)\s*(\d[\d,]*)\s*(k)?\b", text, re.I))
@@ -76,14 +92,20 @@ def scan(text: str) -> dict[str, str]:
         m = re.search(pat, text, re.I)
         if m: out[key] = m.group(1)
 
+    marker_society, marker_landmark, marker_maps = _marker_candidates(text)
+    society=_first_line_value(text, (r"society\s*name", r"society", r"apartment\s*name", r"community\s*name", r"building\s*name")) or marker_society
+    landmark=_first_line_value(text, (r"landmark",)) or marker_landmark
+    locality=_first_line_value(text, (r"property\s*location", r"location", r"locality", r"area"))
+    subtype=resolve_property_subtype(text)
     direct = {
         "internal_property_type": resolve_internal_property_type(text),
-        "society_name": _first_line_value(text, (r"society\s*name", r"society", r"apartment\s*name", r"community\s*name", r"building\s*name")),
-        "landmark": _first_line_value(text, (r"landmark",)),
-        "locality": _first_line_value(text, (r"property\s*location", r"location", r"locality", r"area")),
-        "property_subtype": _first_line_value(text, (r"property\s*subtype", r"subtype")),
+        "society_name": society,
+        "landmark": landmark,
+        "locality": locality,
+        "property_subtype": subtype,
         "property_highlights": _first_line_value(text, (r"property\s*highlights", r"highlights")),
         "age_of_property_years": _first_line_value(text, (r"age\s*of\s*property", r"property\s*age")),
+        "google_maps_url": marker_maps or GoogleMapsClient.extract_url(text),
     }
     for key, value in direct.items():
         if value: out[key] = value
