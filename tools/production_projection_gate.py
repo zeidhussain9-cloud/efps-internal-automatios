@@ -154,14 +154,18 @@ def check_row(row_number: int, raw: str, model: dict[str, str]) -> list[str]:
         if model.get("society_amenities", "").strip() not in {"", "-"}:
             failures.append("unresolved property type must not invent a society amenity bundle")
 
-    tenant = model.get("preferred_tenant_type", "").strip()
-    bachelor = model.get("bachelor_preference", "").strip()
-    if tenant == "Family":
-        if bachelor:
-            failures.append("bachelor_preference must be blank for Family")
+    tenant = model.get("preferred_tenant_type", "")
+    bachelor = model.get("bachelor_preference", "")
+    tenant_allowed = set(schema.BY_NAME["preferred_tenant_type"].allowed_values)
+    bachelor_allowed = set(schema.BY_NAME["bachelor_preference"].allowed_values)
+    if tenant not in tenant_allowed:
+        failures.append(f"preferred_tenant_type must be canonical, got {tenant!r}")
+    elif tenant == "Family":
+        if bachelor != "":
+            failures.append(f"bachelor_preference must be blank for Family, got {bachelor!r}")
     elif tenant == "Open For All":
-        if bachelor not in {"Female Only", "Male Only", "Open for both"}:
-            failures.append(f"bachelor_preference must be canonical for Open For All, got {bachelor!r}")
+        if bachelor not in bachelor_allowed:
+            failures.append(f"bachelor_preference must be an exact live Sheet value for Open For All, got {bachelor!r}")
 
     if model.get("raw_message_text", "").strip() != raw.strip():
         failures.append("raw_message_text changed during projection")
