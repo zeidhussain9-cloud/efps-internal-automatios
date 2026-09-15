@@ -16,6 +16,7 @@ class MapsResolution:
     latitude: float | None = None
     longitude: float | None = None
     confidence: str = "NOT_VERIFIED"
+    place_name: str = ""
 
 
 class GoogleMapsClient:
@@ -37,13 +38,7 @@ class GoogleMapsClient:
 
     @classmethod
     def extract_url(cls, text: str) -> str:
-        """Extract the exact supported Maps URL from source text.
-
-        This is intentionally network-free. URL recognition is a deterministic
-        source operation; expansion/resolution belongs to the runtime layer.
-        The returned value is normalized only for source-message wrappers and
-        terminal punctuation; the URL itself is otherwise preserved exactly.
-        """
+        """Extract the exact supported Maps URL from source text without network access."""
         match = cls.MAP_URL_RE.search(text or "")
         if not match:
             return ""
@@ -51,7 +46,6 @@ class GoogleMapsClient:
 
     @classmethod
     def is_maps_url(cls, value: str) -> bool:
-        """Return whether a value is exactly one supported Maps URL."""
         return bool(cls.MAP_URL_RE.fullmatch((value or "").strip().strip("<>\"'")))
 
     @classmethod
@@ -121,13 +115,14 @@ class GoogleMapsClient:
         )
         confidence = "VERIFIED" if not result.get("partial_match") else "PARTIAL_MATCH"
         return MapsResolution(
-            canonical,
-            result.get("formatted_address", ""),
-            locality,
-            components.get("postal_code", ""),
-            geometry.get("lat"),
-            geometry.get("lng"),
-            confidence,
+            canonical_url=canonical,
+            formatted_address=result.get("formatted_address", ""),
+            locality=locality,
+            pincode=components.get("postal_code", ""),
+            latitude=geometry.get("lat"),
+            longitude=geometry.get("lng"),
+            confidence=confidence,
+            place_name=str(result.get("name", "") or "").strip(),
         )
 
     def geocode_address(self, address: str) -> MapsResolution:
