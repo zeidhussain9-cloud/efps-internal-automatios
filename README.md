@@ -42,7 +42,7 @@ For every implementation, the agent must review all maintained root and `docs/` 
 
 - `shared/cloudinary/` — reusable Cloudinary media storage/upload capability with deterministic property/lead namespaces and secure URL helpers.
 - `shared/credentials/` — canonical local macOS Keychain credential provider.
-- `shared/google_maps/` — reusable Google Maps URL extraction and Geocoding resolution capability; live application-path verified for Inventory Phase 1.
+- `shared/google_maps/` — dedicated reusable Google Maps URL extraction, short-link handling, and Geocoding resolution capability.
 - `shared/google_sheets/` — reusable Google Sheets technical access plus the canonical 48-column `Housing_Listings` A:AV contract; live read/write boundary verified for Inventory Phase 1.
 - `shared/slack/` — reusable Slack operational capability for the authorized Inventory Phase-1 workflows.
 - `shared/whatsapp_whapi/` — reusable WhAPI technical transport, live gate, channel/settings primitives, webhook normalization, and neutral messaging primitives.
@@ -59,6 +59,12 @@ The deterministic source contract is: `raw_message_text` is authoritative; persi
 
 Google Maps is a Stage-2 sub-step, not a separate stage. Google Sheets is transport/output, not a top-level stage.
 
+## Deterministic audit status — 2026-09-15
+
+The current control state is 35 deterministic-scope fields: **34 GREEN, 0 YELLOW, 1 RED (`google_maps_url`)**, plus 13 SYSTEM / OUT OF SCOPE fields.
+
+The repository already contains the implementation fix for the observed `share.google` source URL form. The remaining acceptance step is the same read-only rows 2:26 projection from the current merged `main` commit. No unrelated GREEN field is to be reopened without independent regression evidence.
+
 ## Production status
 
-Repository/source hardening is maintained separately from live external-system verification. Inventory Phase-1 Google Sheets and Google Maps runtime probes have been completed successfully. The 2026-09-15 projection fix cycle added source-shape regression coverage; production extraction remains gated on local execution of that regression harness and a read-only model audit against the resulting final `main` commit. Other external integrations remain explicitly `NOT VERIFIED` until their applicable target-runtime acceptance probes succeed.
+Repository/source hardening is maintained separately from live external-system verification. Inventory Phase-1 Google Sheets and Google Maps runtime probes have been completed successfully. The remaining deterministic extraction gate is specifically the `google_maps_url` projection evidence described above; it must not be promoted to GREEN solely because the code change exists. Other external integrations remain explicitly `NOT VERIFIED` until their applicable target-runtime acceptance probes succeed.
