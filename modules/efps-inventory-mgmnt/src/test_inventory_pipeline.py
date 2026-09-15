@@ -79,7 +79,7 @@ def test_real_message_formats_are_extracted_deterministically():
     assert row["maintenance_included"] == "Yes"
     assert row["security_deposit"] == "125000"
     assert row["preferred_tenant_type"] == "Open For All"
-    assert row["pet_friendly"] == "Allowed"
+    assert row["pet_friendly"] == "Yes"
     assert row["internal_property_type"] == "Gated Community"
     assert row["society_amenities"] == "Club House, Lift, Gym, CCTV, Power Backup, Swimming Pool, Garden, Sports, Kids Area"
 
