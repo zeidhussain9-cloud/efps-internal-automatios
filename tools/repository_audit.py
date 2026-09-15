@@ -97,7 +97,7 @@ def audit() -> int:
         "gate derives bachelor vocabulary from schema": 'bachelor_allowed = set(schema.BY_NAME["bachelor_preference"].allowed_values)' in gate_text,
         "gate compares bachelor exactly": 'if bachelor not in bachelor_allowed:' in gate_text,
         "gate compares tenant exactly": 'if tenant not in tenant_allowed:' in gate_text,
-        "landmark has no locality dependency": re.search(r'\("landmark",PANEL,STAGE_2,\(\),\(\),', schema_text) is not None,
+        "landmark declares locality fallback dependency": re.search(r'\("landmark",PANEL,STAGE_2,\(\),\("locality",\)', schema_text) is not None,
         "inventory README has no stale Standalone fallback": all(term not in inventory_readme for term in STALE_TERMS),
     }
     failures = [name for name, ok in checks.items() if not ok]
