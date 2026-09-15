@@ -24,7 +24,7 @@ Maintained root documents:
 
 Maintained `docs/` documents are defined by `docs/DOCUMENT_MAP.md`.
 
-Every affected document must be updated in the same implementation. Documents not affected must still be checked for continued accuracy. Update `HANDOFF.md` when current task/session state changes.
+Every affected document must be updated in the same implementation. Documents not affected must still be checked for accuracy. Update `HANDOFF.md` when current task/session state changes.
 
 Apply `docs/DOCUMENT_UPDATE_MATRIX.md` and `docs/DOCUMENT_GOVERNANCE.md` for detailed routing.
 
@@ -44,7 +44,17 @@ Apply `docs/DOCUMENT_UPDATE_MATRIX.md` and `docs/DOCUMENT_GOVERNANCE.md` for det
 
 Inventory Phase 1 uses three top-level stages only: Initial/Webhook, Deterministic Extraction/Property Processing, and the Downstream Operations boundary. Maps and AI processing are Stage-2 sub-steps; Google Sheets is transport/output.
 
-The verified current Phase-1 runtime state includes successful Google Sheets contract/read-write-boundary verification, successful Google Maps direct API verification, successful Maps application-path verification, and successful Stage-2 deterministic + Maps + validation verification. Other runtime capabilities remain explicitly unverified until their target-runtime probes succeed.
+## Deterministic Inventory architecture
+
+Stage 2 uses `raw_message_text` as its only deterministic extraction source. The flow is canonical source segmentation -> candidate extraction -> field resolution -> normalization -> validation -> Maps enrichment/verification -> optional AI review/wording.
+
+`modules/efps-inventory-mgmnt/src/field_resolution.py` is the sole candidate-resolution layer for BHK, maintenance, and internal property type. `internal_property_type` has exactly three values: `Gated Community`, `Semi Gated`, and `Standalone`. `normalize.py` consumes the resolved value and does not independently classify property type.
+
+Existing persisted Stage-2 Sheet values are never extraction input. The read-only model audit reports populated Sheet mismatches as source conflicts and does not overwrite the Sheet.
+
+## Verification status
+
+The repository-level architecture and regression contract are implemented. Production extraction remains gated on final post-change repository test execution and the read-only model audit. Google Sheets/Maps runtime capability verification remains separate from source-code verification. Other runtime capabilities remain explicitly unverified until their target-runtime probes succeed.
 
 ## Gemini-specific maintenance
 
