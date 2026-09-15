@@ -21,7 +21,10 @@ sys.path.insert(0, str(MODULE_ROOT))
 pipeline = importlib.import_module("src.pipeline")
 field_resolution = importlib.import_module("src.field_resolution")
 
-MAP_URL_RE = re.compile(r"https?://(?:maps\.app\.goo\.gl|goo\.gl|www\.google\.com/maps|maps\.google\.com)\S+", re.I)
+# Keep the gate's Maps grammar aligned with the shared adapter. In particular,
+# share.google is a Google short-link form and must not be mistaken for a
+# landmark when it follows a 📍 Landmark: marker.
+MAP_URL_RE = re.compile(r"https?://(?:maps\.app\.goo\.gl|goo\.gl|www\.google\.com/maps|maps\.google\.com|share\.google)\S+", re.I)
 PLACEHOLDERS = {"", "*", "-", "—", "n/a", "na", "none", "not available", "not mentioned", "nil"}
 TARGET_FIELDS = {
     "internal_property_type",
@@ -129,7 +132,6 @@ def check_row(row_number: int, raw: str, model: dict[str, str]) -> list[str]:
         if explicit and model.get("property_highlights", "").strip() != explicit:
             failures.append(f"property_highlights expected explicit {explicit!r}, got {model.get('property_highlights')!r}")
 
-    # Pincode is optional/enrichment-owned. A blank value is PASS.
     pincode = model.get("pincode", "").strip()
     if pincode and not re.fullmatch(r"\d{6}", pincode):
         failures.append(f"pincode is nonblank but invalid: {pincode!r}")
@@ -155,7 +157,6 @@ def check_row(row_number: int, raw: str, model: dict[str, str]) -> list[str]:
         if model.get("society_amenities", "").strip() not in {"", "-"}:
             failures.append("unresolved property type must not invent a society amenity bundle")
 
-    # Green-field regression guards.
     if not model.get("raw_message_text", "").strip() == raw.strip():
         failures.append("raw_message_text changed during projection")
     furnish = "Fully Furnished" if re.search(r"\bfully\s*furnish", raw, re.I) else "Semi Furnished" if re.search(r"\bsemi[-\s]*furnish", raw, re.I) else ""
