@@ -1,0 +1,123 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: EFPS internal automation live integration
+
+Parameters:
+  LeadsTableArn:
+    Type: String
+  InteractionsTableArn:
+    Type: String
+  LeadAuditTableArn:
+    Type: String
+  LeadsStreamArn:
+    Type: String
+  WebhookToken:
+    Type: String
+    NoEcho: true
+
+Globals:
+  Function:
+    Runtime: python3.12
+    Timeout: 60
+    MemorySize: 256
+    Environment:
+      Variables:
+        EFPS_WEBHOOK_LIVE: '1'
+        EFPS_WHAPI_LIVE: '1'
+        EFPS_WEBHOOK_TOKEN: !Ref WebhookToken
+        INVENTORY_SENDERS: '917975102130,919902024973'
+        SLACK_LEADS_CHANNEL: 'C0BTM6PH55L'
+        SLACK_INVENTORY_CHANNEL: 'C0BTQGG8VT3'
+        SLACK_VERIFICATION_CHANNEL: 'C0BUHUHRK0Q'
+        PYTHONPATH: 'modules/efpd-lead-mgmnt/src:modules/efps-inventory-mgmnt/src'
+
+Resources:
+  EFPSWebhook:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: webhook_handler.lambda_handler
+      CodeUri: .
+      Events:
+        Webhook:
+          Type: Api
+          Properties: { Path: /whapi/webhook, Method: post }
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action: [dynamodb:GetItem, dynamodb:PutItem, dynamodb:UpdateItem, dynamodb:Query, dynamodb:Scan]
+              Resource: [!Ref LeadsTableArn, !Ref InteractionsTableArn, !Ref LeadAuditTableArn]
+
+  EFPSCommands:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: commands_handler.lambda_handler
+      CodeUri: .
+      Events:
+        Command:
+          Type: Api
+          Properties: { Path: /slack/commands, Method: post }
+
+  EFPSEvents:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: events_handler.lambda_handler
+      CodeUri: .
+      Events:
+        Events:
+          Type: Api
+          Properties: { Path: /slack/events, Method: post }
+
+  EFPSInteractive:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: interactive_handler.lambda_handler
+      CodeUri: .
+      Events:
+        Interactive:
+          Type: Api
+          Properties: { Path: /slack/interactive, Method: post }
+
+  EFPSBatch:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: handler.lambda_handler
+      CodeUri: .
+      Events:
+        Schedule:
+          Type: Schedule
+          Properties:
+            Schedule: cron(30 2,6,12 ? * * *)
+            Enabled: true
+
+  EFPSLeadWorker:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: leads_worker.lambda_handler
+      CodeUri: .
+      Events:
+        LeadStream:
+          Type: DynamoDB
+          Properties:
+            Stream: !Ref LeadsStreamArn
+            StartingPosition: LATEST
+            BatchSize: 10
+        DailyDigest:
+          Type: Schedule
+          Properties:
+            Schedule: cron(30 3 ? * * *)
+            Enabled: true
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action: [dynamodb:GetItem, dynamodb:PutItem, dynamodb:UpdateItem, dynamodb:Query, dynamodb:Scan]
+              Resource: [!Ref LeadsTableArn, !Ref InteractionsTableArn, !Ref LeadAuditTableArn]
+
+Outputs:
+  WebhookUrl:
+    Value: !Sub 'https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/whapi/webhook'
+  SlackCommandUrl:
+    Value: !Sub 'https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/slack/commands'
+  SlackEventsUrl:
+    Value: !Sub 'https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/slack/events'
+  SlackInteractiveUrl:
+    Value: !Sub 'https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/slack/interactive'
