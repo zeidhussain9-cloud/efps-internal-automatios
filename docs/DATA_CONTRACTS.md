@@ -35,7 +35,49 @@ Deterministic extraction reads the completed `raw_message_text` only. Existing c
 
 Verified deterministic rules include decimal BHK preservation, ground-floor normalization to `0`, carpet-area derivation at 90% of built-up area when blank, maintenance-included normalization to `0`, month-based deposit calculation, deterministic furnishing defaults, property-subtype alias normalization, explicit gated/semi-gated/standalone classification, deterministic amenity defaults, and the family/bachelor dependency. Explicit source values are preserved rather than silently overwritten.
 
-Maps is a technical capability invoked by inventory processing, not a separate top-level stage. AI remains advisory and cannot replace source facts or bypass deterministic validation.
+### Furnish type contract
+
+Live `Housing_Listings` validation for column M `furnish_type` is a strict `ONE_OF_LIST` with exactly:
+
+- `Fully Furnished`
+- `Semi Furnished`
+
+The repository contract is now aligned to those two values. Source text such as `Unfurnished`, `un-furnished`, `not furnished`, or `empty` does not create a third `furnish_type` value. It results in blank `furnish_type` and blank `flat_furnishings`, because the live Sheet has no `Unfurnished` dropdown value.
+
+`Semi Furnished` and `Fully Furnished` drive deterministic `flat_furnishings` defaults only when explicit `flat_furnishings` are absent.
+
+## Verified live Sheet dropdown contract
+
+The live production Sheet was read-only inspected for the current Phase-1 contract. Columns D, M, Y, Z, AE, and AF use strict `ONE_OF_LIST` validation with custom UI enabled. The exact observed values are:
+
+| Column | Field | Exact observed dropdown values |
+|---|---|---|
+| D | `internal_property_type` | `Gated Community`; `Semi Gated`; `Standalone` |
+| M | `furnish_type` | `Fully Furnished`; `Semi Furnished` |
+| Y | `preferred_tenant_type` | `Family`; `Open For All` |
+| Z | `bachelor_preference` | `Female Only `; `Male Only`; `Open for both` |
+| AE | `society_amenities` | `Security, Lift, CCTV, Power Backup`; `Club House, Lift, Gym, CCTV, Power Backup, Swimming Pool, Garden, Sports, Kids Area`; `-` |
+| AF | `flat_furnishings` | `Wardrobe, Modular Kitchen, Geyser, Fan, Light`; `Wardrobe, Modular Kitchen, Geyser, Fan, Light, Fridge, Washing Machine, TV, Sofa, Bed, Dining Table` |
+
+The observed `Female Only ` value contains a trailing space in the live validation configuration. This is recorded exactly as observed and is not silently rewritten.
+
+Column AA `pet_friendly` has no Google Sheets data-validation rule. However, the populated live values inspected in AA are exactly `Yes` and `No`.
+
+No conditional/row-dependent Google Sheets dropdown validation was observed for D, M, Y, Z, AE, or AF: each has one validation configuration in the inspected range. Therefore the field dependencies below are application/business rules, not conditional Sheet dropdown rules.
+
+## Verified business interdependencies
+
+- `internal_property_type` → `society_amenities`: `Gated Community` and `Semi Gated` trigger deterministic amenity defaults only when `society_amenities` is blank. Standalone classification does not invent amenities. The live Sheet's exact amenity dropdown combinations are separately recorded above; reconciliation between deterministic tier strings and those exact dropdown combinations remains an open contract item.
+- `furnish_type` → `flat_furnishings`: `Semi Furnished` and `Fully Furnished` populate the corresponding deterministic default furnishing sets only when `flat_furnishings` is blank. Unfurnished source text produces blank furnishing fields.
+- `preferred_tenant_type` → `bachelor_preference`: the repository contains a deterministic family/bachelor rule. Family/family-only currently maps an absent bachelor value to internal `Not Allowed`, while the live Sheet dropdown does not contain `Not Allowed`; this remains an open contract item.
+- `society_amenities` declares dependency on `internal_property_type` in the canonical schema.
+- `flat_furnishings` declares dependency on `furnish_type` in the canonical schema.
+- `bachelor_preference` declares dependency on `preferred_tenant_type` in the canonical schema.
+- `maintenance` ↔ `maintenance_included` and `security_deposit` → `monthly_rent` are additional deterministic field dependencies.
+
+## Validation authority
+
+Deterministic validation must reject values that are outside the canonical application contract, except where an explicitly documented internal intermediate value remains under reconciliation. No Sheet dropdown value is to be invented from source text or general knowledge.
 
 ## Stage-3 ownership boundary
 
@@ -43,6 +85,6 @@ Stage 1/2 inventory writes are restricted to A:D, F:AO, and AU. They must never 
 
 ## Verification boundary
 
-Inventory Phase-1 verification has established the 48-column production sheet contract, the Stage-1/2 write boundary, live Google Sheets access, live Google Maps Geocoding access, the Maps application path, and the actual Stage-2 deterministic + Maps + validation path without a production Sheet write during the end-to-end probe.
+Inventory Phase-1 verification has established the 48-column production sheet contract, the Stage-1/2 write boundary, live Google Sheets access, live Google Maps Geocoding access, the Maps application path, the actual Stage-2 deterministic + Maps + validation path without a production Sheet write during the end-to-end probe, and the live dropdown/populated-value observations recorded above.
 
 The repository still does not by itself prove current WhAPI deployment state, Cloudinary live upload state, or Slack live deployment state. Those remain separate runtime acceptance boundaries.
