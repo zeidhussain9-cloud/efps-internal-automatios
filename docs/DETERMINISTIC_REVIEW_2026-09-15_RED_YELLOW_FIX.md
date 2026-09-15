@@ -1,48 +1,66 @@
 # Deterministic Extraction Review — 2026-09-15
 
-## Evidence reviewed
+## Evidence and version audit
 
-The 25-row read-only production projection was reviewed against the raw WhatsApp source for rows 2–26. Existing Sheet values were treated as display-only and not as extraction evidence.
+The recurring 25-row projection artifact `Pasted markdown(20260915-094155).md` was executed from repository commit `98d657b`, not from the subsequently merged deterministic-fix commit `c096445` or current `main`. The artifact itself records `git rev-parse --short HEAD` as `98d657b` before the projection command. Therefore it cannot be used to judge the fixes that were later merged. This version mismatch explains why already-fixed source shapes kept reappearing in later manual classifications.
 
-## Confirmed root causes
+Current `main` is `60e167ad2d181f5444bb0f1df5b20e0f0ec84e0c`. The comparison from `98d657b` to current `main` contains 21 commits and includes changes to the deterministic extractor, resolver, normalizer, regression suite, and review documentation.
+
+## Source-backed findings
 
 ### `pet_friendly`
-The source uses forms such as `Pets: Not Allowed`. The negative-expression regex did not permit the label delimiter (`:`), so the negative phrase was not matched and the fallback returned `Yes`.
-
-**Permanent fix:** accept `:`, `=` and `-` after the Pets/Animals label; explicit negative evidence wins over positive/default behavior.
+The old projection at `98d657b` showed `Pets: Not Allowed` becoming `Yes`. Current normalization explicitly recognizes negative pet wording with `:`, `=`, or `-`, and negative evidence wins.
 
 ### `balconies`
-The extractor only recognized a numeric form such as `2 Balconies`. Source rows also use the singular form `Balcony`, which carries an explicit count of one.
-
-**Permanent fix:** recognize singular `Balcony` and normalize it to `1`; numeric counts continue to win.
+Bare singular `Balcony` means one. Current normalization handles this when the extractor has no numeric count.
 
 ### `landmark` vs `google_maps_url`
-Some source records use `📍 Landmark:` followed by a Maps URL on the next line. A generic label extractor could interpret the URL as landmark text.
-
-**Permanent fix:** `📍` markers are structured source anchors; Maps URLs belong to `google_maps_url`, never `landmark`. Any Maps URL found in the landmark candidate is discarded from `landmark`.
+A `📍 Landmark:` marker followed by a Maps URL must leave `landmark` blank and place the URL in `google_maps_url`. Current extraction and normalization implement that separation.
 
 ### `society_name` and `google_maps_url`
-The EFPS source commonly uses `📍 Society Name:` followed by a Maps URL. This is a source grammar, not a generic labelled field. The deterministic extractor now treats the marker name as the society candidate and the URL as Maps data. The locality fallback remains a last resort after extraction/enrichment.
+The structured EFPS marker grammar `📍 Name:` + Maps URL is now explicitly parsed. The marker name is the society/property candidate and the URL is the Maps candidate. Existing projection evidence already showed this working for records such as `Sonestaa Silver Oak` before the stale manual review was produced.
+
+### `locality`
+`Location:` is a deterministic source field. The 98d657b production artifact shows `Location: Thubarahalli, Whitefield` projecting to `locality = Thubarahalli, Whitefield`, so locality was not an extraction defect in that artifact. Maps replacement is a separate enrichment stage. Locality must not be downgraded merely because pincode/Maps enrichment was not run by the read-only projection harness.
+
+### `pincode`
+Pincode is enrichment-owned unless explicitly present in source. A blank value is valid and non-blocking. `validate.py` does not require a nonblank pincode, and the new production gate explicitly treats blank pincode as PASS.
+
+### `maintenance`
+The production projection already demonstrated correct numeric maintenance and `+ Water` preservation. Current resolver/normalizer also covers `Included` and `Included + Water` semantics. Maintenance should be graded against the source contract, not against historical Sheet formatting.
+
+### `property_highlights`
+Blank is valid when there is no explicit highlight and no supported deterministic fragment. A prior PARTIAL classification therefore did not establish a parser defect by itself.
+
+## Genuine remaining defect found by this audit
 
 ### `internal_property_type`
-Explicit source syntax such as `Gated: Community` must resolve to `Gated Community`. The resolver was hardened to parse the explicit gated/semi-gated delimiter form and to preserve explicit standalone evidence. Missing evidence still cannot truthfully prove Standalone; the canonical schema fallback remains documented until Maps enrichment can establish a different classification.
+The resolver previously ended with `return "Standalone"` when neither gating nor standalone evidence existed. That is a false fact: absence of evidence does not prove Standalone. This specifically misclassified `Prima Hilife`, whose raw source contains the community name but no gating keyword.
 
-## Business rules preserved
+Independent current property evidence describes Prima Hi-Life as an exclusive gated community, and current rental inventory lists it with the `Gated Community` highlight. citeturn919629search0turn919629search6
 
-- Operational subtype usage is primarily `Apartment`, `Villa`, and `Studio`.
-- `Duplex Villa` resolves to `Villa`.
-- `1 RK` / `Studio` resolves to `Studio`.
-- Normal apartment/building inventory resolves to `Apartment` unless a stronger supported subtype is present.
-- `Maintenance: Included` → `maintenance=0`, `maintenance_included=Yes`.
-- `Maintenance: Included + Water` → included=yes with the water-charge qualifier retained.
-- Explicit maintenance amount → amount in `maintenance`, `maintenance_included=No`.
-- Gated/Semi Gated → covered parking defaults to `1` when no explicit covered count exists.
-- Pincode is non-blocking; blank pincode must not by itself create `Needs Review`.
+**Permanent fix:**
+1. Explicit source gating/standalone evidence remains highest priority.
+2. Independently adjudicated community names are resolved through `src/community_property_types.py`.
+3. `Prima Hi-Life`/`Prima Hilife` is explicitly registered as `Gated Community`.
+4. Unknown/no-evidence communities now remain blank instead of being falsely labelled Standalone.
+5. Downstream parking/amenity defaults do not invent a classification when the parent type is unresolved.
 
-## Dependency rule
+This preserves the three business values while separating an actual `Standalone` fact from an unresolved enrichment state.
 
-`society_amenities` and `covered_parking` remain downstream of `internal_property_type`. They must not be independently inferred in a way that masks an upstream classification failure.
+## Regression-control fix
 
-## Regression coverage
+The old projection harness was observational: it dumped 48 fields but had no field-level assertion against the deterministic contract. This allowed a manually maintained 10/11-field classification to drift independently of code state.
 
-`tools/test_deterministic_edge_cases.py` covers the confirmed source forms for gated classification, subtype mapping, pet restrictions, singular balcony, Maps URL separation, society marker parsing, maintenance inclusion semantics, and covered-parking dependency.
+Current repository adds:
+
+- `tools/test_deterministic_edge_cases.py` for exact source-shape regressions;
+- `tools/projection_regression_check.py` for pure deterministic regression assertions;
+- `tools/production_projection_gate.py` for the live 25-row source-backed contract gate;
+- CI execution of the deterministic regression tools.
+
+The production gate treats valid blanks as valid results, including pincode and property highlights where the contract permits them, and checks selected previously-green fields for regression.
+
+## Acceptance rule
+
+The next live projection must be run from the actual fix commit/merged `main` SHA. Previous output from `98d657b` must not be reused as evidence for the current code. A clean result means the 11 previously recurring review labels are absent because their field contracts pass; it does **not** require every optional/enrichment field to be populated.
