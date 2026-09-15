@@ -1,0 +1,73 @@
+name: Legacy Repository Audit
+
+on:
+  push:
+    paths:
+      - ".github/workflows/legacy-repo-audit.yml"
+  workflow_dispatch:
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout new repository
+        uses: actions/checkout@v4
+
+      - name: Checkout legacy repository at pinned commit
+        uses: actions/checkout@v4
+        with:
+          repository: zeidhussain9-cloud/efps-platform
+          ref: bd186c7c3418d633bca6766b1b92204c7a56d484
+          path: legacy
+
+      - name: Run literal tracked-file audit
+        working-directory: legacy
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import subprocess
+
+          root = Path.cwd()
+          raw = subprocess.check_output(["git", "ls-files", "-z"], text=False)
+          files = [Path(p.decode("utf-8")) for p in raw.split(b"\0") if p]
+
+          total_lines = 0
+          total_bytes = 0
+          text_files = 0
+          binary_files = 0
+          rows = []
+
+          for rel in sorted(files, key=lambda p: p.as_posix()):
+              data = (root / rel).read_bytes()
+              total_bytes += len(data)
+              try:
+                  text = data.decode("utf-8")
+              except UnicodeDecodeError:
+                  binary_files += 1
+                  rows.append((rel.as_posix(), "BINARY", len(data)))
+                  continue
+              lines = text.count("\\n") + (1 if text and not text.endswith("\\n") else 0)
+              total_lines += lines
+              text_files += 1
+              rows.append((rel.as_posix(), lines, len(data)))
+
+          out = root / "LEGACY_REPOSITORY_LINE_AUDIT.txt"
+          with out.open("w", encoding="utf-8") as fh:
+              fh.write("EFPS LEGACY REPOSITORY — LITERAL TRACKED-FILE AUDIT\n")
+              fh.write("COMMIT bd186c7c3418d633bca6766b1b92204c7a56d484\n")
+              fh.write(f"TRACKED_FILES {len(files)}\n")
+              fh.write(f"TEXT_FILES {text_files}\n")
+              fh.write(f"BINARY_FILES {binary_files}\n")
+              fh.write(f"TEXT_LINES {total_lines}\n")
+              fh.write(f"TOTAL_BYTES {total_bytes}\n\n")
+              for path, lines, size in rows:
+                  fh.write(f"FILE {path} | lines={lines} | bytes={size}\n")
+
+          print(out.read_text(encoding="utf-8"))
+          PY
+
+      - name: Upload audit artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: legacy-repository-line-audit
+          path: legacy/LEGACY_REPOSITORY_LINE_AUDIT.txt
