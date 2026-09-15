@@ -56,10 +56,9 @@ def deterministic(raw_text: str, row: dict | None = None) -> dict:
 
 
 def process_closed_session(raw_text: str, *, row: dict | None = None, maps_client=None, ai_llm=None):
-    """Run Stage 2 and fail closed when a supplied Maps location is not verified."""
+    """Run deterministic Stage 2. Maps uncertainty is informational, not an extraction review failure."""
     out = deterministic(raw_text, row)
     issues: list[str] = []
-    maps_unverified = False
     maps = maps_client or GoogleMapsClient()
     maps_url = out.get("google_maps_url", "") or maps.extract_url(raw_text)
     if maps_url:
@@ -72,18 +71,16 @@ def process_closed_session(raw_text: str, *, row: dict | None = None, maps_clien
             })
             normalize.apply_location_fallbacks(out)
         elif resolved.confidence in ("PARTIAL_MATCH", "NEEDS_RUNTIME_VERIFICATION", "NOT_FOUND"):
-            maps_unverified = True
             issues.append(f"Google Maps verification failed or is incomplete: {resolved.confidence}")
         else:
-            maps_unverified = True
             issues.append(f"Google Maps resolution returned an unrecognized verification state: {resolved.confidence}")
     out["status"] = "Pending"
     errors = validate.validate(out)
     if errors:
         out["status"] = "Needs Review"
         issues.extend(errors)
-    if maps_unverified:
-        out["status"] = "Needs Review"
+    # Maps is deterministic enrichment/verification. A non-VERIFIED Maps result
+    # must not convert an otherwise valid deterministic extraction into review.
     if out["status"] == "Pending":
         from .ai import apply
         out = apply(out, raw_text, ai_llm)
