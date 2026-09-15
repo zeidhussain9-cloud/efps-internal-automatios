@@ -11,34 +11,40 @@ This is the canonical list of unresolved decisions and verified unknowns for the
 
 - The successful WhAPI Cloudflare diagnostic required an explicit `User-Agent: EFPS-Inventory-Phase1/1.0`. The current `WhApiClient` source has not yet been changed to add that header. Decide and verify whether the explicit user-agent should become part of the canonical client transport contract before treating the client itself as production-accepted for live API calls.
 
-## Closed in the current deterministic contract pass
+## Deterministic audit status — 2026-09-15
 
-- `preferred_tenant_type` normalization is closed for the observed source variants: family variants normalize to `Family`; anyone/open-for-all variants normalize to `Open For All`.
-- `pet_friendly` contract is closed: explicit no-pet wording emits `No`; absence of a pet restriction emits `Yes` as the established last-resort rule.
-- `servant_room` behavior is closed: explicit source `Yes` is preserved; missing source value defaults to `No`.
-- `covered_parking` behavior is closed: Gated Community and Semi Gated default to `1` when no covered-parking value is supplied; an explicit source value remains authoritative; Standalone does not receive that default.
-- `internal_property_type` direct-field extraction is closed: explicit source values are accepted with common label separators and normalized to the canonical three values; `Gated: Community` and `Semi Gated: Community` are supported positive forms; absent explicit values use the documented gating-wording fallback.
-- `society_name` direct extraction/fallback behavior is closed: direct values and structured `📍 Name:` markers are preserved after presentation cleanup; if exhaustive raw-source and Maps enrichment do not establish a name, locality is the allowed last-resort society-name fallback.
-- `landmark` behavior is closed: a Maps URL following `📍 Landmark:` belongs to `google_maps_url`, not `landmark`; landmark never inherits locality.
-- `google_maps_url` deterministic extraction is closed: supported Maps URLs present in `raw_message_text` are extracted without network access; Maps verification remains a separate enrichment step.
-- `internal_property_type` → `society_amenities` is closed: Gated Community and Semi Gated use exact verified Sheet combinations; Standalone uses `-` when blank.
-- Property subtype behavior is closed for the current operational contract: normal apartment/flat/building inventory uses `Apartment`; villa wording, including `Duplex Villa`, uses `Villa`; `Studio` is reserved for 1 RK; explicit supported portal subtype wording remains authoritative.
-- Property highlights and catalog title fallback behavior is closed for the current deterministic contract: explicit values are preserved; otherwise only factual supported fragments are generated. AI remains optional wording-only processing.
-- `age_of_property_years` remains non-blocking and conservative: populate only from an explicit/authoritative source fact; otherwise blank.
-- The `furnish_type` mismatch is closed: live Sheet values are exactly `Fully Furnished` and `Semi Furnished`; Unfurnished source wording leaves the field blank.
-- Exact `bachelor_preference` vocabulary formatting remains closed. The live `Female Only ` trailing space is intentionally preserved.
-- Exact live Sheet values and application dependencies for D, M, Y, Z, AA, AE, and AF remain verified.
-- Maps status handling is closed for deterministic extraction: `PARTIAL_MATCH`, `NEEDS_RUNTIME_VERIFICATION`, and `NOT_FOUND` are recorded as issues but do not by themselves convert a valid deterministic extraction to `Needs Review`.
-- Maintenance business semantics are closed: `Included` → maintenance `0` + `Yes`; `Included + Water` → `Water Charges Additional` + `Yes`; a separately stated maintenance amount → `No`; amount qualifiers such as `+ Water` remain preserved.
-- Pincode is explicitly non-blocking: a blank pincode does not by itself produce `Needs Review`; when available, verified Maps enrichment may populate it.
+The deterministic field audit is now narrowed to one unresolved field:
+
+- `google_maps_url` remains **RED pending the next rows 2:26 read-only projection**.
+- The repository implementation now recognizes the observed `share.google` source URL form in the shared Maps adapter and production projection gate.
+- The next projection is the acceptance evidence. If it passes, `google_maps_url` moves RED → GREEN. If it fails, it remains RED and only the demonstrated Maps failure is investigated.
+- Previously closed GREEN deterministic fields must not be reopened without independent regression evidence.
+
+## Closed deterministic contract findings
+
+- `preferred_tenant_type` normalization is closed for the observed source variants.
+- `pet_friendly` contract is closed for explicit positive/negative source wording.
+- `servant_room` behavior is closed.
+- `covered_parking` behavior is closed and follows resolved `internal_property_type`.
+- `internal_property_type` direct extraction/resolution is closed, including explicit negative gating and unresolved-no-evidence semantics.
+- `society_name` direct extraction/fallback behavior is closed.
+- `landmark` separation from Maps URLs is closed.
+- Property subtype behavior is closed for the current operational contract.
+- Property highlights and catalog title fallback behavior are closed.
+- `age_of_property_years` remains non-blocking and conservative.
+- `furnish_type` behavior is closed for the observed live contract.
+- Exact `bachelor_preference` vocabulary formatting remains closed.
+- Maintenance business semantics are closed, including `Included + Water`.
+- `society_amenities` dependency behavior is closed.
+- `pincode` is explicitly non-blocking.
 
 ## Deferred by current Phase-1 boundary
 
 - Production WhAPI media downloads and direct Cloudinary association beyond the currently authorized temporary photo workflow.
 - Inventory lifecycle/locking implementation beyond the current protected-column boundary.
 - Additional batch/live orchestration beyond the explicit Phase-1 intake and processing paths.
-- Future Meta Catalogue, Housing Portal, and website production integrations until their implementation requirements are explicitly authorized and established. These are future additions, not current open pointers.
+- Future Meta Catalogue, Housing Portal, and website production integrations until their implementation requirements are explicitly authorized and established.
 
 ## Governance
 
-When any pointer is resolved, update this document and the affected architecture/contracts/handoff in the same implementation session. The deterministic field contract, regression suite, handoff, and control matrix must remain synchronized with approved business-rule changes.
+When the remaining Maps pointer is resolved, update this document and the affected architecture/contracts/handoff in the same implementation session. The deterministic field contract, regression suite, handoff, and control matrix must remain synchronized with approved business-rule changes.
