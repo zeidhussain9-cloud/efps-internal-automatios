@@ -111,20 +111,20 @@ def test_share_google_url_is_extracted_and_preserved_exactly():
     raw = "Location: Bellandur\n📍 Landmark:\nhttps://share.google/AbC123"
     out = deterministic(raw)
     assert out["google_maps_url"] == "https://share.google/AbC123"
-    assert out["landmark"] == ""
+    assert out["landmark"] == "Bellandur"
 
 
 def test_landmark_maps_url_is_not_stored_as_landmark():
     raw = "Location: Harlur\n📍 Landmark:\nhttps://maps.app.goo.gl/example"
     out = deterministic(raw)
     assert out["google_maps_url"] == "https://maps.app.goo.gl/example"
-    assert out["landmark"] == ""
+    assert out["landmark"] == "Harlur"
 
 
-def test_locality_is_not_copied_to_landmark_during_deterministic_projection():
+def test_locality_is_copied_to_landmark_as_final_fallback():
     out = deterministic("2 BHK\nRent: 40000\nLocation: Harlur")
     assert out["locality"] == "Harlur"
-    assert out["landmark"] == ""
+    assert out["landmark"] == "Harlur"
 
 
 def test_society_name_fallback_is_last_resort_in_production_path():
