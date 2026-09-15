@@ -12,7 +12,7 @@ FIXED = {
 PROPERTY_SUBTYPES = {"Apartment", "Independent House", "Duplex", "Independent Floor", "Villa", "Penthouse", "Studio", "Farm House"}
 FURNISH_TYPES = {"Fully Furnished", "Semi Furnished"}
 PREFERRED_TENANT_TYPES = {"Family", "Open For All"}
-BACHELOR_PREFERENCES = {"Female Only ", "Male Only", "Open for both"}
+BACHELOR_PREFERENCES = {"Female Only", "Male Only", "Open for both"}
 PET_FRIENDLY = {"Yes", "No"}
 COVERED_PARKING = {"0", "1", "2", "3", "3+"}
 FURNISHINGS = {"AC", "Wardrobe", "Geyser", "Fan", "Light", "Fridge", "TV", "Bed", "Sofa", "Dining Table", "Washing Machine", "Cupboard", "Microwave", "Stove", "Water Purifier", "Gas Pipeline", "Chimney", "Modular Kitchen"}
@@ -55,12 +55,12 @@ def validate(row: dict) -> list[str]:
     if row["bachelor_preference"] and row["bachelor_preference"] not in BACHELOR_PREFERENCES:
         errors.append("invalid bachelor_preference")
     # Y -> Z dependent dropdown contract. Family deliberately clears Z;
-    # Open For All requires an explicit valid bachelor preference. A blank in
-    # the latter state is a deterministic contract failure, not a Yellow case.
+    # Open For All requires a canonical dependent value. The deterministic
+    # normalizer supplies Open for both when source evidence does not override it.
     if row["preferred_tenant_type"] == "Family" and row["bachelor_preference"]:
         errors.append("bachelor_preference must be blank when preferred_tenant_type is Family")
-    elif row["preferred_tenant_type"] == "Open For All" and not row["bachelor_preference"]:
-        errors.append("bachelor_preference required when preferred_tenant_type is Open For All")
+    elif row["preferred_tenant_type"] == "Open For All" and row["bachelor_preference"] not in {"Female Only", "Male Only", "Open for both"}:
+        errors.append("bachelor_preference must be a canonical value when preferred_tenant_type is Open For All")
     if row["pet_friendly"] and row["pet_friendly"] not in PET_FRIENDLY:
         errors.append("invalid pet_friendly")
     if row["covered_parking"] not in COVERED_PARKING | {""}:

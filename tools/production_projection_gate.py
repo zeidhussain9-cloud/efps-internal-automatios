@@ -161,7 +161,7 @@ def check_row(row_number: int, raw: str, model: dict[str, str]) -> list[str]:
             failures.append("bachelor_preference must be blank for Family")
     elif tenant == "Open For All":
         if bachelor not in {"Female Only", "Male Only", "Open for both"}:
-            failures.append(f"bachelor_preference required for Open For All, got {bachelor!r}")
+            failures.append(f"bachelor_preference must be canonical for Open For All, got {bachelor!r}")
 
     if model.get("raw_message_text", "").strip() != raw.strip():
         failures.append("raw_message_text changed during projection")

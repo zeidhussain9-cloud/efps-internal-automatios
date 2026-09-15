@@ -21,7 +21,7 @@ The initial blocking set is:
 | `maintenance_included` | Changes the meaning of the rent/maintenance terms. |
 | `security_deposit` | Core commercial term. |
 | `preferred_tenant_type` | Core tenant eligibility constraint. |
-| `bachelor_preference` | Dependent tenant eligibility field; required for `Open For All`. |
+| `bachelor_preference` | Dependent tenant eligibility field; its value is determined by the parent unless explicit source evidence overrides it. |
 | `pet_friendly` | Tenant eligibility/property restriction. |
 | `furnish_type` | Core listing classification where explicitly supplied. |
 | `built_up_area` | Core property-size fact when supplied. |
@@ -51,9 +51,10 @@ A property-processing run may become `Needs Review` because of a blocking proper
 `bachelor_preference` is dependent on `preferred_tenant_type`:
 
 - `Family` -> blank dependent value is valid.
-- `Open For All` -> one of `Female Only`, `Male Only`, or `Open for both` is required.
+- `Open For All` -> default exactly to the Sheet dropdown value `Open for both`.
+- Explicit valid bachelor source evidence wins over the dependency default, so `Female Only` or `Male Only` remains authoritative when explicitly supplied.
 
-Direct source evidence has priority over dependency defaults.
+The canonical dropdown vocabulary is exactly `Female Only`, `Male Only`, and `Open for both`. No alternate spelling, trailing-space variant, or invented value is permitted.
 
 ## Governance
 

@@ -17,6 +17,7 @@ _SLACK_LINK=re.compile(r"^<(?P<url>[^|>]+)(\|[^>]*)?>$")
 _PLACEHOLDERS={"*","-","—","n/a","na","none","not available","not mentioned","nil"}
 _STANDALONE_WORDS=re.compile(r"\b(independent\s+house|independent\s+floor|builder\s+floor|farm ?house|stand[-\s]*alone)\b",re.I)
 
+
 def strip_slack_markup(value:str)->str:
     match=_SLACK_LINK.match(str(value or "").strip()); return match.group("url").strip() if match else str(value or "").strip()
 
@@ -105,11 +106,17 @@ def apply_parking_defaults(row:dict)->dict:
 
 def apply_tenant_bachelor_rule(row:dict,raw_text:str)->dict:
     tenant=_canonical_tenant(row.get("preferred_tenant_type", "")); row["preferred_tenant_type"]=tenant; lower_raw=str(raw_text or "").lower()
-    if ("family" in lower_raw and "female" in lower_raw and "bachelor" in lower_raw) or re.search(r"\bfamily\s*&\s*female\b",lower_raw):row["preferred_tenant_type"]="Open For All";row["bachelor_preference"]="Female Only ";return row
+    # Explicit source evidence has priority over dependency defaults.
+    if ("family" in lower_raw and "female" in lower_raw and "bachelor" in lower_raw) or re.search(r"\bfamily\s*&\s*female\b",lower_raw):
+        row["preferred_tenant_type"]="Open For All";row["bachelor_preference"]="Female Only ";return row
     current=str(row.get("bachelor_preference","")).strip()
     if current and not _verified_in_text(current,raw_text):current=""
-    if current:row["bachelor_preference"]=current
-    elif tenant=="Family":row["bachelor_preference"]=""
+    if current:
+        row["bachelor_preference"]=current
+    elif tenant=="Family":
+        row["bachelor_preference"]=""
+    elif tenant=="Open For All":
+        row["bachelor_preference"]="Open for both"
     return row
 
 def normalize_bachelor_preference(row:dict)->dict:
@@ -181,7 +188,7 @@ def normalize(row:dict,raw_text:str="",*,resolved_internal_property_type:str="")
         out["society_amenities"]=("Club House, Lift, Gym, CCTV, Power Backup, Swimming Pool, Garden, Sports, Kids Area" if resolved_internal_property_type=="Gated Community" else "Security, Lift, CCTV, Power Backup" if resolved_internal_property_type=="Semi Gated" else "-")
     apply_parking_defaults(out)
     out["pet_friendly"]="No" if re.search(r"\b(?:pets?|animals?)\s*(?::|=|-)?\s*(?:are\s*)?(?:not\s*allowed|not\s*permitted|prohibited|banned)\b|\b(?:no|without)\s+pets?\b",raw_text or "",re.I) else "Yes"
-    if out.get("landmark") and re.search(r"https?://(?:maps\.app\.goo\.gl|goo\.gl|www\.google\.com/maps|maps\.google\.com)",out["landmark"],re.I):out["landmark"]=""
+    if out.get("landmark") and re.search(r"https?://(?:maps\.app\.goo\.gl|goo\.gl|www\.google\.com/maps|maps\.google\.com|share\.google)",out["landmark"],re.I):out["landmark"]=""
     apply_tenant_bachelor_rule(out,raw_text);normalize_bachelor_preference(out)
     fragments=construct_deterministic_highlights(out,raw_text,original_subtype)
     if fragments and not _usable(out.get("property_highlights","")):out["property_highlights"]=" | ".join(fragments)
