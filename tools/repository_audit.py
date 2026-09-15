@@ -1,17 +1,17 @@
-"""Repository-wide text/contract audit for Inventory Phase 1.
+"""Repository-wide tracked-file audit for Inventory Phase 1.
 
-The audit is intentionally read-only. It walks every checkout file except .git
-metadata, reports exact physical line counts by file/folder, and fails on
-known stale contract statements or known contract drift.
+The audit is read-only. It enumerates the exact Git-tracked repository files,
+reports physical line counts for every UTF-8 text file, identifies binary files,
+and fails on known stale contract statements or known contract drift.
 """
 from __future__ import annotations
 
 from collections import defaultdict
 from pathlib import Path
 import re
+import subprocess
 
 ROOT = Path(__file__).resolve().parents[1]
-EXCLUDED_PARTS = {".git"}
 STALE_TERMS = (
     "declared " + "Standalone fallback",
     "declared `" + "Standalone` fallback",
@@ -19,6 +19,18 @@ STALE_TERMS = (
     "fallback is `" + "Standalone`",
     "fallback is **" + "Standalone**",
 )
+
+
+def tracked_files() -> list[Path]:
+    result = subprocess.run(
+        ["git", "ls-files", "-z"],
+        cwd=ROOT,
+        check=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+    names = [name for name in result.stdout.decode("utf-8").split("\x00") if name]
+    return [ROOT / name for name in names]
 
 
 def is_binary(data: bytes) -> bool:
@@ -31,17 +43,8 @@ def physical_line_count(text: str) -> int:
     return len(text.splitlines())
 
 
-def iter_files() -> list[Path]:
-    files: list[Path] = []
-    for path in sorted(ROOT.rglob("*")):
-        if not path.is_file() or any(part in EXCLUDED_PARTS for part in path.parts):
-            continue
-        files.append(path)
-    return files
-
-
 def audit() -> int:
-    files = iter_files()
+    files = tracked_files()
     folder_lines: defaultdict[str, int] = defaultdict(int)
     total_text_lines = 0
     text_files = 0
@@ -50,6 +53,7 @@ def audit() -> int:
 
     print("EFPS REPOSITORY LINE-BY-LINE AUDIT")
     print(f"ROOT: {ROOT}")
+    print("SCOPE: git-tracked files only")
     print(f"FILES DISCOVERED: {len(files)}")
 
     for path in files:
@@ -68,13 +72,10 @@ def audit() -> int:
         for i in range(1, len(parts)):
             folder_lines[Path(*parts[:i]).as_posix()] += lines
 
-        # This detector is deliberately not evaluated against this audit script
-        # itself because the forbidden terms are defined here as test fixtures.
-        if rel != "tools/repository_audit.py":
-            for term in STALE_TERMS:
-                for number, line in enumerate(text.splitlines(), 1):
-                    if term in line:
-                        stale_hits.append(f"{rel}:{number}: {line.strip()}")
+        for term in STALE_TERMS:
+            for number, line in enumerate(text.splitlines(), 1):
+                if term in line:
+                    stale_hits.append(f"{rel}:{number}: {line.strip()}")
         print(f"FILE {rel} | lines={lines}")
 
     print("\nFOLDER LINE TOTALS")
