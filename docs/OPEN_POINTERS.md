@@ -13,15 +13,13 @@ This is the canonical list of unresolved decisions and verified unknowns for the
 
 ## Deterministic audit status — 2026-09-15
 
-The deterministic field audit is now narrowed to one unresolved field:
+The latest available 25-row read-only production projection shows the previously RED `google_maps_url` contract now passing: the observed `share.google` source URL is projected exactly into `google_maps_url`, and the corresponding society marker is preserved as `society_name`. The production gate output shows the remaining failures are the `preferred_tenant_type -> bachelor_preference` dependency on rows where `Open For All` has no valid dependent value.
 
-- `google_maps_url` remains **RED pending the next rows 2:26 read-only projection**.
-- The repository implementation now recognizes the observed `share.google` source URL form in the shared Maps adapter and production projection gate.
-- The next projection is the acceptance evidence. If it passes, `google_maps_url` moves RED → GREEN. If it fails, it remains RED and only the demonstrated Maps failure is investigated.
-- Previously closed GREEN deterministic fields must not be reopened without independent regression evidence.
+Current deterministic acceptance therefore has one demonstrated unresolved property contract: `bachelor_preference` for `Open For All` rows. Do not reopen Maps or society unless a fresh projection demonstrates a regression.
 
 ## Closed deterministic contract findings
 
+- `google_maps_url` source extraction and exact source preservation, including `share.google`, are closed by the current projection evidence and regression coverage.
 - `preferred_tenant_type` normalization is closed for the observed source variants.
 - `pet_friendly` contract is closed for explicit positive/negative source wording.
 - `servant_room` behavior is closed.
@@ -33,7 +31,7 @@ The deterministic field audit is now narrowed to one unresolved field:
 - Property highlights and catalog title fallback behavior are closed.
 - `age_of_property_years` remains non-blocking and conservative.
 - `furnish_type` behavior is closed for the observed live contract.
-- Exact `bachelor_preference` vocabulary formatting remains closed.
+- Exact `bachelor_preference` vocabulary formatting remains closed, but the dependency requirement for `Open For All` remains unresolved where the source provides no valid dependent value.
 - Maintenance business semantics are closed, including `Included + Water`.
 - `society_amenities` dependency behavior is closed.
 - `pincode` is explicitly non-blocking.
@@ -47,4 +45,4 @@ The deterministic field audit is now narrowed to one unresolved field:
 
 ## Governance
 
-When the remaining Maps pointer is resolved, update this document and the affected architecture/contracts/handoff in the same implementation session. The deterministic field contract, regression suite, handoff, and control matrix must remain synchronized with approved business-rule changes.
+When a deterministic pointer is resolved, update this document and the affected architecture/contracts/handoff in the same implementation session. The deterministic field contract, regression suite, handoff, and control matrix must remain synchronized with approved business-rule changes.
