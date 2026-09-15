@@ -12,78 +12,18 @@ extract = importlib.import_module("src.extract")
 pipeline = importlib.import_module("src.pipeline")
 
 CASES = [
-    (
-        "explicit_gated_community",
-        "Gated Community\nLocation: Harlur",
-        lambda r: r == "Gated Community",
-        field_resolution.resolve_internal_property_type,
-    ),
-    (
-        "explicit_gated_colon_community",
-        "Gated: Community\nLocation: Kasavanahalli",
-        lambda r: r == "Gated Community",
-        field_resolution.resolve_internal_property_type,
-    ),
-    (
-        "explicit_semi_gated_colon_community",
-        "Semi Gated: Community\nLocation: Harlur",
-        lambda r: r == "Semi Gated",
-        field_resolution.resolve_internal_property_type,
-    ),
-    (
-        "negative_gating_does_not_claim_gated",
-        "Gated: No\nLocation: Harlur",
-        lambda r: r == "Standalone",
-        field_resolution.resolve_internal_property_type,
-    ),
-    (
-        "maintenance_included",
-        "Rent: 70K\nMaintenance: Included",
-        lambda r: r == ("0", "Yes"),
-        field_resolution.resolve_maintenance,
-    ),
-    (
-        "maintenance_included_water",
-        "Rent: 42K\nMaintenance: 2,777 + Water",
-        lambda r: r == ("2777 + Water", "No"),
-        field_resolution.resolve_maintenance,
-    ),
-    (
-        "maintenance_rent_suffix",
-        "Rent: 50K + 6K Maintenance",
-        lambda r: r == ("6000", "No"),
-        field_resolution.resolve_maintenance,
-    ),
-    (
-        "decimal_bhk_preserved",
-        "Semi Furnished 2.5 BHK with 2 Bathrooms",
-        lambda r: r == "2.5 BHK",
-        field_resolution.resolve_bhk,
-    ),
-    (
-        "duplex_villa_subtype",
-        "Fully Furnished 4 BHK Duplex Villa",
-        lambda r: r == "Villa",
-        field_resolution.resolve_property_subtype,
-    ),
-    (
-        "studio_subtype",
-        "1 RK for Rent",
-        lambda r: r == "Studio",
-        field_resolution.resolve_property_subtype,
-    ),
-    (
-        "singular_balcony",
-        "Semi Furnished 3 BHK with Balcony",
-        lambda r: r.get("balconies") == "1",
-        extract.scan,
-    ),
-    (
-        "pets_not_allowed_colon",
-        "Pets: Not Allowed",
-        lambda r: r.get("pet_friendly") == "Not Allowed",
-        extract.scan,
-    ),
+    ("explicit_gated_community", "Gated Community\nLocation: Harlur", lambda r: r == "Gated Community", field_resolution.resolve_internal_property_type),
+    ("explicit_gated_colon_community", "Gated: Community\nLocation: Kasavanahalli", lambda r: r == "Gated Community", field_resolution.resolve_internal_property_type),
+    ("explicit_semi_gated_colon_community", "Semi Gated: Community\nLocation: Harlur", lambda r: r == "Semi Gated", field_resolution.resolve_internal_property_type),
+    ("negative_gating_does_not_claim_gated", "Gated: No\nLocation: Harlur", lambda r: r == "Standalone", field_resolution.resolve_internal_property_type),
+    ("maintenance_included", "Rent: 70K\nMaintenance: Included", lambda r: r == ("0", "Yes"), field_resolution.resolve_maintenance),
+    ("maintenance_included_water", "Rent: 42K\nMaintenance: Included + Water", lambda r: r == ("0 + Water", "Yes"), field_resolution.resolve_maintenance),
+    ("maintenance_amount_water", "Rent: 42K\nMaintenance: 2,777 + Water", lambda r: r == ("2777 + Water", "No"), field_resolution.resolve_maintenance),
+    ("maintenance_rent_suffix", "Rent: 50K + 6K Maintenance", lambda r: r == ("6000", "No"), field_resolution.resolve_maintenance),
+    ("decimal_bhk_preserved", "Semi Furnished 2.5 BHK with 2 Bathrooms", lambda r: r == "2.5 BHK", field_resolution.resolve_bhk),
+    ("duplex_villa_subtype", "Fully Furnished 4 BHK Duplex Villa", lambda r: r == "Villa", field_resolution.resolve_property_subtype),
+    ("studio_subtype", "1 RK for Rent", lambda r: r == "Studio", field_resolution.resolve_property_subtype),
+    ("singular_balcony", "Semi Furnished 3 BHK with Balcony", lambda r: r.get("balconies") == "1", extract.scan),
 ]
 
 
@@ -96,8 +36,8 @@ def main() -> int:
         if not ok:
             failures.append(name)
 
-    # Integration assertions for the production deterministic path.
-    case = pipeline.deterministic("Semi Furnished 3 BHK with 3 Bathrooms & 2 Balconies\nPets: Not Allowed\nGated Community")
+    integration_source = "Semi Furnished 3 BHK with 3 Bathrooms & 2 Balconies\nPets: Not Allowed\nGated Community"
+    case = pipeline.deterministic(integration_source)
     integration = {
         "internal_property_type": case.get("internal_property_type") == "Gated Community",
         "balconies": case.get("balconies") == "2",
