@@ -1,8 +1,58 @@
 # Google Maps
 
-Reusable technical capability for Maps URL extraction and Google Geocoding resolution.
+Reusable technical capability for Google Maps URL extraction and Geocoding resolution.
 
-Modules own property/business decisions; this package owns API transport and normalized resolution.
+## Responsibility boundary
+
+- `shared/google_maps/` owns URL grammar, short-link handling, network expansion, and normalized Maps resolution.
+- Inventory owns when Maps is required and how verified Maps results affect business fields.
+- Deterministic extraction treats `raw_message_text` as authoritative and never uses persisted Sheet values as extraction input.
+
+## Supported source URL forms
+
+The deterministic extractor accepts:
+
+- `maps.app.goo.gl`
+- `goo.gl`
+- `maps.google.com`
+- `www.google.com/maps`
+- `share.google`
+
+`share.google` is an official Google short-link domain. Google documents that the Google app can generate short links such as `share.google`, and that clicking one redirects into the Google app. citeturn0search3turn0search4
+
+The extractor only identifies the URL. It does not perform network expansion at the deterministic extraction boundary.
+
+## Resolution model
+
+Google Maps handling has two distinct operations:
+
+1. **Extract** the exact Maps URL present in `raw_message_text`.
+2. **Resolve/enrich** that URL when runtime/network access is available.
+
+Short links are expanded by `GoogleMapsClient.expand()` when possible. The resolved URL is then converted into a Geocoding query using coordinates, a place path, or supported query parameters. Verified results can provide canonical Maps URL, formatted address, locality, pincode, coordinates, and confidence.
+
+This separation is intentional: a network redirect must never be required merely to recognize a source URL.
+
+## Inventory contract
+
+`google_maps_url` is a deterministic source field because the URL itself is present in `raw_message_text`.
+
+A `📍 Name:` marker followed by a Maps URL produces a society/property-name candidate plus a Maps URL candidate.
+
+A `📍 Landmark:` marker followed by a Maps URL must leave `landmark` blank and place the URL in `google_maps_url`.
+
+Verified Maps enrichment may replace locality and provide pincode, but failure to run enrichment does not invalidate correct source locality extraction.
+
+## Current audit state — 2026-09-15
+
+The deterministic repository audit has 35 deterministic-scope fields:
+
+- 34 GREEN
+- 0 YELLOW
+- 1 RED: `google_maps_url`
+- 13 SYSTEM / OUT OF SCOPE
+
+The remaining RED is specifically the live 25-row projection result for Maps URL population. The current code already recognizes `share.google`; the required next evidence is the same read-only rows 2–26 audit executed from the current merged `main` commit. The field can move only from RED to GREEN when that evidence confirms the source URL is projected correctly, or remain RED if the contract test still fails.
 
 ## Authentication
 
@@ -19,47 +69,10 @@ Credential priority:
 
 The raw API key MUST NOT be stored in Git.
 
-The current key belongs to the Google Cloud project `easyfind-automations`, is identified in the non-secret registry as `Google Maps Key`, and is restricted to `geocoding-backend.googleapis.com`.
+## Runtime acceptance
 
-## Runtime behaviour
+Previously completed runtime probes established live Maps API access for the verified credential, including address resolution and the Inventory Stage-2 application path. These probes are separate from the current deterministic projection RED and do not by themselves promote `google_maps_url` to GREEN.
 
-The adapter uses the Google Geocoding API endpoint:
-
-`https://maps.googleapis.com/maps/api/geocode/json`
-
-A missing credential returns `NEEDS_RUNTIME_VERIFICATION`; an empty result returns `NOT_FOUND`; a Google partial match returns `PARTIAL_MATCH`; a normal resolved result returns `VERIFIED`.
-
-The adapter accepts:
-
-- `maps.app.goo.gl`
-- `goo.gl`
-- `maps.google.com`
-- `www.google.com/maps`
-- `maps.google.com`
-
-Short links are expanded when possible. URL queries may resolve from coordinates, `/maps/place/...`, or `q`/`query`/`destination` parameters. Address-only resolution is also supported.
-
-`MapsResolution` is the normalized result containing `canonical_url`, `formatted_address`, `locality`, `pincode`, `latitude`, `longitude`, and `confidence`.
-
-`GoogleMapsClient.resolve()` is intentionally keyword-only: use `resolve(maps_url=..., address=...)`.
-
-For verified results, the canonical URL is generated from returned coordinates and `place_id` when available.
-
-## Inventory integration boundary
-
-Inventory Management owns when Maps is required. In Stage 2, `process_closed_session()` resolves a supplied/extracted Maps URL after deterministic extraction/normalization. A `VERIFIED` result updates `google_maps_url`, `locality`, and `pincode`. Other Maps confidence states are recorded according to the Inventory processing contract and are not deterministic source-extraction failures.
-
-Maps is a Stage-2 processing sub-step, not a separate top-level stage.
-
-## Verified runtime acceptance
-
-The following application-path probes passed without exposing the key:
-
-- Keychain credential loaded successfully.
-- Address resolution for `Harlur, Bengaluru, Karnataka` returned `VERIFIED` with coordinates.
-- A Google Maps search URL resolved to HSR Layout, Bengaluru, pincode `560102`, with `VERIFIED` confidence.
-- The actual Inventory Stage-2 `process_closed_session()` path consumed the Maps result successfully and populated `locality`, `pincode`, and canonical `google_maps_url`.
-
-These probes establish live Maps API access for the verified credential at the time of testing; they do not authorize storing the secret in the repository.
+Google's supported Maps URL model uses explicit universal Maps URL forms and does not require an API key merely to construct or launch a Maps URL. citeturn0search0
 
 See `CREDENTIALS.md` for the non-secret credential registry.
