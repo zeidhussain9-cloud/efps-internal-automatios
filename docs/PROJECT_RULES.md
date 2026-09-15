@@ -34,6 +34,12 @@ The completed `raw_message_text` is the authoritative deterministic extraction s
 
 Inventory raw sessions can contain multiple concatenated WhatsApp messages. `modules/efps-inventory-mgmnt/src/source_segments.py` is the canonical segmentation primitive. Labelled-field extraction must operate on one source unit at a time so a field cannot consume a later message. A recurring extraction defect must be fixed at the canonical source-boundary or field-contract level and must include a regression fixture for the triggering source shape; isolated one-off regex patches are not sufficient.
 
+### Canonical field-resolution boundary
+
+`modules/efps-inventory-mgmnt/src/field_resolution.py` is the sole deterministic candidate-resolution layer. Extractors discover candidates; the resolver chooses the authoritative source candidate; normalization canonicalizes the chosen result. No downstream normalization function may independently reclassify a resolved deterministic field. Existing Sheet values are never candidates. Later explicit source corrections supersede earlier values; explicit negative gating cannot be overridden by generic positive wording.
+
+The three fields that previously produced recurring populated conflicts are governed explicitly: BHK preserves decimals and resolves later explicit corrections; maintenance requires maintenance-specific context and preserves qualifiers such as `+ Water`; internal property type has one canonical resolver for Gated Community, Semi Gated, and Standalone.
+
 ## Cloudinary
 
 `shared/cloudinary/` provides technical media storage/upload capabilities. Business modules decide which media is stored and why. The shared implementation uses deterministic property/lead namespaces, non-overwriting uploads, stable secure URLs, and optional media fingerprints.
@@ -72,4 +78,4 @@ Inventory raw sessions can contain multiple concatenated WhatsApp messages. `mod
 
 ## Validation
 
-A change is complete only when the applicable implementation, verification, validation, and documentation checks are complete and there are no known contradictions with repository truth.
+A change is complete only when the applicable implementation, verification, validation, and documentation checks are complete and there are no known contradictions with repository truth. The read-only model audit must report populated source conflicts separately from expected projections and must exit non-zero when true populated conflicts or protected-column changes remain.
