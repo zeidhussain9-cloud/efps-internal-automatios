@@ -7,7 +7,7 @@ NUMERIC_FIELDS={"pincode","built_up_area","carpet_area","age_of_property_years",
 SEMI_FURNISHED_DEFAULTS=("Wardrobe","Modular Kitchen","Geyser","Fan","Light")
 FULLY_FURNISHED_DEFAULTS=SEMI_FURNISHED_DEFAULTS+("Fridge","Washing Machine","TV","Sofa","Bed","Dining Table")
 CARPET_RATIO=0.90
-PORTAL_SUBTYPE_MAP={"Triplex Villa":"Villa","Complex Villa":"Villa","Villa Complex":"Villa","Triplex":"Independent House","Builder Floor":"Independent Floor","Independent Building":"Independent House"}
+PORTAL_SUBTYPE_MAP={"Triplex Villa":"Villa","Complex Villa":"Villa","Villa Complex":"Villa","Duplex Villa":"Villa","Triplex":"Independent House","Builder Floor":"Independent Floor","Independent Building":"Independent House"}
 NO_FLOOR_SUBTYPES={"Villa","Independent House","Farm House","Duplex"}
 GATED_COMMUNITY_DEFAULTS=("Club House","Lift","Gym","CCTV","Power Backup","Swimming Pool","Garden","Sports","Kids Area")
 SEMI_GATED_AMENITIES=("Security","Lift","CCTV","Power Backup")
@@ -20,7 +20,7 @@ _SLACK_LINK=re.compile(r"^<(?P<url>[^|>]+)(\|[^>]*)?>$")
 _PLACEHOLDERS={"*","-","—","n/a","na","none","not available","not mentioned","nil"}
 _YES_VALUES={"yes","y","true","1","allowed"}
 _NO_VALUES={"no","n","false","0","not allowed","not permitted","none"}
-_STANDALONE_WORDS=re.compile(r"\b(villa|independent house|independent floor|builder floor|farm ?house|duplex|triplex|penthouse|studio)\b",re.I)
+_STANDALONE_WORDS=re.compile(r"\b(independent\s+house|independent\s+floor|builder\s+floor|farm ?house|stand[-\s]*alone)\b",re.I)
 
 
 def strip_slack_markup(value:str)->str:
@@ -39,6 +39,7 @@ def normalize_maintenance(value:str)->str:
     raw=str(value or "").strip()
     if not raw:return ""
     if raw.lower()=="included":return "0"
+    if re.fullmatch(r"included\s*\+\s*(?:water|water\s*charges?)",raw,re.I):return "Water Charges Additional"
     m=_MAINT_NUMERIC.fullmatch(raw)
     if not m:return re.sub(r"(?<=\d),(?=\d)","",raw)
     n=float(m.group(1).replace(",","")); unit=(m.group(2) or "").lower()
@@ -93,9 +94,16 @@ def _canonical_subtype(value:str)->str:
 
 def default_property_subtype(row:dict,raw_text:str)->dict:
     explicit=_canonical_subtype(row.get("property_subtype","")); row["property_subtype"]=explicit
-    if explicit or not str(row.get("floor_number","")).strip():return row
-    if _STANDALONE_WORDS.search(raw_text or ""):return row
-    row["property_subtype"]="Apartment"; return row
+    if explicit:return row
+    # EFPS portal usage: Studio is only for 1 RK; villas remain Villa; normal
+    # apartment/building inventory uses Apartment when no non-apartment subtype
+    # is explicitly present. Standalone wording alone must not force a blank.
+    if re.search(r"\b(?:1\s*[- ]?\s*rk|studio)\b",raw_text or "",re.I):row["property_subtype"]="Studio"
+    elif re.search(r"\b(?:duplex\s+)?villa\b",raw_text or "",re.I):row["property_subtype"]="Villa"
+    elif _STANDALONE_WORDS.search(raw_text or ""):
+        return row
+    else:row["property_subtype"]="Apartment"
+    return row
 
 
 def floor_for_standalone(row:dict)->dict:
@@ -109,9 +117,11 @@ def _fallback_location(row:dict)->str:
 
 
 def apply_location_fallbacks(row:dict)->dict:
+    # Society fallback is intentionally last-resort. It is called only after
+    # Maps enrichment in the production path. Landmark must never inherit
+    # locality because the fields have different business meanings.
     location=_fallback_location(row)
     if not _usable(row.get("society_name","")) and location:row["society_name"]=location
-    if not _usable(row.get("landmark","")) and location:row["landmark"]=location
     return row
 
 
@@ -184,7 +194,12 @@ def normalize(row:dict,raw_text:str="",*,resolved_internal_property_type:str="")
         if out.get(field):out[field]=clean_number(out[field])
     if out.get("security_deposit"):out["security_deposit"]=resolve_deposit(row.get("security_deposit",""),out.get("monthly_rent",""))
     if out.get("maintenance"):out["maintenance"]=normalize_maintenance(out["maintenance"])
-    if out.get("maintenance_included","").lower()=="yes":out["maintenance_included"]="Yes";out["maintenance"]="0"
+    if out.get("maintenance_included","").lower()=="yes":
+        out["maintenance_included"]="Yes"
+        if out.get("maintenance","").strip().lower() in {"included","included + water","included + water charges"}:
+            out["maintenance"]="Water Charges Additional" if "water" in out["maintenance"].lower() else "0"
+        elif not out.get("maintenance"):
+            out["maintenance"]="0"
     elif out.get("maintenance_included","").lower()=="no":out["maintenance_included"]="No"
     val=out.get("BHK","")
     if val.lower()=="studio" or re.fullmatch(r"1\s*[- ]?\s*rk",val,re.I):out["BHK"]="1 RK"
@@ -206,7 +221,6 @@ def normalize(row:dict,raw_text:str="",*,resolved_internal_property_type:str="")
     apply_parking_defaults(out)
     out["pet_friendly"]=_pet_value(raw_text)
     apply_tenant_bachelor_rule(out,raw_text);normalize_bachelor_preference(out)
-    apply_location_fallbacks(out)
     fragments=construct_deterministic_highlights(out,raw_text,original_subtype)
     if fragments and not _usable(out.get("property_highlights","")):out["property_highlights"]=" | ".join(fragments)
     if not _usable(out.get("catalog_title","")):out["catalog_title"]=build_catalog_title(out)
