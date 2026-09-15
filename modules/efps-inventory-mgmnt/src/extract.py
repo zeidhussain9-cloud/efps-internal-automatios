@@ -18,10 +18,14 @@ def _clean_source_value(value: str) -> str:
     return value.strip(" -–—")
 
 
+# Raw inventory sessions concatenate timestamped WhatsApp messages. A field value
+# must stop at the next message marker as well as a line/HTML break; otherwise a
+# direct field can absorb subsequent messages and become unusable.
+_NEXT_MESSAGE = r"(?=\s*(?:\[(?:\d{4}[-/]\d{1,2}[-/]\d{1,2})[^\]]*\]|(?:\d{4}[-/]\d{1,2}[-/]\d{1,2}[ T]\d{1,2}:\d{2}(?::\d{2})?))|$)"
+
+
 def _line_value(text: str, label: str) -> str:
-    # Intake raw_text prefixes each message with [timestamp] [message_id],
-    # so the field label is not necessarily at the beginning of the line.
-    pattern = rf"\b{label}\b\s*(?::|[-–—])\s*(.*?)(?=(?:<br\s*/?>)|\n|$)"
+    pattern = rf"\b{label}\b\s*(?::|[-–—|=])\s*(.*?)(?=(?:<br\s*/?>)|\n|{_NEXT_MESSAGE})"
     match = re.search(pattern, text, re.I)
     return _clean_source_value(match.group(1)) if match else ""
 
@@ -75,10 +79,13 @@ def scan(text: str) -> dict[str, str]:
         if m: out[key] = m.group(1)
 
     direct = {
-        "internal_property_type": _first_line_value(text, (r"internal\s*property\s*type", r"property\s*type", r"type")),
-        "society_name": _first_line_value(text, (r"society\s*name", r"society")),
+        # Keep these labels specific. A generic "type:" match can capture an
+        # unrelated phrase and incorrectly turn a valid property into a gated
+        # classification during normalization.
+        "internal_property_type": _first_line_value(text, (r"internal\s*property\s*type", r"property\s*type", r"property\s*classification", r"gating\s*type")),
+        "society_name": _first_line_value(text, (r"society\s*name", r"society", r"apartment\s*name", r"community\s*name", r"building\s*name")),
         "landmark": _first_line_value(text, (r"landmark",)),
-        "locality": _first_line_value(text, (r"location", r"locality", r"area")),
+        "locality": _first_line_value(text, (r"property\s*location", r"location", r"locality", r"area")),
         "property_subtype": _first_line_value(text, (r"property\s*subtype", r"subtype")),
         "property_highlights": _first_line_value(text, (r"property\s*highlights", r"highlights")),
         "age_of_property_years": _first_line_value(text, (r"age\s*of\s*property", r"property\s*age")),

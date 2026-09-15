@@ -16,21 +16,25 @@ The completed `raw_message_text` is the only extraction source. Existing Sheet v
 
 ### Direct fields
 
-- `internal_property_type`: extract the explicit source field first. Accept common `:` or `-` label separators. Normalize to `Gated Community`, `Semi Gated`, or `Standalone`. If the explicit field is absent, semi-gated wording wins, then gated-community/society wording, otherwise Standalone.
-- `society_name`: use the directly supplied society name. Strip presentation-only markdown. Placeholder-only values such as `*` or `-` count as blank. If blank, use the resulting location/locality.
+- `internal_property_type`: extract the explicit source field first. Accept `:`, `-`, `|`, or `=` label separators. Normalize to `Gated Community`, `Semi Gated`, or `Standalone`. If the explicit field is absent, semi-gated wording wins, then explicit gated-community/society/property wording, then explicit standalone-property wording, otherwise Standalone.
+- `society_name`: use the directly supplied society name. Also accept apartment/community/building-name labels. Strip presentation-only markdown. Placeholder-only values such as `*` or `-` count as blank. If blank, use the resulting location/locality.
 - `landmark`: use the directly supplied landmark. Strip presentation-only markdown. Placeholder-only values such as `*` or `-` count as blank. If blank, use the resulting location/locality.
-- `locality`: use explicit `Location`, `Locality`, or `Area`; a verified Maps locality may replace it.
+- `locality`: use explicit `Property Location`, `Location`, `Locality`, or `Area`; a verified Maps locality may replace it.
 - `property_subtype`: use explicit subtype and normalize supported aliases. If absent, default to Apartment only for a normal floor-bearing apartment-style record; standalone-property wording does not invent Apartment.
 - `property_highlights`: preserve explicit highlights. Otherwise construct only factual deterministic fragments supported by the source, such as Utility area, supported subtype alias wording, multiple-unit/floor availability, or RK wording.
 - `catalog_title`: construct a factual fallback from furnishing type, BHK, and location when blank. AI may rewrite wording only.
 - `age_of_property_years`: populate only from an explicit/authoritative property-age fact; otherwise blank. Do not infer it from Maps.
+
+### Timestamped raw-message parsing
+
+Inventory sessions may concatenate multiple WhatsApp messages with timestamp markers. Direct-field extraction must terminate at the next timestamped message as well as at newline/HTML breaks. This prevents a field such as `Society Name` or `Property Type` from absorbing later messages. Timestamped direct-field regression coverage is required for changes to this parser.
 
 ### Core rules
 
 - Decimal BHK values such as `2.5 BHK` are preserved.
 - `G`/`Ground` floor normalizes to `0`.
 - Carpet area defaults to 90% of built-up area when carpet area is blank.
-- Maintenance is read directly from source. Numeric `k`/lakh values normalize to rupees; mixed values such as `2777 + Water` preserve the stated suffix. `Included` means maintenance `0` and `maintenance_included = Yes`.
+- Maintenance is read directly from source. Numeric `k`/lakh values normalize to rupees; mixed values such as `2777 + Water` preserve the stated suffix. `Included` means maintenance `0` and `maintenance_included = Yes`. A model-vs-sheet difference caused solely by the existing Sheet storing only the numeric component is not an extraction defect.
 - Deposit expressed in months is calculated from monthly rent.
 - Semi Furnished and Fully Furnished receive deterministic furnishing defaults only when explicit furnishings are absent. Unfurnished source wording leaves furnish fields blank because the live Sheet has no Unfurnished value.
 - `servant_room` is `Yes` only when explicitly stated; otherwise `No`.
