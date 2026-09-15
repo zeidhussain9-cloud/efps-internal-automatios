@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from src import batch
-from src.pipeline import initial_row
+from src.pipeline import initial_row, process_phase1
 from shared.google_sheets import schema
 
 
@@ -17,6 +17,14 @@ class FakeBatchClient:
 
     def write_ranges(self, spreadsheet_id, worksheet_name, updates):
         self.writes.append(updates)
+
+
+def test_phase1_fixture_is_validation_clean():
+    row = initial_row("EF-TEST-BATCH", raw_text="2 BHK\nRent: 40000\nProperty Type: Gated Community\nLocation: Harlur")
+    result = process_phase1(row["raw_message_text"], row=row)
+    assert result.issues == (), result.issues
+    assert result.row["status"] == "Pending"
+    assert result.row["intake_status"] == "Processed"
 
 
 def test_batch_phase1_uses_one_read_and_one_batch_write():
