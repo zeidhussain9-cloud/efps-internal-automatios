@@ -97,6 +97,14 @@ def scan(text: str) -> dict[str, str]:
         m = re.search(pat, text, re.I)
         if m: out[key] = m.group(1)
 
+    # A singular, explicitly mentioned "Balcony" means one balcony when no
+    # numeric balcony count was supplied. Negative wording must not invent one.
+    if "balconies" not in out:
+        has_negative_balcony = re.search(r"\b(?:no|without)\s+(?:a\s+)?balcony\b", text, re.I)
+        has_singular_balcony = re.search(r"\b(?:with\s+)?balcony\b", text, re.I)
+        if has_singular_balcony and not has_negative_balcony:
+            out["balconies"] = "1"
+
     marker_society, marker_landmark, marker_maps = _marker_candidates(text)
     society=_first_line_value(text, (r"society\s*name", r"society", r"apartment\s*name", r"community\s*name", r"building\s*name")) or marker_society
     landmark=_first_line_value(text, (r"landmark",)) or marker_landmark
