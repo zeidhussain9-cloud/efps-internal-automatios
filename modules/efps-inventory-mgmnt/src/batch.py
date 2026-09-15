@@ -1,25 +1,16 @@
-"""Deterministic-first Phase-1 batch runner for existing inventory rows."""
+"""Quota-safe, resumable Phase-1 runner for existing inventory rows."""
 from __future__ import annotations
 
 from shared.google_sheets import schema
 from shared.google_sheets.client import GoogleSheetsClient
-from shared.google_maps import GoogleMapsClient
 
-from .pipeline import process_closed_session, write_phase1_update
+from .pipeline import phase1_ranges_for_row, process_phase1
 
 RAW = "Raw"
 NEEDS_REVIEW = "Needs Review"
-
-# These columns belong to downstream/lifecycle owners and must survive every
-# Inventory Phase-1 processing pass unchanged.
 PROTECTED_FIELDS = (
-    "listing_state",
-    "posted_url",
-    "posted_at",
-    "error_notes",
-    "meta_catalog_id",
-    "meta_catalog_status",
-    "inventory_locked",
+    "listing_state", "posted_url", "posted_at", "error_notes",
+    "meta_catalog_id", "meta_catalog_status", "inventory_locked",
 )
 
 
@@ -32,47 +23,35 @@ def eligible(row: dict) -> bool:
 
 
 def _assert_protected_fields_unchanged(before: dict, after: dict, row_number: int) -> None:
-    changed = [
-        field for field in PROTECTED_FIELDS
-        if str(before.get(field, "")) != str(after.get(field, ""))
-    ]
+    changed = [field for field in PROTECTED_FIELDS if str(before.get(field, "")) != str(after.get(field, ""))]
     if changed:
-        raise PermissionError(
-            f"row {row_number}: Stage-3 protected fields changed: {', '.join(changed)}"
-        )
+        raise PermissionError(f"row {row_number}: Stage-3 protected fields changed: {', '.join(changed)}")
+
+
+def _field_report(result: dict) -> dict:
+    report = result.get("report", {})
+    return {
+        "populated": report.get("populated_fields", []),
+        "blank": report.get("blank_fields", []),
+        "unresolved": report.get("unresolved_fields", []),
+        "review_flags": report.get("review_flags", []),
+        "trace": report.get("trace", {}),
+    }
 
 
 def run(
     client: GoogleSheetsClient,
     *,
-    maps_client=None,
-    ai_llm=None,
+    start_row: int = 2,
+    end_row: int | None = None,
     limit: int | None = None,
 ) -> dict:
-    """Process all eligible rows and write only Stage-1/2-owned columns."""
-    return run_range(
-        client,
-        start_row=2,
-        end_row=None,
-        maps_client=maps_client,
-        ai_llm=ai_llm,
-        limit=limit,
-    )
+    """Process a bounded sheet range through the canonical Phase-1 runner.
 
-
-def run_range(
-    client: GoogleSheetsClient,
-    *,
-    start_row: int,
-    end_row: int | None,
-    maps_client=None,
-    ai_llm=None,
-    limit: int | None = None,
-) -> dict:
-    """Process an explicit sheet row range, e.g. rows 2 through 26.
-
-    Rows outside the supplied range are not read or written. Ineligible rows
-    inside the range are reported as skipped rather than treated as failures.
+    The function performs one read and one batch write for the whole run. A
+    failed write leaves eligible rows Raw/Raw so the same command can be safely
+    rerun; already Processed rows are skipped. No Maps network call or AI call
+    is made by this batch path.
     """
     if start_row < 2:
         raise ValueError("start_row must be >= 2")
@@ -82,25 +61,20 @@ def run_range(
         raise ValueError("limit must be >= 0")
 
     final_row = end_row if end_row is not None else None
-    read_range = (
-        f"A{start_row}:AV{final_row}"
-        if final_row is not None
-        else f"A{start_row}:AV"
-    )
+    read_range = f"A{start_row}:AV{final_row}" if final_row is not None else f"A{start_row}:AV"
     values = client.read_range(schema.SHEET_ID, schema.WORKSHEET_NAME, read_range)
 
-    processed = 0
-    needs_review = 0
-    skipped = 0
+    considered = processed = needs_review = skipped = 0
     errors: list[str] = []
     row_results: list[dict] = []
-    considered = 0
+    writes: list[tuple[str, list[list[str]]]] = []
+    pending_rows: list[tuple[int, dict, dict, list[str]]] = []
 
     for offset, raw_values in enumerate(values):
         row_number = start_row + offset
         if len(raw_values) != schema.GRID_WIDTH:
             errors.append(f"row {row_number}: invalid width {len(raw_values)}")
-            row_results.append({"row": row_number, "result": "error"})
+            row_results.append({"row": row_number, "result": "error", "error": "invalid width"})
             continue
 
         row = schema.row_to_mapping(raw_values)
@@ -118,29 +92,12 @@ def run_range(
         considered += 1
         listing_id = str(row.get("listing_id", row_number)).strip()
         try:
-            updated, issues = process_closed_session(
-                str(row.get("raw_message_text", "")),
-                row=row,
-                maps_client=maps_client or GoogleMapsClient(),
-                ai_llm=ai_llm,
-            )
+            result = process_phase1(str(row.get("raw_message_text", "")), row=row)
+            updated = result.row
+            issues = list(result.issues)
             _assert_protected_fields_unchanged(row, updated, row_number)
-            write_phase1_update(client, row_number, updated)
-
-            if str(updated.get("status", "")) == NEEDS_REVIEW:
-                needs_review += 1
-                result = "needs_review"
-            else:
-                processed += 1
-                result = "processed"
-
-            errors.extend(f"{listing_id}: {issue}" for issue in issues)
-            row_results.append({
-                "row": row_number,
-                "listing_id": listing_id,
-                "result": result,
-                "issues": issues,
-            })
+            writes.extend(phase1_ranges_for_row(row_number, updated))
+            pending_rows.append((row_number, updated, _field_report(result), issues))
         except Exception as exc:
             errors.append(f"{listing_id}: {type(exc).__name__}: {exc}")
             row_results.append({
@@ -150,6 +107,41 @@ def run_range(
                 "error": f"{type(exc).__name__}: {exc}",
             })
 
+    write_error = None
+    if writes:
+        try:
+            client.write_ranges(schema.SHEET_ID, schema.WORKSHEET_NAME, writes)
+        except Exception as exc:
+            write_error = f"{type(exc).__name__}: {exc}"
+            errors.append(f"batch write failed; no Phase-1 rows were confirmed: {write_error}")
+
+    if write_error is None:
+        for row_number, updated, field_report, issues in pending_rows:
+            listing_id = str(updated.get("listing_id", row_number)).strip()
+            if str(updated.get("status", "")) == NEEDS_REVIEW:
+                needs_review += 1
+                result_name = "needs_review"
+            else:
+                processed += 1
+                result_name = "processed"
+            errors.extend(f"{listing_id}: {issue}" for issue in issues)
+            row_results.append({
+                "row": row_number,
+                "listing_id": listing_id,
+                "result": result_name,
+                "issues": issues,
+                "fields": field_report,
+            })
+    else:
+        for row_number, updated, field_report, issues in pending_rows:
+            row_results.append({
+                "row": row_number,
+                "listing_id": str(updated.get("listing_id", row_number)).strip(),
+                "result": "write_failed",
+                "issues": issues,
+                "fields": field_report,
+            })
+
     return {
         "start_row": start_row,
         "end_row": end_row,
@@ -157,6 +149,7 @@ def run_range(
         "processed": processed,
         "needs_review": needs_review,
         "skipped": skipped,
+        "write_failed": bool(write_error),
         "errors": errors,
         "rows": row_results,
     }
