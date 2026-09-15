@@ -44,6 +44,9 @@ def deterministic(raw_text:str, row:dict|None=None) -> dict:
     base.update(extract.scan(raw_text))
     base["internal_property_type"]=resolve_internal_property_type(raw_text)
     base=normalize.normalize(base,raw_text, resolved_internal_property_type=base["internal_property_type"])
+    # Location fallback is part of the deterministic projection itself so every
+    # downstream caller receives the same final society/location contract.
+    normalize.apply_location_fallbacks(base)
     return base
 
 
