@@ -30,11 +30,12 @@ Stage-2 items are processing sub-steps, not separate top-level stages. Google Sh
 - Carpet area derives to 90% of built-up area when carpet is blank.
 - Maintenance included normalizes to `0`; stated nonnumeric maintenance text is preserved otherwise.
 - Month-based deposits are calculated from monthly rent.
-- Furnishing defaults and explicit-furnishing precedence are deterministic.
+- `Fully Furnished` and `Semi Furnished` have deterministic furnishing defaults only when explicit furnishings are absent.
+- Source text indicating `Unfurnished` does not create a third furnish type; both `furnish_type` and `flat_furnishings` remain blank, matching the live Sheet contract.
 - Property subtype aliases normalize to the canonical subtype vocabulary.
 - Internal property type is limited to `Gated Community`, `Semi Gated`, and `Standalone`, with classification driven by verified source wording and documented fallback behavior.
 - Gated/semi-gated amenity defaults do not by themselves prove that a property is gated.
-- Family/family-only tenant preference sets `bachelor_preference = Not Allowed` only when no explicit bachelor value is present.
+- Family/family-only tenant preference sets the current internal bachelor fallback to `Not Allowed` only when no explicit bachelor value is present; this outcome is not currently present in the live Sheet dropdown and remains an open reconciliation item.
 - Deterministic extraction uses completed `raw_message_text`, not prior canonical Sheet values.
 
 ## Canonical sheet
@@ -42,6 +43,27 @@ Stage-2 items are processing sub-steps, not separate top-level stages. Google Sh
 `Housing_Listings` is exactly 48 columns A:AV in the latest supplied order. `shared/google_sheets/schema.py` is the canonical physical contract. Stage-1/2 writes are restricted to A:D, F:AO, and AU. E (`listing_state`), AP:AT, and AV (`inventory_locked`) are protected from this path.
 
 The production read and write boundary have been verified. No Stage-3 field is permitted through the Stage-1/2 writer.
+
+### Verified live dropdown/value contract
+
+Read-only production inspection established:
+
+- D `internal_property_type`: `Gated Community`, `Semi Gated`, `Standalone`.
+- M `furnish_type`: `Fully Furnished`, `Semi Furnished`.
+- Y `preferred_tenant_type`: `Family`, `Open For All`.
+- Z `bachelor_preference`: exact observed values `Female Only `, `Male Only`, `Open for both`; the first value contains a trailing space.
+- AA `pet_friendly`: no Sheet data-validation rule; populated values observed are `Yes` and `No`.
+- AE `society_amenities`: `Security, Lift, CCTV, Power Backup`; `Club House, Lift, Gym, CCTV, Power Backup, Swimming Pool, Garden, Sports, Kids Area`; `-`.
+- AF `flat_furnishings`: `Wardrobe, Modular Kitchen, Geyser, Fan, Light`; `Wardrobe, Modular Kitchen, Geyser, Fan, Light, Fridge, Washing Machine, TV, Sofa, Bed, Dining Table`.
+
+D, M, Y, Z, AE, and AF use strict `ONE_OF_LIST` validation with custom UI enabled. No conditional/row-dependent dropdown validation was observed; the relationships among these fields are application/business dependencies.
+
+### Verified business dependencies
+
+- `internal_property_type` → `society_amenities` for deterministic amenity tiers when amenities are blank. Exact live Sheet amenity combinations do not yet match the deterministic tier strings and remain an open reconciliation item.
+- `furnish_type` → `flat_furnishings` for deterministic furnishing defaults when furnishings are blank.
+- `preferred_tenant_type` → `bachelor_preference` for family/bachelor normalization; the current `Not Allowed` internal outcome does not match the live Sheet dropdown and remains open.
+- `maintenance_included` ↔ `maintenance` and `monthly_rent` → `security_deposit` are deterministic dependencies.
 
 ## Google Maps verified state
 
@@ -98,9 +120,11 @@ The shared Cloudinary application path has passed live Inventory Phase-1 upload 
 See `docs/OPEN_POINTERS.md`. The current unresolved items are:
 
 1. Slack production runtime acceptance.
-2. Exact Google Sheet dropdown vocabularies for `preferred_tenant_type`, `bachelor_preference`, and `pet_friendly`.
-3. Exact `inventory_locked` sheet control vocabulary.
-4. Decide and verify whether the explicit WhAPI user-agent required by the successful Cloudflare diagnostic should become part of the canonical `WhApiClient` transport contract.
+2. Exact `inventory_locked` sheet control vocabulary.
+3. Decide and verify whether the explicit WhAPI user-agent required by the successful Cloudflare diagnostic should become part of the canonical `WhApiClient` transport contract.
+4. Reconcile the family/bachelor deterministic `Not Allowed` outcome with the live `bachelor_preference` Sheet vocabulary.
+5. Reconcile deterministic gated/semi-gated amenity default strings with the live `society_amenities` Sheet dropdown combinations.
+6. Explicitly decide how to treat the trailing space in the live `Female Only ` validation value.
 
 Future Meta Catalogue, Housing Portal, and website production integrations are outside the current Inventory Phase-1 pointer list.
 
