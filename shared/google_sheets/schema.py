@@ -56,7 +56,7 @@ _ROWS = [
 ("maintenance_included",PANEL,STAGE_2,("Yes","No"),(),"Interdependent with maintenance."),
 ("security_deposit",PANEL,STAGE_2,(),("monthly_rent",),"Explicit amount or explicitly stated months converted using rent."),
 ("preferred_tenant_type",PANEL,STAGE_2,("Family","Open For All"),(),"Exact live Sheet dropdown vocabulary; deterministic source variants normalized."),
-("bachelor_preference",PANEL,STAGE_2,("Female Only","Male Only","Open for both"),("preferred_tenant_type",),"Exact live Sheet dropdown vocabulary. Family clears this field; Open For All defaults exactly to Open for both unless explicit source evidence overrides it."),
+("bachelor_preference",PANEL,STAGE_2,("Female Only ","Male Only","Open for both"),("preferred_tenant_type",),"Exact live Sheet dropdown vocabulary. Family clears this field; Open For All defaults exactly to Open for both unless explicit source evidence overrides it."),
 ("pet_friendly",PANEL,STAGE_2,("Yes","No"),(),"Explicit no-pet wording → No; silence/no restriction → Yes last-resort."),
 ("servant_room",PANEL,STAGE_2,("Yes","No"),(),"Explicit source Yes only; otherwise No."),
 ("covered_parking",PANEL,STAGE_2,("0","1","2","3","3+"),("internal_property_type",),"Explicit source value wins; Gated Community/Semi Gated default to 1 when blank."),
@@ -116,7 +116,7 @@ def _check()->None:
     assert all(letter(k)==v for k,v in expected.items())
     assert writable_by(HOUSING_AGENT)==("posted_url","posted_at","error_notes")
     assert writable_by(META_CATALOG)==("meta_catalog_id","meta_catalog_status")
-    assert "Female Only" in BY_NAME["bachelor_preference"].allowed_values
-    assert "Female Only " not in BY_NAME["bachelor_preference"].allowed_values
+    assert "Female Only " in BY_NAME["bachelor_preference"].allowed_values
+    assert "Female Only" not in BY_NAME["bachelor_preference"].allowed_values
 
 _check()

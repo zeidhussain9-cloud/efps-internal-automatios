@@ -61,10 +61,10 @@ Google Maps is a Stage-2 sub-step, not a separate stage. Google Sheets is transp
 
 ## Deterministic audit status — 2026-09-15
 
-The current control state is 35 deterministic-scope fields: **34 GREEN, 0 YELLOW, 1 RED (`google_maps_url`)**, plus 13 SYSTEM / OUT OF SCOPE fields.
+The deterministic contract currently under final hardening contains 35 deterministic-scope fields. The intended accepted state is **35 GREEN, 0 YELLOW, 0 RED**, plus 13 SYSTEM / OUT OF SCOPE fields.
 
-The repository already contains the implementation fix for the observed `share.google` source URL form. The remaining acceptance step is the same read-only rows 2:26 projection from the current merged `main` commit. No unrelated GREEN field is to be reopened without independent regression evidence.
+The final hardening change synchronizes the live Sheet bachelor dropdown vocabulary, including the intentional trailing space in `Female Only `, across schema, normalization, validation, regression tests, and maintained documentation. The read-only 25-row projection and production contract gate remain required acceptance evidence from the resulting merged commit.
 
 ## Production status
 
-Repository/source hardening is maintained separately from live external-system verification. Inventory Phase-1 Google Sheets and Google Maps runtime probes have been completed successfully. The remaining deterministic extraction gate is specifically the `google_maps_url` projection evidence described above; it must not be promoted to GREEN solely because the code change exists. Other external integrations remain explicitly `NOT VERIFIED` until their applicable target-runtime acceptance probes succeed.
+Repository/source hardening is maintained separately from live external-system verification. Inventory Phase-1 Google Sheets and Google Maps runtime probes are separate acceptance boundaries. The deterministic regression suite and read-only 25-row projection/gate must pass from the resulting merged `main` commit before this state is accepted as production-ready.

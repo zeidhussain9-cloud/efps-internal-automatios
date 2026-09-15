@@ -102,17 +102,14 @@ Pincode is an enrichment field when it is not explicitly present in source text.
 
 ### Tenant eligibility dependency
 
-`preferred_tenant_type` is the parent field and `bachelor_preference` is its dependent field.
+`preferred_tenant_type` is the parent field and `bachelor_preference` is its dependent field. The live Sheet dropdowns are authoritative for exact values:
 
+- `preferred_tenant_type` = `Family` or `Open For All`.
 - `Family` -> `bachelor_preference` must be blank.
 - `Open For All` -> `bachelor_preference` defaults exactly to `Open for both`.
-- Explicit valid source evidence for bachelor preference overrides that default, preserving `Female Only` or `Male Only` when explicitly stated.
+- Explicit valid source evidence for `Female Only ` or `Male Only` overrides that default.
 
-The canonical Sheet vocabulary is exactly `Female Only`, `Male Only`, `Open for both`. The implementation must not carry the historical trailing-space variant `Female Only `.
-
-### Property highlights
-
-Explicit source highlights remain authoritative. When no explicit highlight exists, only supported deterministic factual fragments may be generated. Blank is valid when there is no supported fragment; this is not a parser failure.
+The canonical Sheet vocabulary is exactly `Female Only ` (with the trailing space present in the live dropdown), `Male Only`, and `Open for both`. The trailing space is intentional and is part of the exact Sheet contract. It must not be trimmed away when writing or validating the dependent dropdown value.
 
 ## Dependency graph
 
@@ -173,6 +170,7 @@ Every production extraction/resolution defect must have a fixture for the exact 
 - explicit positive and negative pet forms;
 - Sheet-independence;
 - dependent-value generation, including `Open For All -> Open for both`;
+- exact live bachelor dropdown values, including the intentional trailing space on `Female Only `;
 - non-blocking pincode absence;
 - valid blank property highlights;
 - validation of the normalized output shape.

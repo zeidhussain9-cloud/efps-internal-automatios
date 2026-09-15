@@ -48,13 +48,15 @@ A property-processing run may become `Needs Review` because of a blocking proper
 
 ## Dependency rule
 
-`bachelor_preference` is dependent on `preferred_tenant_type`:
+`preferred_tenant_type` is the parent field and has exactly two live Sheet dropdown values: `Family` and `Open For All`.
 
-- `Family` -> blank dependent value is valid.
-- `Open For All` -> default exactly to the Sheet dropdown value `Open for both`.
-- Explicit valid bachelor source evidence wins over the dependency default, so `Female Only` or `Male Only` remains authoritative when explicitly supplied.
+`bachelor_preference` is the dependent field and is governed as follows:
 
-The canonical dropdown vocabulary is exactly `Female Only`, `Male Only`, and `Open for both`. No alternate spelling, trailing-space variant, or invented value is permitted.
+- `Family` -> `bachelor_preference` must be blank.
+- `Open For All` -> default exactly to the Sheet dropdown value `Open for both` when no explicit bachelor source value exists.
+- Explicit valid bachelor source evidence wins over the dependency default: `Female Only ` or `Male Only` remains authoritative when explicitly supplied.
+
+The canonical dropdown vocabulary is exactly `Female Only ` (including the intentional trailing space), `Male Only`, and `Open for both`. The trailing space is part of the live Sheet value and must be preserved end-to-end. No alternate spelling or trimmed replacement is permitted.
 
 ## Governance
 
