@@ -12,22 +12,38 @@ def test_direct_property_type_wins_over_generic_wording():
     assert out["internal_property_type"] == "Semi Gated"
 
 
+def test_explicit_community_label_is_case_and_format_insensitive():
+    cases = {
+        "Community: Gated Community": "Gated Community",
+        "community: gated community": "Gated Community",
+        "COMMUNITY:GATED": "Gated Community",
+        "Community : GATED COMMUNITY": "Gated Community",
+        "Community: Semi Gated": "Semi Gated",
+        "community: semi-gated community": "Semi Gated",
+        "COMMUNITY: SEMIGATED": "Semi Gated",
+        "Community: Standalone": "Standalone",
+        "community: stand-alone": "Standalone",
+        "COMMUNITY: STAND ALONE": "Standalone",
+    }
+    for source, expected in cases.items():
+        out = deterministic(f"2 BHK\nRent: 40000\n{source}")
+        assert out["internal_property_type"] == expected
+
+
 def test_missing_property_type_remains_unresolved():
     out = deterministic("2 BHK\nRent: 40000\nLocation: Harlur")
     assert out["internal_property_type"] == ""
 
 
-def test_registry_is_consulted_without_fabricating_standalone():
-    registry = deterministic("2 BHK\nRent: 40000\nSociety: Prima Hi-Life")
-    unknown = deterministic("2 BHK\nRent: 40000\nSociety: Unknown Heights")
-    assert registry["internal_property_type"] == "Gated Community"
-    assert unknown["internal_property_type"] == ""
+def test_unknown_property_type_does_not_fabricate_standalone():
+    out = deterministic("2 BHK\nRent: 40000\nCommunity: gated-ish")
+    assert out["internal_property_type"] == ""
 
 
 def test_coupled_property_type_parking_amenities_state():
-    gated = deterministic("2 BHK\nRent: 40000\nProperty Type: Gated Community")
-    semi = deterministic("2 BHK\nRent: 40000\nProperty Type: Semi Gated")
-    standalone = deterministic("2 BHK\nRent: 40000\nProperty Type: Standalone")
+    gated = deterministic("2 BHK\nRent: 40000\nCommunity: Gated Community")
+    semi = deterministic("2 BHK\nRent: 40000\nCommunity: Semi Gated")
+    standalone = deterministic("2 BHK\nRent: 40000\nCommunity: Standalone")
     assert gated["covered_parking"] == "1"
     assert gated["open_parking"] == "-"
     assert gated["society_amenities"] == phase1.GATED_AMENITIES
@@ -40,27 +56,27 @@ def test_coupled_property_type_parking_amenities_state():
 
 
 def test_explicit_parking_counts_are_preserved():
-    out = deterministic("2 BHK\nRent: 40000\nProperty Type: Gated Community\n2 covered parking")
+    out = deterministic("2 BHK\nRent: 40000\nCommunity: Gated Community\n2 covered parking")
     assert out["covered_parking"] == "2"
 
 
 def test_landmark_uses_locality_final_fallback_and_never_maps_url():
-    fallback = deterministic("2 BHK\nRent: 40000\nLocation: Harlur")
-    maps_landmark = deterministic("2 BHK\nRent: 40000\nLocation: Harlur\nLandmark: https://maps.app.goo.gl/example")
+    fallback = deterministic("2 BHK\nRent: 40000\nCommunity: Gated Community\nLocation: Harlur")
+    maps_landmark = deterministic("2 BHK\nRent: 40000\nCommunity: Gated Community\nLocation: Harlur\nLandmark: https://maps.app.goo.gl/example")
     assert fallback["landmark"] == "Harlur"
     assert maps_landmark["landmark"] == "Harlur"
     assert maps_landmark["google_maps_url"] == "https://maps.app.goo.gl/example"
 
 
 def test_society_fallback_is_reported_for_later_review():
-    result = phase1.run_phase1("2 BHK\nRent: 40000\nProperty Type: Gated Community\nLocation: Harlur")
+    result = phase1.run_phase1("2 BHK\nRent: 40000\nCommunity: Gated Community\nLocation: Harlur")
     assert result.row["society_name"] == "Harlur"
     assert "society_name_locality_fallback" in result.report["review_flags"]
 
 
 def test_maps_url_extraction_is_deterministic_and_does_not_resolve_network():
     result = phase1.run_phase1(
-        "2 BHK\nRent: 40000\nProperty Type: Gated Community\nLocation: Harlur\n"
+        "2 BHK\nRent: 40000\nCommunity: Gated Community\nLocation: Harlur\n"
         "https://share.google/AbC123"
     )
     assert result.row["google_maps_url"] == "https://share.google/AbC123"
@@ -69,7 +85,7 @@ def test_maps_url_extraction_is_deterministic_and_does_not_resolve_network():
 
 def test_phase1_status_transition_happens_at_boundary():
     row = initial_row("EF-TEST-PHASE1")
-    result = phase1.run_phase1("2 BHK\nRent: 40000\nProperty Type: Gated Community\nLocation: Harlur", row=row)
+    result = phase1.run_phase1("2 BHK\nRent: 40000\nCommunity: Gated Community\nLocation: Harlur", row=row)
     assert result.row["intake_status"] == "Processed"
     assert result.row["status"] == "Pending"
 
@@ -138,7 +154,7 @@ def test_github_sheets_client_reuses_spreadsheet_and_worksheet():
 
 
 def test_phase1_report_exposes_populated_blank_unresolved_and_trace():
-    result = phase1.run_phase1("2 BHK\nRent: 40000\nProperty Type: Gated Community\nLocation: Harlur")
+    result = phase1.run_phase1("2 BHK\nRent: 40000\nCommunity: Gated Community\nLocation: Harlur")
     report = result.report
     assert "monthly_rent" in report["populated_fields"]
     assert "age_of_property_years" in report["blank_fields"]
@@ -147,5 +163,5 @@ def test_phase1_report_exposes_populated_blank_unresolved_and_trace():
 
 
 def test_phase1_output_is_exactly_48_fields():
-    result = phase1.run_phase1("2 BHK\nRent: 40000\nProperty Type: Gated Community\nLocation: Harlur")
+    result = phase1.run_phase1("2 BHK\nRent: 40000\nCommunity: Gated Community\nLocation: Harlur")
     assert tuple(result.row.keys()) == schema.NAMES

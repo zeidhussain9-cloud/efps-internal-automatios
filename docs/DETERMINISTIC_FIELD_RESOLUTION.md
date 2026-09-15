@@ -26,8 +26,7 @@ Extraction discovers source candidates. Resolution selects the authoritative can
 2. Explicit boolean/negative evidence where the field supports it.
 3. Specific deterministic wording.
 4. Generic wording.
-5. Explicitly adjudicated external/source registry when the field contract allows it.
-6. Declared fallback only when the contract explicitly permits a fallback.
+5. Declared fallback only when the contract explicitly permits a fallback.
 
 When the same field is explicitly corrected in a later source message, the later explicit value wins. An explicit negative gating statement is authoritative and cannot be overridden by later generic positive wording.
 
@@ -59,11 +58,17 @@ Only maintenance-labelled values or the specific `rent + maintenance` form can c
 - `Semi Gated`
 - `Standalone`
 
-The resolver is authoritative. Apartment subtype does not itself decide gated vs semi-gated. Resolution precedence is explicit source evidence, explicit negative evidence, specific/generic gating wording, then an independently adjudicated community/property registry when available.
+The primary source contract is an explicit classification line using `Community`, for example:
 
-`Gated: Community` and `Semi Gated: Community` are valid positive source forms. Explicit negative gating is authoritative. **Absence of gating evidence is not evidence of Standalone.** When there is no authoritative classification, the deterministic resolver returns blank/unresolved rather than fabricating `Standalone`. Downstream normalization must not invent a gated/standalone classification from the blank result.
+```text
+Community: Gated Community
+Community: Semi Gated
+Community: Standalone
+```
 
-The community registry is intentionally explicit and evidence-driven. It is not a generic "society name means gated" heuristic. `Prima Hi-Life` / `Prima Hilife` is currently adjudicated as `Gated Community` in `src/community_property_types.py`.
+The `Community` label and classification value are matched case-insensitively and tolerate ordinary whitespace and hyphenation variants such as `community:gated`, `semi-gated`, and `stand-alone`. Equivalent explicit labels such as `Property Type:` and `Gating Type:` remain supported. Canonical output is always exactly `Gated Community`, `Semi Gated`, or `Standalone`.
+
+Explicit gating wording is authoritative. Absence of gating evidence is not evidence of `Standalone`. An invalid or absent classification remains unresolved rather than being invented. Society/community names are never used to infer the internal property type.
 
 `internal_property_type` drives the default `society_amenities` bundle and the covered-parking default; therefore it is a parent business decision with downstream dependencies.
 
@@ -107,7 +112,7 @@ Pincode is an enrichment field when it is not explicitly present in source text.
 - `preferred_tenant_type` = `Family` or `Open For All`.
 - `Family` -> `bachelor_preference` must be blank.
 - `Open For All` -> `bachelor_preference` defaults exactly to `Open for both`.
-- Explicit valid source evidence for `Female Only ` or `Male Only` overrides that default.
+- Explicit valid source evidence for `Female Only ` or `Male Only` overrides the default.
 
 The canonical Sheet vocabulary is exactly `Female Only ` (with the trailing space present in the live dropdown), `Male Only`, and `Open for both`. The trailing space is intentional and is part of the exact Sheet contract. It must not be trimmed away when writing or validating the dependent dropdown value.
 
@@ -162,7 +167,7 @@ Every production extraction/resolution defect must have a fixture for the exact 
 - maintenance amount normalization;
 - maintenance included and included-plus-water semantics;
 - positive and negative gating evidence;
-- known community adjudication where source wording is insufficient;
+- case-insensitive and whitespace/hyphenation variants of the explicit `Community:` property-type source form;
 - `📍` society/property and landmark markers;
 - Maps URL extraction without network access;
 - locality extraction from explicit source labels;

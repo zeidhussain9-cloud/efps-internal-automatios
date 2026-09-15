@@ -7,7 +7,6 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 from .source_segments import split_source_messages
-from .community_property_types import resolve_known_community_property_type
 
 @dataclass(frozen=True)
 class Candidate:
@@ -34,7 +33,7 @@ def _label_candidates(text: str, label: str, field: str) -> list[Candidate]:
     return out
 
 def _community_name_candidates(text: str) -> list[Candidate]:
-    """Collect source community/property-name candidates without importing extract."""
+    """Collect source community/property-name candidates without external lookups."""
     out: list[Candidate] = []
     marker=re.compile(r"📍\s*([^:\n|]+?)\s*:\s*", re.I)
     for match in marker.finditer(text or ""):
@@ -80,27 +79,44 @@ def resolve_maintenance(text: str) -> tuple[str,str]:
     result=_scale_number(m.group(1),m.group(2)); suffix=_clean(m.group(3) or "")
     return (f"{result} + {suffix}" if suffix else result),"No"
 
+def _property_type_from_value(value: str) -> str:
+    """Normalize permitted human-entered classifications without case sensitivity."""
+    low = re.sub(r"\s+", " ", str(value or "").strip().lower()).replace("–", "-").replace("—", "-")
+    low = re.sub(r"\s*[-/]\s*", " ", low)
+    if low in {"gated", "gated community", "gatedcommunity"}: return "Gated Community"
+    if low in {"semi gated", "semi-gated", "semi gated community", "semi-gated community", "semigated", "semigated community"}: return "Semi Gated"
+    if low in {"standalone", "stand alone", "stand-alone", "stand alone property", "standalone property"}: return "Standalone"
+    return ""
+
 def resolve_internal_property_type(text: str) -> str:
-    """Resolve property type without inventing Standalone from missing evidence.
+    """Resolve only from explicit source classification/gating evidence.
 
-    Precedence is explicit source evidence, explicit negative evidence, specific
-    wording, an independently adjudicated community registry, then blank when
-    no authoritative classification exists. Blank means unresolved/enrichment-
-    owned; it is not evidence of Standalone.
+    Accepted classification labels are case-insensitive, including the
+    operator-approved forms `Community: Gated Community`, `Community: Semi
+    Gated`, and `Community: Standalone`. Missing or invalid evidence remains
+    unresolved; society names are never used to infer property type.
     """
-    explicit=[]
-    for label,method in ((r"internal\s*property\s*type","internal"),(r"property\s*(?:type|classification)","property_label"),(r"gating\s*type","gating_label")):
-        for c in _label_candidates(text,label,"internal_property_type"):
-            v=c.value.lower()
-            if "semi" in v and "gated" in v: explicit.append(Candidate(c.field,"Semi Gated",c.segment_index,method,True,c.position))
-            elif "gated" in v: explicit.append(Candidate(c.field,"Gated Community",c.segment_index,method,True,c.position))
-            elif "stand" in v: explicit.append(Candidate(c.field,"Standalone",c.segment_index,method,True,c.position))
+    explicit: list[Candidate] = []
+    labels = (
+        r"internal\s*property\s*type",
+        r"property\s*(?:type|classification)",
+        r"gating\s*type",
+        r"community",
+    )
+    for label in labels:
+        method = "community_label" if label == r"community" else "property_type_label"
+        for candidate in _label_candidates(text, label, "internal_property_type"):
+            canonical = _property_type_from_value(candidate.value)
+            if canonical:
+                explicit.append(Candidate(candidate.field, canonical, candidate.segment_index, method, True, candidate.position))
+    if explicit:
+        return sorted(explicit, key=lambda c: (c.segment_index, c.position))[-1].value
 
-    boolean=[]
-    # Explicit boolean/source fields. Handle both "Gated: No" and
-    # "Gated Community: No" so negative gating evidence cannot be shadowed
-    # later by a generic "gated community" phrase.
-    pattern=re.compile(r"\b(?P<label>semi[-\s]*gated(?:\s+community)?|gated(?:\s+community)?)\s*(?::|=|\||-)\s*(?P<value>[^|\n<]+)",re.I)
+    boolean: list[Candidate] = []
+    pattern = re.compile(
+        r"\b(?P<label>semi[-\s]*gated(?:\s+community)?|gated(?:\s+community)?)\s*(?::|=|\||-)\s*(?P<value>[^|\n<]+)",
+        re.I,
+    )
     yes={"yes","y","true","1","allowed","community","society","property"}
     no={"no","n","false","0","not allowed","not permitted","none"}
     for i,segment in enumerate(_segments(text)):
@@ -110,8 +126,8 @@ def resolve_internal_property_type(text: str) -> str:
                 boolean.append(Candidate("internal_property_type","Semi Gated" if "semi" in m.group("label").lower() else "Gated Community",i,"boolean",True,m.start()))
             elif value in no:
                 boolean.append(Candidate("internal_property_type","Standalone",i,"boolean_negative",True,m.start()))
-    if boolean:return sorted(boolean,key=lambda c:(c.segment_index,c.position))[-1].value
-    if explicit:return sorted(explicit,key=lambda c:(c.segment_index,c.position))[-1].value
+    if boolean:
+        return sorted(boolean,key=lambda c:(c.segment_index,c.position))[-1].value
 
     generic=[]
     for i,segment in enumerate(_segments(text)):
@@ -119,10 +135,6 @@ def resolve_internal_property_type(text: str) -> str:
         elif re.search(r"\bgated\s*(?:community|society|property)\b",segment,re.I): generic.append(Candidate("internal_property_type","Gated Community",i,"generic",False,0))
         elif re.search(r"\b(?:independent\s+(?:house|floor)|farm\s*house|stand[-\s]*alone)\b",segment,re.I): generic.append(Candidate("internal_property_type","Standalone",i,"generic",False,0))
     if generic:return sorted(generic,key=lambda c:(c.segment_index,c.position))[-1].value
-
-    for c in _community_name_candidates(text):
-        known=resolve_known_community_property_type(c.value)
-        if known:return known
     return ""
 
 def resolve_property_subtype(text: str) -> str:

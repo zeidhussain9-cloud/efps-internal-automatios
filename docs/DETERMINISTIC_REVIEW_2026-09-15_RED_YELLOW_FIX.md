@@ -2,7 +2,7 @@
 
 ## Historical review record
 
-This file records the deterministic hardening cycle that culminated in the merged 2026-09-15 contract state. The earlier intermediate RED/YELLOW classifications below are historical findings and must not be mistaken for current repository status.
+This file records the deterministic hardening cycle that culminated in the merged 2026-09-15 contract state. Earlier intermediate RED/YELLOW classifications are historical findings and must not be mistaken for current repository status.
 
 ## Final accepted deterministic state for this review cycle
 
@@ -31,7 +31,6 @@ The audit cycle permanently hardened:
 - maintenance inclusion and `+ Water` semantics;
 - explicit positive and negative internal-property-type evidence;
 - unresolved internal-property-type handling without inventing `Standalone`;
-- community-name adjudication where independently established;
 - society/property marker versus landmark separation;
 - locality source extraction;
 - dependent `society_amenities` and `covered_parking` behaviour;

@@ -15,7 +15,7 @@ from shared.google_maps import GoogleMapsClient
 from shared.google_sheets import schema
 
 from . import extract, normalize, validate
-from .community_property_types import resolve_known_community_property_type
+from .field_resolution import resolve_internal_property_type
 from .source_segments import split_source_messages
 
 CANONICAL_PROPERTY_TYPES = ("Gated Community", "Semi Gated", "Standalone")
@@ -39,78 +39,6 @@ def _clean(value: str) -> str:
 
 def _segments(text: str) -> list[str]:
     return split_source_messages(text)
-
-
-def _label_candidates(text: str, labels: str) -> list[tuple[int, int, str]]:
-    pattern = re.compile(rf"\b(?:{labels})\b\s*(?::|[-–—|=])\s*([^|\n<]+)", re.I)
-    found: list[tuple[int, int, str]] = []
-    for segment_index, segment in enumerate(_segments(text)):
-        for match in pattern.finditer(segment):
-            value = _clean(match.group(1))
-            if value:
-                found.append((segment_index, match.start(), value))
-    return found
-
-
-def resolve_internal_property_type(text: str) -> str:
-    """Resolve only the three canonical internal property types.
-
-    Direct user-labelled evidence is authoritative, later source segments win,
-    then explicit boolean gating evidence, then weaker wording, then the
-    adjudicated community registry. Missing evidence remains unresolved; it is
-    never converted to Standalone by absence alone.
-    """
-    explicit: list[tuple[int, int, str]] = []
-    for segment_index, position, value in _label_candidates(
-        text,
-        r"internal\s*property\s*type|property\s*(?:type|classification)|gating\s*type",
-    ):
-        low = value.lower()
-        if "semi" in low and "gated" in low:
-            explicit.append((segment_index, position, "Semi Gated"))
-        elif re.search(r"\bgated\b", low):
-            explicit.append((segment_index, position, "Gated Community"))
-        elif "stand" in low:
-            explicit.append((segment_index, position, "Standalone"))
-    if explicit:
-        return sorted(explicit)[-1][2]
-
-    boolean: list[tuple[int, int, str]] = []
-    pattern = re.compile(
-        r"\b(?P<label>semi[-\s]*gated(?:\s+community)?|gated(?:\s+community)?)\s*(?::|=|\||-)\s*(?P<value>[^|\n<]+)",
-        re.I,
-    )
-    yes = {"yes", "y", "true", "1", "allowed", "community", "society", "property"}
-    no = {"no", "n", "false", "0", "not allowed", "not permitted", "none"}
-    for segment_index, segment in enumerate(_segments(text)):
-        for match in pattern.finditer(segment):
-            value = _clean(match.group("value")).lower()
-            if value in yes:
-                canonical = "Semi Gated" if "semi" in match.group("label").lower() else "Gated Community"
-                boolean.append((segment_index, match.start(), canonical))
-            elif value in no:
-                boolean.append((segment_index, match.start(), "Standalone"))
-    if boolean:
-        return sorted(boolean)[-1][2]
-
-    generic: list[tuple[int, int, str]] = []
-    for segment_index, segment in enumerate(_segments(text)):
-        for match in re.finditer(r"\bsemi[-\s]*gated\b", segment, re.I):
-            generic.append((segment_index, match.start(), "Semi Gated"))
-        for match in re.finditer(r"\bgated\s*(?:community|society|property)\b", segment, re.I):
-            generic.append((segment_index, match.start(), "Gated Community"))
-        for match in re.finditer(r"\b(?:independent\s+(?:house|floor)|farm\s*house|stand[-\s]*alone)\b", segment, re.I):
-            generic.append((segment_index, match.start(), "Standalone"))
-    if generic:
-        return sorted(generic)[-1][2]
-
-    source = extract.scan(text)
-    society = str(source.get("society_name", "") or "").strip()
-    if society:
-        known = resolve_known_community_property_type(society)
-        if known in CANONICAL_PROPERTY_TYPES:
-            return known
-    return ""
 
 
 def resolve_parking_society_amenities(row: dict[str, str]) -> dict[str, str]:

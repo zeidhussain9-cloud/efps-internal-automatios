@@ -9,7 +9,7 @@ The production Phase-1 boundary is `src.phase1.run_phase1()`.
 1. Preserve the supplied `raw_message_text` as the authoritative source.
 2. Segment the source into canonical source-message units.
 3. Extract deterministic candidates.
-4. Resolve canonical values without reading persisted Stage-2 Sheet values as evidence.
+4. Resolve canonical values from authoritative source evidence without reading persisted Stage-2 Sheet values as evidence.
 5. Apply deterministic normalization and dependency rules.
 6. Execute deterministic Google Maps URL extraction. This step performs no network access.
 7. Apply landmark and society fallback rules.
@@ -27,7 +27,17 @@ The only accepted values are:
 - `Semi Gated`
 - `Standalone`
 
-Direct labelled source evidence wins over weaker evidence, with later source-message precedence. If source evidence is insufficient, the canonical community/property-type registry may adjudicate. Missing evidence never becomes `Standalone` by default.
+The authoritative source form is an explicit classification line, preferably:
+
+```text
+Community: Gated Community
+Community: Semi Gated
+Community: Standalone
+```
+
+The label and value are matched case-insensitively and tolerate ordinary whitespace/hyphenation variants. Equivalent explicit labels such as `Property Type:` and `Gating Type:` remain supported. Missing or invalid classification remains unresolved; absence never implies `Standalone`.
+
+Society/community names are not used as property-type evidence.
 
 ## Coupled property-type state
 
@@ -54,13 +64,14 @@ The `GoogleSheetsClient` caches spreadsheet/worksheet objects, supports multi-ra
 
 The Phase-1 batch runner performs one range read followed by one batch write for the bounded row set. A failed write does not mark rows processed in memory; the same command can be rerun safely. Rows already at `intake_status=Processed` are skipped.
 
-## Remaining-row command
+The controlled dependency repair command for already-processed rows is `tools/repair_phase1_dependencies.py`. It verifies the current manually adjudicated `internal_property_type`, fills only blank dependent fields, validates the repaired row, protects Stage-3 fields, and writes changes through one batch request.
 
-After this hardening branch is merged to `main` and the local repository is synchronized, the production Phase-1 command for the remaining rows is:
+## Production execution
+
+After the repository is synchronized to the accepted implementation, the normal remaining-row command is:
 
 ```bash
-cd /path/to/efps-internal-automatios
-PYTHONPATH=.:modules/efps-inventory-mgmnt python tools/run_phase1_rows.py --start-row 12 --end-row 26
+PYTHONPATH=.:modules/efps-inventory-mgmnt python tools/run_phase1_rows.py --start-row <n> --end-row <m>
 ```
 
-This command deliberately does **not** perform Google Maps network resolution or AI verification/beautification. It reports each row's populated, blank, unresolved, review-flag, and deterministic trace data.
+The normal Phase-1 command deliberately does not perform Google Maps network resolution or AI verification/beautification. It reports each row's populated, blank, unresolved, review-flag, and deterministic trace data.

@@ -14,9 +14,9 @@ This is the canonical list of unresolved decisions and verified unknowns for the
 
 ## Phase-1 deterministic hardening status — 2026-09-15
 
-The consolidated Phase-1 implementation pointers are closed in the `phase1-deterministic-hardening` change set pending final CI acceptance and merge. The implementation now has one canonical Phase-1 runner, deterministic Maps URL extraction, strict internal-property-type resolution, coupled parking/amenity resolution, location fallbacks, immediate validation, status transitions, field-level reporting, deterministic traceability, and quota-safe resumable Sheets processing.
+The consolidated Phase-1 implementation is merged on `main`. The implementation has one canonical Phase-1 runner, deterministic Maps URL extraction, strict internal-property-type resolution from source classification, coupled parking/amenity resolution, location fallbacks, immediate validation, status transitions, field-level reporting, deterministic traceability, and quota-safe resumable Sheets processing.
 
-The exact bachelor live dropdown remains `Female Only `, `Male Only`, `Open for both`, with the trailing space on `Female Only ` intentionally preserved. `Family` clears the dependent field; `Open For All` defaults to `Open for both`; explicit valid source evidence overrides the default.
+The exact bachelor live dropdown remains `Female Only `, `Male Only`, `Open for both`, with the trailing space on `Female Only ` intentionally preserved. `Family` clears the dependent field; `Open For All` defaults to `Open for both`; explicit valid bachelor source evidence overrides the default.
 
 ## Closed deterministic contract findings
 
@@ -24,7 +24,7 @@ The exact bachelor live dropdown remains `Female Only `, `Male Only`, `Open for 
 - `preferred_tenant_type -> bachelor_preference` dependency and exact live dropdown vocabulary are closed.
 - `pet_friendly` contract is closed for the current positive/negative wording contract.
 - `servant_room` behavior is closed.
-- `internal_property_type` resolves only to `Gated Community`, `Semi Gated`, or `Standalone`; direct labelled source evidence wins over weaker evidence; the canonical registry is consulted only when source evidence is insufficient; missing evidence never implies `Standalone`.
+- `internal_property_type` resolves only to `Gated Community`, `Semi Gated`, or `Standalone`; explicit source classification wins; casing and ordinary spacing/hyphenation variations are accepted; missing or invalid classification remains unresolved and never implies `Standalone`.
 - `covered_parking` defaults to `1` for Gated Community/Semi Gated when absent, while explicit counts (including counts greater than 1) are preserved.
 - `open_parking` defaults to `-` and is populated only from explicit source evidence.
 - `society_amenities` is resolved from the internal property type using exact canonical Sheet vocabulary.
@@ -43,11 +43,11 @@ The canonical row path is `tools/run_phase1_rows.py --start-row <n> --end-row <m
 
 The batch runner performs one source-range read and one multi-range batch write. Google Sheets spreadsheet/worksheet objects are reused and rate-limit failures are retried with bounded exponential backoff. Already Processed rows are skipped, while a failed batch write does not mark prepared rows as processed, making the operation safe to rerun.
 
+`tools/repair_phase1_dependencies.py` is the controlled repair path for already-processed rows after a manual property-type adjudication. It verifies the current property type, fills only blank dependent values, validates the repaired row, protects Stage-3 fields, and writes the repair through one batch request.
+
 Field-level execution reporting exposes populated, blank, unresolved, and flagged fields, plus source segments, extracted candidates, and resolved selections.
 
 ## Remaining external-system work
-
-The next live acceptance boundary after merge is deterministic Phase-1 processing of rows 12–26. That run must occur only from the merged `main` commit and only through the Phase-1 deterministic boundary; runtime Maps enrichment and AI verification/beautification remain later steps.
 
 The remaining live/runtime unknowns above must not be confused with unresolved deterministic contract work.
 
