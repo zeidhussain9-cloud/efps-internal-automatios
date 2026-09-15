@@ -102,4 +102,4 @@ def test_sheet_values_are_not_used_as_deterministic_source():
     out = deterministic(raw, row=row)
     assert out["BHK"] == "2.5 BHK"
     assert out["maintenance"] == "5000"
-    assert out["internal_property_type"] == "Standalone"
+    assert out["internal_property_type"] == ""
