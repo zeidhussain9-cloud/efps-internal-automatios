@@ -8,54 +8,50 @@ EasyFind Property Solutions (EFPS) is a real-estate brokerage business operating
 
 The automation exists to reduce repetitive operational work without silently changing EFPS business decisions.
 
-Core business areas include rental brokerage, resale, property management, and additional property-related services.
-
-Established website positioning:
-
-> Find, Owner, Manager all under one roof.
-
 ## Core principles
 
 - Business correctness takes precedence over technical capability.
 - Preserve source facts; do not invent missing property information.
 - Technical access is not business authorization.
-- When a business rule is unclear, keep the decision with a human rather than inventing policy.
-- Public-facing information must follow the intended EFPS disclosure rules.
 - Prefer simple, controlled automation over unnecessary complexity.
 
 ## Inventory Phase-1 deterministic rules
 
-Inventory property processing uses deterministic extraction and normalization before any optional AI step. The completed `raw_message_text` is the source of truth for extraction; existing Sheet values are not replay/extraction input.
+Inventory property processing uses deterministic extraction and normalization before any optional AI step. The completed `raw_message_text` is the source of truth for extraction; existing Sheet values are not extraction input.
 
 ### Direct source fields
 
-- `internal_property_type` is extracted from an explicit source field when present and normalized only to `Gated Community`, `Semi Gated`, or `Standalone`. If no explicit value is supplied, the deterministic gating wording rule is used: explicit gated wording → Gated Community; explicit semi-gated wording → Semi Gated; otherwise → Standalone.
-- `society_name` is taken directly from the source when supplied. If no society name is supplied, use the extracted `locality`/`Location` value as the fallback.
-- `landmark` is taken directly from the source when supplied. If no landmark is supplied, use the extracted `locality`/`Location` value as the fallback.
-- `locality` is extracted from an explicit `Location`/`Locality`/`Area` source field when available. A verified Google Maps result may then replace it with the verified Maps locality.
-- `property_subtype` is taken directly from an explicit subtype/property-subtype source field when supplied and normalized through the canonical alias map. If absent and a normal floor-bearing apartment-style record has a floor, the fallback is `Apartment`. Standalone-property wording does not invent `Apartment`; the subtype remains blank unless explicitly supplied or mapped from a supported alias.
+- `internal_property_type`: extract the explicit source field first. Common `:` and `-` label separators are accepted. Normalize to `Gated Community`, `Semi Gated`, or `Standalone`. If absent, explicit semi-gated wording wins, then gated-community/society wording, otherwise Standalone.
+- `society_name`: use the directly supplied society name. Presentation-only markdown and placeholder-only values such as `*` or `-` are blank. If missing, use the resulting location/locality.
+- `landmark`: use the directly supplied landmark. Presentation-only markdown and placeholder-only values such as `*` or `-` are blank. If missing, use the resulting location/locality.
+- `locality`: use explicit `Location`, `Locality`, or `Area`; verified Maps locality may replace it.
+- `property_subtype`: explicit subtype is authoritative after supported alias normalization. If absent, `Apartment` is used only for a normal floor-bearing apartment-style record; standalone-property wording does not invent Apartment.
+- `property_highlights`: preserve explicit source highlights. Otherwise generate only factual supported fragments such as Utility area, subtype alias wording, multiple-unit/floor availability, or RK wording.
+- `catalog_title`: when blank, construct a factual fallback from furnishing type, BHK, and location. Optional AI can rewrite wording only.
+- `age_of_property_years`: populate only from an explicit/authoritative age fact. Do not infer age from Maps; blank is valid.
 
 ### Core deterministic rules
 
-- Decimal BHK values such as `2.5 BHK` are preserved as `2.5 BHK`.
+- Decimal BHK values such as `2.5 BHK` are preserved.
 - `G`/`Ground` floor normalizes to `0`.
 - When carpet area is blank and built-up area is known, carpet area is derived as 90% of built-up area.
-- Maintenance is read directly from the source. Numeric `k`/lakh values are normalized to rupees; mixed values such as `2777 + Water` preserve the numeric amount and stated suffix rather than discarding the suffix. `Maintenance: Included` means maintenance `0` and `maintenance_included = Yes`.
+- Maintenance is read directly from source. Numeric `k`/lakh values are normalized to rupees. Mixed values such as `2777 + Water` preserve the stated suffix. `Included` means maintenance `0` and `maintenance_included = Yes`.
 - Deposit expressed in months is calculated from monthly rent.
-- Semi Furnished and Fully Furnished have deterministic default furnishing sets; explicit source furnishings are preserved.
-- Property subtype aliases normalize to the canonical subtype vocabulary.
-- Society amenities are selected deterministically from `internal_property_type` when the source does not provide an explicit compatible amenity selection: Gated Community → the exact verified gated combination; Semi Gated → the exact verified semi-gated combination; Standalone → `-`. No unsupported amenity claims are invented.
-- `covered_parking` defaults to `1` for Gated Community and Semi Gated when no covered-parking value is explicitly supplied. Standalone properties do not receive this default.
-- `servant_room` is `Yes` only when the source explicitly states it; otherwise it defaults to `No`.
-- `pet_friendly` uses the established last-resort rule: explicit `pets not allowed`/equivalent restriction → `No`; otherwise, including when the source is silent about pets, → `Yes`.
-- Preferred tenant variants normalize to the live Sheet vocabulary: family variants → `Family`; anyone/open-for-all variants → `Open For All`. Specific `Family & Female`/female-bachelor wording also preserves the female-bachelor dependency by setting `preferred_tenant_type = Open For All` and `bachelor_preference = Female Only `.
-- `bachelor_preference` is populated only from an explicit source preference or the established female-bachelor rule; no invalid `Not Allowed` value is generated.
-- `property_highlights` remains deterministic and factual. Explicit source highlights are preserved. When blank, the fallback may include directly supported facts such as `Utility area`, supported subtype alias wording, multiple-unit/floor availability, or RK wording. It must not add unsupported marketing claims.
-- `catalog_title` receives a deterministic factual fallback only when blank, based on available BHK/furnishing/location facts. Optional AI beautification may rewrite it later under the wording-only AI boundary.
-- `age_of_property_years` is populated only from an explicit/authoritative property-age fact when available. It is not guessed from Maps, and otherwise remains blank.
-- Deterministic processing fails closed rather than guessing missing property facts.
+- Semi Furnished and Fully Furnished receive deterministic furnishing defaults only when explicit furnishings are absent. Unfurnished source wording leaves furnish fields blank because the live Sheet has no Unfurnished value.
+- `servant_room` is `Yes` only when explicitly stated; otherwise `No`.
+- `pet_friendly` is `No` when source explicitly says pets are not allowed/not permitted/prohibited or equivalent no-pet wording. If no pet restriction is mentioned, the established last-resort value is `Yes`.
+- `covered_parking` defaults to `1` for Gated Community and Semi Gated when no covered-parking value is explicitly supplied. Standalone does not receive this default.
+- `preferred_tenant_type` normalizes family variants to `Family` and anyone/open-for-all variants to `Open For All`.
+- `bachelor_preference` is populated only from an explicit source preference or the established female-bachelor rule.
+- `internal_property_type` determines default `society_amenities`: Gated Community → exact gated Sheet combination; Semi Gated → exact semi-gated Sheet combination; Standalone → `-`.
 
-Google Maps is a technical Stage-2 capability, not a separate business stage. When a Maps URL is supplied/extracted, only a `VERIFIED` resolution is accepted for location fields; incomplete or failed resolution sends the property to review. Verified Maps locality also feeds the society/landmark fallback when those fields are blank.
+## Review-status business rule
+
+`Needs Review` is not a normal deterministic-extraction outcome. A valid deterministic extraction remains `Pending` after processing. `Needs Review` is reserved for deterministic validation errors or explicit AI conflicts. Google Maps `PARTIAL_MATCH`, `NEEDS_RUNTIME_VERIFICATION`, or `NOT_FOUND` is an informational processing issue and does not itself create a review state; downstream publication may separately require verified Maps data.
+
+## Google Maps
+
+Google Maps is a technical Stage-2 processing capability, not a separate business stage. When verified, Maps may supply locality, pincode, and canonical Maps URL. It may also complete blank society/landmark fallbacks through the verified locality.
 
 ## Marketplace business rules
 
@@ -80,53 +76,10 @@ Google Maps is a technical Stage-2 capability, not a separate business stage. Wh
 19. Do not invent missing property facts.
 20. When location research is required, verify the location and nearby points rather than guessing.
 
-## Domain terms
-
-| Term | Meaning |
-|---|---|
-| EFPS | EasyFind Property Solutions |
-| EasyFind | Common short form for EasyFind Property Solutions |
-| Inventory | Structured EFPS property information used for operations and listings |
-| Marketplace | Facebook Marketplace property listings |
-| Ready To Occupy | Property immediately available |
-| Open For All | Listing wording used when preferred tenants are anyone |
-| Brokerage applicable | Required Marketplace disclosure |
-| Property Listing | Public-facing property advertisement |
-| WhatsApp Catalogue | EFPS catalogue organized by BHK rental categories |
-| WhatsApp Group | `Flat & Flatmates – EasyFind Bangalore` |
-
-## Geographic context
-
-EFPS is primarily associated with East Bangalore. Repeatedly discussed areas include Harlur, Sarjapur Road, Outer Ring Road, Bellandur, Kasavanahalli, and HSR Layout. Relevant commercial/technology locations include Prestige Tech Park, RMZ Ecoworld, Ecospace, Cessna, Vaishnavi Tech Park, and Zepto HQ.
-
-These are context, not an exclusive or permanent geographic boundary.
-
-## Operational channels and systems
-
-Known EFPS business/operational systems include Facebook Marketplace, Housing.com, MagicBricks, 99acres, MyGate, WhatsApp, Google Sheets, WhatsApp Catalogue, the EFPS website, and related automation infrastructure.
-
-These systems are context. Their existence does not automatically authorize an agent to perform every available action.
-
 ## Current automation implementation scope
 
-The repository has established shared technical capability boundaries for Cloudinary, credentials, Google Maps, Google Sheets, Slack, and WhatsApp/WhAPI. Inventory Phase 1 currently establishes the inbound/property-processing path through deterministic Stage 2 processing, Maps resolution, validation, and protected Sheet persistence boundaries. Future portal/catalogue publishing requires separate explicit implementation requirements and authorization.
-
-## Open business decisions
-
-Do not invent or silently resolve these until EFPS establishes them:
-
-- complete approval matrix
-- negotiation authority
-- financial approval thresholds
-- owner/client/tenant communication rules
-- autonomous-vs-approval-required action boundaries
-- complete geographic service area
-- permanent posting-profile/contact mapping
-- formal escalation hierarchy
-- data-retention policy
+Inventory Phase 1 currently establishes the inbound/property-processing path through deterministic Stage-2 processing, Maps resolution, validation, and protected Sheet persistence boundaries. Future portal/catalogue publishing requires separate explicit implementation requirements and authorization.
 
 ## Canonical principle
 
-EFPS Automations is an automation system serving the business, not an independent business operator.
-
-When a rule exists, follow it. When a fact is known, preserve it. When a fact is missing, do not invent it. When authority is unclear, keep the decision with a human.
+EFPS Automations is an automation system serving the business, not an independent business operator. When a rule exists, follow it. When a fact is known, preserve it. When a fact is missing, do not invent it. When authority is unclear, keep the decision with a human.
