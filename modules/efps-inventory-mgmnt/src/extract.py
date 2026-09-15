@@ -3,6 +3,7 @@ from __future__ import annotations
 import re
 
 from .source_segments import split_source_messages
+from .field_resolution import resolve_bhk, resolve_internal_property_type, resolve_maintenance
 
 
 def _scale(n: str, s: str = "") -> str:
@@ -21,18 +22,12 @@ def _clean_source_value(value: str) -> str:
 
 
 def _line_value(text: str, label: str) -> str:
-    """Extract a labelled value from one source unit at a time.
-
-    This is deliberately source-unit scoped. It prevents a label in one
-    WhatsApp message from consuming the value belonging to a later message.
-    """
     pattern = re.compile(rf"\b{label}\b\s*(?::|[-–—|=])\s*([^|\n<]+)", re.I)
     for unit in split_source_messages(text):
         match = pattern.search(unit)
         if match:
             value = _clean_source_value(match.group(1))
-            if value:
-                return value
+            if value: return value
     return ""
 
 
@@ -46,12 +41,9 @@ def _first_line_value(text: str, labels: tuple[str, ...]) -> str:
 def scan(text: str) -> dict[str, str]:
     out: dict[str, str] = {}
     text = text or ""
-    m = (
-        re.search(r"\b(\d+(?:\.\d+)?)\s*[- ]?\s*bhk\b", text, re.I)
-        or re.search(r"\bbed\s*rooms?\s*[:\-]\s*(\d+(?:\.\d+)?)\b", text, re.I)
-        or re.search(r"\b(\d+(?:\.\d+)?)\s*[- ]?\s*bed\s*rooms?\b", text, re.I)
-    )
-    if m: out["BHK"] = f"{m.group(1)} BHK"
+
+    bhk = resolve_bhk(text)
+    if bhk: out["BHK"] = bhk
     elif re.search(r"\bstudio\b", text, re.I): out["property_subtype"] = "Studio"
 
     m = (re.search(r"(?:rent|rental)\D{0,12}?(?:rs\.?|inr|₹)?\s*(\d[\d,]*\.?\d*)\s*(k|lakh|l)?\b", text, re.I)
@@ -85,7 +77,7 @@ def scan(text: str) -> dict[str, str]:
         if m: out[key] = m.group(1)
 
     direct = {
-        "internal_property_type": _first_line_value(text, (r"internal\s*property\s*type", r"property\s*type", r"property\s*classification", r"gating\s*type")),
+        "internal_property_type": resolve_internal_property_type(text),
         "society_name": _first_line_value(text, (r"society\s*name", r"society", r"apartment\s*name", r"community\s*name", r"building\s*name")),
         "landmark": _first_line_value(text, (r"landmark",)),
         "locality": _first_line_value(text, (r"property\s*location", r"location", r"locality", r"area")),
@@ -96,12 +88,10 @@ def scan(text: str) -> dict[str, str]:
     for key, value in direct.items():
         if value: out[key] = value
 
-    maintenance = _line_value(text, r"maintenance")
+    maintenance, included = resolve_maintenance(text)
     if maintenance:
-        numeric = re.fullmatch(r"\s*([\d.,]+)\s*(k|lakh|l)?\s*", maintenance, re.I)
-        out["maintenance"] = _scale(numeric.group(1), numeric.group(2)) if numeric else maintenance
-        out["maintenance_included"] = "Yes" if maintenance.strip().lower() == "included" else "No"
-    if re.search(r"maintenance\s*[:\-]\s*included\b", text, re.I): out["maintenance_included"] = "Yes"
+        out["maintenance"] = maintenance
+        out["maintenance_included"] = included
 
     for key, label in (("preferred_tenant_type", r"preferred\s*tenant"),("bachelor_preference", r"bachelor(?:s)?"),("pet_friendly", r"pets?"),("servant_room", r"servant\s*room")):
         value = _line_value(text, label)
