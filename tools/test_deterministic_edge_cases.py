@@ -1,4 +1,4 @@
-"""Focused regression tests for the 2026-09-15 deterministic extraction review."""
+"""Focused regression tests for the deterministic extraction contract."""
 from __future__ import annotations
 import pathlib
 import sys
@@ -7,11 +7,28 @@ ROOT=pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT / "modules" / "efps-inventory-mgmnt"))
 
 from src.field_resolution import resolve_internal_property_type, resolve_property_subtype, resolve_maintenance
-from src import extract, normalize
+from src import extract, normalize, pipeline
 
 
 def test_gated_colon_community():
     assert resolve_internal_property_type("Gated: Community") == "Gated Community"
+
+def test_explicit_negative_gating_is_standalone():
+    assert resolve_internal_property_type("Gated: No") == "Standalone"
+
+def test_unknown_gating_is_unresolved_not_false_standalone():
+    assert resolve_internal_property_type("2 BHK Apartment\nLocation: Harlur") == ""
+
+def test_known_production_community_is_gated():
+    raw="Fully Furnished 2 BHK\nLocation: Sarjapur Road\n📍Prima Hilife:\nhttps://maps.app.goo.gl/pL58dyhfPsSrsB9r6?g_st=ic"
+    assert resolve_internal_property_type(raw) == "Gated Community"
+    row=pipeline.deterministic(raw)
+    assert row["internal_property_type"] == "Gated Community"
+    assert row["society_name"] == "Prima Hilife"
+    assert row["locality"] == "Sarjapur Road"
+    assert row["google_maps_url"].startswith("https://maps.app.goo.gl/")
+    assert row["covered_parking"] == "1"
+    assert row["society_amenities"] == "Club House, Lift, Gym, CCTV, Power Backup, Swimming Pool, Garden, Sports, Kids Area"
 
 def test_duplex_villa_is_villa():
     assert resolve_property_subtype("Fully Furnished 4 BHK Duplex Villa") == "Villa"
