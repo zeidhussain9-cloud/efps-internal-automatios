@@ -36,10 +36,15 @@ Apply `docs/DOCUMENT_UPDATE_MATRIX.md` and `docs/DOCUMENT_GOVERNANCE.md` for det
 - `shared/` = reusable technical capabilities.
 - Established shared capability boundaries:
   - `shared/cloudinary/`
+  - `shared/credentials/`
+  - `shared/google_maps/`
   - `shared/google_sheets/`
+  - `shared/slack/`
   - `shared/whatsapp_whapi/`
 
-An established boundary does not prove every runtime feature is complete. Implementation status must be verified before calling a capability live or production-ready.
+Inventory Phase 1 uses three top-level stages only: Initial/Webhook, Deterministic Extraction/Property Processing, and the Downstream Operations boundary. Maps and AI processing are Stage-2 sub-steps; Google Sheets is transport/output.
+
+The verified current Phase-1 runtime state includes successful Google Sheets contract/read-write-boundary verification, successful Google Maps direct API verification, successful Maps application-path verification, and successful Stage-2 deterministic + Maps + validation verification. Other runtime capabilities remain explicitly unverified until their target-runtime probes succeed.
 
 ## Gemini-specific maintenance
 
