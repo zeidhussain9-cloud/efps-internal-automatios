@@ -115,10 +115,12 @@ def scan(text: str) -> dict[str, str]:
             else _scale(m.group(1), m.group(2))
         )
 
+    # Live Housing_Listings furnish_type dropdown is limited to the two
+    # canonical values below. Unfurnished is represented by a blank
+    # furnish_type and blank flat_furnishings rather than a third value.
     for pat, label in (
         (r"\bfully\s*furnish", "Fully Furnished"),
         (r"\bsemi[-\s]*furnish", "Semi Furnished"),
-        (r"\bun[-\s]*furnish|\bnot\s*furnish|\bempty\b", "Unfurnished"),
     ):
         if re.search(pat, text, re.I):
             out["furnish_type"] = label
