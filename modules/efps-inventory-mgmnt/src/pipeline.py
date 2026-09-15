@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 from shared.google_sheets import schema
 from shared.google_sheets.client import GoogleSheetsClient
 from shared.google_maps import GoogleMapsClient
-from . import extract, normalize, validate, listing_id
+from . import extract, normalize, validate, listing_id, source_consistency
 
 FIXED = {
     "transaction_type": "Rent",
@@ -52,6 +52,7 @@ def deterministic(raw_text: str, row: dict | None = None) -> dict:
     base = _stage2_input_row(row) if row is not None else empty_row()
     base["raw_message_text"] = raw_text or base.get("raw_message_text", "")
     base.update(extract.scan(raw_text))
+    source_consistency.reconcile_property_type(base, raw_text)
     return normalize.normalize(base, raw_text)
 
 
