@@ -66,6 +66,7 @@ def set_internal_type(row:dict,raw_text:str)->dict:
     if not str(row.get("society_amenities","")).strip():
         if classification=="Gated Community":row["society_amenities"] = ", ".join(GATED_COMMUNITY_DEFAULTS)
         elif classification=="Semi Gated":row["society_amenities"] = ", ".join(SEMI_GATED_AMENITIES)
+        elif str(row.get("property_subtype","")).strip().lower() not in {"","independent house","independent floor","farm house"}:row["society_amenities"] = ", ".join(SEMI_GATED_AMENITIES)
     return row
 
 def apply_tenant_bachelor_rule(row:dict,raw_text:str)->dict:
