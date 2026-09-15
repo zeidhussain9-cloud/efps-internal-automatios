@@ -24,7 +24,7 @@ Business meaning and workflow decisions remain with the owning module. Shared Sh
 |---|---|
 | Keychain service | `efps-whapi-panel-sheet` |
 | Keychain account | `efps` |
-| Historical AWS source | `efps-whapi-panel-sheet` |
+| Historical migration source | `efps-whapi-panel-sheet` |
 | Environment fallbacks | `GOOGLE_SERVICE_ACCOUNT_JSON`, `GOOGLE_APPLICATION_CREDENTIALS` |
 
 The current repository resolves the canonical local macOS Keychain service after environment fallbacks. The private key/JSON value is never stored in GitHub.
@@ -62,9 +62,17 @@ Inventory Stage-1/2 writes are explicitly restricted to A:D, F:AO, and AU so lif
 
 Exact sheet dropdown vocabularies that are not verified in repository source are intentionally left unclaimed rather than guessed.
 
-## Runtime status
+## Verified Phase-1 runtime state
 
-The credential contract and client are implemented. Actual service-account authorization to the named spreadsheet and a safe live read/write smoke test remain runtime verification items.
+The canonical spreadsheet connection has been live-read successfully and the production write boundary has been verified without performing an unauthorized production write. The verified Stage-1/2 write ranges are:
+
+- `A:D`
+- `F:AO`
+- `AU`
+
+The protected Stage-3 ranges are `E`, `AP:AT`, and `AV`.
+
+The verified production worksheet contains the expected 48-column `Housing_Listings` contract. This establishes the current runtime authorization and contract boundary for Inventory Phase 1; it does not authorize Stage-3 writers or invent unverified sheet control vocabularies.
 
 ## Documentation impact for contract changes
 
