@@ -27,22 +27,35 @@ Established website positioning:
 
 Inventory property processing uses deterministic extraction and normalization before any optional AI step. The completed `raw_message_text` is the source of truth for extraction; existing Sheet values are not replay/extraction input.
 
-Established deterministic rules include:
+### Direct source fields
+
+- `internal_property_type` is extracted from an explicit source field when present and normalized only to `Gated Community`, `Semi Gated`, or `Standalone`. If no explicit value is supplied, the deterministic gating wording rule is used: explicit gated wording → Gated Community; explicit semi-gated wording → Semi Gated; otherwise → Standalone.
+- `society_name` is taken directly from the source when supplied. If no society name is supplied, use the extracted `locality`/`Location` value as the fallback.
+- `landmark` is taken directly from the source when supplied. If no landmark is supplied, use the extracted `locality`/`Location` value as the fallback.
+- `locality` is extracted from an explicit `Location`/`Locality`/`Area` source field when available. A verified Google Maps result may then replace it with the verified Maps locality.
+- `property_subtype` is taken directly from an explicit subtype/property-subtype source field when supplied and normalized through the canonical alias map. If absent and a normal floor-bearing apartment-style record has a floor, the fallback is `Apartment`. Standalone-property wording does not invent `Apartment`; the subtype remains blank unless explicitly supplied or mapped from a supported alias.
+
+### Core deterministic rules
 
 - Decimal BHK values such as `2.5 BHK` are preserved as `2.5 BHK`.
 - `G`/`Ground` floor normalizes to `0`.
 - When carpet area is blank and built-up area is known, carpet area is derived as 90% of built-up area.
-- When maintenance is included, maintenance is normalized to `0`; otherwise stated nonnumeric maintenance text is preserved.
+- Maintenance is read directly from the source. Numeric `k`/lakh values are normalized to rupees; mixed values such as `2777 + Water` preserve the numeric amount and stated suffix rather than discarding the suffix. `Maintenance: Included` means maintenance `0` and `maintenance_included = Yes`.
 - Deposit expressed in months is calculated from monthly rent.
 - Semi Furnished and Fully Furnished have deterministic default furnishing sets; explicit source furnishings are preserved.
 - Property subtype aliases normalize to the canonical subtype vocabulary.
-- Internal property type values are `Gated Community`, `Semi Gated`, and `Standalone`.
-- Explicit gated-community wording establishes `Gated Community`; explicit semi-gated wording establishes `Semi Gated`; independent-house/floor/farm-house wording establishes `Standalone`; otherwise the documented fallback applies without inventing a gating fact.
-- Gated-community and semi-gated amenity defaults are deterministic and are not themselves evidence that a property is gated.
-- Family/family-only tenant preference sets `bachelor_preference = Not Allowed` only when an explicit bachelor value is absent.
+- Society amenities are selected deterministically from `internal_property_type` when the source does not provide an explicit compatible amenity selection: Gated Community → the exact verified gated combination; Semi Gated → the exact verified semi-gated combination; Standalone → `-`. No unsupported amenity claims are invented.
+- `covered_parking` defaults to `1` for Gated Community and Semi Gated when no covered-parking value is explicitly supplied. Standalone properties do not receive this default.
+- `servant_room` is `Yes` only when the source explicitly states it; otherwise it defaults to `No`.
+- `pet_friendly` uses the established last-resort rule: explicit `pets not allowed`/equivalent restriction → `No`; otherwise, including when the source is silent about pets, → `Yes`.
+- Preferred tenant variants normalize to the live Sheet vocabulary: family variants → `Family`; anyone/open-for-all variants → `Open For All`. Specific `Family & Female`/female-bachelor wording also preserves the female-bachelor dependency by setting `preferred_tenant_type = Open For All` and `bachelor_preference = Female Only `.
+- `bachelor_preference` is populated only from an explicit source preference or the established female-bachelor rule; no invalid `Not Allowed` value is generated.
+- `property_highlights` remains deterministic and factual. Explicit source highlights are preserved. When blank, the fallback may include directly supported facts such as `Utility area`, supported subtype alias wording, multiple-unit/floor availability, or RK wording. It must not add unsupported marketing claims.
+- `catalog_title` receives a deterministic factual fallback only when blank, based on available BHK/furnishing/location facts. Optional AI beautification may rewrite it later under the wording-only AI boundary.
+- `age_of_property_years` is populated only from an explicit/authoritative property-age fact when available. It is not guessed from Maps, and otherwise remains blank.
 - Deterministic processing fails closed rather than guessing missing property facts.
 
-Google Maps is a technical Stage-2 capability, not a separate business stage. When a Maps URL is supplied/extracted, only a `VERIFIED` resolution is accepted for location fields; incomplete or failed resolution sends the property to review.
+Google Maps is a technical Stage-2 capability, not a separate business stage. When a Maps URL is supplied/extracted, only a `VERIFIED` resolution is accepted for location fields; incomplete or failed resolution sends the property to review. Verified Maps locality also feeds the society/landmark fallback when those fields are blank.
 
 ## Marketplace business rules
 
