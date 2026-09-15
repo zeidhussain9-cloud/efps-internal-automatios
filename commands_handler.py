@@ -13,8 +13,7 @@ def lambda_handler(event,context):
         return response("unauthorized",401,"text/plain")
     try:
         form={k:v[0] for k,v in urllib.parse.parse_qs(raw.decode()).items()}
-        answer=commands.handle(form.get("text",""),user_id=form.get("user_id",""),channel_id=form.get("channel_id",""))
-        return response({"response_type":"in_channel","text":answer})
+        return response(commands.handle(form.get("text",""),user_id=form.get("user_id",""),channel_id=form.get("channel_id","")))
     except Exception as exc:
         crash_report.report("slack_command",exc,reference=form.get("command","") if 'form' in locals() else "")
         return response({"response_type":"ephemeral","text":"EFPS could not process that command. The error was logged for review."})
