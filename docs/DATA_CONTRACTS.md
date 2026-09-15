@@ -29,6 +29,16 @@ The completed `raw_message_text` is the only extraction source. Existing Sheet v
 
 Inventory sessions can concatenate multiple WhatsApp messages. The canonical segmentation implementation is `modules/efps-inventory-mgmnt/src/source_segments.py`. It recognizes bracketed and ISO/slash-date timestamp forms and preserves each message as an independent source unit. Direct labelled-field extraction operates inside these units only. A field must never consume a later message's value. This rule applies repository-wide to Inventory Stage-2 labelled extraction; adding a one-off regex exception is not an acceptable substitute.
 
+### Canonical field resolution
+
+`modules/efps-inventory-mgmnt/src/field_resolution.py` is the single deterministic candidate-resolution layer. Extractors discover candidates; the resolver chooses the authoritative candidate; normalization canonicalizes the chosen value. Existing Sheet values are never candidates.
+
+For fields with multiple source units, explicit candidates are resolved deterministically using source order: later explicit inventory messages supersede earlier values, representing a source correction/update. Explicit labelled/boolean evidence outranks generic wording. Explicit negative gating is terminal against generic positive wording.
+
+- `BHK`: preserve decimal values; later explicit BHK messages supersede earlier BHK values.
+- `maintenance`: only maintenance-labelled context or the specific `rent + maintenance` form can create a maintenance candidate. `k`/lakh units are normalized to rupees; suffixes such as `+ Water` are preserved.
+- `internal_property_type`: one canonical resolver owns classification and default fallback; downstream normalization must not independently rediscover property type.
+
 ### Core rules
 
 - Decimal BHK values such as `2.5 BHK` are preserved.
@@ -74,3 +84,7 @@ Stage 1/2 writes are restricted to A:D, F:AO, and AU. E (`listing_state`), AP:AT
 ## Verification boundary
 
 Production Google Sheets access, the 48-column contract, write boundary, Google Maps access/application path, and live dropdown observations have been verified. Repository changes to deterministic rules must have regression coverage before live production extraction.
+
+## Model-audit contract
+
+`tools/inventory_model_test.py` is read-only. It classifies differences as same, expected projection, lifecycle projection, formatting-only, or populated source conflict. Blank Sheet Stage-2 fields becoming deterministically populated are expected projections; `Raw → Pending` and `Raw → Processed` are lifecycle projections. A populated Sheet value differing from the deterministic model is reported as a source conflict and must be investigated against raw source evidence before either side is changed. The script never writes to Google Sheets and exits non-zero when true populated conflicts or protected-column changes are present.
