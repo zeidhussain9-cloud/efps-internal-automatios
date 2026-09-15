@@ -84,6 +84,13 @@ def test_gated_colon_variant_is_classified_as_gated():
     assert row["internal_property_type"] == "Gated Community"
 
 
+def test_unfurnished_source_does_not_create_non_sheet_furnish_value():
+    raw = "2 BHK\nRent: 40000\nUnfurnished apartment"
+    row = pipeline.deterministic(raw, pipeline.initial_row("EF-2609-0028"))
+    assert row["furnish_type"] == ""
+    assert row["flat_furnishings"] == ""
+
+
 def test_stage_two_maps_integration_accepts_only_verified_resolution():
     raw = """2.5 BHK semi furnished apartment for rent in Harlur.
 Rent 60000 + maintenance.
