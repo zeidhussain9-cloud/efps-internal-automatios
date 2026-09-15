@@ -30,13 +30,13 @@ Supported transport forms include bracketed timestamps, ISO-like timestamps, sla
 
 `internal_property_type` supports exactly `Gated Community`, `Semi Gated`, and `Standalone`.
 
-Accepted explicit evidence includes property-type labels and boolean gating labels. Negative boolean gating evidence is explicit evidence for `Standalone`. Specific canonical phrases may classify the field when no stronger explicit evidence exists. When no property-type evidence exists, the declared deterministic fallback is `Standalone`.
+Accepted explicit evidence includes property-type labels and boolean gating labels. Negative boolean gating evidence is explicit evidence for `Standalone`. Specific canonical phrases may classify the field when no stronger explicit evidence exists. When no authoritative property-type evidence exists, the deterministic result remains blank/unresolved; the system must not fabricate `Standalone`.
 
 `internal_property_type` is resolved once by `src/field_resolution.py`. Normalization consumes the resolved value and does not independently classify the property.
 
 ## Maintenance evidence
 
-Only maintenance-specific labels or the specific `rent + maintenance` pattern can create maintenance candidates. Numeric values with `K`/lakh units are normalized to rupees. Source qualifiers such as `+ Water` and `Water Charges` are preserved. `Included` is represented by maintenance `0` and `maintenance_included = Yes`; an amount alone does not imply inclusion. `Included + Water` is also represented by `maintenance 0 + Water` with `maintenance_included = Yes`.
+Only maintenance-specific labels or the specific `rent + maintenance` pattern can create maintenance candidates. Numeric values with `K`/lakh units are normalized to rupees. Source qualifiers such as `+ Water` and `Water Charges` are preserved. `Included` is represented by maintenance `0` and `maintenance_included = Yes`; an amount alone does not imply inclusion. `Included + Water` is also represented by maintenance `0 + Water` with `maintenance_included = Yes`.
 
 ## Numeric source variants
 
