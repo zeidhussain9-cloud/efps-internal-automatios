@@ -13,9 +13,19 @@ def _scale(n: str, s: str = "") -> str:
     return str(int(v))
 
 
+def _clean_source_value(value: str) -> str:
+    value = re.sub(r"<br\s*/?>", "\n", str(value or ""), flags=re.I)
+    value = re.sub(r"[*_`~]", "", value).strip()
+    value = re.sub(r"\s+", " ", value)
+    return value.strip(" -–—")
+
+
 def _line_value(text: str, label: str) -> str:
-    match = re.search(rf"{label}\s*:\s*(.*?)(?:<br\s*/?>|\n|$)", text, re.I)
-    return match.group(1).strip() if match else ""
+    # Source messages commonly use ':', '-', or an HTML <br> after labels.
+    # Stop at the next HTML line break/newline so one field cannot consume the next.
+    pattern = rf"(?:^|(?:<br\s*/?>)|\n)\s*{label}\s*(?::|[-–—])\s*(.*?)(?=(?:<br\s*/?>)|\n|$)"
+    match = re.search(pattern, text, re.I)
+    return _clean_source_value(match.group(1)) if match else ""
 
 
 def _first_line_value(text: str, labels: tuple[str, ...]) -> str:
@@ -40,11 +50,10 @@ def scan(text: str) -> dict[str, str]:
     elif re.search(r"\bstudio\b", text, re.I):
         out["property_subtype"] = "Studio"
 
-    m = re.search(
-        r"(?:rent|rental)\D{0,12}?(?:rs\.?|inr|₹)?\s*(\d[\d,]*\.?\d*)\s*(k|lakh|l)?\b",
-        text,
-        re.I,
-    ) or re.search(r"(?:rs\.?|inr|₹)\s*(\d[\d,]*)\s*(k)?\b", text, re.I)
+    m = (
+        re.search(r"(?:rent|rental)\D{0,12}?(?:rs\.?|inr|₹)?\s*(\d[\d,]*\.?\d*)\s*(k|lakh|l)?\b", text, re.I)
+        or re.search(r"(?:rs\.?|inr|₹)\s*(\d[\d,]*)\s*(k)?\b", text, re.I)
+    )
     if m:
         v = _scale(m.group(1), m.group(2) if m.lastindex and m.lastindex > 1 else "")
         if 3000 <= int(v) <= 100000000:
@@ -58,13 +67,11 @@ def scan(text: str) -> dict[str, str]:
         if m:
             out[key] = m.group(1)
     if "built_up_area" not in out:
-        m = re.search(r"sqft\s*:\s*(\d{3,5})", text, re.I) or re.search(
-            r"\b(\d{3,5})\s*(?:sq\.?\s*ft|sqft|sft)\b", text, re.I
-        )
+        m = re.search(r"sqft\s*:\s*(\d{3,5})", text, re.I) or re.search(r"\b(\d{3,5})\s*(?:sq\.?\s*ft|sqft|sft)\b", text, re.I)
         if m:
             out["built_up_area"] = m.group(1)
 
-    m = re.search(r"floor\s*:\s*(g|ground|\d{1,2})\s*(?:/|of)\s*(\d{1,2})", text, re.I)
+    m = re.search(r"floor\s*[:\-]\s*(g|ground|\d{1,2})\s*(?:/|of)\s*(\d{1,2})", text, re.I)
     if m:
         floor = m.group(1).lower()
         out["floor_number"] = "0" if floor in {"g", "ground"} else m.group(1)
@@ -102,7 +109,7 @@ def scan(text: str) -> dict[str, str]:
         if value:
             out[key] = value
 
-    maintenance = _line_value(text, "maintenance")
+    maintenance = _line_value(text, r"maintenance")
     if maintenance:
         numeric = re.fullmatch(r"\s*([\d.,]+)\s*(k|lakh|l)?\s*", maintenance, re.I)
         if numeric:
@@ -121,14 +128,10 @@ def scan(text: str) -> dict[str, str]:
         if value:
             out[key] = value
 
-    if re.search(r"maintenance\s*:\s*included\b", text, re.I):
+    if re.search(r"maintenance\s*[:\-]\s*included\b", text, re.I):
         out["maintenance_included"] = "Yes"
 
-    m = re.search(
-        r"(?:deposit|dep|advance)\D{0,12}?(\d[\d,]*\.?\d*)\s*(k|lakh|l|months?|mnths?)?",
-        text,
-        re.I,
-    )
+    m = re.search(r"(?:deposit|dep|advance)\D{0,12}?(\d[\d,]*\.?\d*)\s*(k|lakh|l|months?|mnths?)?", text, re.I)
     if m:
         unit = (m.group(2) or "").lower()
         out["security_deposit"] = (
