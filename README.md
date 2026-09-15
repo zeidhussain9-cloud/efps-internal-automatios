@@ -55,7 +55,7 @@ Inventory uses three top-level stages:
 2. **Phase-1 deterministic boundary**: canonical source segmentation, deterministic candidate extraction/resolution, normalization/dependencies, deterministic Google Maps URL extraction, and deterministic validation. This boundary is implemented by `src.phase1.run_phase1()` and is AI-independent and network-free for Maps.
 3. **Later property verification / downstream processing**: runtime Google Maps resolution, optional AI verification, wording-only AI beautification, media handling, and downstream publishing. These do not provide source evidence to the deterministic boundary.
 
-The deterministic source contract is: `raw_message_text` is authoritative; persisted Stage-2 Sheet values are never extraction input. Internal property type is restricted to `Gated Community`, `Semi Gated`, or `Standalone`; direct source evidence wins, the canonical registry is consulted when needed, and missing evidence never implies `Standalone`.
+The deterministic source contract is: `raw_message_text` is authoritative; persisted Stage-2 Sheet values are never extraction input. Internal property type is restricted to `Gated Community`, `Semi Gated`, or `Standalone`; direct source evidence wins and missing/invalid evidence remains unresolved. Society/community names are not used as property-type evidence.
 
 Property type drives the coupled parking/amenities resolution: covered parking defaults to `1` for Gated Community/Semi Gated when absent, explicit counts are preserved, open parking defaults to `-`, and society amenities use exact live Sheet dropdown combinations.
 
@@ -65,6 +65,8 @@ Property type drives the coupled parking/amenities resolution: covered parking d
 
 The hardened Phase-1 contract remains a 48-field canonical `Housing_Listings` schema with deterministic fields owned by the panel and downstream fields protected. `catalog_title` and `property_highlights` remain valid deterministic fields but may be wording-only AI beautification outputs after the Phase-1 boundary.
 
+The deterministic repository work is complete for the current Phase-1 Inventory Management scope. The remaining items are live/external runtime verification dependencies documented separately in `docs/OPEN_POINTERS.md`; they are not unresolved deterministic field-contract defects.
+
 ## Production status
 
-Repository/source hardening is maintained separately from live external-system verification. The production Phase-1 batch path is one read plus one quota-safe batch write, with bounded 429 backoff and resumable/idempotent row eligibility. Run the full regression/audit suite from the merged `main` commit before processing live remaining rows.
+The canonical implementation is merged to `main`. The production Phase-1 batch path is one source-range read plus one quota-safe batch write, with bounded 429 backoff and resumable/idempotent row eligibility. Run the full regression/audit suite from the merged `main` commit before processing new live rows. Already-processed rows use the controlled dependency-repair path rather than being reprocessed through the normal runner.

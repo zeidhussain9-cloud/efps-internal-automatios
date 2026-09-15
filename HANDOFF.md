@@ -13,7 +13,7 @@ The authorized implementation target is **Inventory Management Phase 1**. The wo
 - `normalize.py` consumes canonical resolved property type and must not independently reclassify it.
 - BHK preserves decimals and later explicit corrections.
 - Maintenance requires maintenance-specific context, normalizes K/lakh units, independently evaluates inclusion, and preserves source qualifiers such as `+ Water`.
-- Internal property type has exactly three business values: Gated Community, Semi Gated, and Standalone. Explicit negative gating is authoritative against generic positive wording; absence of authoritative evidence remains unresolved and does not prove Standalone.
+- Internal property type has exactly three business values: Gated Community, Semi Gated, and Standalone. Explicit source classification wins; casing and ordinary spacing/hyphenation variants are accepted; missing or invalid classification remains unresolved and never implies Standalone.
 - Numeric balcony extraction covers explicit singular/plural source forms, including bare `Balcony` as one balcony.
 - Explicit no-pet source wording is authoritative during final normalization.
 - `📍 Landmark:` followed only by a Maps URL remains a blank landmark; the URL belongs to `google_maps_url`, and landmark never inherits locality.
@@ -40,27 +40,37 @@ For tenant eligibility:
 - Explicit valid source evidence for `Female Only ` or `Male Only` overrides the default.
 - `Female Only ` includes the intentional trailing space present in the live Sheet dropdown and that exact value is the canonical contract.
 
-## Audit findings fixed in this work
+## Final hardening status — 2026-09-15
 
-The repository-wide audit found and corrected stale or contradictory repository truth in the following areas:
+The final Phase-1 hardening is merged to `main`. The canonical deterministic path includes source-only evidence, explicit internal property-type classification without a society-learning registry, coupled parking/amenity resolution, location fallbacks, deterministic Maps URL extraction, immediate validation, deterministic reporting/traceability, and quota-safe resumable Sheets processing.
 
-1. The production projection gate previously stripped the exact trailing space from `bachelor_preference` and hardcoded a trimmed vocabulary. It now compares the exact live values directly from `shared/google_sheets/schema.py`.
-2. `landmark` in the schema incorrectly declared a locality dependency even though the implementation explicitly forbids locality inheritance. The dependency metadata is now empty and aligned with runtime behavior.
-3. Inventory source-extraction and inventory README documentation previously described a Standalone fallback when property-type evidence was absent. The canonical rule is now consistently documented as unresolved/blank rather than fabricated Standalone.
-4. The dated deterministic review and `OPEN_POINTERS.md` contained stale intermediate RED/current-failure status. They now describe the final hardening state and retain unresolved items only where runtime verification is genuinely still required.
-5. Root AI guidance was stale about the number of established shared capability boundaries. The current repository inventory is six: Cloudinary, Credentials, Google Maps, Google Sheets, Slack, and WhAPI.
-6. A repository-wide read-only audit utility was added at `tools/repository_audit.py` and wired into Inventory Contract CI before the deterministic regression suite.
+The controlled repair command `tools/repair_phase1_dependencies.py` is the only approved repair path for already-processed rows after a manual property-type adjudication. It reads one bounded range, changes only blank dependent fields, protects Stage-3 fields, validates the repaired rows, and writes one multi-range batch.
 
-## Verification baseline before this audit
+## Inventory data glance — rows 2–26
 
-The last verified deterministic baseline on `main` (`df9ef879a570290f13fe2a300a90d950691d32b7`) had 78 passing regression tests, 25/25 read-only projection rows, 48/48 canonical fields, zero model errors, zero writes, and a 25/25 production projection contract gate. Those results were evidence for that commit only.
+The supplied deterministic extraction snapshot is consistent with the Phase-1 dependency contract for the visible rows: `status=Pending`, `intake_status=Processed`, canonical internal property types, covered parking populated as required, open parking as `-`, and society amenities populated according to property type. `EF-2609-DPTV` contains a manually corrected deposit in the supplied snapshot; that is treated as a source-data correction, not a software defect.
 
-## Current audit branch
+Two rows use the intentionally allowed locality fallback for society/landmark (`EF-2609-DPTV`, `EF-2609-22H0`); this remains a review-quality signal for later Maps enrichment, not a Phase-1 contract failure. `pincode`, `age_of_property_years`, image URLs, publishing metadata, and other downstream fields remain outside the deterministic acceptance gate where the source/next-stage contract allows them to remain blank.
 
-Branch `phase1-repository-audit-hardening` contains the audit hardening described above. Final acceptance requires the branch CI to pass, the changes to be merged to `main`, and the exact resulting `main` commit to be synchronized locally before any live deterministic extraction/write operation is started.
+## Remaining external dependencies — not open deterministic pointers
 
-## Safety boundary
+These are future live-runtime verification tasks, not unresolved Phase-1 implementation defects:
 
-No production Sheet write is part of the repository audit or read-only projection gate. Live deterministic extraction for rows 2–26 is the next acceptance boundary after the audited commit is merged and synchronized. External Maps runtime verification and deterministic source projection remain separate boundaries.
+- Slack app installation, bot membership, command registration, deployed endpoint/signature verification, and live API probe.
+- Exact `inventory_locked` live Sheet control vocabulary.
+- Google Maps network resolution after deterministic URL extraction.
+- WhAPI live transport verification, including whether the observed diagnostic-required `User-Agent: EFPS-Inventory-Phase1/1.0` should be made mandatory in the shared client.
 
-No production credentials or secrets are part of this change set.
+They must not be mixed into the deterministic Phase-1 completion claim.
+
+## Verification / operating boundary
+
+The canonical normal path is:
+
+```bash
+PYTHONPATH=.:modules/efps-inventory-mgmnt python tools/run_phase1_rows.py --start-row <n> --end-row <m>
+```
+
+The normal runner skips rows already marked `Processed`; already-processed rows use the controlled dependency-repair tool. Live production processing must start only from an exact local checkout of the accepted `main` commit and after the regression/audit suite passes locally.
+
+No production credentials or secrets are part of the repository hardening.
