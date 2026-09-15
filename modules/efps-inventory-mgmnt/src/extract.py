@@ -89,8 +89,6 @@ def scan(text: str) -> dict[str, str]:
         if m:
             out[key] = m.group(1)
 
-    # These are direct source fields. We prefer explicit labels and do not
-    # infer their values from unrelated prose.
     direct = {
         "internal_property_type": _first_line_value(text, (r"internal\s*property\s*type", r"property\s*type", r"type")),
         "society_name": _first_line_value(text, (r"society\s*name", r"society")),
@@ -98,6 +96,7 @@ def scan(text: str) -> dict[str, str]:
         "locality": _first_line_value(text, (r"location", r"locality", r"area")),
         "property_subtype": _first_line_value(text, (r"property\s*subtype", r"subtype")),
         "property_highlights": _first_line_value(text, (r"property\s*highlights", r"highlights")),
+        "age_of_property_years": _first_line_value(text, (r"age\s*of\s*property", r"property\s*age")),
     }
     for key, value in direct.items():
         if value:
