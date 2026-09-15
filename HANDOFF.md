@@ -2,9 +2,9 @@
 
 ## Current state
 
-The current authorized implementation target is **Inventory Management Phase 1**. The workflow has three top-level stages: Stage 1 Initial/Webhook, Stage 2 Deterministic Extraction/Property Processing, and Stage 3 downstream boundary reserved for later consumers.
+The authorized implementation target is **Inventory Management Phase 1**. The workflow has three top-level stages: Stage 1 Initial/Webhook, Stage 2 Deterministic Extraction/Property Processing, and Stage 3 downstream boundary reserved for later consumers.
 
-## Stage-2 implementation
+## Stage-2 implementation truth
 
 - `extract.py` discovers deterministic source facts from completed `raw_message_text`.
 - `source_segments.py` is the canonical source-message boundary parser for concatenated WhatsApp inventory messages.
@@ -13,10 +13,10 @@ The current authorized implementation target is **Inventory Management Phase 1**
 - `normalize.py` consumes canonical resolved property type and must not independently reclassify it.
 - BHK preserves decimals and later explicit corrections.
 - Maintenance requires maintenance-specific context, normalizes K/lakh units, independently evaluates inclusion, and preserves source qualifiers such as `+ Water`.
-- Internal property type has exactly three business values: Gated Community, Semi Gated, and Standalone. Explicit negative gating is authoritative against generic positive wording, while absence of evidence does not prove Standalone.
+- Internal property type has exactly three business values: Gated Community, Semi Gated, and Standalone. Explicit negative gating is authoritative against generic positive wording; absence of authoritative evidence remains unresolved and does not prove Standalone.
 - Numeric balcony extraction covers explicit singular/plural source forms, including bare `Balcony` as one balcony.
 - Explicit no-pet source wording is authoritative during final normalization.
-- `📍 Landmark:` followed only by a Maps URL remains a blank landmark; the URL belongs to `google_maps_url`.
+- `📍 Landmark:` followed only by a Maps URL remains a blank landmark; the URL belongs to `google_maps_url`, and landmark never inherits locality.
 - Existing Sheet Stage-2 values are never deterministic extraction input.
 - `Needs Review` is governed by `docs/NEEDS_REVIEW_CONTRACT.md`; non-blocking field gaps do not become property-processing blockers by themselves, but they must still remain deterministic and contract-valid.
 
@@ -40,32 +40,27 @@ For tenant eligibility:
 - Explicit valid source evidence for `Female Only ` or `Male Only` overrides the default.
 - `Female Only ` includes the intentional trailing space present in the live Sheet dropdown and that exact value is the canonical contract.
 
-## Google Maps state
+## Audit findings fixed in this work
 
-`shared/google_maps/` is the dedicated reusable Maps capability. It owns deterministic URL grammar, short-link expansion, and normalized Maps resolution.
+The repository-wide audit found and corrected stale or contradictory repository truth in the following areas:
 
-Supported source URL forms include `maps.app.goo.gl`, `goo.gl`, `maps.google.com`, `www.google.com/maps`, and `share.google`.
+1. The production projection gate previously stripped the exact trailing space from `bachelor_preference` and hardcoded a trimmed vocabulary. It now compares the exact live values directly from `shared/google_sheets/schema.py`.
+2. `landmark` in the schema incorrectly declared a locality dependency even though the implementation explicitly forbids locality inheritance. The dependency metadata is now empty and aligned with runtime behavior.
+3. Inventory source-extraction and inventory README documentation previously described a Standalone fallback when property-type evidence was absent. The canonical rule is now consistently documented as unresolved/blank rather than fabricated Standalone.
+4. The dated deterministic review and `OPEN_POINTERS.md` contained stale intermediate RED/current-failure status. They now describe the final hardening state and retain unresolved items only where runtime verification is genuinely still required.
+5. Root AI guidance was stale about the number of established shared capability boundaries. The current repository inventory is six: Cloudinary, Credentials, Google Maps, Google Sheets, Slack, and WhAPI.
+6. A repository-wide read-only audit utility was added at `tools/repository_audit.py` and wired into Inventory Contract CI before the deterministic regression suite.
 
-The 25-row production projection now passes the source-preservation contract for the tested Maps cases, including row 10 / `EF-2609-JCN1`, where the raw `https://share.google/oo7aBEUjVMGWUQzPm` value is projected unchanged into `google_maps_url`. The production projection contract gate reports all rows as PASS.
+## Verification baseline before this audit
 
-Do not re-open the Maps or society contracts unless a new projection demonstrates an actual regression against their contracts.
+The last verified deterministic baseline on `main` (`df9ef879a570290f13fe2a300a90d950691d32b7`) had 78 passing regression tests, 25/25 read-only projection rows, 48/48 canonical fields, zero model errors, zero writes, and a 25/25 production projection contract gate. Those results were evidence for that commit only.
 
-## Current verification truth before this hardening change
+## Current audit branch
 
-The merged baseline `176fcaf3b52d9899309e90f7f3556f97cb6dcc8d` had 74 passing and 4 failing regression tests. The failures were caused by stale test expectations and one validator/schema mismatch around the intentional trailing-space `Female Only ` Sheet value. The 25-row production projection and production projection contract gate both passed, but the full regression suite exposed the remaining bachelor contract inconsistency.
-
-## Permanent hardening change in progress
-
-This branch synchronizes the code, tests, and canonical documentation to the live Sheet contract rather than deleting or weakening the failing tests. The intended invariant is:
-
-- schema allowed value = `Female Only `, `Male Only`, `Open for both`;
-- normalized explicit Female Only source = exact `Female Only `;
-- validator accepts that exact value;
-- `Family` clears the dependent field;
-- `Open For All` defaults to `Open for both`;
-- explicit valid Male/Female source overrides the default;
-- regression tests assert the exact live dropdown semantics.
+Branch `phase1-repository-audit-hardening` contains the audit hardening described above. Final acceptance requires the branch CI to pass, the changes to be merged to `main`, and the exact resulting `main` commit to be synchronized locally before any live deterministic extraction/write operation is started.
 
 ## Safety boundary
 
-No production Sheet write is part of the read-only projection audit. External Maps runtime verification and deterministic source projection are separate acceptance boundaries. No production credentials or secrets are part of this change set.
+No production Sheet write is part of the repository audit or read-only projection gate. Live deterministic extraction for rows 2–26 is the next acceptance boundary after the audited commit is merged and synchronized. External Maps runtime verification and deterministic source projection remain separate boundaries.
+
+No production credentials or secrets are part of this change set.
