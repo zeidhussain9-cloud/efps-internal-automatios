@@ -101,7 +101,7 @@ def test_property_type_normalization_prefers_explicit_semi_gated():
 
 def test_mixed_maintenance_is_preserved_as_source_fact():
     raw = "[2026-09-15 10:00] Maintenance: 2777 + Water"
-    row = {"maintenance": ""}
-    out = normalize(row, raw)
+    extracted = scan(raw)
+    out = normalize({"maintenance": extracted.get("maintenance", "")}, raw)
     assert out["maintenance"] == "2777 + Water"
     assert out["maintenance_included"] == "No"
