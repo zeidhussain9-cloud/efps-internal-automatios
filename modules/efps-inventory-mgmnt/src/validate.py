@@ -54,6 +54,13 @@ def validate(row: dict) -> list[str]:
         errors.append("invalid preferred_tenant_type")
     if row["bachelor_preference"] and row["bachelor_preference"] not in BACHELOR_PREFERENCES:
         errors.append("invalid bachelor_preference")
+    # Y -> Z dependent dropdown contract. Family deliberately clears Z;
+    # Open For All requires an explicit valid bachelor preference. A blank in
+    # the latter state is a deterministic contract failure, not a Yellow case.
+    if row["preferred_tenant_type"] == "Family" and row["bachelor_preference"]:
+        errors.append("bachelor_preference must be blank when preferred_tenant_type is Family")
+    elif row["preferred_tenant_type"] == "Open For All" and not row["bachelor_preference"]:
+        errors.append("bachelor_preference required when preferred_tenant_type is Open For All")
     if row["pet_friendly"] and row["pet_friendly"] not in PET_FRIENDLY:
         errors.append("invalid pet_friendly")
     if row["covered_parking"] not in COVERED_PARKING | {""}:
