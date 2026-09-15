@@ -4,6 +4,7 @@ from __future__ import annotations
 from shared.google_sheets import schema
 from shared.google_sheets.client import GoogleSheetsClient
 
+from .phase1 import Phase1Result
 from .pipeline import phase1_ranges_for_row, process_phase1
 
 RAW = "Raw"
@@ -28,8 +29,8 @@ def _assert_protected_fields_unchanged(before: dict, after: dict, row_number: in
         raise PermissionError(f"row {row_number}: Stage-3 protected fields changed: {', '.join(changed)}")
 
 
-def _field_report(result: dict) -> dict:
-    report = result.get("report", {})
+def _field_report(result: Phase1Result) -> dict:
+    report = result.report
     return {
         "populated": report.get("populated_fields", []),
         "blank": report.get("blank_fields", []),
