@@ -56,7 +56,26 @@ The AWS entries identify historical migration sources only. Runtime resolution i
 
 The current runtime credential provider reads the canonical Keychain service and does not require AWS Secrets Manager access. The legacy deployment uses one token/channel/connected-number relationship. The two numbers above are source-number configuration and are not proof of two WhAPI channels.
 
-Current WhAPI documentation confirms these relevant API surfaces: `GET /health`, `GET /settings`, `GET /settings/events`, `PATCH /settings`, `POST /settings/webhook_test`, and `POST /messages/text`. The shared client exposes neutral primitives for these operations. Live channel identity, webhook URL, subscription state, and endpoint behavior for the deployed account remain runtime verification items.
+### Verified live Inventory Phase-1 state
+
+The connected WhAPI account was verified with read-only/live diagnostic requests:
+
+- `GET /health`: HTTP 200.
+- Connected display identity: `Easyfind Property Solutions`.
+- Connected WhatsApp ID: `919148338801`.
+- Business channel: `true`.
+- Channel ID: `DRAXTH-J6HEU`.
+- `GET /settings`: HTTP 200.
+- A webhook is configured in `body` mode with `messages` / `POST` subscription.
+- `GET /settings/events`: HTTP 200; `messages` / `post` is an allowed event.
+- A direct synthetic JSON POST to the configured deployed webhook returned HTTP 200 with `{"ok": true, "queued": 1}`.
+- The synthetic probe used non-inventory sender `919000000000`, so it could not open an Inventory Phase-1 property session.
+- The deployed webhook URL and its `?t=` authentication token are intentionally not recorded here.
+- No WhAPI settings were modified and no customer message was sent during the acceptance checks.
+
+The initial `/health` request was blocked by Cloudflare browser-signature filtering. A subsequent single diagnostic request with explicit `User-Agent: EFPS-Inventory-Phase1/1.0` passed with HTTP 200. This verifies the live endpoint under that diagnostic request but does not by itself prove that the canonical `WhApiClient` transport is permanently compatible with the Cloudflare requirement.
+
+Current WhAPI documentation confirms these relevant API surfaces: `GET /health`, `GET /settings`, `GET /settings/events`, `PATCH /settings`, `POST /settings/webhook_test`, and `POST /messages/text`. The shared client exposes neutral primitives for these operations.
 
 The shared webhook builder requires explicit event definitions discovered from `GET /settings/events`; it does not guess or silently reuse a legacy event list.
 
@@ -85,8 +104,7 @@ The separate existing `Maps Platform API Key` resource remains documented in `sh
 - Property public-ID convention: `properties/{listing_id}/photo_{n}`
 - Lead public-ID namespace: `leads/{phone}/{message_id}_{n}`
 - Catalogue helper limit: 10 URLs
-
-Actual account access and a successful live upload remain runtime verification items.
+- Runtime state: live Inventory Phase-1 upload acceptance verified through the application credential path; HTTPS `secure_url` and deterministic property public ID were returned.
 
 ## Slack
 
