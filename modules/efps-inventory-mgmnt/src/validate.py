@@ -22,10 +22,15 @@ SHEET_AMENITY_COMBINATIONS = {
     "-",
 }
 NUMERIC = {"pincode", "built_up_area", "carpet_area", "age_of_property_years", "total_floors", "bathrooms", "balconies", "open_parking", "monthly_rent", "security_deposit"}
+MAINTENANCE_NUMERIC = re.compile(r"\d+(?:\.\d+)?(?: \+ .+)?$")
 
 
 def _numeric(value: object) -> bool:
     return bool(re.fullmatch(r"\d+(?:\.\d+)?", str(value)))
+
+
+def _maintenance_shape(value: object) -> bool:
+    return bool(re.fullmatch(r"\d+(?: \\+ .+)?", str(value or "").strip()))
 
 
 def validate(row: dict) -> list[str]:
@@ -60,9 +65,10 @@ def validate(row: dict) -> list[str]:
     for key in NUMERIC:
         if row[key] and not _numeric(row[key]):
             errors.append(f"{key} must be numeric")
-    if row["maintenance"] and not _numeric(row["maintenance"]):
-        if str(row["maintenance"]).strip().lower() == "included":
-            errors.append("maintenance must be 0 when included")
+    if row["maintenance"] and str(row["maintenance"]).strip().lower() == "included":
+        errors.append("maintenance must be 0 when included")
+    elif row["maintenance"] and not re.fullmatch(r"\d+(?: \+ .+)?", str(row["maintenance"]).strip()):
+        errors.append("maintenance must be a normalized amount with an optional source qualifier")
     if row["flat_furnishings"]:
         bad = [x.strip() for x in str(row["flat_furnishings"]).split(",") if x.strip() and x.strip() not in FURNISHINGS]
         if bad:
