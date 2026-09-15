@@ -13,20 +13,37 @@ from src import extract, normalize, pipeline
 def test_gated_colon_community():
     assert resolve_internal_property_type("Gated: Community") == "Gated Community"
 
+def test_explicit_community_variants_are_case_insensitive():
+    cases=(
+        ("Community: Gated Community","Gated Community"),
+        ("community: gated","Gated Community"),
+        ("COMMUNITY:GATED COMMUNITY","Gated Community"),
+        ("Community : Semi-Gated Community","Semi Gated"),
+        ("community: semigated","Semi Gated"),
+        ("COMMUNITY: STAND ALONE","Standalone"),
+        ("Community: stand-alone","Standalone"),
+    )
+    for raw,expected in cases:
+        assert resolve_internal_property_type(raw) == expected
+
 def test_explicit_negative_gating_is_standalone():
     assert resolve_internal_property_type("Gated: No") == "Standalone"
 
 def test_unknown_gating_is_unresolved_not_false_standalone():
     assert resolve_internal_property_type("2 BHK Apartment\nLocation: Harlur") == ""
 
-def test_known_production_community_is_gated():
+def test_community_name_is_never_used_as_property_type_evidence():
     raw="Fully Furnished 2 BHK\nLocation: Sarjapur Road\n📍Prima Hilife:\nhttps://maps.app.goo.gl/pL58dyhfPsSrsB9r6?g_st=ic"
-    assert resolve_internal_property_type(raw) == "Gated Community"
+    assert resolve_internal_property_type(raw) == ""
     row=pipeline.deterministic(raw)
-    assert row["internal_property_type"] == "Gated Community"
+    assert row["internal_property_type"] == ""
     assert row["society_name"] == "Prima Hilife"
     assert row["locality"] == "Sarjapur Road"
     assert row["google_maps_url"].startswith("https://maps.app.goo.gl/")
+
+def test_explicit_community_type_drives_dependents():
+    row=pipeline.deterministic("2 BHK\nRent: 40000\nCommunity: Gated Community")
+    assert row["internal_property_type"] == "Gated Community"
     assert row["covered_parking"] == "1"
     assert row["society_amenities"] == "Club House, Lift, Gym, CCTV, Power Backup, Swimming Pool, Garden, Sports, Kids Area"
 
