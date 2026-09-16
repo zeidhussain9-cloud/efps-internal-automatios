@@ -4,8 +4,12 @@ from __future__ import annotations
 from shared.google_sheets import schema
 from shared.google_sheets.client import GoogleSheetsClient
 
-from .phase1 import Phase1Result
-from .pipeline import phase1_ranges_for_row, process_phase1
+try:
+    from .phase1 import Phase1Result
+    from .pipeline import phase1_ranges_for_row, process_phase1
+except ImportError:
+    from phase1 import Phase1Result
+    from pipeline import phase1_ranges_for_row, process_phase1
 
 RAW = "Raw"
 NEEDS_REVIEW = "Needs Review"
