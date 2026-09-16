@@ -69,6 +69,25 @@ Inventory Stage 1/2 may write A:D, F:AO, and AU. It must not write E (`listing_s
 ## Runtime boundary
 Inventory Phase-1 runtime verification has completed successfully for the canonical Google Sheets read/write boundary and for Google Maps direct API access plus application-path consumption. WhAPI live channel identity/subscription/deployment, Cloudinary live upload, and Slack live deployment remain separate runtime acceptance items.
 
+## Live-system migration boundary — 2026-09-16
+
+The repository-level live migration is layered on the latest canonical `main`. Lead Management, Slack handlers, and shared WhAPI/Slack capabilities already present on `main` remain authoritative; the migration does not replace newer implementations with the stale migration branch.
+
+The live webhook ownership is:
+
+```text
+WhAPI webhook
+    -> shared.whatsapp_whapi.webhook.parse_delivery()
+    -> inventory listener? ──yes──> Inventory Stage-1 runtime adapter
+    -> otherwise ────────────────> Lead Management
+```
+
+`modules/efps-inventory-mgmnt/src/inventory_runtime.py` owns only the live Stage-1 integration boundary: durable session capture, message deduplication, raw intake, listing identity allocation, initial-row persistence, and handoff of a closed session to the canonical existing pipeline. It does not implement or copy legacy extraction, normalization, field resolution, validation, or Stage-2 business rules.
+
+`handler.py` is the scheduled Raw-row adapter and calls the canonical Inventory package directly. The SAM template supplies the existing Lead resources plus the `efps-sessions` table ARN required by the Stage-1 durable session store.
+
+No Stage-2 implementation from the legacy system is part of this architecture.
+
 ## Documentation authority
 
-`docs/DATA_CONTRACTS.md` owns cross-module field semantics and dependencies. `docs/DETERMINISTIC_FIELD_RESOLUTION.md` owns candidate resolution and precedence. `docs/INVENTORY_SOURCE_EXTRACTION.md` owns source segmentation and extraction boundaries. `docs/DOCUMENT_MAP.md` owns documentation roles.
+`docs/DATA_CONTRACTS.md` owns cross-module field semantics and dependencies. `docs/DETERMINISTIC_FIELD_RESOLUTION.md` owns candidate resolution and precedence. `docs/INVENTORY_SOURCE_EXTRACTION.md` owns source segmentation and extraction boundaries. `docs/DOCUMENT_MAP.md` owns documentation roles. `docs/MIGRATION_LIVE_SYSTEM_MAP_20260916.md` owns the approved live-system migration boundary.

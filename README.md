@@ -67,6 +67,14 @@ The hardened Phase-1 contract remains a 48-field canonical `Housing_Listings` sc
 
 The deterministic repository work is complete for the current Phase-1 Inventory Management scope. The remaining items are live/external runtime verification dependencies documented separately in `docs/OPEN_POINTERS.md`; they are not unresolved deterministic field-contract defects.
 
+## Live-system migration reconciliation — 2026-09-16
+
+The repository now carries the approved live-system operational boundary on top of the latest canonical `main` without importing legacy Inventory processing. Lead Management and its current Slack/runtime surfaces remain under their existing new-repository ownership. The live WhAPI boundary routes the configured inventory listeners into the Stage-1 adapter and ordinary inbound traffic into Lead Management.
+
+`modules/efps-inventory-mgmnt/src/inventory_runtime.py` is the only migrated Inventory runtime adapter: it captures the live Stage-1 session boundary, durable session state, deduplication, and raw intake, then delegates closed sessions to the existing canonical Inventory pipeline. `handler.py` provides the scheduled Raw-row worker using the same canonical package.
+
+Legacy Inventory extraction, normalization, deterministic business rules, field resolution, property processing, validation/business logic, and Stage-2 implementation are explicitly excluded from the migration.
+
 ## Production status
 
-The canonical implementation is merged to `main`. The production Phase-1 batch path is one source-range read plus one quota-safe batch write, with bounded 429 backoff and resumable/idempotent row eligibility. Run the full regression/audit suite from the merged `main` commit before processing new live rows. Already-processed rows use the controlled dependency-repair path rather than being reprocessed through the normal runner.
+The repository-level migration reconciliation is complete on its dedicated migration branch. Production acceptance is not claimed by this commit: AWS deployment, Slack registration, WhAPI cutover, secret injection, synthetic live Inventory traffic, and old-runtime zero-traffic confirmation remain runtime gates.

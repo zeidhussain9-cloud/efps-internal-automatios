@@ -1,6 +1,6 @@
 # Open Pointers
 
-This is the canonical list of unresolved decisions and verified unknowns for the current Inventory Management Phase 1 scope. Deterministic Phase-1 contract work is complete. The items below are deferred live/runtime dependencies and must not be treated as deterministic implementation blockers. Unknowns are never guessed. Future Meta Catalogue and Housing Portal additions are outside the current Phase-1 scope.
+This is the canonical list of unresolved decisions and verified unknowns for the current Inventory Management Phase 1 and live-system migration scope. Deterministic Phase-1 contract work is complete. Unknowns are never guessed. Future Meta Catalogue and Housing Portal additions are outside the current Phase-1 scope.
 
 ## Deferred external/runtime verification
 
@@ -8,6 +8,8 @@ This is the canonical list of unresolved decisions and verified unknowns for the
 - Exact `inventory_locked` live Sheet control vocabulary.
 - Google Maps network resolution after deterministic URL extraction.
 - WhAPI live transport verification, including whether the observed diagnostic-required `User-Agent: EFPS-Inventory-1.0` should become part of the canonical client transport contract.
+- Production deployment identity, final endpoint URLs, Lambda environment/secret injection, and DynamoDB `efps-sessions` availability for the Stage-1 runtime adapter.
+- Synthetic live Inventory traffic through the final WhAPI destination and confirmation that the old runtime receives zero required traffic after cutover.
 
 These items depend on the actual external/runtime environment. They are not unresolved Phase-1 field-resolution, normalization, validation, or Sheets-batch implementation defects.
 
@@ -46,6 +48,16 @@ The batch runner performs one source-range read and one multi-range batch write.
 `tools/repair_phase1_dependencies.py` is the controlled repair path for already-processed rows after a manual property-type adjudication. It verifies the current property type, fills only blank dependent values, validates the repaired row, protects Stage-3 fields, and writes the repair through one batch request.
 
 Field-level execution reporting exposes populated, blank, unresolved, and flagged fields, plus source segments, extracted candidates, and resolved selections.
+
+## Live-system migration reconciliation — 2026-09-16
+
+Repository reconciliation starts from the latest canonical `main`. The stale migration branch is not merged wholesale. Current Inventory Stage-1/Stage-2 remains authoritative.
+
+Approved live-system responsibilities now represented in the repository include Lead Management, Slack endpoints, the WhAPI webhook boundary, the scheduled Raw-row worker, and the durable Inventory Stage-1 intake adapter. The Stage-1 adapter is responsible only for listener/session/raw-intake integration and delegates closed-session processing to the canonical existing Inventory pipeline.
+
+Legacy Inventory extraction, normalization, deterministic business rules, field resolution, property processing, validation/business logic, and Stage-2 implementation are explicitly excluded.
+
+The repository-level migration is complete only when the dedicated migration commit is verified. Production acceptance remains separate until deployment and live probes establish the runtime gates below.
 
 ## Governance
 
