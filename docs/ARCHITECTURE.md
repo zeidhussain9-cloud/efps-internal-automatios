@@ -69,6 +69,14 @@ Inventory Stage 1/2 may write A:D, F:AO, and AU. It must not write E (`listing_s
 ## Runtime boundary
 Inventory Phase-1 runtime verification has completed successfully for the canonical Google Sheets read/write boundary and for Google Maps direct API access plus application-path consumption. WhAPI live channel identity/subscription/deployment, Cloudinary live upload, and Slack live deployment remain separate runtime acceptance items.
 
+## Lead management runtime contracts
+
+The Lead interactive surface uses Slack message/thread history for `history::open`; it does not use a `lead_history` modal. Lost-stage actions directly set the stage and do not open a `lead_lost` modal. Audit display timestamps are rendered in IST while audit records are stored with UTC timestamps.
+
+The Lead dashboard is discovered through Slack history. Dashboard state is not persisted in `DDB_SESSIONS`, newly created dashboards are not pinned, and digest refresh uses the same Slack-history discovery/update/post behavior.
+
+The WhAPI webhook authenticates the query token before evaluating the live gate. This ordering matches the inspected legacy `modules/efps-whapi-panel/webhook_handler.py:lambda_handler` behavior at legacy commit `bd186c7c3418d633bca6766b1b92204c7a56d484`.
+
 ## Documentation authority
 
 `docs/DATA_CONTRACTS.md` owns cross-module field semantics and dependencies. `docs/DETERMINISTIC_FIELD_RESOLUTION.md` owns candidate resolution and precedence. `docs/INVENTORY_SOURCE_EXTRACTION.md` owns source segmentation and extraction boundaries. `docs/DOCUMENT_MAP.md` owns documentation roles.
