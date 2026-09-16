@@ -61,7 +61,21 @@ def test_read_write_and_append_contract_rows() -> None:
         "values": [row[:46]],
         "value_input_option": "RAW",
     }
+    reserved_source = list(row)
+    reserved_source[schema.NAMES.index("source_group")] = "historical-chat-id"
     with pytest.raises(PermissionError):
-        client.write_row("sheet", "tab", 2, [*row[:45], "historical-lock"] + [""])
+        client.write_row("sheet", "tab", 2, reserved_source)
     with pytest.raises(ValueError):
         client.write_row("sheet", "tab", 2, ["short"])
+
+
+def test_housing_listings_reserved_ranges_are_rejected() -> None:
+    client = GoogleSheetsClient(GoogleSheetsCredentials({"type": "service_account"}), client=object())
+    with pytest.raises(PermissionError):
+        client.read_range(schema.SHEET_ID, schema.WORKSHEET_NAME, "A2:AV")
+    with pytest.raises(PermissionError):
+        client.read_range(schema.SHEET_ID, schema.WORKSHEET_NAME, "AU2:AU10")
+    with pytest.raises(PermissionError):
+        client.write_range(schema.SHEET_ID, schema.WORKSHEET_NAME, "AV2", [["Yes"]])
+    with pytest.raises(PermissionError):
+        client.write_ranges(schema.SHEET_ID, schema.WORKSHEET_NAME, [("AT2:AV2", [["x", "y", "z"]])])
