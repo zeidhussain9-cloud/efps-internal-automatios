@@ -39,9 +39,10 @@ The AWS entries identify historical migration sources only. Runtime resolution i
 - Recorded service-account identity: `gcpnew@easyfind-automations.iam.gserviceaccount.com`
 - Canonical local schema: `shared/google_sheets/schema.py`
 - Verified physical contract: 48 columns, `A:AV`
-- Verified Stage-1/2 inventory write boundary: `A:D`, `F:AO`, `AU`
-- Protected Stage-3 fields: `E`, `AP:AT`, `AV`
-- Housing Portal owns `AP:AR`; Meta Catalogue owns `AS:AT`; Panel owns `A:AO` and `AU:AV` physically, subject to the Stage-3 ownership boundary.
+- Verified Stage-1/2 inventory write boundary: `A:D`, `F:AO`
+- Reserved/dummy columns: `AU` (`source_group`) and `AV` (`inventory_locked`); both must remain blank and are not operationally owned or writable.
+- Protected downstream fields: `E`, `AP:AT`
+- Housing Portal owns `AP:AR`; Meta Catalogue owns `AS:AT`.
 - Runtime state: canonical read and write-boundary verification completed for Inventory Phase 1.
 
 ## WhatsApp / WhAPI

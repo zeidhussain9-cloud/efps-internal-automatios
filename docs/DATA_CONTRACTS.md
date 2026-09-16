@@ -4,7 +4,7 @@ This is the canonical cross-module data ownership and contract reference for EFP
 
 ## Inventory contract
 
-`shared/google_sheets/schema.py` is the single physical `Housing_Listings` contract: 48 columns A:AV in the latest supplied order. Each column records owner, top-level population stage, allowed values where verified, and declared dependencies.
+`shared/google_sheets/schema.py` is the single physical `Housing_Listings` contract: 48 columns A:AV in the latest supplied order. Each column records owner, top-level population stage, allowed values where verified, and declared dependencies. AU (`source_group`) and AV (`inventory_locked`) are reserved/dummy columns with no current owner or operational stage; both must remain blank.
 
 The latest physical order is:
 
@@ -91,7 +91,7 @@ Column AA `pet_friendly` has no Sheet validation rule; observed/application valu
 
 ## Stage-1/2 write boundary
 
-Stage 1/2 writes are restricted to A:D, F:AO, and AU. E (`listing_state`), AP:AT (Housing/Meta downstream fields), and AV (`inventory_locked`) are protected.
+Stage 1/2 writes are restricted to A:D and F:AO. E (`listing_state`) and AP:AT (Housing/Meta downstream fields) are outside the Inventory write set. AU (`source_group`) and AV (`inventory_locked`) are reserved/dummy columns and are neither read as operational inputs nor written by Inventory Stage 1/2. Both must remain blank.
 
 ## Verification boundary
 

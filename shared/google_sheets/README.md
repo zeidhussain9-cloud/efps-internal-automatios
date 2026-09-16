@@ -71,12 +71,11 @@ The current deterministic implementation supplies tiered amenity defaults and fu
 
 ## Ownership and downstream boundary
 
-- Inventory/panel owns the Stage-1/2 fields and `source_group` at AU.
+- Inventory/panel owns the Stage-1/2 fields through AO.
+- AU (`source_group`) and AV (`inventory_locked`) are reserved/dummy physical columns. They have no current owner, stage, or operational write permission.
 - Housing Portal owns AP:AR: `posted_url`, `posted_at`, `error_notes`.
 - Meta Catalogue owns AS:AT: `meta_catalog_id`, `meta_catalog_status`.
-- Lifecycle/control owns E and AV: `listing_state`, `inventory_locked`.
-
-Inventory Stage-1/2 writes are explicitly restricted to A:D, F:AO, and AU so lifecycle/downstream state cannot be erased by a late processing update.
+- Inventory Stage-1/2 writes are restricted to A:D and F:AO.
 
 ## Canonical schema
 
@@ -84,7 +83,7 @@ Inventory Stage-1/2 writes are explicitly restricted to A:D, F:AO, and AU so lif
 
 - physical column order and letters
 - field names
-- owner of every column
+- owner of every column, including reserved/dummy columns
 - top-level population stage
 - writable permissions
 - verified allowed values
@@ -93,15 +92,18 @@ Inventory Stage-1/2 writes are explicitly restricted to A:D, F:AO, and AU so lif
 - derived ranges
 - row-width and ownership integrity checks
 
+AU/AV are intentionally retained in the physical schema so the 48-column contract remains intact, while the repository treats both as reserved and blank.
+
 ## Verified Phase-1 runtime state
 
-The canonical spreadsheet connection has been live-read successfully and the production write boundary has been verified without performing an unauthorized production write. The verified Stage-1/2 write ranges are:
+The canonical spreadsheet connection has been live-read successfully and the production write boundary has been verified without performing an unauthorized production write. The repository Stage-1/2 write ranges are:
 
 - `A:D`
 - `F:AO`
-- `AU`
 
-The protected Stage-3 ranges are `E`, `AP:AT`, and `AV`.
+AU and AV are reserved/dummy columns and are not written by Inventory Stage 1/2.
+
+The protected downstream ranges remain `E`, `AP:AT`; AU/AV are reserved rather than downstream-owned.
 
 The verified production worksheet contains the expected 48-column `Housing_Listings` contract. This establishes the current runtime authorization and contract boundary for Inventory Phase 1; it does not authorize Stage-3 writers.
 

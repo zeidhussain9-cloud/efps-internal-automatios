@@ -1,6 +1,6 @@
 # Open Pointers
 
-This is the canonical list of unresolved decisions and verified unknowns for the current EFPS reconciliation scope. The seven Lead/UI/authentication contract decisions were adjudicated on 2026-09-16 and are now closed in the repository. Remaining pointers are runtime/configuration verification items and must not be treated as deterministic Inventory implementation blockers.
+This is the canonical list of unresolved decisions and verified unknowns for the current EFPS reconciliation scope. The seven Lead/UI/authentication contract decisions were adjudicated on 2026-09-16 and are now closed in the repository. The Inventory AU/AV reservation decision is also closed at the repository contract level; historical live Sheet cleanup remains a separate controlled operation.
 
 ## Closed contract decisions — 2026-09-16
 
@@ -11,6 +11,7 @@ This is the canonical list of unresolved decisions and verified unknowns for the
 - Newly created dashboards are not pinned.
 - Digest uses the Slack-history discovery/update/post behavior.
 - Webhook authentication occurs before the live gate, matching the inspected legacy repository behavior at `bd186c7c3418d633bca6766b1b92204c7a56d484`.
+- Inventory `AU` (`source_group`) and `AV` (`inventory_locked`) are reserved/dummy columns. They remain in the 48-column physical contract, must remain blank, are not operator-editable, and are excluded from Inventory Stage-1/2 writes.
 
 ## Deferred runtime/configuration verification
 
@@ -20,7 +21,7 @@ This is the canonical list of unresolved decisions and verified unknowns for the
 - Webhook credential stored payload schema and runtime resolution of `EFPS_WEBHOOK_TOKEN`.
 - Executable Inventory Stage-1 → canonical current-main Stage-2 routing through the deployed/testable path.
 - Slack app installation, bot membership, command registration, endpoint deployment, signature verification in the target runtime, and live API probe.
-- Exact `inventory_locked` live Sheet control vocabulary.
+- Historical AU/AV live Sheet values still require the separate controlled cleanup procedure; no repository task authorizes live Sheet mutation.
 - Google Maps network resolution after deterministic URL extraction.
 - WhAPI live transport verification, including whether the observed diagnostic-required `User-Agent: EFPS-Inventory-Phase-1/1.0` should become part of the canonical client transport contract.
 
@@ -29,6 +30,8 @@ These items depend on the actual external/runtime environment. Unknown credentia
 ## Inventory deterministic status
 
 The canonical Phase-1 deterministic implementation remains on current `main` and is outside the Lead contract reconciliation. The repository Inventory boundary remains clean: reconciliation adapters do not import or restore legacy Inventory Stage-2 extraction, normalization, field-resolution, validation, or pipeline logic.
+
+AU/AV are reserved at the repository contract level. `StoredSession.source_group` remains DynamoDB session metadata and is intentionally independent of the Sheet's AU column.
 
 ## Batch / operating contract
 

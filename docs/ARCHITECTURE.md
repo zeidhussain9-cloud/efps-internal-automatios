@@ -47,7 +47,7 @@ Existing persisted Sheet Stage-2 values are never extraction input. The raw sour
 Stage 3 is the downstream boundary for later consumers. It is not part of the current Inventory Phase-1 publishing implementation.
 
 ## Canonical sheet
-The single physical shape is `shared/google_sheets/schema.py`: 48 columns A:AV. The schema records owner, stage, allowed values where verified, and declared dependencies.
+The single physical shape is `shared/google_sheets/schema.py`: 48 columns A:AV. The schema records owner, stage, allowed values where verified, and declared dependencies. AU (`source_group`) and AV (`inventory_locked`) are reserved/dummy columns with no current owner or operational stage.
 
 ## Deterministic business dependency graph
 
@@ -64,7 +64,7 @@ monthly_rent -> security_deposit (month-based source form)
 `internal_property_type` has exactly three business values: `Gated Community`, `Semi Gated`, `Standalone`.
 
 ## Stage-1/2 write boundary
-Inventory Stage 1/2 may write A:D, F:AO, and AU. It must not write E (`listing_state`), AP:AT (Housing/Meta downstream fields), or AV (`inventory_locked`). Stage-3 writers are responsible for those protected fields.
+Inventory Stage 1/2 may write only A:D and F:AO. It must not write E (`listing_state`), AP:AT (Housing/Meta downstream fields), AU (`source_group`), or AV (`inventory_locked`). AU/AV are reserved/dummy columns and must remain blank. Stage-3 writers do not currently use AU/AV.
 
 ## Runtime boundary
 Inventory Phase-1 runtime verification has completed successfully for the canonical Google Sheets read/write boundary and for Google Maps direct API access plus application-path consumption. WhAPI live channel identity/subscription/deployment, Cloudinary live upload, and Slack live deployment remain separate runtime acceptance items.

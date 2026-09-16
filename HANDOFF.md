@@ -52,12 +52,18 @@ The supplied deterministic extraction snapshot is consistent with the Phase-1 de
 
 Two rows use the intentionally allowed locality fallback for society/landmark (`EF-2609-DPTV`, `EF-2609-22H0`); this remains a review-quality signal for later Maps enrichment, not a Phase-1 contract failure. `pincode`, `age_of_property_years`, image URLs, publishing metadata, and other downstream fields remain outside the deterministic acceptance gate where the source/next-stage contract allows them to remain blank.
 
+## Reserved Sheet columns — current control decision
+
+AU (`source_group`) and AV (`inventory_locked`) remain physical columns in the 48-column `Housing_Listings` contract, but are reserved/dummy columns for future functionality. Both must remain blank. They are not operational inputs, not operator-editable, and not included in Inventory Stage-1/2 writes. Historical values are a separate controlled live-data cleanup task and are not modified by this repository change.
+
+`StoredSession.source_group` remains intentionally preserved as DynamoDB session metadata because it is independent runtime/session state; it is no longer copied into AU.
+
 ## Remaining external dependencies — not open deterministic pointers
 
 These are future live-runtime verification tasks, not unresolved Phase-1 implementation defects:
 
 - Slack app installation, bot membership, command registration, deployed endpoint/signature verification, and live API probe.
-- Exact `inventory_locked` live Sheet control vocabulary.
+- Exact Inventory reserved-column live Sheet state/clearance (historical AU/AV values require separate controlled cleanup).
 - Google Maps network resolution after deterministic URL extraction.
 - WhAPI live transport verification, including whether the observed diagnostic-required `User-Agent: EFPS-Inventory-Phase-1/1.0` should be made mandatory in the shared client.
 

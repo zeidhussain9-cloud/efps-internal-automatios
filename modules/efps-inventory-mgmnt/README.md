@@ -61,8 +61,10 @@ Stage 2 first segments `raw_message_text` into source-message units using `src/s
 
 ## Stage-1/2 Sheets boundary
 
-The inventory contract is 48 columns A:AV. Stage 1/2 writes are restricted to A:D, F:AO, and AU. E, AP:AT, and AV remain protected.
+The inventory contract remains 48 physical columns A:AV. AU (`source_group`) and AV (`inventory_locked`) are reserved/dummy columns for future functionality and must remain blank. They are not operational inputs, are not operator-editable, and are not part of Stage-1/2 writes. Stage 1/2 writes are restricted to A:D and F:AO.
+
+Historical AU/AV values are a separate live-data cleanup task; this repository change does not mutate the production Sheet.
 
 ## Verification
 
-Regression coverage includes canonical source segmentation, multi-candidate resolution, later corrections, decimal BHK, maintenance unit normalization/qualifiers/inclusion, positive/negative property-type evidence, singular/decimal balcony source forms, explicit pet negatives, Sheet-independence, dependent defaults, and normalized maintenance validation. Production projection gating validates the committed deterministic path against rows 2–26 without Sheet-value feedback or writes; live external-system writes remain a separate acceptance boundary.
+Regression coverage includes canonical source segmentation, multi-candidate resolution, later corrections, decimal BHK, maintenance unit normalization/qualifiers/inclusion, positive/negative property-type evidence, singular/decimal balcony source forms, explicit pet negatives, Sheet-independence, dependent defaults, normalized maintenance validation, and the reserved AU/AV boundary. Production projection gating validates the committed deterministic path against rows 2–26 without Sheet-value feedback or writes; live external-system writes remain a separate acceptance boundary.
