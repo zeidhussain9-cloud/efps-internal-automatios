@@ -44,8 +44,8 @@ def process(payload: dict) -> dict:
     for message in messages:
         try:
             if message.is_inventory_listener and not message.is_group and not message.from_me:
-                from webhook import handle as inventory_handle
-                results.append(inventory_handle(message, sheets_client=sheets_client))
+                from inventory_runtime import handle as inventory_handle
+                results.append(inventory_handle(message, client=sheets_client))
             else:
                 results.append(handle_lead(message))
         except Exception as exc:  # noqa: BLE001
@@ -53,7 +53,7 @@ def process(payload: dict) -> dict:
             results.append({"message_id":message.message_id,"error":str(exc)})
     return {"handled":len(results),"results":results}
 
-def lambda_handler(event, context):  # noqa: ANN001, ARG001
+def lambda_handler(event, context):
     if not _authorised(event): return {"statusCode":401,"body":"unauthorized"}
     if not whapi_config.live_enabled(): return _ok({"ok":True,"live":False})
     body=event.get("body") or "{}"

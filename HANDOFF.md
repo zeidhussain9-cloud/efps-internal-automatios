@@ -63,6 +63,22 @@ These are future live-runtime verification tasks, not unresolved Phase-1 impleme
 
 They must not be mixed into the deterministic Phase-1 completion claim.
 
+## Live-system migration reconciliation — 2026-09-16
+
+The live-system migration is reconciled from the latest canonical `main`, not by merging the stale migration branch wholesale. Current `main` remains authoritative for Inventory Stage 1/2 and all newer Phase-1 hardening.
+
+The approved live operational boundary now includes:
+
+- Lead Management behavior, persistence, audit, cards, dashboard, stream worker, and Slack endpoints already present on `main`.
+- The canonical WhAPI webhook boundary, with direct inbound traffic routed to Lead and the two configured inventory listeners routed only to Inventory Stage 1.
+- `modules/efps-inventory-mgmnt/src/inventory_runtime.py` as the live Stage-1 durable intake adapter. It owns session capture/deduplication and delegates closed-session processing to the canonical `pipeline.process_closed_session()` implementation.
+- `handler.py` as the scheduled Raw-row worker using only the canonical Inventory package.
+- The SAM live-integration boundary, including the DynamoDB session-table ARN needed by the Stage-1 adapter.
+
+No legacy Inventory extraction, normalization, field resolution, property processing, validation/business rules, or Stage-2 implementation is part of this migration.
+
+The reconciliation is repository-level only. AWS deployment, Slack live registration, WhAPI destination cutover, production secret injection, synthetic live Inventory traffic, and old-runtime zero-traffic confirmation remain separate runtime acceptance gates.
+
 ## Verification / operating boundary
 
 The canonical normal path is:

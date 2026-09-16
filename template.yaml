@@ -11,6 +11,9 @@ Parameters:
     Type: String
   LeadsStreamArn:
     Type: String
+  SessionsTableArn:
+    Type: String
+    Description: ARN of the existing efps-sessions DynamoDB table used by Inventory Stage 1
   WebhookToken:
     Type: String
     NoEcho: true
@@ -44,8 +47,8 @@ Resources:
       Policies:
         - Statement:
             - Effect: Allow
-              Action: [dynamodb:GetItem, dynamodb:PutItem, dynamodb:UpdateItem, dynamodb:Query, dynamodb:Scan]
-              Resource: [!Ref LeadsTableArn, !Ref InteractionsTableArn, !Ref LeadAuditTableArn]
+              Action: [dynamodb:GetItem, dynamodb:PutItem, dynamodb:UpdateItem, dynamodb:Query, dynamodb:Scan, dynamodb:DeleteItem]
+              Resource: [!Ref LeadsTableArn, !Ref InteractionsTableArn, !Ref LeadAuditTableArn, !Ref SessionsTableArn]
 
   EFPSCommands:
     Type: AWS::Serverless::Function

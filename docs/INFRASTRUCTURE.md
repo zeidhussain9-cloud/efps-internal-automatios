@@ -114,6 +114,12 @@ The separate existing `Maps Platform API Key` resource remains documented in `sh
 - Workspace/channel IDs are documented only where previously verified; current app installation, bot membership, command registration, and live endpoint behavior remain runtime verification items.
 - Society approval commands, queues, cards, and workflows are explicitly excluded from the new architecture.
 
+## Live-system runtime boundary — 2026-09-16
+
+The repository-level migration uses the latest canonical `main` plus the approved live Stage-1 integration boundary. `modules/efps-inventory-mgmnt/src/inventory_runtime.py` requires the existing `efps-sessions` DynamoDB table and uses it only for durable Stage-1 session state. The SAM integration template requires `SessionsTableArn` for that table and grants the WhAPI webhook Lambda the minimum DynamoDB actions required for session lifecycle operations.
+
+Lead resources and their stream remain externally supplied through the existing template parameters. The migration does not replace current Lead, Slack, WhAPI, Sheets, Maps, or Cloudinary implementations with older migration-branch versions.
+
 ## Credential policy
 
 Only secret names and non-sensitive identifiers may be documented here. Secret values, WhAPI tokens, Cloudinary API secrets, Google service-account private keys, webhook secrets, Slack signing secrets, and production credentials must remain outside version control.

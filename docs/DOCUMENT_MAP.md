@@ -25,6 +25,7 @@ This document is the canonical map of maintained repository documentation. It te
 | `DOCUMENT_MAP.md` | Maintained-document ownership map |
 | `DOCUMENT_UPDATE_MATRIX.md` | Routing table for documentation review/update decisions |
 | `OPEN_POINTERS.md` | Unresolved decisions and verified unknowns |
+| `MIGRATION_LIVE_SYSTEM_MAP_20260916.md` | Approved live-system migration boundary and responsibility classification |
 | `INVENTORY_SOURCE_EXTRACTION.md` | Canonical Stage-2 source segmentation and deterministic extraction contract |
 | `DETERMINISTIC_FIELD_RESOLUTION.md` | Canonical candidate extraction/resolution/normalization contract for deterministic Stage-2 fields |
 | `NEEDS_REVIEW_CONTRACT.md` | Blocking property-detail fields and deterministic `Needs Review` status contract |
@@ -74,6 +75,10 @@ Established shared capabilities include:
 - `security.py` — inbound request signature verification.
 - `safety.py` — safe text and thread-control helpers.
 - `routing.py` — channel/workspace routing constants.
+
+### Live-system migration document
+
+`MIGRATION_LIVE_SYSTEM_MAP_20260916.md` is the single maintained map for the approved live-system migration. It records which capabilities are retained from current `main`, which live integration components are reconciled, and which legacy Inventory responsibilities are explicitly excluded.
 
 ## Single-source rule
 
