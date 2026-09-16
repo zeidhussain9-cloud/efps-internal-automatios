@@ -160,10 +160,11 @@ def _property_subtype_candidates(text: str) -> tuple[set[str], bool]:
         if re.search(r"\bpenthouse\b|\bfarm\s*house\b",scope,re.I): unsupported=True
         for pattern,canonical in patterns:
             if re.search(pattern,scope,re.I): found.add(canonical)
-    # "Duplex Villa" is a specific duplex form; do not treat the generic
-    # Villa word inside that phrase as conflicting evidence.
     if re.search(r"\bduplex\s+villa\b",text or "",re.I):
         found.discard("Villa")
+    # Apartment/flat/unit is generic when an explicit specific subtype is also present.
+    if len(found) > 1 and "Apartment" in found:
+        found.discard("Apartment")
     return found, unsupported
 
 def has_property_subtype_evidence(text: str) -> bool:
