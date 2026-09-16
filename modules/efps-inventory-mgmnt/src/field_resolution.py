@@ -6,7 +6,10 @@ candidate. It never uses existing Sheet values as source truth.
 from __future__ import annotations
 import re
 from dataclasses import dataclass
-from .source_segments import split_source_messages
+try:
+    from .source_segments import split_source_messages
+except ImportError:
+    from source_segments import split_source_messages
 
 AUTHORIZED_PROPERTY_SUBTYPES = (
     "Apartment", "Villa", "Independent House", "Duplex", "Studio", "Independent Floor",
