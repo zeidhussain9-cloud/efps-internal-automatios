@@ -8,6 +8,10 @@ import re
 from dataclasses import dataclass
 from .source_segments import split_source_messages
 
+AUTHORIZED_PROPERTY_SUBTYPES = (
+    "Apartment", "Villa", "Independent House", "Duplex", "Studio", "Independent Floor",
+)
+
 @dataclass(frozen=True)
 class Candidate:
     field: str
@@ -137,21 +141,42 @@ def resolve_internal_property_type(text: str) -> str:
     if generic:return sorted(generic,key=lambda c:(c.segment_index,c.position))[-1].value
     return ""
 
-def resolve_property_subtype(text: str) -> str:
-    """EFPS operationally uses Apartment, Villa and Studio most often.
-    Villa wins for villa wording; Studio is reserved for 1 RK/studio.
-    """
-    text=text or ""
+def _property_subtype_candidates(text: str) -> tuple[set[str], bool]:
+    """Return authorized subtype evidence and whether unsupported/conflicting evidence exists."""
     labels=_label_candidates(text,r"property\s*subtype|subtype","property_subtype")
     source=" ".join(c.value for c in labels)
-    if re.search(r"\b(?:1\s*[- ]?\s*rk|studio)\b",source,re.I) or re.search(r"\b1\s*[- ]?\s*rk\b",text,re.I) or re.search(r"\bstudio\b",text,re.I): return "Studio"
-    if re.search(r"\b(?:duplex\s+)?villa\b",source,re.I) or re.search(r"\b(?:duplex\s+)?villa\b",text,re.I): return "Villa"
-    aliases=((r"independent\s+house|independent\s+building","Independent House"),(r"independent\s+floor|builder\s+floor","Independent Floor"),(r"penthouse","Penthouse"),(r"farm\s*house","Farm House"),(r"\bduplex\b","Duplex"),(r"\bapartment\b|\bflat\b","Apartment"))
-    for pattern,canonical in aliases:
-        if re.search(pattern,source,re.I): return canonical
-    for pattern,canonical in aliases:
-        if re.search(pattern,text,re.I): return canonical
-    return ""
+    scopes=(source,text or "")
+    patterns=(
+        (r"\b1\s*[- ]?\s*rk\b|\bstudio\b","Studio"),
+        (r"\bvilla\b","Villa"),
+        (r"\bindependent\s+house\b","Independent House"),
+        (r"\bindependent\s+floor\b","Independent Floor"),
+        (r"\bduplex\b","Duplex"),
+        (r"\b(?:apartment|flat|unit)\b","Apartment"),
+    )
+    found:set[str]=set()
+    unsupported=False
+    for scope in scopes:
+        if re.search(r"\bpenthouse\b|\bfarm\s*house\b",scope,re.I): unsupported=True
+        for pattern,canonical in patterns:
+            if re.search(pattern,scope,re.I): found.add(canonical)
+    return found, unsupported
+
+def has_property_subtype_evidence(text: str) -> bool:
+    found, unsupported = _property_subtype_candidates(text)
+    return bool(found) or unsupported
+
+def resolve_property_subtype(text: str) -> str:
+    """Resolve only the six V10-authorized property subtypes.
+
+    Explicit authorized wording is authoritative. Unsupported values and
+    conflicting specific subtype evidence remain unresolved rather than being
+    mapped to a convenient canonical value.
+    """
+    found, unsupported = _property_subtype_candidates(text or "")
+    if unsupported or len(found) != 1:
+        return ""
+    return next(iter(found))
 
 def trace(text: str) -> dict:
     bhk=resolve_bhk(text); maintenance,maintenance_included=resolve_maintenance(text); property_type=resolve_internal_property_type(text); subtype=resolve_property_subtype(text)
