@@ -30,17 +30,6 @@ Canonical command surface migrated from the legacy EFPS panel. There is one Slac
 | bare `submit` in the property thread | Submit the current verification answers. |
 | bare `next` / `skip` / `exit` | Session controls in the property thread. |
 
-## Runtime bug channel — `#eps-runtime-error-bugs-reporting`
-
-| Command | Purpose |
-|---|---|
-| `/efps bug report` | Start a guided bug report. |
-| `/efps bug submit` | Submit the active bug interview. |
-| `/efps bug cancel` | Cancel the active bug interview. |
-| `/efps bug show <BUG-ID>` | Show one bug. |
-| `/efps bug fix <BUG-ID> <note>` | Record the fix and close the bug. |
-| `/efps bugs` | Flush unannounced failures and list open bugs. |
-
 ## Lead channel — `#efps-leads`
 
 No lead-specific slash command is required by the migrated implementation. Lead cards are updated through Slack Block Kit interactions and threads.
