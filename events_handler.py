@@ -16,9 +16,12 @@ from pipeline import write_phase1_update, process_phase1
 LID_RE=re.compile(r"`(EF-[A-Z0-9-]+|BLR-[A-Z0-9-]+)`")
 
 def _row(client,lid):
-    values=client.read_range(schema.SHEET_ID,schema.WORKSHEET_NAME,"A2:AV")
+    values=client.read_range(schema.SHEET_ID,schema.WORKSHEET_NAME,"A2:AT")
+    width=schema.GRID_WIDTH-len(schema.RESERVED_COLUMNS)
     for n,r in enumerate(values,start=2):
-        if len(r)==schema.GRID_WIDTH and str(r[0]).strip().upper()==lid.upper(): return n,schema.row_to_mapping(r)
+        values_row=list(r)+[""]*len(schema.RESERVED_COLUMNS) if len(r)==width else r
+        if len(values_row)==schema.GRID_WIDTH and str(values_row[0]).strip().upper()==lid.upper():
+            return n,schema.row_to_mapping(values_row)
     return None,None
 
 def _thread_listing(root_text):
@@ -52,7 +55,7 @@ def _verification_fields(text):
     for line in str(text or "").splitlines():
         if "=" in line:
             k,v=line.split("=",1); k=k.strip(); v=v.strip()
-            if k in schema.BY_NAME: out[k]=v
+            if k in schema.BY_NAME and k not in schema.RESERVED_COLUMNS: out[k]=v
     return out
 
 def _save_verification(slack,thread_ts,channel):
