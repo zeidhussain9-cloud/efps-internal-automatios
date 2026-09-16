@@ -20,8 +20,9 @@ HELP="""*EFPS commands*
 """
 
 def _rows(client):
-    raw=client.read_range(schema.SHEET_ID,schema.WORKSHEET_NAME,"A2:AV")
-    return [(i,schema.row_to_mapping(r)) for i,r in enumerate(raw,start=2) if len(r)==schema.GRID_WIDTH]
+    raw=client.read_range(schema.SHEET_ID,schema.WORKSHEET_NAME,"A2:AT")
+    width=schema.GRID_WIDTH-len(schema.RESERVED_COLUMNS)
+    return [(i,schema.row_to_mapping(list(r)+[""]*len(schema.RESERVED_COLUMNS))) for i,r in enumerate(raw,start=2) if len(r)==width]
 
 def handle(text:str,user_id:str,channel_id:str)->dict:
     args=text.strip().split(None,2); cmd=args[0].lower() if args else "help"
@@ -54,7 +55,7 @@ def handle(text:str,user_id:str,channel_id:str)->dict:
         field,value=parts; found=next(((n,r) for n,r in rows if str(r.get("listing_id","" )).strip().upper()==lid),None)
         if not found:return {"response_type":"ephemeral","text":f"No listing `{lid}` found."}
         row_number,row=found
-        blocked={"listing_id","raw_message_text","intake_status","source_group","inventory_locked","locality","pincode","google_maps_url","posted_url","posted_at","meta_catalog_id","meta_catalog_status"}
+        blocked={"listing_id","raw_message_text","intake_status","locality","pincode","google_maps_url","posted_url","posted_at","meta_catalog_id","meta_catalog_status",*schema.RESERVED_COLUMNS}
         if field in blocked or field not in schema.BY_NAME:return {"response_type":"ephemeral","text":f"`{field}` cannot be corrected by `/efps fix`."}
         candidate=dict(row); candidate[field]=value
         projected=process_phase1(str(candidate.get("raw_message_text","")),row=candidate).row
