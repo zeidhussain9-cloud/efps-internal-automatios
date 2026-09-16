@@ -8,19 +8,18 @@ sys.path.insert(0,"modules/efps-inventory-mgmnt")
 sys.path.insert(0,"shared/slack")
 sys.path.insert(0,"modules/efpd-lead-mgmnt/src")
 from src.slack_ops import save_photos,verify_answer,verify_submit,load,clear,photo_move,verify_start
-import bugs,db
+import bugs
 THREAD_WORDS={"done":"done","save":"done","saved":"done","submit":"submit","ok":"done","skip":"skip","next":"next","exit":"exit","stop":"exit","cancel":"exit"}
 def lambda_handler(event,context):
  raw=body_bytes(event)
  try:payload=json.loads(raw.decode())
  except (ValueError,UnicodeDecodeError):return response("")
- if isinstance(payload,dict) and payload.get("type")=="url_verification":return response(str(payload.get("challenge","")),200,"text/plain")
  headers={str(k).lower():str(v) for k,v in (event.get("headers") or {}).items()}
  if not security.verify_signature(raw,headers.get("x-slack-request-timestamp",""),headers.get("x-slack-signature","")):
   return response("unauthorized",401,"text/plain")
+ if isinstance(payload,dict) and payload.get("type")=="url_verification":return response(str(payload.get("challenge","")),200,"text/plain")
  event_id=str(payload.get("event_id") or "") if isinstance(payload,dict) else ""
  try:
-  if event_id and not db.claim_event(event_id):return response("")
   inner=payload.get("event") or {}
   if inner.get("type")=="message" and not inner.get("bot_id") and not inner.get("subtype"):
    user=str(inner.get("user") or "");channel=str(inner.get("channel") or "");thread=str(inner.get("thread_ts") or "");text=str(inner.get("text") or "").strip();word=THREAD_WORDS.get(text.strip(".!").lower(),"")
