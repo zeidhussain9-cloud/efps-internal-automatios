@@ -18,7 +18,6 @@ Operational channels:
 
 - `#eps-wapi-pannel` (`C0BTQGG8VT3`) — inventory operations, batch reports, property fixes and photo collection.
 - `#efps-leads` (`C0BTM6PH55L`) — lead cards and lead dashboard.
-- `#eps-runtime-error-bugs-reporting` (`C0BUHV01L8Y`) — runtime/bug reporting.
 
 Historical channels are documented separately. They are not automatically current.
 
@@ -73,8 +72,6 @@ Current command families:
 - `fix <listing_id> <field> <value>`
 - `verify start|submit|next|skip|exit`
 - `photos start|done|next|skip|exit`
-- `bug report|submit|cancel|show|fix`
-- `bugs`
 - `pause`
 - `resume`
 
@@ -113,7 +110,7 @@ Slack request verification must validate the signing secret before processing in
 
 ## Source lineage
 
-This capability was reconstructed from the legacy `efps-platform` Slack implementation and documentation, including its command router, photo session, verification session, notifications, lead cards/dashboard, bug/crash tracking, infrastructure, and Slack manifest. Legacy contradictions were reviewed rather than copied blindly.
+This capability was reconstructed from the legacy `efps-platform` Slack implementation and documentation, including its command router, photo session, verification session, notifications, lead cards/dashboard, infrastructure, and Slack manifest. Legacy contradictions were reviewed rather than copied blindly.
 
 The legacy app manifest is retained as historical source material; see `SLACK_APP_MANIFEST.md` for the cleaned target specification and explicit exclusions.
 
