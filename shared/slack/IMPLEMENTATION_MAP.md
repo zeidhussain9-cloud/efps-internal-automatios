@@ -10,7 +10,6 @@ This maps the legacy Slack behavior to the new repository without copying obsole
 | `photo_session.py` | `shared/slack/PHASE1_BULK_PHOTOS.md` for operator contract; inventory/media owners implement row selection and Cloudinary persistence |
 | `verify_session.py` | `shared/slack/PROPERTY_VERIFICATION.md` for operator contract; inventory module owns correction/revalidation |
 | `notify.py` | `shared/slack/client.py` for reusable Slack transport |
-| `crash_report.py` / `bugs.py` | Slack operational bug surface; runtime owner remains responsible for recording failures |
 | `lead_card.py` / `digest.py` | Lead-specific Slack behavior; retained as capability knowledge and outside inventory-only completion gate |
 | `SLACK_APP_MANIFEST.md` | `shared/slack/SLACK_APP_MANIFEST.md` |
 | legacy infrastructure/channel records | `shared/slack/CHANNELS.md` and `shared/slack/routing.py` |
@@ -31,4 +30,4 @@ The legacy `verify_session.py` collects missing property fields in Slack, writes
 
 ## Explicit exclusions
 
-Legacy society approval commands and workflows are obsolete and are not part of this map or the new repository.
+Legacy society approval commands and workflows are obsolete and are not part of this map or the new repository. Legacy runtime bug/crash reporting is also excluded from the target Slack capability.
