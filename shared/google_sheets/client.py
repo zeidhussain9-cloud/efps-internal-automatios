@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import time
 from dataclasses import dataclass
 from pathlib import Path
@@ -137,6 +138,25 @@ class GoogleSheetsClient:
         text = str(exc).upper()
         return "429" in text or "RESOURCE_EXHAUSTED" in text or "RATE LIMIT" in text
 
+    @staticmethod
+    def _column_index(column: str) -> int:
+        value = 0
+        for char in column:
+            value = value * 26 + ord(char) - ord("A") + 1
+        return value
+
+    @classmethod
+    def _assert_active_range(cls, spreadsheet_id: str, worksheet_name: str, range_name: str) -> None:
+        if spreadsheet_id != schema.SHEET_ID or worksheet_name != schema.WORKSHEET_NAME:
+            return
+        endpoints = range_name.upper().split(":")
+        reserved_index = cls._column_index(schema.BY_NAME[schema.RESERVED_COLUMNS[0]].letter)
+        for endpoint in endpoints:
+            endpoint = endpoint.rsplit("!", 1)[-1]
+            match = re.search(r"\$?([A-Z]+)\$?\d*$", endpoint)
+            if match and cls._column_index(match.group(1)) >= reserved_index:
+                raise PermissionError("Housing_Listings reserved columns AU/AV are non-operational")
+
     def _with_backoff(self, operation: Callable[[], T]) -> T:
         attempt = 0
         while True:
@@ -153,6 +173,7 @@ class GoogleSheetsClient:
     def read_range(self, spreadsheet_id: str, worksheet_name: str, range_name: str) -> list[list[Any]]:
         if not range_name.strip():
             raise ValueError("range_name must not be empty")
+        self._assert_active_range(spreadsheet_id, worksheet_name, range_name)
         return self._with_backoff(lambda: self.worksheet(spreadsheet_id, worksheet_name).get(range_name))
 
     def read_rows(self, spreadsheet_id: str, worksheet_name: str, range_name: str) -> list[tuple[Any, ...]]:
@@ -170,6 +191,8 @@ class GoogleSheetsClient:
         """Write many ranges through one gspread batch_update request."""
         if not updates:
             return None
+        for range_name, _ in updates:
+            self._assert_active_range(spreadsheet_id, worksheet_name, range_name)
         payload = [{"range": range_name, "values": values} for range_name, values in updates]
         return self._with_backoff(lambda: self.worksheet(spreadsheet_id, worksheet_name).batch_update(payload))
 
