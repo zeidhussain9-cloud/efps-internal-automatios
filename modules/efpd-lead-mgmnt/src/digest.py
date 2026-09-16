@@ -1,6 +1,7 @@
 """Lead dashboard without the deferred sessions table."""
 from __future__ import annotations
-from . import db, leads as L
+import db
+import leads as L
 from shared.slack import SlackClient
 from shared.slack.routing import LEADS_CHANNEL
 
