@@ -1,9 +1,10 @@
 """Read-only production-path deterministic projection dump for Housing_Listings.
 
-Reads the canonical A:AV rows, runs the exact Stage-2 deterministic production
-pipeline from raw_message_text, and prints the model projection without writing
-to Google Sheets. Existing persisted values are shown only as reference; they
-are never used as extraction input or as pass/fail truth.
+Reads the canonical A:AT rows, restores the two reserved columns as in-memory
+blanks, runs the exact Stage-2 deterministic production pipeline from
+raw_message_text, and prints the model projection without writing to Google
+Sheets. Existing persisted values are shown only as reference; they are never
+used as extraction input or as pass/fail truth.
 """
 from __future__ import annotations
 
@@ -26,6 +27,13 @@ def _display(value: object) -> str:
     return text if text else "<blank>"
 
 
+def _canonical_row(values: list) -> list:
+    width = schema.GRID_WIDTH - len(schema.RESERVED_COLUMNS)
+    if len(values) != width:
+        raise ValueError(f"expected {width} active columns, got {len(values)}")
+    return list(values) + [""] * len(schema.RESERVED_COLUMNS)
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--start-row", type=int, default=2)
@@ -38,17 +46,18 @@ def main() -> int:
     rows = client.read_range(
         schema.SHEET_ID,
         schema.WORKSHEET_NAME,
-        f"A{args.start_row}:AV{args.end_row}",
+        f"A{args.start_row}:AT{args.end_row}",
     )
 
     print("=" * 120)
     print("EFPS INVENTORY — READ-ONLY PRODUCTION DETERMINISTIC PROJECTION")
     print("=" * 120)
-    print(f"RANGE                  : A{args.start_row}:AV{args.end_row}")
+    print(f"RANGE                  : A{args.start_row}:AT{args.end_row}")
     print("MODE                   : PRODUCTION PATH / READ-ONLY")
     print("SOURCE AUTHORITY       : raw_message_text")
     print("SHEET WRITE            : 0")
-    print("PERSISTED VALUES      : DISPLAY ONLY — NEVER EXTRACTION INPUT")
+    print("RESERVED COLUMNS       : NOT READ / NOT WRITTEN")
+    print("PERSISTED VALUES       : DISPLAY ONLY — NEVER EXTRACTION INPUT")
     print()
 
     processed = 0
@@ -58,7 +67,7 @@ def main() -> int:
 
     for offset, values in enumerate(rows):
         row_number = args.start_row + offset
-        row = schema.row_to_mapping(values)
+        row = schema.row_to_mapping(_canonical_row(values))
         raw = str(row.get("raw_message_text", "") or "")
 
         print("=" * 120)
