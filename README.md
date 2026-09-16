@@ -70,3 +70,14 @@ The deterministic repository work is complete for the current Phase-1 Inventory 
 ## Production status
 
 The canonical implementation is merged to `main`. The production Phase-1 batch path is one source-range read plus one quota-safe batch write, with bounded 429 backoff and resumable/idempotent row eligibility. Run the full regression/audit suite from the merged `main` commit before processing new live rows. Already-processed rows use the controlled dependency-repair path rather than being reprocessed through the normal runner.
+
+## Lead management operating contracts — 2026-09-16
+
+- Lead history is posted as Slack message/thread content; no history modal is used.
+- Lost-stage handling remains direct stage handling; no lost-reason modal is used.
+- Audit display uses IST while stored audit timestamps remain UTC.
+- Lead dashboard discovery uses Slack history; dashboard state is not persisted in `DDB_SESSIONS` and new dashboards are not pinned.
+- Digest uses the Slack-history discovery/update/post behavior.
+- The WhAPI webhook authenticates the request before evaluating the live gate, matching the inspected legacy repository behavior.
+
+Lead runtime compatibility and production configuration remain subject to separate runtime verification.
