@@ -2,7 +2,8 @@
 
 This tool is intentionally read-only. It exercises canonical deterministic
 processing against supplied rows and reports source-backed/historical Sheet
-conflicts separately from unresolved deterministic contradictions.
+conflicts separately from unresolved deterministic contradictions. Reserved
+AU/AV columns are outside the audit projection and are never read or changed.
 """
 from __future__ import annotations
 
@@ -15,7 +16,8 @@ from modules.efps_inventory_mgmnt_src_adapter import canonical_projection  # typ
 
 # This import shim is replaced by the executable CLI below when loaded from repo root.
 
-PROTECTED = {"listing_state", "posted_url", "posted_at", "error_notes", "meta_catalog_id", "meta_catalog_status", "inventory_locked"}
+PROTECTED = {"listing_state", "posted_url", "posted_at", "error_notes", "meta_catalog_id", "meta_catalog_status"}
+AUDIT_FIELDS = tuple(name for name in schema.NAMES if name not in schema.RESERVED_COLUMNS)
 
 
 def _same_numeric_maintenance(sheet: str, model: str) -> bool:
@@ -38,7 +40,7 @@ def audit_rows(rows: Iterable[dict[str, str]]) -> dict[str, int]:
     for row in rows:
         raw = str(row.get("raw_message_text", "") or "")
         model = canonical_projection(raw, row)
-        for field in schema.NAMES:
+        for field in AUDIT_FIELDS:
             sheet = str(row.get(field, "") or "").strip(); projected = str(model.get(field, "") or "").strip()
             if sheet == projected:
                 counters["same"] += 1
