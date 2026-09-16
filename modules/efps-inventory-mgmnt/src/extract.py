@@ -3,8 +3,12 @@ from __future__ import annotations
 import re
 
 from shared.google_maps import GoogleMapsClient
-from .source_segments import split_source_messages
-from .field_resolution import resolve_bhk, resolve_internal_property_type, resolve_maintenance, resolve_property_subtype
+try:
+    from .source_segments import split_source_messages
+    from .field_resolution import resolve_bhk, resolve_internal_property_type, resolve_maintenance, resolve_property_subtype
+except ImportError:
+    from source_segments import split_source_messages
+    from field_resolution import resolve_bhk, resolve_internal_property_type, resolve_maintenance, resolve_property_subtype
 
 
 def _scale(n: str, s: str = "") -> str:
