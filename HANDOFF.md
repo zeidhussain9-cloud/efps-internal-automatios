@@ -59,7 +59,7 @@ These are future live-runtime verification tasks, not unresolved Phase-1 impleme
 - Slack app installation, bot membership, command registration, deployed endpoint/signature verification, and live API probe.
 - Exact `inventory_locked` live Sheet control vocabulary.
 - Google Maps network resolution after deterministic URL extraction.
-- WhAPI live transport verification, including whether the observed diagnostic-required `User-Agent: EFPS-Inventory-Phase1/1.0` should be made mandatory in the shared client.
+- WhAPI live transport verification, including whether the observed diagnostic-required `User-Agent: EFPS-Inventory-Phase-1/1.0` should be made mandatory in the shared client.
 
 They must not be mixed into the deterministic Phase-1 completion claim.
 
@@ -74,3 +74,21 @@ PYTHONPATH=.:modules/efps-inventory-mgmnt python tools/run_phase1_rows.py --star
 The normal runner skips rows already marked `Processed`; already-processed rows use the controlled dependency-repair tool. Live production processing must start only from an exact local checkout of the accepted `main` commit and after the regression/audit suite passes locally.
 
 No production credentials or secrets are part of the repository hardening.
+
+## Approved Lead reconciliation contracts — 2026-09-16
+
+The reconciliation branch carries the following controller-approved Lead behavior:
+
+- Lead history remains Slack message/thread history; no `lead_history` modal.
+- Lost-stage interaction remains direct stage handling; no `lead_lost` modal or reason-submission flow.
+- Audit presentation uses IST; audit storage remains UTC timestamps.
+- Dashboard discovery remains Slack-history based; no `DDB_SESSIONS` dashboard persistence.
+- Newly created dashboards are not pinned.
+- Digest behavior remains the Slack-history discovery/update/post implementation.
+- Webhook authentication follows the legacy repository ordering: authentication before the live gate.
+
+These Lead contracts are separate from the Inventory Stage-2 deterministic implementation and do not authorize changes to canonical Inventory processing.
+
+## Runtime verification status
+
+The following remain unverified until executed against the target runtime/configuration: Lead worker compatibility, production `EFPS_DDB_PREFIX`, Slack credential payload schema, webhook credential payload schema, and executable Inventory Stage-1 to canonical Stage-2 routing.
