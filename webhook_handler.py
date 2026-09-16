@@ -10,7 +10,6 @@ sys.path.insert(0, str(__file__).rsplit("/", 1)[0] + "/modules/efps-inventory-mg
 from shared.whatsapp_whapi.webhook import authorize_query_token, parse_delivery
 from shared.whatsapp_whapi import config as whapi_config
 from shared.google_sheets.client import GoogleSheetsClient
-from shared.slack import crash_report
 from inventory_runtime import handle as handle_inventory
 from leads import normalise_phone, record_message
 from lead_card import post_or_update, post_history, history_line
@@ -78,7 +77,6 @@ def process(payload: dict) -> dict:
             }), channel=LEADS_CHANNEL)
             results.append({"phone": phone, "direction": direction, "has_media": message.has_media})
         except Exception as exc:
-            crash_report.report("webhook", exc, reference=message.message_id)
             results.append({"message_id": message.message_id, "error": str(exc)})
     return {"handled": len(results), "results": results}
 
