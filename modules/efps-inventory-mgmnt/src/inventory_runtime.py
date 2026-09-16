@@ -9,7 +9,7 @@ from shared.whatsapp_whapi.webhook import IncomingMessage
 SESSION_PREFIX="inventory:"
 @dataclass
 class StoredSession:
- sender:str;listing_id:str="";source_group:str="";started_at:str="";messages:list[dict]|None=None;seen_message_ids:list[str]|None=None
+ sender:str;listing_id:str="";started_at:str="";messages:list[dict]|None=None;seen_message_ids:list[str]|None=None
  def __post_init__(self):self.messages=self.messages or [];self.seen_message_ids=self.seen_message_ids or []
  @property
  def raw_text(self):return "\n".join(f"[{m['timestamp']}] [{m['message_id']}] {m['text']}".strip() for m in self.messages)
@@ -21,8 +21,8 @@ class DynamoSessionStore:
  def get(self,sender):
   item=self._table().get_item(Key={"user_id":SESSION_PREFIX+sender}).get("Item")
   if not item:return None
-  return StoredSession(sender,str(item.get("listing_id") or ""),str(item.get("source_group") or ""),str(item.get("started_at") or ""),json.loads(item.get("messages_json") or "[]"),json.loads(item.get("seen_ids_json") or "[]"))
- def put(self,s):self._table().put_item(Item={"user_id":SESSION_PREFIX+s.sender,"listing_id":s.listing_id,"source_group":s.source_group,"started_at":s.started_at,"messages_json":json.dumps(s.messages),"seen_ids_json":json.dumps(s.seen_message_ids),"expires_at":int(time.time())+86400})
+  return StoredSession(sender,str(item.get("listing_id") or ""),str(item.get("started_at") or ""),json.loads(item.get("messages_json") or "[]"),json.loads(item.get("seen_ids_json") or "[]"))
+ def put(self,s):self._table().put_item(Item={"user_id":SESSION_PREFIX+s.sender,"listing_id":s.listing_id,"started_at":s.started_at,"messages_json":json.dumps(s.messages),"seen_ids_json":json.dumps(s.seen_message_ids),"expires_at":int(time.time())+86400})
  def delete(self,sender):self._table().delete_item(Key={"user_id":SESSION_PREFIX+sender})
 def _rows(c):
  raw=c.read_range(schema.SHEET_ID,schema.WORKSHEET_NAME,"A2:AT");width=schema.GRID_WIDTH-len(schema.RESERVED_COLUMNS);rows=[]
@@ -44,7 +44,7 @@ def handle(message:IncomingMessage,*,store=None,client=None):
  if not message.is_inventory_listener or message.is_group or message.from_me:return {"inventory":False,"reason":"not inventory listener"}
  store=store or DynamoSessionStore();client=client or GoogleSheetsClient();sender=str(message.sender or message.chat_id).strip();session=store.get(sender);text=str(message.body or "").strip()
  if intake.is_new_marker(text):
-  closed=_close(client,session);store.delete(sender);store.put(StoredSession(sender,source_group=message.chat_id,started_at=str(message.timestamp or "")));return {"inventory":True,"recorded":False,"reason":"boundary opened","closed":closed}
+  closed=_close(client,session);store.delete(sender);store.put(StoredSession(sender,started_at=str(message.timestamp or "")));return {"inventory":True,"recorded":False,"reason":"boundary opened","closed":closed}
  if not session:return {"inventory":True,"recorded":False,"reason":"before first NEW"}
  mid=message.message_id
  if mid and mid in session.seen_message_ids:return {"inventory":True,"recorded":False,"duplicate":True}
