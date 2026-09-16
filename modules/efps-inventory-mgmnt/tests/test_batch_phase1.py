@@ -29,14 +29,14 @@ def test_phase1_fixture_is_validation_clean():
     assert result.row["inventory_locked"] == ""
 
 
-def test_batch_phase1_uses_one_read_and_one_batch_write():
+def test_batch_phase1_uses_one_operational_read_and_one_batch_write():
     row = initial_row("EF-TEST-BATCH", raw_text="2 BHK\nRent: 40000\nProperty Type: Gated Community\nLocation: Harlur")
     client = FakeBatchClient(row)
     result = batch.run(client, start_row=2, end_row=2)
     assert result["considered"] == 1
     assert result["processed"] == 1, f"errors={result['errors']}; rows={result['rows']}"
     assert result["write_failed"] is False
-    assert client.reads == ["A2:AV2"]
+    assert client.reads == ["A2:AT2"]
     assert len(client.writes) == 1
     assert len(client.writes[0]) == 2
     assert [x[0] for x in client.writes[0]] == ["A2:D2", "F2:AO2"]

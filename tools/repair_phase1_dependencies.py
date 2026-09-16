@@ -23,11 +23,22 @@ PROTECTED_FIELDS = (
 )
 
 
+def _canonical_rows(values: list[list]) -> list[list]:
+    width = schema.GRID_WIDTH - len(schema.RESERVED_COLUMNS)
+    normalized = []
+    for row in values:
+        if len(row) == width:
+            normalized.append(list(row) + [""] * len(schema.RESERVED_COLUMNS))
+        else:
+            normalized.append(row)
+    return normalized
+
+
 def repair_rows(client: GoogleSheetsClient, *, start_row: int, end_row: int) -> dict:
     if start_row < 2 or end_row < start_row:
         raise ValueError("start_row/end_row must describe a sheet data range starting at row 2 or later")
 
-    values = client.read_range(schema.SHEET_ID, schema.WORKSHEET_NAME, f"A{start_row}:AV{end_row}")
+    values = _canonical_rows(client.read_range(schema.SHEET_ID, schema.WORKSHEET_NAME, f"A{start_row}:AT{end_row}"))
     updates: list[tuple[str, list[list[str]]]] = []
     repaired_rows: list[int] = []
     issues: list[str] = []

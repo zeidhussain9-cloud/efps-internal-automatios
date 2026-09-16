@@ -44,6 +44,18 @@ def _field_report(result: Phase1Result) -> dict:
     }
 
 
+def _canonical_rows(values: list[list]) -> list[list]:
+    """Map the operational A:AT read into the intact 48-field schema."""
+    width = schema.GRID_WIDTH - len(schema.RESERVED_COLUMNS)
+    normalized = []
+    for row in values:
+        if len(row) == width:
+            normalized.append(list(row) + [""] * len(schema.RESERVED_COLUMNS))
+        else:
+            normalized.append(row)
+    return normalized
+
+
 def run(
     client: GoogleSheetsClient,
     *,
@@ -66,8 +78,8 @@ def run(
         raise ValueError("limit must be >= 0")
 
     final_row = end_row if end_row is not None else None
-    read_range = f"A{start_row}:AV{final_row}" if final_row is not None else f"A{start_row}:AV"
-    values = client.read_range(schema.SHEET_ID, schema.WORKSHEET_NAME, read_range)
+    read_range = f"A{start_row}:AT{final_row}" if final_row is not None else f"A{start_row}:AT"
+    values = _canonical_rows(client.read_range(schema.SHEET_ID, schema.WORKSHEET_NAME, read_range))
 
     considered = processed = needs_review = skipped = 0
     errors: list[str] = []
