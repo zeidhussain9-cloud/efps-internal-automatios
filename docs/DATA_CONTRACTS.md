@@ -96,3 +96,11 @@ Stage 1/2 writes are restricted to A:D, F:AO, and AU. E (`listing_state`), AP:AT
 ## Verification boundary
 
 Production Google Sheets access, the 48-column contract, write boundary, Google Maps access/application path, and live dropdown observations have been verified. Repository changes to deterministic rules require regression coverage before live production extraction. The recurring production dataset must always be re-run from the commit that contains the fix under review; prior projection output is evidence of that earlier commit only.
+
+## Lead audit/dashboard contract
+
+Lead audit records use UTC timestamps for storage. Audit descriptions render those timestamps in IST.
+
+Lead history is represented by Slack message/thread history rather than a persisted history modal. Lost-stage handling does not require a lost-reason modal or separate reason-submission flow.
+
+Lead dashboard identity is discovered through Slack history. Dashboard state is not persisted in `DDB_SESSIONS`, and newly created dashboards are not pinned. Digest behavior follows the same Slack-history discovery/update/post contract.
