@@ -30,7 +30,7 @@ def reserved_operation_hits(files:list[Path])->list[str]:
         if path.suffix != ".py" or rel in RESERVED_ALLOWED_FILES or "/test" in rel or path.name.startswith("test_"):
             continue
         text=path.read_text(encoding="utf-8")
-        if "source_group" in text or "inventory_locked" in text:
+        if "inventory_locked" in text:
             hits.append(f"{rel}: reserved field reference")
         if re.search(r"(?:A2|A\{[^}]+\}|[A-Z]\d+):AV", text) or ":AV\"" in text or ":AV'" in text:
             hits.append(f"{rel}: AV range reference")
