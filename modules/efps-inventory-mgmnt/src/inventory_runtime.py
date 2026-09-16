@@ -25,9 +25,13 @@ class DynamoSessionStore:
  def put(self,s):self._table().put_item(Item={"user_id":SESSION_PREFIX+s.sender,"listing_id":s.listing_id,"source_group":s.source_group,"started_at":s.started_at,"messages_json":json.dumps(s.messages),"seen_ids_json":json.dumps(s.seen_message_ids),"expires_at":int(time.time())+86400})
  def delete(self,sender):self._table().delete_item(Key={"user_id":SESSION_PREFIX+sender})
 def _rows(c):
- raw=c.read_range(schema.SHEET_ID,schema.WORKSHEET_NAME,f"A2:{schema.EXPECTED_LAST_COLUMN}");return [(i+2,schema.row_to_mapping(r)) for i,r in enumerate(raw) if r]
+ raw=c.read_range(schema.SHEET_ID,schema.WORKSHEET_NAME,"A2:AT");width=schema.GRID_WIDTH-len(schema.RESERVED_COLUMNS);rows=[]
+ for i,r in enumerate(raw):
+  values=list(r)+[""]*len(schema.RESERVED_COLUMNS) if len(r)==width else r
+  if values:rows.append((i+2,schema.row_to_mapping(values)))
+ return rows
 def _find(c,lid):return next(((n,r) for n,r in _rows(c) if str(r.get("listing_id",""))==lid),None)
-def _persist_initial(c,s):c.append_rows(schema.SHEET_ID,schema.WORKSHEET_NAME,[schema.mapping_to_row(pipeline.initial_row(s.listing_id,s.raw_text,s.source_group,s.started_at))])
+def _persist_initial(c,s):c.append_rows(schema.SHEET_ID,schema.WORKSHEET_NAME,[schema.mapping_to_row(pipeline.initial_row(s.listing_id,s.raw_text,s.started_at))])
 def _persist_update(c,n,row):
  c.write_range(schema.SHEET_ID,schema.WORKSHEET_NAME,schema.range_for("intake_status","intake_status",n),[[row.get("intake_status","")]])
  c.write_range(schema.SHEET_ID,schema.WORKSHEET_NAME,schema.range_for("raw_message_text","raw_message_text",n),[[row.get("raw_message_text","")]])

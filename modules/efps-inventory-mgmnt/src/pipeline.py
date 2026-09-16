@@ -7,8 +7,12 @@ from shared.google_maps import GoogleMapsClient
 from shared.google_sheets import schema
 from shared.google_sheets.client import GoogleSheetsClient
 
-from . import ai, listing_id, validate
-from .phase1 import Phase1Result, project as deterministic_project, run_phase1
+try:
+    from . import ai, listing_id, validate
+    from .phase1 import Phase1Result, project as deterministic_project, run_phase1
+except ImportError:
+    import ai, listing_id, validate
+    from phase1 import Phase1Result, project as deterministic_project, run_phase1
 
 FIXED = {
     "transaction_type": "Rent",
@@ -19,7 +23,7 @@ FIXED = {
 PANEL_FIELDS = tuple(name for name in schema.NAMES if schema.owner_of(name) == schema.PANEL)
 STAGE_3_PROTECTED = {
     "listing_state", "posted_url", "posted_at", "error_notes",
-    "meta_catalog_id", "meta_catalog_status", "inventory_locked",
+    "meta_catalog_id", "meta_catalog_status",
 }
 STAGE_1_2_WRITABLE = tuple(name for name in PANEL_FIELDS if name not in STAGE_3_PROTECTED)
 
@@ -28,7 +32,7 @@ def empty_row() -> dict[str, str]:
     return {name: "" for name in schema.NAMES}
 
 
-def initial_row(listing_id_value: str, raw_text: str = "", source_group: str = "", onboarded_on: str = "") -> dict[str, str]:
+def initial_row(listing_id_value: str, raw_text: str = "", onboarded_on: str = "") -> dict[str, str]:
     row = empty_row()
     row.update({
         "listing_id": listing_id_value,
@@ -36,7 +40,6 @@ def initial_row(listing_id_value: str, raw_text: str = "", source_group: str = "
         "intake_status": "Raw",
         "onboarded_on": onboarded_on or datetime.now(timezone.utc).isoformat(),
         "raw_message_text": raw_text,
-        "source_group": source_group,
         **FIXED,
     })
     return row
@@ -57,8 +60,6 @@ def process_closed_session(raw_text: str, *, row: dict | None = None, maps_clien
     result = run_phase1(raw_text, row=row)
     out = result.row
     issues = list(result.issues)
-
-    # Maps runtime is intentionally after the deterministic boundary.
     maps = maps_client or GoogleMapsClient()
     maps_url = out.get("google_maps_url", "")
     if maps_url:
@@ -76,25 +77,23 @@ def process_closed_session(raw_text: str, *, row: dict | None = None, maps_clien
                     out["society_name"] = place_name
         else:
             issues.append(f"Google Maps verification failed or is incomplete: {resolved.confidence}")
-
-    # Re-apply the deterministic location safety contract after Maps enrichment.
-    from .phase1 import apply_location_contract
+    try:
+        from .phase1 import apply_location_contract
+    except ImportError:
+        from phase1 import apply_location_contract
     apply_location_contract(out)
-
     errors = validate.validate(out)
     if errors:
         out["status"] = "Needs Review"
         issues.extend(errors)
     else:
         out["status"] = "Pending"
-
     if out["status"] == "Pending":
         out = ai.apply(out, raw_text, ai_llm)
         if out.get("_ai_conflicts"):
             issues.extend(str(x) for x in out["_ai_conflicts"])
             out["status"] = "Needs Review"
             out.pop("_ai_conflicts", None)
-
     out["intake_status"] = "Processed"
     return out, issues
 
@@ -111,7 +110,6 @@ def _phase1_ranges(row_number: int, row: dict) -> list[tuple[str, list[list[str]
     return [
         (schema.range_for("listing_id", "internal_property_type", row_number), [[row[name] for name in schema.NAMES[0:4]]]),
         (schema.range_for("onboarded_on", "city", row_number), [[row[name] for name in schema.NAMES[5:41]]]),
-        (schema.range_for("source_group", "source_group", row_number), [[row["source_group"]]]),
     ]
 
 
@@ -125,7 +123,6 @@ def write_phase1_update(client: GoogleSheetsClient, row_number: int, row: dict):
 
 
 def phase1_ranges_for_row(row_number: int, row: dict) -> list[tuple[str, list[list[str]]]]:
-    """Public helper for the quota-safe batch writer."""
     return _phase1_ranges(row_number, row)
 
 

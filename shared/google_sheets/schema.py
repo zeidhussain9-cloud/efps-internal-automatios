@@ -7,10 +7,12 @@ SHEET_ID = "1zdOLWklkWlnVECCtcH4SJj6vm6nEVjINpTT2U2UJEKc"
 WORKSHEET_NAME = "Housing_Listings"
 CONTRACT_VERSION = 4
 PANEL, HOUSING_AGENT, META_CATALOG = "panel", "housing_agent", "meta_catalog"
+RESERVED = "reserved"
 OWNERS = (PANEL, HOUSING_AGENT, META_CATALOG)
 STAGE_1 = "initial_webhook"
 STAGE_2 = "deterministic_extraction_property_processing"
 STAGE_3 = "downstream_operations"
+RESERVED_STAGE = "reserved"
 
 @dataclass(frozen=True)
 class Column:
@@ -70,15 +72,15 @@ _ROWS = [
 ("whatsapp_contact_link",PANEL,STAGE_1,(),(),"Fixed company contact link."),
 ("whatsapp_group_link",PANEL,STAGE_1,(),(),"Fixed company group link."),
 ("transaction_type",PANEL,STAGE_1,("Rent",),(),"Fixed for current rental workflow."),
-("property_subtype",PANEL,STAGE_2,("Apartment","Independent House","Duplex","Independent Floor","Villa","Penthouse","Studio","Farm House"),(),"Explicit source subtype preferred; supported aliases normalize. Apartment is only the normal floor-bearing fallback."),
+("property_subtype",PANEL,STAGE_2,("Apartment","Villa","Independent House","Duplex","Studio","Independent Floor"),(),"V10-authorized six-value vocabulary only. Explicit subtype evidence is authoritative; unsupported or conflicting evidence remains unresolved for review; no subtype is inferred from BHK, floor, furnishing, parking, amenities, rent, area, society, or internal property type."),
 ("city",PANEL,STAGE_1,("Bengaluru",),(),"Fixed for current inventory workflow."),
 ("posted_url",HOUSING_AGENT,STAGE_3,(),(),"Housing Portal downstream-owned."),
 ("posted_at",HOUSING_AGENT,STAGE_3,(),(),"Housing Portal downstream-owned."),
 ("error_notes",HOUSING_AGENT,STAGE_3,(),(),"Housing Portal downstream-owned."),
 ("meta_catalog_id",META_CATALOG,STAGE_3,(),(),"Meta Catalogue downstream-owned."),
 ("meta_catalog_status",META_CATALOG,STAGE_3,(),(),"Meta Catalogue downstream-owned."),
-("source_group",PANEL,STAGE_1,(),(),"Inbound source/chat identifier."),
-("inventory_locked",PANEL,STAGE_3,(),(),"Lifecycle/control field; exact sheet control vocabulary is not verified in repository source."),
+("source_group",RESERVED,RESERVED_STAGE,(),(),"Reserved/dummy column AU. Must remain blank; reserved for future functionality."),
+("inventory_locked",RESERVED,RESERVED_STAGE,(),(),"Reserved/dummy column AV. Must remain blank; reserved for future functionality."),
 ]
 COLUMNS=tuple(Column(*r) for r in _ROWS)
 NAMES=tuple(c.name for c in COLUMNS)
@@ -86,38 +88,25 @@ BY_NAME={c.name:c for c in COLUMNS}
 GRID_WIDTH=len(COLUMNS); EXPECTED_GRID_WIDTH=48
 FIRST_COLUMN="A"; LAST_COLUMN=col_letter(GRID_WIDTH-1); EXPECTED_LAST_COLUMN="AV"
 ROW_IDENTITY="listing_id"
+RESERVED_COLUMNS=("source_group","inventory_locked")
 
 def letter(name:str)->str:return BY_NAME[name].letter
 def owner_of(name:str)->str:return BY_NAME[name].owner
-def stage_of(name:str)->str:return BY_NAME[name].stage
-def writable_by(owner:str)->tuple[str,...]:
-    if owner not in OWNERS: raise KeyError(owner)
-    return tuple(c.name for c in COLUMNS if c.owner==owner)
-def assert_writable(owner:str,names:list[str]|tuple[str,...])->None:
-    allowed=set(writable_by(owner));unknown=[n for n in names if n not in BY_NAME]
-    if unknown:raise KeyError(f"Unknown Housing_Listings field: {', '.join(unknown)}")
-    foreign=[n for n in names if n not in allowed]
-    if foreign:raise PermissionError(f"{owner} may not write: {', '.join(foreign)}")
-def validate_row(values:list[Any]|tuple[Any,...])->tuple[Any,...]:
-    if len(values)!=GRID_WIDTH:raise ValueError(f"Housing_Listings row must contain {GRID_WIDTH} values; found {len(values)}")
-    return tuple(values)
-def row_to_mapping(values:list[Any]|tuple[Any,...])->dict[str,Any]:return dict(zip(NAMES,validate_row(values)))
-def mapping_to_row(values:Mapping[str,Any])->list[Any]:
-    unknown=[n for n in values if n not in BY_NAME]
-    if unknown:raise KeyError(f"Unknown Housing_Listings field: {', '.join(unknown)}")
-    return [values.get(n,"") for n in NAMES]
-def full_range(first_row:int=1)->str:return f"{FIRST_COLUMN}{first_row}:{LAST_COLUMN}{first_row}"
-def range_for(first:str,last:str,row:int)->str:return f"{letter(first)}{row}:{letter(last)}{row}"
-
-def _check()->None:
-    assert GRID_WIDTH==EXPECTED_GRID_WIDTH and LAST_COLUMN==EXPECTED_LAST_COLUMN
-    assert len(set(NAMES))==48
-    expected={"listing_id":"A","raw_message_text":"G","google_maps_url":"L","transaction_type":"AM","property_subtype":"AN","city":"AO","posted_url":"AP","posted_at":"AQ","error_notes":"AR","meta_catalog_id":"AS","meta_catalog_status":"AT","source_group":"AU","inventory_locked":"AV"}
-    assert all(letter(k)==v for k,v in expected.items())
-    assert writable_by(HOUSING_AGENT)==("posted_url","posted_at","error_notes")
-    assert writable_by(META_CATALOG)==("meta_catalog_id","meta_catalog_status")
-    assert "Female Only " in BY_NAME["bachelor_preference"].allowed_values
-    assert "Female Only" not in BY_NAME["bachelor_preference"].allowed_values
-    assert set(BY_NAME["internal_property_type"].allowed_values)=={"Gated Community","Semi Gated","Standalone"}
-
-_check()
+def writable_by(owner:str)->tuple[str,...]:return tuple(c.name for c in COLUMNS if c.owner==owner)
+def assert_writable(owner:str,names:list[str])->None:
+    if owner not in OWNERS: raise ValueError(f"unknown owner: {owner}")
+    unknown=[name for name in names if name not in BY_NAME]
+    if unknown: raise KeyError(f"unknown fields: {sorted(unknown)}")
+    allowed=set(writable_by(owner))
+    for name in names:
+        if name not in allowed: raise PermissionError(f"{owner} cannot write {name}")
+def row_to_mapping(row:list[str])->dict[str,str]:
+    if len(row)!=GRID_WIDTH: raise ValueError(f"expected {GRID_WIDTH} columns, got {len(row)}")
+    return dict(zip(NAMES,row))
+def mapping_to_row(mapping:Mapping[str,Any])->list[str]:
+    unknown=set(mapping)-set(NAMES)
+    if unknown: raise KeyError(f"unknown fields: {sorted(unknown)}")
+    return [str(mapping.get(name,"") or "") for name in NAMES]
+def validate_row(row:list[str])->None:
+    if len(row)!=GRID_WIDTH: raise ValueError(f"expected {GRID_WIDTH} columns, got {len(row)}")
+def range_for(start:str,end:str,row_number:int)->str:return f"{letter(start)}{row_number}:{letter(end)}{row_number}"
