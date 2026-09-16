@@ -8,7 +8,7 @@ SEMI_FURNISHED_DEFAULTS=("Wardrobe","Modular Kitchen","Geyser","Fan","Light")
 FULLY_FURNISHED_DEFAULTS=SEMI_FURNISHED_DEFAULTS+("Fridge","Washing Machine","TV","Sofa","Bed","Dining Table")
 CARPET_RATIO=0.90
 PORTAL_SUBTYPE_MAP={"Triplex Villa":"Villa","Complex Villa":"Villa","Villa Complex":"Villa","Duplex Villa":"Villa","Triplex":"Independent House","Builder Floor":"Independent Floor","Independent Building":"Independent House"}
-NO_FLOOR_SUBTYPES={"Villa","Independent House","Farm House","Duplex"}
+NO_FLOOR_SUBTYPES={"Villa","Independent House","Duplex"}
 _RK_RE=re.compile(r"\b(\d)\s*rk\b",re.I)
 _MONTHS=re.compile(r"^\s*(\d+(?:\.\d+)?)\s*(?:months?|mnths?|mos?)\s*$",re.I)
 _MAINT_NUMERIC=re.compile(r"^\s*([\d.,]+)\s*(k|l|lakh|lakhs)?\s*(?:\+\s*(.+))?\s*$",re.I)
@@ -16,6 +16,7 @@ _UTILITY=re.compile(r"\butilit(?:y|ies)\b",re.I)
 _SLACK_LINK=re.compile(r"^<(?P<url>[^|>]+)(\|[^>]*)?>$")
 _PLACEHOLDERS={"*","-","—","n/a","na","none","not available","not mentioned","nil"}
 _STANDALONE_WORDS=re.compile(r"\b(independent\s+house|independent\s+floor|builder\s+floor|farm ?house|stand[-\s]*alone)\b",re.I)
+_SUBTYPE_EVIDENCE=re.compile(r"\b(?:penthouse|farm\s*house|villa|independent\s+house|independent\s+floor|duplex|apartment|flat|unit|studio|1\s*[- ]?\s*rk)\b",re.I)
 
 
 def strip_slack_markup(value:str)->str:
@@ -75,13 +76,15 @@ def _canonical_subtype(value:str)->str:
     if not raw:return ""
     for key,canonical in PORTAL_SUBTYPE_MAP.items():
         if raw.lower()==key.lower():return canonical
-    for canonical in ("Apartment","Independent House","Duplex","Independent Floor","Villa","Penthouse","Studio","Farm House"):
+    for canonical in ("Apartment","Independent House","Duplex","Independent Floor","Villa","Studio"):
         if raw.lower()==canonical.lower():return canonical
-    return raw
+    return ""
 
 def default_property_subtype(row:dict,raw_text:str)->dict:
     explicit=_canonical_subtype(row.get("property_subtype","")); row["property_subtype"]=explicit
     if explicit:return row
+    # Do not replace explicit unsupported/conflicting subtype evidence with Apartment.
+    if _SUBTYPE_EVIDENCE.search(raw_text or ""):return row
     if re.search(r"\b1\s*[- ]?\s*rk\b",raw_text or "",re.I):row["property_subtype"]="Studio"
     elif re.search(r"\b(?:duplex\s+)?villa\b",raw_text or "",re.I):row["property_subtype"]="Villa"
     elif _STANDALONE_WORDS.search(raw_text or ""):return row
