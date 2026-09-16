@@ -3,6 +3,7 @@
 This is read-only. It uses raw_message_text as source authority and does not
 compare deterministic correctness to persisted Stage-2 values. Optional or
 enrichment-owned blanks, especially pincode, are not treated as failures.
+The two reserved Housing_Listings columns AU/AV are neither read nor written.
 """
 from __future__ import annotations
 
@@ -180,6 +181,13 @@ def check_row(row_number: int, raw: str, model: dict[str, str]) -> list[str]:
     return failures
 
 
+def _canonical_row(values: list) -> list:
+    width = schema.GRID_WIDTH - len(schema.RESERVED_COLUMNS)
+    if len(values) != width:
+        raise ValueError(f"expected {width} active columns, got {len(values)}")
+    return list(values) + [""] * len(schema.RESERVED_COLUMNS)
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--start-row", type=int, default=2)
@@ -189,15 +197,16 @@ def main() -> int:
         raise SystemExit("invalid row range")
 
     client = GoogleSheetsClient()
-    rows = client.read_range(schema.SHEET_ID, schema.WORKSHEET_NAME, f"A{args.start_row}:AV{args.end_row}")
+    rows = client.read_range(schema.SHEET_ID, schema.WORKSHEET_NAME, f"A{args.start_row}:AT{args.end_row}")
     total_failures = 0
     rows_with_failures = 0
     print("EFPS PRODUCTION PROJECTION CONTRACT GATE")
     print(f"ROWS: {args.start_row}-{args.end_row} | SOURCE: raw_message_text | SHEET WRITES: 0")
+    print("RESERVED COLUMNS: NOT READ / NOT WRITTEN")
 
     for offset, values in enumerate(rows):
         row_number = args.start_row + offset
-        row = schema.row_to_mapping(values)
+        row = schema.row_to_mapping(_canonical_row(values))
         raw = str(row.get("raw_message_text", "") or "")
         if not raw.strip():
             continue
