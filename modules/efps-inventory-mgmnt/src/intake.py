@@ -10,7 +10,6 @@ from shared.whatsapp_whapi.webhook import IncomingMessage
 class PropertySession:
     sender: str
     listing_id: str = ""
-    source_group: str = ""
     started_at: str = ""
     messages: list[dict] = field(default_factory=list)
     image_count: int = 0
@@ -91,7 +90,6 @@ def ingest(message: IncomingMessage | dict, store: SessionStore):
             return "closed", current
         session = PropertySession(
             sender=sender,
-            source_group=str(_field(message, "chat_id")),
             started_at=str(_field(message, "timestamp") or datetime.now(timezone.utc).isoformat()),
         )
         store.put(session)
