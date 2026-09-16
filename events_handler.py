@@ -2,13 +2,12 @@
 from __future__ import annotations
 import json,sys
 from shared.webhook.request import body_bytes,response
-from shared.slack import security,crash_report
+from shared.slack import security
 from shared.slack.client import SlackClient
 sys.path.insert(0,"modules/efps-inventory-mgmnt")
 sys.path.insert(0,"shared/slack")
 sys.path.insert(0,"modules/efpd-lead-mgmnt/src")
 from src.slack_ops import save_photos,verify_answer,verify_submit,load,clear,photo_move,verify_start
-import bugs
 THREAD_WORDS={"done":"done","save":"done","saved":"done","submit":"submit","ok":"done","skip":"skip","next":"next","exit":"exit","stop":"exit","cancel":"exit"}
 def lambda_handler(event,context):
  raw=body_bytes(event)
@@ -18,15 +17,10 @@ def lambda_handler(event,context):
  if not security.verify_signature(raw,headers.get("x-slack-request-timestamp",""),headers.get("x-slack-signature","")):
   return response("unauthorized",401,"text/plain")
  if isinstance(payload,dict) and payload.get("type")=="url_verification":return response(str(payload.get("challenge","")),200,"text/plain")
- event_id=str(payload.get("event_id") or "") if isinstance(payload,dict) else ""
  try:
   inner=payload.get("event") or {}
   if inner.get("type")=="message" and not inner.get("bot_id") and not inner.get("subtype"):
    user=str(inner.get("user") or "");channel=str(inner.get("channel") or "");thread=str(inner.get("thread_ts") or "");text=str(inner.get("text") or "").strip();word=THREAD_WORDS.get(text.strip(".!").lower(),"")
-   if user and bugs.in_progress(user):
-    reply=bugs.answer(user,text)
-    if reply:SlackClient().post_message(channel,reply,thread_ts=thread or None)
-    return response("")
    vs=load(user,"verify") if user else None;ps=load(user,"photos") if user else None;session=vs or ps
    if session and (not thread or session.thread_ts==thread) and word:
     if session.kind=="photos":
@@ -43,5 +37,5 @@ def lambda_handler(event,context):
     reply=verify_answer(user,text);SlackClient().post_message(channel,reply,thread_ts=thread);return response("")
   return response("")
  except Exception as exc:
-  crash_report.report("slack_events",exc,reference=event_id)
+  print(f"Slack event failed: {exc!r}")
   return response("")
