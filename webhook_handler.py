@@ -84,10 +84,10 @@ def process(payload: dict) -> dict:
 
 
 def lambda_handler(event, context):
-    if not whapi_config.live_enabled():
-        return _ok({"ok": True, "live": False})
     if not _authorised(event):
         return {"statusCode": 401, "body": "unauthorized"}
+    if not whapi_config.live_enabled():
+        return _ok({"ok": True, "live": False})
     body = event.get("body") or "{}"
     if event.get("isBase64Encoded"):
         import base64
