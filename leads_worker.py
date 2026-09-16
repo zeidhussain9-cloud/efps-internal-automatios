@@ -34,7 +34,7 @@ def handle_stream(event,*,_post=None,_res=None):
   except Exception as exc:print(f"lead card redraw failed: {exc!r}")
  board=False
  if redrawn:
-  try:board=bool(digest.refresh_board(_res=_res,_post=_post).get("updated"))
+  try:board=bool(digest.run(_res=_res).get("updated"))
   except Exception as exc:print(f"board refresh failed: {exc!r}")
  return {"redrawn":redrawn,"skipped":skipped,"board":board}
 def lambda_handler(event,context):
