@@ -73,7 +73,7 @@ The connected WhAPI account was verified with read-only/live diagnostic requests
 - The deployed webhook URL and its `?t=` authentication token are intentionally not recorded here.
 - No WhAPI settings were modified and no customer message was sent during the acceptance checks.
 
-The initial `/health` request was blocked by Cloudflare browser-signature filtering. A subsequent single diagnostic request with explicit `User-Agent: EFPS-Inventory-Phase1/1.0` passed with HTTP 200. This verifies the live endpoint under that diagnostic request but does not by itself prove that the canonical `WhApiClient` transport is permanently compatible with the Cloudflare requirement.
+The initial `/health` request was blocked by Cloudflare browser-signature filtering. A subsequent single diagnostic request with explicit `User-Agent: EFPS-Inventory-Phase-1/1.0` passed with HTTP 200. This verifies the live endpoint under that diagnostic request but does not by itself prove that the canonical WhApiClient transport is permanently compatible with the Cloudflare requirement.
 
 Current WhAPI documentation confirms these relevant API surfaces: `GET /health`, `GET /settings`, `GET /settings/events`, `PATCH /settings`, `POST /settings/webhook_test`, and `POST /messages/text`. The shared client exposes neutral primitives for these operations.
 
@@ -119,3 +119,11 @@ The separate existing `Maps Platform API Key` resource remains documented in `sh
 Only secret names and non-sensitive identifiers may be documented here. Secret values, WhAPI tokens, Cloudinary API secrets, Google service-account private keys, webhook secrets, Slack signing secrets, and production credentials must remain outside version control.
 
 The credential migration pattern is: historical AWS source values → local macOS Keychain services under account `efps` → shared adapters. The migration itself does not prove live third-party connectivity; each integration requires its own runtime acceptance probe.
+
+## Approved webhook contract — 2026-09-16
+
+The legacy repository was inspected directly at commit `bd186c7c3418d633bca6766b1b92204c7a56d484`, file `modules/efps-whapi-panel/webhook_handler.py`, function `lambda_handler`. Its source performs `_authorised(event)` first and evaluates `whapi_config.live_enabled()` second. The current reconciliation webhook preserves that ordering: authentication → live gate.
+
+The current reconciliation credential loader's stored webhook/Slack payload field names remain runtime-configuration items and are not established as canonical by this document.
+
+The current Lead runtime also uses `EFPS_DDB_PREFIX` for table naming; the repository default is `efps`, but the production value remains a runtime configuration verification item.
