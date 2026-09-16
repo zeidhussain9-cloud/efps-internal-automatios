@@ -91,9 +91,14 @@ def letter(name:str)->str:return BY_NAME[name].letter
 
 def owner_of(name:str)->str:return BY_NAME[name].owner
 
-def writable_by(owner:str)->tuple[str,...]:return tuple(c.name for c in COLUMNS if c.owner==owner and c.stage!=STAGE_3)
+def writable_by(owner:str)->tuple[str,...]:return tuple(c.name for c in COLUMNS if c.owner==owner)
 
 def assert_writable(owner:str,names:list[str])->None:
+    if owner not in OWNERS:
+        raise ValueError(f"unknown owner: {owner}")
+    unknown=[name for name in names if name not in BY_NAME]
+    if unknown:
+        raise KeyError(f"unknown fields: {sorted(unknown)}")
     allowed=set(writable_by(owner))
     for name in names:
         if name not in allowed: raise PermissionError(f"{owner} cannot write {name}")
