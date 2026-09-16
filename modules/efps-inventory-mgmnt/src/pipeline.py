@@ -7,8 +7,12 @@ from shared.google_maps import GoogleMapsClient
 from shared.google_sheets import schema
 from shared.google_sheets.client import GoogleSheetsClient
 
-from . import ai, listing_id, validate
-from .phase1 import Phase1Result, project as deterministic_project, run_phase1
+try:
+    from . import ai, listing_id, validate
+    from .phase1 import Phase1Result, project as deterministic_project, run_phase1
+except ImportError:
+    import ai, listing_id, validate
+    from phase1 import Phase1Result, project as deterministic_project, run_phase1
 
 FIXED = {
     "transaction_type": "Rent",
@@ -78,7 +82,10 @@ def process_closed_session(raw_text: str, *, row: dict | None = None, maps_clien
             issues.append(f"Google Maps verification failed or is incomplete: {resolved.confidence}")
 
     # Re-apply the deterministic location safety contract after Maps enrichment.
-    from .phase1 import apply_location_contract
+    try:
+        from .phase1 import apply_location_contract
+    except ImportError:
+        from phase1 import apply_location_contract
     apply_location_contract(out)
 
     errors = validate.validate(out)
