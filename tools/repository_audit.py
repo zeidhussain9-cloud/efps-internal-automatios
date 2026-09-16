@@ -1,17 +1,14 @@
-"""Repository-wide tracked-file audit for Inventory Phase 1.
-
-The audit is read-only. It enumerates exact Git-tracked files, reports physical
-line counts for every UTF-8 text file, identifies binary files, and fails on
-known stale contract statements or contract drift.
-"""
+"""Repository-wide tracked-file audit for Inventory Phase 1."""
 from __future__ import annotations
 from collections import defaultdict
 from pathlib import Path
 import re
 import subprocess
-from shared.google_sheets import schema
+import sys
 
 ROOT=Path(__file__).resolve().parents[1]
+sys.path.insert(0,str(ROOT))
+from shared.google_sheets import schema
 STALE_TERMS=("declared " + "Standalone fallback","declared `" + "Standalone` fallback","fallback is " + "Standalone","fallback is `" + "Standalone`","fallback is **" + "Standalone**")
 def tracked_files()->list[Path]:
     result=subprocess.run(["git","ls-files","-z"],cwd=ROOT,check=True,stdout=subprocess.PIPE,stderr=subprocess.PIPE)
@@ -35,17 +32,17 @@ def audit()->int:
     print("\nCONTRACT INVARIANTS")
     schema_text=(ROOT/"shared/google_sheets/schema.py").read_text(encoding="utf-8");gate_text=(ROOT/"tools/production_projection_gate.py").read_text(encoding="utf-8");inventory_readme=(ROOT/"modules/efps-inventory-mgmnt/README.md").read_text(encoding="utf-8")
     checks={
-        "exact live bachelor tuple": schema.BY_NAME["bachelor_preference"].allowed_values==("Female Only ","Male Only","Open for both"),
-        "trimmed bachelor value excluded": "Female Only" not in schema.BY_NAME["bachelor_preference"].allowed_values,
-        "gate derives bachelor vocabulary from schema": 'bachelor_allowed = set(schema.BY_NAME["bachelor_preference"].allowed_values)' in gate_text,
-        "gate compares bachelor exactly": 'if bachelor not in bachelor_allowed:' in gate_text,
-        "gate compares tenant exactly": 'if tenant not in tenant_allowed:' in gate_text,
-        "landmark declares locality fallback dependency": re.search(r'\("landmark",PANEL,STAGE_2,\(\),\("locality",\)',schema_text) is not None,
-        "inventory README has no stale Standalone fallback": all(term not in inventory_readme for term in STALE_TERMS),
-        "reserved columns are exact": schema.RESERVED_COLUMNS==("source_group","inventory_locked"),
-        "reserved columns have no operational owner": all(schema.owner_of(name)==schema.RESERVED and schema.BY_NAME[name].stage==schema.RESERVED_STAGE for name in schema.RESERVED_COLUMNS),
-        "reserved columns are not panel-writable": all(name not in schema.writable_by(schema.PANEL) for name in schema.RESERVED_COLUMNS),
-        "V10 subtype vocabulary is exact": schema.BY_NAME["property_subtype"].allowed_values==("Apartment","Villa","Independent House","Duplex","Studio","Independent Floor"),
+        "exact live bachelor tuple":schema.BY_NAME["bachelor_preference"].allowed_values==("Female Only ","Male Only","Open for both"),
+        "trimmed bachelor value excluded":"Female Only" not in schema.BY_NAME["bachelor_preference"].allowed_values,
+        "gate derives bachelor vocabulary from schema":'bachelor_allowed = set(schema.BY_NAME["bachelor_preference"].allowed_values)' in gate_text,
+        "gate compares bachelor exactly":'if bachelor not in bachelor_allowed:' in gate_text,
+        "gate compares tenant exactly":'if tenant not in tenant_allowed:' in gate_text,
+        "landmark declares locality fallback dependency":re.search(r'\("landmark",PANEL,STAGE_2,\(\),\("locality",\)',schema_text) is not None,
+        "inventory README has no stale Standalone fallback":all(term not in inventory_readme for term in STALE_TERMS),
+        "reserved columns are exact":schema.RESERVED_COLUMNS==("source_group","inventory_locked"),
+        "reserved columns have no operational owner":all(schema.owner_of(name)==schema.RESERVED and schema.BY_NAME[name].stage==schema.RESERVED_STAGE for name in schema.RESERVED_COLUMNS),
+        "reserved columns are not panel-writable":all(name not in schema.writable_by(schema.PANEL) for name in schema.RESERVED_COLUMNS),
+        "V10 subtype vocabulary is exact":schema.BY_NAME["property_subtype"].allowed_values==("Apartment","Villa","Independent House","Duplex","Studio","Independent Floor"),
     }
     failures=[name for name,ok in checks.items() if not ok]
     for name,ok in checks.items():print(f"CHECK {name}: {'PASS' if ok else 'FAIL'}")
