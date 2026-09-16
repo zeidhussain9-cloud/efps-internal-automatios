@@ -53,6 +53,8 @@ def project(raw_text:str,row:dict[str,Any]|None=None)->dict[str,str]:
     base.update({n:v for n,v in extract.scan(raw_text).items() if n in schema.BY_NAME})
     base["internal_property_type"]=resolve_internal_property_type(raw_text)
     base=normalize.normalize(base,raw_text,resolved_internal_property_type=base["internal_property_type"])
+    # normalize retains the historical Apartment fallback only when there is no
+    # subtype evidence. Explicit unsupported or conflicting evidence stays blank.
     resolved_subtype=resolve_property_subtype(raw_text)
     if resolved_subtype:
         base["property_subtype"]=resolved_subtype
