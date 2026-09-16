@@ -52,12 +52,16 @@ def test_read_write_and_append_contract_rows() -> None:
         client=fake,
     )
     row = [f"v{i}" for i in range(schema.GRID_WIDTH)]
+    row[schema.NAMES.index("source_group")] = ""
+    row[schema.NAMES.index("inventory_locked")] = ""
     assert client.read_range("sheet", "tab", "A1:B2") == [["A1:B2"]]
     assert client.write_row("sheet", "tab", 2, row) == {"ok": True}
-    assert fake.ws.updated == ("A2:AV2", [row], True)
+    assert fake.ws.updated == ("A2:AT2", [row[:46]], True)
     assert client.append_rows("sheet", "tab", [row]) == {
-        "values": [row],
+        "values": [row[:46]],
         "value_input_option": "RAW",
     }
+    with pytest.raises(PermissionError):
+        client.write_row("sheet", "tab", 2, [*row[:45], "historical-lock"] + [""])
     with pytest.raises(ValueError):
         client.write_row("sheet", "tab", 2, ["short"])
