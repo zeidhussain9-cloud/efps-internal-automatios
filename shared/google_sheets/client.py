@@ -157,7 +157,9 @@ class GoogleSheetsClient:
 
     def read_rows(self, spreadsheet_id: str, worksheet_name: str, range_name: str) -> list[tuple[Any, ...]]:
         rows = self.read_range(spreadsheet_id, worksheet_name, range_name)
-        return [schema.validate_row(row) for row in rows]
+        width = schema.GRID_WIDTH - len(schema.RESERVED_COLUMNS)
+        normalized = [list(row) + [""] * len(schema.RESERVED_COLUMNS) if len(row) == width else row for row in rows]
+        return [schema.validate_row(row) for row in normalized]
 
     def write_ranges(
         self,
@@ -176,18 +178,27 @@ class GoogleSheetsClient:
             raise ValueError("range_name must not be empty")
         return self.write_ranges(spreadsheet_id, worksheet_name, [(range_name, values)])
 
+    @staticmethod
+    def _writable_canonical_row(values: list[Any] | tuple[Any, ...]) -> list[Any]:
+        row = schema.validate_row(values)
+        for field in schema.RESERVED_COLUMNS:
+            index = schema.NAMES.index(field)
+            if str(row[index] or "").strip():
+                raise PermissionError(f"reserved column {field} must remain blank")
+        return list(row[: schema.GRID_WIDTH - len(schema.RESERVED_COLUMNS)])
+
     def write_row(self, spreadsheet_id: str, worksheet_name: str, row_number: int, values: list[Any] | tuple[Any, ...]) -> Any:
         if row_number < 1:
             raise ValueError("row_number must be >= 1")
-        row = schema.validate_row(values)
-        return self.write_range(spreadsheet_id, worksheet_name, schema.full_range(row_number), [list(row)])
+        row = self._writable_canonical_row(values)
+        return self.write_range(spreadsheet_id, worksheet_name, f"A{row_number}:AT{row_number}", [row])
 
     def append_rows(self, spreadsheet_id: str, worksheet_name: str, values: list[list[Any]]) -> Any:
         if not values:
             return None
-        rows = [schema.validate_row(row) for row in values]
+        rows = [self._writable_canonical_row(row) for row in values]
         return self._with_backoff(
             lambda: self.worksheet(spreadsheet_id, worksheet_name).append_rows(
-                [list(row) for row in rows], value_input_option="RAW"
+                rows, value_input_option="RAW"
             )
         )
