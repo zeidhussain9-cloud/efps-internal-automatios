@@ -24,7 +24,7 @@ display_information:
   background_color: "#1f2d3d"
   long_description: >-
     The operational control panel for EasyFind property intake, verification,
-    photo collection, runtime tracking, and lead operations.
+    photo collection, and lead operations.
 
 features:
   bot_user:
@@ -35,7 +35,7 @@ features:
     - command: /efps
       url: <NEW_REPOSITORY_SLASH_COMMAND_ENDPOINT>
       description: EasyFind operations panel
-      usage_hint: status | run | show | fix | verify | photos | bug | pause
+      usage_hint: status | run | show | fix | verify | photos | pause
       should_escape: false
 
 oauth_config:
