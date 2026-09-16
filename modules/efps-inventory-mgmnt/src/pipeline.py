@@ -23,7 +23,7 @@ FIXED = {
 PANEL_FIELDS = tuple(name for name in schema.NAMES if schema.owner_of(name) == schema.PANEL)
 STAGE_3_PROTECTED = {
     "listing_state", "posted_url", "posted_at", "error_notes",
-    "meta_catalog_id", "meta_catalog_status", "inventory_locked",
+    "meta_catalog_id", "meta_catalog_status",
 }
 STAGE_1_2_WRITABLE = tuple(name for name in PANEL_FIELDS if name not in STAGE_3_PROTECTED)
 
@@ -32,7 +32,7 @@ def empty_row() -> dict[str, str]:
     return {name: "" for name in schema.NAMES}
 
 
-def initial_row(listing_id_value: str, raw_text: str = "", source_group: str = "", onboarded_on: str = "") -> dict[str, str]:
+def initial_row(listing_id_value: str, raw_text: str = "", onboarded_on: str = "") -> dict[str, str]:
     row = empty_row()
     row.update({
         "listing_id": listing_id_value,
@@ -40,7 +40,6 @@ def initial_row(listing_id_value: str, raw_text: str = "", source_group: str = "
         "intake_status": "Raw",
         "onboarded_on": onboarded_on or datetime.now(timezone.utc).isoformat(),
         "raw_message_text": raw_text,
-        "source_group": source_group,
         **FIXED,
     })
     return row
@@ -118,7 +117,6 @@ def _phase1_ranges(row_number: int, row: dict) -> list[tuple[str, list[list[str]
     return [
         (schema.range_for("listing_id", "internal_property_type", row_number), [[row[name] for name in schema.NAMES[0:4]]]),
         (schema.range_for("onboarded_on", "city", row_number), [[row[name] for name in schema.NAMES[5:41]]]),
-        (schema.range_for("source_group", "source_group", row_number), [[row["source_group"]]]),
     ]
 
 

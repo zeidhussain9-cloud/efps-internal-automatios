@@ -93,6 +93,8 @@ def validate(row: dict) -> list[str]:
     for key in ("posted_url", "posted_at", "error_notes", "meta_catalog_id", "meta_catalog_status"):
         if row[key]:
             errors.append(f"{key} must remain empty before downstream stages")
+    if any(str(row.get(field, "") or "") for field in schema.RESERVED_COLUMNS):
+        errors.append("reserved Inventory columns AU/AV must remain blank")
     return errors
 
 
@@ -111,7 +113,9 @@ def validate_raw(row: dict) -> list[str]:
     for key, value in FIXED.items():
         if row[key] != value:
             errors.append(f"{key} must be {value}")
-    for key in ("listing_state", "posted_url", "posted_at", "error_notes", "meta_catalog_id", "meta_catalog_status", "inventory_locked"):
+    for key in ("listing_state", "posted_url", "posted_at", "error_notes", "meta_catalog_id", "meta_catalog_status"):
         if row[key]:
             errors.append(f"{key} must be empty at initial intake")
+    if any(str(row.get(field, "") or "") for field in schema.RESERVED_COLUMNS):
+        errors.append("reserved Inventory columns AU/AV must remain blank")
     return errors

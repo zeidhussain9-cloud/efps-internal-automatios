@@ -19,7 +19,7 @@ SEMI_GATED_AMENITIES = "Security, Lift, CCTV, Power Backup"
 
 PROTECTED_FIELDS = (
     "listing_state", "posted_url", "posted_at", "error_notes",
-    "meta_catalog_id", "meta_catalog_status", "inventory_locked",
+    "meta_catalog_id", "meta_catalog_status",
 )
 
 
@@ -73,8 +73,6 @@ def repair_rows(client: GoogleSheetsClient, *, start_row: int, end_row: int) -> 
                 f"{listing_id}: protected Stage-3 fields changed: {', '.join(protected_changed)}"
             )
 
-        # A previously blocked row becomes Pending only after the repaired
-        # canonical row validates cleanly. Otherwise preserve its status.
         if row.get("status") == "Needs Review":
             updated["status"] = "Pending"
 

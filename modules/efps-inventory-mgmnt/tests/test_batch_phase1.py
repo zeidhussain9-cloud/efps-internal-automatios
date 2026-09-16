@@ -25,6 +25,8 @@ def test_phase1_fixture_is_validation_clean():
     assert result.issues == (), result.issues
     assert result.row["status"] == "Pending"
     assert result.row["intake_status"] == "Processed"
+    assert result.row["source_group"] == ""
+    assert result.row["inventory_locked"] == ""
 
 
 def test_batch_phase1_uses_one_read_and_one_batch_write():
@@ -36,7 +38,8 @@ def test_batch_phase1_uses_one_read_and_one_batch_write():
     assert result["write_failed"] is False
     assert client.reads == ["A2:AV2"]
     assert len(client.writes) == 1
-    assert len(client.writes[0]) == 3
+    assert len(client.writes[0]) == 2
+    assert [x[0] for x in client.writes[0]] == ["A2:D2", "F2:AO2"]
     assert result["rows"][0]["fields"]["populated"]
 
 

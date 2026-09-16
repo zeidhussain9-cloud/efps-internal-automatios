@@ -27,7 +27,7 @@ class DynamoSessionStore:
 def _rows(c):
  raw=c.read_range(schema.SHEET_ID,schema.WORKSHEET_NAME,f"A2:{schema.EXPECTED_LAST_COLUMN}");return [(i+2,schema.row_to_mapping(r)) for i,r in enumerate(raw) if r]
 def _find(c,lid):return next(((n,r) for n,r in _rows(c) if str(r.get("listing_id",""))==lid),None)
-def _persist_initial(c,s):c.append_rows(schema.SHEET_ID,schema.WORKSHEET_NAME,[schema.mapping_to_row(pipeline.initial_row(s.listing_id,s.raw_text,s.source_group,s.started_at))])
+def _persist_initial(c,s):c.append_rows(schema.SHEET_ID,schema.WORKSHEET_NAME,[schema.mapping_to_row(pipeline.initial_row(s.listing_id,s.raw_text,s.started_at))])
 def _persist_update(c,n,row):
  c.write_range(schema.SHEET_ID,schema.WORKSHEET_NAME,schema.range_for("intake_status","intake_status",n),[[row.get("intake_status","")]])
  c.write_range(schema.SHEET_ID,schema.WORKSHEET_NAME,schema.range_for("raw_message_text","raw_message_text",n),[[row.get("raw_message_text","")]])

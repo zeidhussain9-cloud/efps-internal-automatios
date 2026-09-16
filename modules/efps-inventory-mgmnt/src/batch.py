@@ -15,7 +15,7 @@ RAW = "Raw"
 NEEDS_REVIEW = "Needs Review"
 PROTECTED_FIELDS = (
     "listing_state", "posted_url", "posted_at", "error_notes",
-    "meta_catalog_id", "meta_catalog_status", "inventory_locked",
+    "meta_catalog_id", "meta_catalog_status",
 )
 
 

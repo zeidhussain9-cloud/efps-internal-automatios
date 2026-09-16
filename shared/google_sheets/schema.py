@@ -7,10 +7,12 @@ SHEET_ID = "1zdOLWklkWlnVECCtcH4SJj6vm6nEVjINpTT2U2UJEKc"
 WORKSHEET_NAME = "Housing_Listings"
 CONTRACT_VERSION = 4
 PANEL, HOUSING_AGENT, META_CATALOG = "panel", "housing_agent", "meta_catalog"
+RESERVED = "reserved"
 OWNERS = (PANEL, HOUSING_AGENT, META_CATALOG)
 STAGE_1 = "initial_webhook"
 STAGE_2 = "deterministic_extraction_property_processing"
 STAGE_3 = "downstream_operations"
+RESERVED_STAGE = "reserved"
 
 @dataclass(frozen=True)
 class Column:
@@ -77,8 +79,8 @@ _ROWS = [
 ("error_notes",HOUSING_AGENT,STAGE_3,(),(),"Housing Portal downstream-owned."),
 ("meta_catalog_id",META_CATALOG,STAGE_3,(),(),"Meta Catalogue downstream-owned."),
 ("meta_catalog_status",META_CATALOG,STAGE_3,(),(),"Meta Catalogue downstream-owned."),
-("source_group",PANEL,STAGE_1,(),(),"Inbound source/chat identifier."),
-("inventory_locked",PANEL,STAGE_3,(),(),"Lifecycle/control field; exact sheet control vocabulary is not verified in repository source."),
+("source_group",RESERVED,RESERVED_STAGE,(),(),"Reserved/dummy column AU. Must remain blank; reserved for future functionality."),
+("inventory_locked",RESERVED,RESERVED_STAGE,(),(),"Reserved/dummy column AV. Must remain blank; reserved for future functionality."),
 ]
 COLUMNS=tuple(Column(*r) for r in _ROWS)
 NAMES=tuple(c.name for c in COLUMNS)
@@ -86,6 +88,7 @@ BY_NAME={c.name:c for c in COLUMNS}
 GRID_WIDTH=len(COLUMNS); EXPECTED_GRID_WIDTH=48
 FIRST_COLUMN="A"; LAST_COLUMN=col_letter(GRID_WIDTH-1); EXPECTED_LAST_COLUMN="AV"
 ROW_IDENTITY="listing_id"
+RESERVED_COLUMNS=("source_group","inventory_locked")
 
 def letter(name:str)->str:return BY_NAME[name].letter
 

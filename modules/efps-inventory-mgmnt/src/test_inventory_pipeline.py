@@ -6,7 +6,7 @@ from shared.google_sheets import schema
 
 
 def test_initial_row_is_canonical_and_stage_one_safe():
-    row = pipeline.initial_row("EF-2609-0001", source_group="919902024973", onboarded_on="2026-09-15T00:00:00+00:00")
+    row = pipeline.initial_row("EF-2609-0001", onboarded_on="2026-09-15T00:00:00+00:00")
     assert list(row) == list(schema.NAMES)
     assert row["listing_id"] == "EF-2609-0001"
     assert row["status"] == "Raw"
@@ -16,6 +16,8 @@ def test_initial_row_is_canonical_and_stage_one_safe():
     assert row["city"] == "Bengaluru"
     assert row["posted_url"] == ""
     assert row["meta_catalog_id"] == ""
+    assert row["source_group"] == ""
+    assert row["inventory_locked"] == ""
 
 
 def test_deterministic_processing_preserves_verified_business_rules():
@@ -45,6 +47,15 @@ Gated Community"""
     assert "Utility area" in row["property_highlights"]
     assert "Wardrobe" in row["flat_furnishings"]
     assert "Fridge" in row["flat_furnishings"]
+
+
+def test_project_drops_historical_reserved_sheet_values():
+    row = pipeline.initial_row("EF-2609-RESERVED", raw_text="2 BHK\nRent: 40000\nGated Community\nLocation: Harlur")
+    row["source_group"] = "historical-chat-id"
+    row["inventory_locked"] = "historical-lock"
+    projected = pipeline.deterministic(row["raw_message_text"], row=row)
+    assert projected["source_group"] == ""
+    assert projected["inventory_locked"] == ""
 
 
 def test_family_bachelor_explicit_value_is_not_overwritten():
@@ -148,7 +159,7 @@ Google Maps: https://www.google.com/maps/search/?api=1&query=12.9081,77.6476
                 confidence="VERIFIED",
             )
 
-    row = pipeline.initial_row("EF-TEST-STAGE2-MAPS", raw_text=raw, source_group="STAGE2_VERIFICATION")
+    row = pipeline.initial_row("EF-TEST-STAGE2-MAPS", raw_text=raw)
     processed, issues = pipeline.process_closed_session(raw, row=row, maps_client=FakeMaps(), ai_llm=None)
 
     assert processed["status"] == "Pending"
@@ -163,6 +174,8 @@ Google Maps: https://www.google.com/maps/search/?api=1&query=12.9081,77.6476
     assert processed["pincode"] == "560102"
     assert processed["google_maps_url"].startswith("https://www.google.com/maps/")
     assert issues == []
+    assert processed["source_group"] == ""
+    assert processed["inventory_locked"] == ""
 
 
 def test_new_marker_opens_then_closes_same_sender_session():
@@ -201,9 +214,9 @@ class FakeSheets:
         self.writes.append((range_name, values))
 
 
-def test_stage_two_writer_never_touches_lifecycle_or_downstream_columns():
+def test_stage_two_writer_never_touches_reserved_or_downstream_columns():
     client = FakeSheets()
-    row = pipeline.initial_row("EF-2609-0004", source_group="919902024973")
+    row = pipeline.initial_row("EF-2609-0004")
     row["internal_property_type"] = "Standalone"
     row["listing_state"] = "Rented Out"
     row["posted_url"] = "https://housing.example/listing"
@@ -211,7 +224,8 @@ def test_stage_two_writer_never_touches_lifecycle_or_downstream_columns():
     row["error_notes"] = "existing downstream state"
     row["meta_catalog_id"] = "meta-1"
     row["meta_catalog_status"] = "active"
-    row["inventory_locked"] = "locked"
+    row["source_group"] = "historical-chat-id"
+    row["inventory_locked"] = "historical-lock"
     pipeline.write_phase1_update(client, 12, row)
-    assert [x[0] for x in client.writes] == ["A12:D12", "F12:AO12", "AU12:AU12"]
-    assert all("E12" not in x[0] and "AP12" not in x[0] and "AV12" not in x[0] for x in client.writes)
+    assert [x[0] for x in client.writes] == ["A12:D12", "F12:AO12"]
+    assert all("E12" not in x[0] and "AP12" not in x[0] and "AU12" not in x[0] and "AV12" not in x[0] for x in client.writes)

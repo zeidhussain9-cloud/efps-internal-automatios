@@ -64,6 +64,21 @@ def test_verified_field_dependencies_are_recorded_in_schema() -> None:
     assert schema.BY_NAME["security_deposit"].depends_on == ("monthly_rent",)
 
 
+def test_reserved_columns_are_physical_but_not_operational() -> None:
+    assert schema.RESERVED_COLUMNS == ("source_group", "inventory_locked")
+    assert schema.owner_of("source_group") == schema.RESERVED
+    assert schema.owner_of("inventory_locked") == schema.RESERVED
+    assert schema.BY_NAME["source_group"].stage == schema.RESERVED_STAGE
+    assert schema.BY_NAME["inventory_locked"].stage == schema.RESERVED_STAGE
+    assert schema.writable_by(schema.PANEL) == tuple(name for name in schema.NAMES if schema.owner_of(name) == schema.PANEL)
+    assert "source_group" not in schema.writable_by(schema.PANEL)
+    assert "inventory_locked" not in schema.writable_by(schema.PANEL)
+    with pytest.raises(PermissionError):
+        schema.assert_writable(schema.PANEL, ["source_group"])
+    with pytest.raises(PermissionError):
+        schema.assert_writable(schema.PANEL, ["inventory_locked"])
+
+
 def test_row_mapping_round_trip() -> None:
     row = [f"v{i}" for i in range(schema.GRID_WIDTH)]
     assert schema.mapping_to_row(schema.row_to_mapping(row)) == row
@@ -77,8 +92,6 @@ def test_row_width_is_enforced() -> None:
 def test_downstream_ownership_is_exact() -> None:
     assert schema.writable_by(schema.HOUSING_AGENT) == ("posted_url", "posted_at", "error_notes")
     assert schema.writable_by(schema.META_CATALOG) == ("meta_catalog_id", "meta_catalog_status")
-    assert "source_group" in schema.writable_by(schema.PANEL)
-    assert "inventory_locked" in schema.writable_by(schema.PANEL)
 
 
 def test_unknown_and_foreign_writes_are_rejected() -> None:

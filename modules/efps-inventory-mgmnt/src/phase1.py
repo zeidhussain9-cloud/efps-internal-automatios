@@ -47,14 +47,12 @@ def _report(row,issues,flags,trace):
 def project(raw_text:str,row:dict[str,Any]|None=None)->dict[str,str]:
     base={n:"" for n in schema.NAMES}
     if row:
-        for name in ("listing_id","status","intake_status","onboarded_on","raw_message_text","whatsapp_contact_link","whatsapp_group_link","transaction_type","city","source_group","cloudinary_image_urls","listing_state","posted_url","posted_at","error_notes","meta_catalog_id","meta_catalog_status","inventory_locked"):
+        for name in ("listing_id","status","intake_status","onboarded_on","raw_message_text","whatsapp_contact_link","whatsapp_group_link","transaction_type","city","cloudinary_image_urls","listing_state","posted_url","posted_at","error_notes","meta_catalog_id","meta_catalog_status"):
             base[name]=str(row.get(name,"") or "")
     base["raw_message_text"]=raw_text or base.get("raw_message_text","")
-    base.update({n:v for n,v in extract.scan(raw_text).items() if n in schema.BY_NAME})
+    base.update({n:v for n,v in extract.scan(raw_text).items() if n in schema.BY_NAME and n not in schema.RESERVED_COLUMNS})
     base["internal_property_type"]=resolve_internal_property_type(raw_text)
     base=normalize.normalize(base,raw_text,resolved_internal_property_type=base["internal_property_type"])
-    # normalize retains the historical Apartment fallback only when there is no
-    # subtype evidence. Explicit unsupported or conflicting evidence stays blank.
     resolved_subtype=resolve_property_subtype(raw_text)
     if resolved_subtype:
         base["property_subtype"]=resolved_subtype
@@ -64,6 +62,8 @@ def project(raw_text:str,row:dict[str,Any]|None=None)->dict[str,str]:
     if maps_url:base["google_maps_url"]=maps_url
     apply_location_contract(base)
     if set(base)!=set(schema.NAMES):raise ValueError("Phase-1 projection must contain exactly 48 fields")
+    for reserved in schema.RESERVED_COLUMNS:
+        base[reserved]=""
     return base
 
 def run_phase1(raw_text:str,*,row:dict[str,Any]|None=None)->Phase1Result:
