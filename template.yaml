@@ -19,20 +19,25 @@ Parameters:
     NoEcho: true
     Description: Existing inbound webhook query-token value for the deployed endpoint
   WhApiSecretArn:
-    Type: AWS::SecretsManager::Secret::Arn
-    Description: Existing Secrets Manager secret whose JSON api_token field contains the WhAPI token
+    Type: String
+    AllowedPattern: '^arn:[^:]+:secretsmanager:[^:]+:[0-9]{12}:secret:.+$'
+    Description: Existing Secrets Manager secret ARN whose JSON api_token field contains the WhAPI token
   SlackSecretArn:
-    Type: AWS::SecretsManager::Secret::Arn
-    Description: Existing Secrets Manager secret whose JSON bot_token and signing_secret fields contain Slack credentials
+    Type: String
+    AllowedPattern: '^arn:[^:]+:secretsmanager:[^:]+:[0-9]{12}:secret:.+$'
+    Description: Existing Secrets Manager secret ARN whose JSON bot_token and signing_secret fields contain Slack credentials
   GoogleSheetsSecretArn:
-    Type: AWS::SecretsManager::Secret::Arn
-    Description: Existing Secrets Manager secret whose SecretString is the Google service-account JSON document
+    Type: String
+    AllowedPattern: '^arn:[^:]+:secretsmanager:[^:]+:[0-9]{12}:secret:.+$'
+    Description: Existing Secrets Manager secret ARN whose SecretString is the Google service-account JSON document
   CloudinarySecretArn:
-    Type: AWS::SecretsManager::Secret::Arn
-    Description: Existing Secrets Manager secret whose JSON cloud_name, api_key, and api_secret fields contain Cloudinary credentials
+    Type: String
+    AllowedPattern: '^arn:[^:]+:secretsmanager:[^:]+:[0-9]{12}:secret:.+$'
+    Description: Existing Secrets Manager secret ARN whose JSON cloud_name, api_key, and api_secret fields contain Cloudinary credentials
   MapsSecretArn:
-    Type: AWS::SecretsManager::Secret::Arn
-    Description: Existing Secrets Manager secret whose SecretString contains the Google Maps API key
+    Type: String
+    AllowedPattern: '^arn:[^:]+:secretsmanager:[^:]+:[0-9]{12}:secret:.+$'
+    Description: Existing Secrets Manager secret ARN whose SecretString contains the Google Maps API key
 
 Globals:
   Function:
