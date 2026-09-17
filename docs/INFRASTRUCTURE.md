@@ -6,6 +6,7 @@ This is the canonical registry for external systems and verified resource identi
 
 - GitHub repository: `zeidhussain9-cloud/efps-internal-automatios`
 - Default branch: `main`
+- Repository code and deployment contract are maintained on `main`.
 
 ## Established shared capabilities
 
@@ -14,7 +15,7 @@ This is the canonical registry for external systems and verified resource identi
 - `shared/whatsapp_whapi/` — technical WhAPI authentication, transport, channel/settings primitives, webhook normalization, and neutral message primitives.
 - `shared/google_maps/` — reusable Google Maps URL extraction and Geocoding resolution capability.
 - `shared/slack/` — reusable Slack transport, security, routing, and Phase-1 operational capability.
-- `shared/credentials/` — canonical local macOS Keychain credential provider.
+- `shared/credentials/` — canonical local macOS Keychain credential provider for local development and local diagnostics.
 
 ## Credential provider map
 
@@ -29,7 +30,7 @@ This is the canonical registry for external systems and verified resource identi
 | Google Maps baseline migration service | `efps-whapi-panel-maps` | `efps` | `efps-whapi-panel-maps` |
 | Google Maps current API credential | `efps-google-maps-api-key` | `efps` | dedicated Maps credential registry |
 
-The AWS entries identify historical migration sources only. Runtime resolution in the current repository uses the local Keychain provider. Secret values are never stored in GitHub or this document.
+The Keychain entries are the local-development credential source. They are not a production Lambda credential mechanism. The SAM deployment contract uses existing AWS Secrets Manager secrets and injects only the required runtime environment variables; secret values are never stored in GitHub or this document. See `docs/DEPLOYMENT.md`.
 
 ## Google Sheets
 
@@ -38,15 +39,17 @@ The AWS entries identify historical migration sources only. Runtime resolution i
 - Immutable row identity: `listing_id` in column `A`
 - Recorded service-account identity: `gcpnew@easyfind-automations.iam.gserviceaccount.com`
 - Canonical local schema: `shared/google_sheets/schema.py`
-- Verified physical contract: 48 columns, `A:AV`
-- Verified Stage-1/2 inventory write boundary: `A:D`, `F:AO`, `AU`
-- Protected Stage-3 fields: `E`, `AP:AT`, `AV`
-- Housing Portal owns `AP:AR`; Meta Catalogue owns `AS:AT`; Panel owns `A:AO` and `AU:AV` physically, subject to the Stage-3 ownership boundary.
-- Runtime state: canonical read and write-boundary verification completed for Inventory Phase 1.
+- Physical grid: 48 columns, `A:AV`
+- **Current reserved columns: `AU` (`source_group`) and `AV` (`inventory_locked`)**
+- **Current active write boundary: `A:AT`**
+- AU/AV are dummy/reserved columns. Current runtime code must not read, write, populate, or operate on them.
+- A:AV rows may still be represented in memory to preserve the canonical 48-field schema, but AU/AV positions must remain blank.
+- Stage-3 fields remain downstream-owned according to `shared/google_sheets/schema.py`; the reserved-column rule does not transfer ownership of AU/AV to any runtime stage.
+- Historical live Sheet values in AU/AV require a separate controlled data-cleanup operation and are not changed by repository code.
 
 ## WhatsApp / WhAPI
 
-- Canonical Keychain service: `efps-whapi-panel-token`
+- Canonical local Keychain service: `efps-whapi-panel-token`
 - Keychain account: `efps`
 - WhAPI base URL: `https://gate.whapi.cloud`
 - Live-traffic approval flag: `EFPS_WHAPI_LIVE=1`
@@ -54,11 +57,11 @@ The AWS entries identify historical migration sources only. Runtime resolution i
 - Legacy webhook query parameter: `t`
 - Retained inventory-listener sender numbers: `917975102130`, `919902024973`
 
-The current runtime credential provider reads the canonical Keychain service and does not require AWS Secrets Manager access. The legacy deployment uses one token/channel/connected-number relationship. The two numbers above are source-number configuration and are not proof of two WhAPI channels.
+Local runtime resolution can use the canonical Keychain service. Deployed Lambda resolution is defined separately in `template.yaml`: `WHAPI_API_TOKEN` is populated from the configured AWS Secrets Manager secret. The repository does not assert that the referenced production secret currently exists or contains a valid token; that requires AWS runtime verification.
 
-### Verified live Inventory Phase-1 state
+### Previously verified live Inventory Phase-1 state
 
-The connected WhAPI account was verified with read-only/live diagnostic requests:
+The connected WhAPI account was previously verified with read-only/live diagnostic requests:
 
 - `GET /health`: HTTP 200.
 - Connected display identity: `Easyfind Property Solutions`.
@@ -66,53 +69,51 @@ The connected WhAPI account was verified with read-only/live diagnostic requests
 - Business channel: `true`.
 - Channel ID: `DRAXTH-J6HEU`.
 - `GET /settings`: HTTP 200.
-- A webhook is configured in `body` mode with `messages` / `POST` subscription.
-- `GET /settings/events`: HTTP 200; `messages` / `post` is an allowed event.
+- A webhook was configured in `body` mode with `messages` / `POST` subscription.
+- `GET /settings/events`: HTTP 200; `messages` / `post` was an allowed event.
 - A direct synthetic JSON POST to the configured deployed webhook returned HTTP 200 with `{"ok": true, "queued": 1}`.
 - The synthetic probe used non-inventory sender `919000000000`, so it could not open an Inventory Phase-1 property session.
-- The deployed webhook URL and its `?t=` authentication token are intentionally not recorded here.
-- No WhAPI settings were modified and no customer message was sent during the acceptance checks.
+- No WhAPI settings were modified and no customer message was sent during those acceptance checks.
 
-The initial `/health` request was blocked by Cloudflare browser-signature filtering. A subsequent single diagnostic request with explicit `User-Agent: EFPS-Inventory-Phase1/1.0` passed with HTTP 200. This verifies the live endpoint under that diagnostic request but does not by itself prove that the canonical `WhApiClient` transport is permanently compatible with the Cloudflare requirement.
-
-Current WhAPI documentation confirms these relevant API surfaces: `GET /health`, `GET /settings`, `GET /settings/events`, `PATCH /settings`, `POST /settings/webhook_test`, and `POST /messages/text`. The shared client exposes neutral primitives for these operations.
-
-The shared webhook builder requires explicit event definitions discovered from `GET /settings/events`; it does not guess or silently reuse a legacy event list.
+These observations are historical runtime evidence, not proof that the current `main` commit is deployed or that current AWS credentials are valid. Current production state must be independently verified in AWS.
 
 ## Google Maps
 
 - Google Cloud project: `easyfind-automations`
 - Current API key display name: `Google Maps Key`
 - Current key resource UID: `2334a827-466f-4a7a-8962-68c2afa29e34`
-- Canonical Keychain service: `efps-google-maps-api-key`
+- Canonical local Keychain service: `efps-google-maps-api-key`
 - Keychain account: `efps`
 - Runtime variable accepted by the adapter: `GOOGLE_MAPS_API_KEY`
 - Geocoding endpoint: `https://maps.googleapis.com/maps/api/geocode/json`
 - API restriction: `geocoding-backend.googleapis.com`
-- Runtime state: live direct API access, application-path resolution, and Inventory Stage-2 consumption verified.
-- Verified Maps URL resolution returned `VERIFIED` confidence and structured locality/pincode/coordinates for the test location.
+- Runtime state: live direct API access, application-path resolution, and Inventory Stage-2 consumption were previously verified.
 - Missing/incomplete Maps resolution fails closed into Inventory `Needs Review`; no location is guessed.
 
-The separate existing `Maps Platform API Key` resource remains documented in `shared/google_maps/CREDENTIALS.md` with its secret-storage mapping marked `NOT VERIFIED`.
+The current SAM deployment contract injects `GOOGLE_MAPS_API_KEY` from the configured AWS Secrets Manager secret. This does not prove that the AWS secret exists or that the deployed Lambda has been updated.
 
 ## Cloudinary
 
-- Canonical Keychain service: `efps-whapi-panel-cloudinary`
+- Canonical local Keychain service: `efps-whapi-panel-cloudinary`
 - Keychain account: `efps`
 - Runtime variables accepted by the adapter: `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`, `CLOUDINARY_URL`
 - Optional explicit cloud name: `CLOUDINARY_CLOUD_NAME`
 - Property public-ID convention: `properties/{listing_id}/photo_{n}`
 - Lead public-ID namespace: `leads/{phone}/{message_id}_{n}`
 - Catalogue helper limit: 10 URLs
-- Runtime state: live Inventory Phase-1 upload acceptance verified through the application credential path; HTTPS `secure_url` and deterministic property public ID were returned.
+- Runtime state: live Inventory Phase-1 upload acceptance was previously verified through the local application credential path.
+
+The current SAM deployment contract injects `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, and `CLOUDINARY_API_SECRET` from the configured AWS Secrets Manager secret. This does not prove current AWS runtime connectivity.
 
 ## Slack
 
-- Canonical Keychain service: `efps-whapi-panel-slack`
+- Canonical local Keychain service: `efps-whapi-panel-slack`
 - Keychain account: `efps`
 - Runtime variables accepted by the adapter: `SLACK_BOT_TOKEN`, `SLACK_SIGNING_SECRET`
 - Workspace/channel IDs are documented only where previously verified; current app installation, bot membership, command registration, and live endpoint behavior remain runtime verification items.
 - Society approval commands, queues, cards, and workflows are explicitly excluded from the new architecture.
+
+The current SAM deployment contract injects `SLACK_BOT_TOKEN` and `SLACK_SIGNING_SECRET` from the configured AWS Secrets Manager secret. This does not prove that the Slack app is installed or that the current deployed endpoint is registered.
 
 ## Live-system runtime boundary — 2026-09-16
 
@@ -122,6 +123,12 @@ Lead resources and their stream remain externally supplied through the existing 
 
 ## Credential policy
 
-Only secret names and non-sensitive identifiers may be documented here. Secret values, WhAPI tokens, Cloudinary API secrets, Google service-account private keys, webhook secrets, Slack signing secrets, and production credentials must remain outside version control.
+Only secret names/ARNs and non-sensitive identifiers may be documented here. Secret values, WhAPI tokens, Cloudinary API secrets, Google service-account private keys, webhook secrets, Slack signing secrets, and production credentials must remain outside version control.
 
-The credential migration pattern is: historical AWS source values → local macOS Keychain services under account `efps` → shared adapters. The migration itself does not prove live third-party connectivity; each integration requires its own runtime acceptance probe.
+The credential architecture is now explicitly split:
+
+1. local development/diagnostics → macOS Keychain provider;
+2. deployed Lambda runtime → existing AWS Secrets Manager secrets referenced by `template.yaml` dynamic references;
+3. third-party runtime acceptance → independently verified AWS probes.
+
+The migration itself does not prove live third-party connectivity. Each integration requires its own runtime acceptance probe.
