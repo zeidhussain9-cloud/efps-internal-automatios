@@ -1,8 +1,8 @@
 """Scheduled Inventory worker; uses only the canonical new Inventory package."""
 from __future__ import annotations
 import json,sys
-sys.path.insert(0,"modules/efps-inventory-mgmnt")
-from src import pipeline
+sys.path.insert(0, str(__file__).rsplit("/",1)[0] + "/modules/efps-inventory-mgmnt/src")
+from pipeline import process_closed_session, write_phase1_update
 from shared.google_sheets import schema
 from shared.google_sheets.client import GoogleSheetsClient
 

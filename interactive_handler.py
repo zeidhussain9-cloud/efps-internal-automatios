@@ -6,7 +6,7 @@ import sys
 from shared.slack import SlackClient
 from shared.slack.security import verify_signature
 from shared.slack.routing import LEADS_CHANNEL
-sys.path.insert(0,"modules/efpd-lead-mgmnt/src")
+sys.path.insert(0, str(__file__).rsplit("/",1)[0] + "/modules/efpd-lead-mgmnt/src")
 import audit, db, leads as L
 from lead_card import post_or_update, history_line
 
