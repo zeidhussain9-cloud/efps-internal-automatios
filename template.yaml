@@ -17,6 +17,22 @@ Parameters:
   WebhookToken:
     Type: String
     NoEcho: true
+    Description: Existing inbound webhook query-token value for the deployed endpoint
+  WhApiSecretArn:
+    Type: AWS::SecretsManager::Secret::Arn
+    Description: Existing Secrets Manager secret whose JSON api_token field contains the WhAPI token
+  SlackSecretArn:
+    Type: AWS::SecretsManager::Secret::Arn
+    Description: Existing Secrets Manager secret whose JSON bot_token and signing_secret fields contain Slack credentials
+  GoogleSheetsSecretArn:
+    Type: AWS::SecretsManager::Secret::Arn
+    Description: Existing Secrets Manager secret whose SecretString is the Google service-account JSON document
+  CloudinarySecretArn:
+    Type: AWS::SecretsManager::Secret::Arn
+    Description: Existing Secrets Manager secret whose JSON cloud_name, api_key, and api_secret fields contain Cloudinary credentials
+  MapsSecretArn:
+    Type: AWS::SecretsManager::Secret::Arn
+    Description: Existing Secrets Manager secret whose SecretString contains the Google Maps API key
 
 Globals:
   Function:
@@ -28,6 +44,14 @@ Globals:
         EFPS_WEBHOOK_LIVE: '1'
         EFPS_WHAPI_LIVE: '1'
         EFPS_WEBHOOK_TOKEN: !Ref WebhookToken
+        WHAPI_API_TOKEN: !Sub '{{resolve:secretsmanager:${WhApiSecretArn}:SecretString:api_token}}'
+        SLACK_BOT_TOKEN: !Sub '{{resolve:secretsmanager:${SlackSecretArn}:SecretString:bot_token}}'
+        SLACK_SIGNING_SECRET: !Sub '{{resolve:secretsmanager:${SlackSecretArn}:SecretString:signing_secret}}'
+        GOOGLE_SERVICE_ACCOUNT_JSON: !Sub '{{resolve:secretsmanager:${GoogleSheetsSecretArn}:SecretString}}'
+        CLOUDINARY_CLOUD_NAME: !Sub '{{resolve:secretsmanager:${CloudinarySecretArn}:SecretString:cloud_name}}'
+        CLOUDINARY_API_KEY: !Sub '{{resolve:secretsmanager:${CloudinarySecretArn}:SecretString:api_key}}'
+        CLOUDINARY_API_SECRET: !Sub '{{resolve:secretsmanager:${CloudinarySecretArn}:SecretString:api_secret}}'
+        GOOGLE_MAPS_API_KEY: !Sub '{{resolve:secretsmanager:${MapsSecretArn}:SecretString}}'
         INVENTORY_SENDERS: '917975102130,919902024973'
         SLACK_LEADS_CHANNEL: 'C0BTM6PH55L'
         SLACK_INVENTORY_CHANNEL: 'C0BTQGG8VT3'
