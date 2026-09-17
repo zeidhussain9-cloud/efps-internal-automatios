@@ -1,0 +1,15 @@
+version = 0.1
+
+[default.global.parameters]
+stack_name = "efps-whapi-panel"
+region = "us-east-1"
+
+[default.build.parameters]
+use_container = true
+
+[default.deploy.parameters]
+stack_name = "efps-whapi-panel"
+region = "us-east-1"
+capabilities = "CAPABILITY_IAM"
+confirm_changeset = false
+resolve_s3 = true
