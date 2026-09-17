@@ -16,7 +16,7 @@ This document is the repository-side deployment contract for the canonical `main
 
 | SAM parameter | Environment variable(s) | Required secret shape |
 |---|---|---|
-| `WhApiSecretArn` | `WHAPI_API_TOKEN` | JSON object with `api_token` |
+| `WhApiSecretArn` | `WHAPI_API_TOKEN` | JSON object with `token` |
 | `SlackSecretArn` | `SLACK_BOT_TOKEN`, `SLACK_SIGNING_SECRET` | JSON object with `bot_token` and `signing_secret` |
 | `GoogleSheetsSecretArn` | `GOOGLE_SERVICE_ACCOUNT_JSON` | Complete Google service-account JSON as `SecretString` |
 | `CloudinarySecretArn` | `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET` | JSON object with `cloud_name`, `api_key`, and `api_secret` |
