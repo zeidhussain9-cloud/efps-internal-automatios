@@ -10,7 +10,7 @@ from shared.google_sheets import schema
 from shared.cloudinary.client import CloudinaryClient
 from shared.cloudinary.media import upload_property_images
 import sys
-sys.path.insert(0,"modules/efps-inventory-mgmnt/src")
+sys.path.insert(0, str(__file__).rsplit("/",1)[0] + "/modules/efps-inventory-mgmnt/src")
 from pipeline import write_phase1_update, process_phase1
 
 LID_RE=re.compile(r"`(EF-[A-Z0-9-]+|BLR-[A-Z0-9-]+)`")

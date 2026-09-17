@@ -3,7 +3,7 @@ from __future__ import annotations
 import sys
 from typing import Any
 
-sys.path.insert(0, "modules/efpd-lead-mgmnt/src")
+sys.path.insert(0, str(__file__).rsplit("/",1)[0] + "/modules/efpd-lead-mgmnt/src")
 
 from lead_card import post_or_update
 from digest import run as digest_run
