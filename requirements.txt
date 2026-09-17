@@ -4,3 +4,4 @@ gcloud>=0.18,<1
 gspread>=6,<7
 google-auth>=2.35,<3
 cloudinary>=1.41,<2
+requests>=2.32,<3

@@ -1,0 +1,82 @@
+name: SAM Deployment Validation
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "template.yaml"
+      - "requirements.txt"
+      - "webhook_handler.py"
+      - "commands_handler.py"
+      - "events_handler.py"
+      - "interactive_handler.py"
+      - "handler.py"
+      - "leads_worker.py"
+      - "shared/**"
+      - "modules/efpd-lead-mgmnt/**"
+      - "modules/efps-inventory-mgmnt/**"
+      - ".github/workflows/sam-deployment-validation.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "template.yaml"
+      - "requirements.txt"
+      - "webhook_handler.py"
+      - "commands_handler.py"
+      - "events_handler.py"
+      - "interactive_handler.py"
+      - "handler.py"
+      - "leads_worker.py"
+      - "shared/**"
+      - "modules/efpd-lead-mgmnt/**"
+      - "modules/efps-inventory-mgmnt/**"
+      - ".github/workflows/sam-deployment-validation.yml"
+
+jobs:
+  validate-build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout canonical source
+        uses: actions/checkout@v4
+
+      - name: Set up AWS SAM CLI
+        uses: aws-actions/setup-sam@v2
+
+      - name: Validate SAM template
+        run: sam validate --template-file template.yaml --lint
+
+      - name: Clean SAM build
+        run: sam build --template-file template.yaml --use-container --parallel --no-cached
+
+      - name: Validate generated SAM template
+        run: sam validate --template-file .aws-sam/build/template.yaml --lint
+
+      - name: Compile Python runtime modules
+        run: python -m compileall -q shared modules/efpd-lead-mgmnt/src modules/efps-inventory-mgmnt/src tools webhook_handler.py commands_handler.py events_handler.py interactive_handler.py handler.py leads_worker.py
+
+      - name: Verify Lambda dependency packaging
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          build_root = Path('.aws-sam/build')
+          functions = [
+              'EFPSWebhook',
+              'EFPSCommands',
+              'EFPSEvents',
+              'EFPSInteractive',
+              'EFPSBatch',
+              'EFPSLeadWorker',
+          ]
+          required = ['boto3', 'cloudinary', 'cryptography', 'gspread', 'requests']
+
+          for function in functions:
+              artifact = build_root / function
+              if not artifact.is_dir():
+                  raise SystemExit(f'Missing SAM build artifact: {artifact}')
+              names = {entry.name for entry in artifact.iterdir()}
+              missing = [name for name in required if name not in names]
+              if missing:
+                  raise SystemExit(f'{function}: missing packaged dependencies: {missing}')
+              print(f'{function}: packaged dependencies present')
+          PY
