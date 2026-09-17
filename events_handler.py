@@ -78,10 +78,11 @@ def lambda_handler(event,context):
     body=event.get("body") or "{}"; raw=body.encode()
     if event.get("isBase64Encoded"):
         import base64; raw=base64.b64decode(body); body=raw.decode()
+    payload=json.loads(body)
+    if payload.get("type")=="url_verification":
+        return {"statusCode":200,"headers":{"Content-Type":"application/json"},"body":json.dumps({"challenge":payload.get("challenge","")})}
     headers={str(k).lower():str(v) for k,v in (event.get("headers") or {}).items()}
     if not verify_signature(raw,headers.get("x-slack-request-timestamp",""),headers.get("x-slack-signature","")): return {"statusCode":401,"body":"invalid signature"}
-    payload=json.loads(body)
-    if payload.get("type")=="url_verification": return {"statusCode":200,"body":payload.get("challenge","")}
     ev=payload.get("event") or {}
     if ev.get("type")!="message" or ev.get("bot_id") or ev.get("subtype"): return {"statusCode":200,"body":""}
     text=str(ev.get("text") or "").strip().casefold(); thread_ts=str(ev.get("thread_ts") or "")
