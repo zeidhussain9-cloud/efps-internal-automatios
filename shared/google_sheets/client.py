@@ -178,8 +178,7 @@ class GoogleSheetsClient:
 
     def read_rows(self, spreadsheet_id: str, worksheet_name: str, range_name: str) -> list[tuple[Any, ...]]:
         rows = self.read_range(spreadsheet_id, worksheet_name, range_name)
-        width = schema.GRID_WIDTH - len(schema.RESERVED_COLUMNS)
-        normalized = [list(row) + [""] * len(schema.RESERVED_COLUMNS) if len(row) == width else row for row in rows]
+        normalized = [list(row) + [""] * (schema.GRID_WIDTH - len(row)) if len(row) < schema.GRID_WIDTH else list(row) for row in rows]
         return [schema.validate_row(row) for row in normalized]
 
     def write_ranges(

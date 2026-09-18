@@ -25,9 +25,9 @@ class DynamoSessionStore:
  def put(self,s):self._table().put_item(Item={"user_id":SESSION_PREFIX+s.sender,"listing_id":s.listing_id,"started_at":s.started_at,"messages_json":json.dumps(s.messages),"seen_ids_json":json.dumps(s.seen_message_ids),"expires_at":int(time.time())+86400})
  def delete(self,sender):self._table().delete_item(Key={"user_id":SESSION_PREFIX+sender})
 def _rows(c):
- raw=c.read_range(schema.SHEET_ID,schema.WORKSHEET_NAME,"A2:AT");width=schema.GRID_WIDTH-len(schema.RESERVED_COLUMNS);rows=[]
+ raw=c.read_range(schema.SHEET_ID,schema.WORKSHEET_NAME,"A2:AT");rows=[]
  for i,r in enumerate(raw):
-  values=list(r)+[""]*len(schema.RESERVED_COLUMNS) if len(r)==width else r
+  values=list(r)+[""]*(schema.GRID_WIDTH-len(r)) if len(r)<schema.GRID_WIDTH else list(r)
   if values:rows.append((i+2,schema.row_to_mapping(values)))
  return rows
 def _find(c,lid):return next(((n,r) for n,r in _rows(c) if str(r.get("listing_id",""))==lid),None)
