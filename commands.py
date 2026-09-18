@@ -22,7 +22,12 @@ HELP="""*EFPS commands*
 def _rows(client):
     raw=client.read_range(schema.SHEET_ID,schema.WORKSHEET_NAME,"A2:AT")
     width=schema.GRID_WIDTH-len(schema.RESERVED_COLUMNS)
-    return [(i,schema.row_to_mapping(list(r)+[""]*len(schema.RESERVED_COLUMNS))) for i,r in enumerate(raw,start=2) if len(r)==width]
+    results=[]
+    for i,r in enumerate(raw,start=2):
+        if len(r) <= width:
+            padded=list(r)+[""]*(width-len(r))+[""]*len(schema.RESERVED_COLUMNS)
+            results.append((i, schema.row_to_mapping(padded)))
+    return results
 
 def handle(text:str,user_id:str,channel_id:str)->dict:
     args=text.strip().split(None,2); cmd=args[0].lower() if args else "help"
