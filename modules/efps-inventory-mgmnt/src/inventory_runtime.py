@@ -2,11 +2,16 @@
 from __future__ import annotations
 import json,time
 from dataclasses import dataclass
+from datetime import datetime,timedelta,timezone
 import intake,pipeline
 from shared.google_sheets import schema
 from shared.google_sheets.client import GoogleSheetsClient
 from shared.whatsapp_whapi.webhook import IncomingMessage
 SESSION_PREFIX="inventory:"
+_IST=timezone(timedelta(hours=5,minutes=30))
+def _fmt_ts(ts):
+ try:return datetime.fromtimestamp(int(ts),tz=_IST).strftime("%-d %b %Y, %-I:%M %p")
+ except(ValueError,TypeError,OSError):return str(ts or "")
 @dataclass
 class StoredSession:
  sender:str;listing_id:str="";started_at:str="";messages:list[dict]|None=None;seen_message_ids:list[str]|None=None
@@ -44,7 +49,7 @@ def handle(message:IncomingMessage,*,store=None,client=None):
  if not message.is_inventory_listener or message.is_group or message.from_me:return {"inventory":False,"reason":"not inventory listener"}
  store=store or DynamoSessionStore();client=client or GoogleSheetsClient();sender=str(message.sender or message.chat_id).strip();session=store.get(sender);text=str(message.body or "").strip()
  if intake.is_new_marker(text):
-  closed=_close(client,session);store.delete(sender);store.put(StoredSession(sender,started_at=str(message.timestamp or "")));return {"inventory":True,"recorded":False,"reason":"boundary opened","closed":closed}
+  closed=_close(client,session);store.delete(sender);store.put(StoredSession(sender,started_at=_fmt_ts(message.timestamp)));return {"inventory":True,"recorded":False,"reason":"boundary opened","closed":closed}
  if not session:return {"inventory":True,"recorded":False,"reason":"before first NEW"}
  mid=message.message_id
  if mid and mid in session.seen_message_ids:return {"inventory":True,"recorded":False,"duplicate":True}
