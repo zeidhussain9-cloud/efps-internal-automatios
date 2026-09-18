@@ -103,7 +103,7 @@ def write_new_property(client: GoogleSheetsClient, row: dict):
     if validate_errors:
         raise ValueError("Refusing invalid raw inventory row: " + "; ".join(validate_errors))
     schema.assert_writable(schema.PANEL, list(STAGE_1_2_WRITABLE))
-    return client.append_rows(schema.SHEET_ID, schema.WORKSHEET_NAME, [schema.mapping_to_row(row)])
+    return client.insert_rows(schema.SHEET_ID, schema.WORKSHEET_NAME, [schema.mapping_to_row(row)])
 
 
 def _phase1_ranges(row_number: int, row: dict) -> list[tuple[str, list[list[str]]]]:

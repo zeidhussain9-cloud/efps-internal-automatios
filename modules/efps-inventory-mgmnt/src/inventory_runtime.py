@@ -31,7 +31,7 @@ def _rows(c):
   if values:rows.append((i+2,schema.row_to_mapping(values)))
  return rows
 def _find(c,lid):return next(((n,r) for n,r in _rows(c) if str(r.get("listing_id",""))==lid),None)
-def _persist_initial(c,s):c.append_rows(schema.SHEET_ID,schema.WORKSHEET_NAME,[schema.mapping_to_row(pipeline.initial_row(s.listing_id,s.raw_text,s.started_at))])
+def _persist_initial(c,s):c.insert_rows(schema.SHEET_ID,schema.WORKSHEET_NAME,[schema.mapping_to_row(pipeline.initial_row(s.listing_id,s.raw_text,s.started_at))])
 def _persist_update(c,n,row):
  c.write_range(schema.SHEET_ID,schema.WORKSHEET_NAME,schema.range_for("intake_status","intake_status",n),[[row.get("intake_status","")]])
  c.write_range(schema.SHEET_ID,schema.WORKSHEET_NAME,schema.range_for("raw_message_text","raw_message_text",n),[[row.get("raw_message_text","")]])
@@ -49,7 +49,7 @@ def handle(message:IncomingMessage,*,store=None,client=None):
  mid=message.message_id
  if mid and mid in session.seen_message_ids:return {"inventory":True,"recorded":False,"duplicate":True}
  if mid:session.seen_message_ids.append(mid)
- if message.message_type.lower() in {"image","video","document","audio"}:store.put(session);return {"inventory":True,"recorded":True,"media":True,"listing_id":session.listing_id}
+ if message.message_type.lower() in {"image","video","document","audio"} and not text:store.put(session);return {"inventory":True,"recorded":True,"media":True,"listing_id":session.listing_id}
  if text:session.messages.append({"text":text,"timestamp":message.timestamp or "","message_id":mid or ""})
  if not session.listing_id:session.listing_id=pipeline.next_listing_id(client);_persist_initial(client,session)
  else:

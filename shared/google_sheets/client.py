@@ -225,3 +225,16 @@ class GoogleSheetsClient:
                 rows, value_input_option="RAW"
             )
         )
+
+    def insert_rows(self, spreadsheet_id: str, worksheet_name: str, values: list[list[Any]], row: int = 2) -> Any:
+        """Insert rows at a given position (default: row 2, right after header)."""
+        if not values:
+            return None
+        if row < 2:
+            raise ValueError("row must be >= 2 (row 1 is the header)")
+        rows = [self._writable_canonical_row(r) for r in values]
+        return self._with_backoff(
+            lambda: self.worksheet(spreadsheet_id, worksheet_name).insert_rows(
+                rows, row=row, value_input_option="RAW"
+            )
+        )
