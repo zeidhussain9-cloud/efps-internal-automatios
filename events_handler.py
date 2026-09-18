@@ -172,20 +172,21 @@ def lambda_handler(event,context):
 
                 position = session.get('queue_position', 0) + 1
                 
-                message_text = (f"*Photos needed — {position} of {session['total_in_queue']}*\\n"
-                                f"`{next_lid}`\\n"
-                                f"• Society: {next_prop.get('society_name') or '—'}\\n"
-                                f"• BHK: {next_prop.get('BHK') or '—'}\\n"
-                                f"• Rent: {next_prop.get('monthly_rent') or '—'}\\n"
-                                f"• Floor: {next_prop.get('floor_number') or '—'}\\n"
-                                f"• Locality: {next_prop.get('locality') or '—'}\\n"
-                                f"• Furnishing: {next_prop.get('furnish_type') or '—'}\\n\\n"
-                                f"*Original message:*\\n"
-                                f"```{str(next_prop.get('raw_message_text',''))[:1200]}```\\n\\n"
-                                f"*Reply to this message with the photos* — attach them right here in the thread.\\n"
-                                f"Then reply `done` in this thread to save them.\\n"
-                                f"(`skip` to pass, `exit` to stop.)\\n\\n"
-                                f"_Just type the word on its own — no slash._")
+                message_text = (
+                    f"*Photos needed — {position} of {session['total_in_queue']}*\\n"
+                    f"`{next_lid}`\\n"
+                    f"• Society: {next_prop.get('society_name') or '—'}\\n"
+                    f"• BHK: {next_prop.get('BHK') or '—'}\\n"
+                    f"• Rent: {next_prop.get('monthly_rent') or '—'}\\n"
+                    f"• Floor: {next_prop.get('floor_number') or '—'}\\n"
+                    f"• Locality: {next_prop.get('locality') or '—'}\\n"
+                    f"• Furnishing: {next_prop.get('furnish_type') or '—'}\\n\\n"
+                    f"*Original message:*\n```\n{str(next_prop.get('raw_message_text',''))[:1200]}\n```\n\n"
+                    f"*Reply to this message with the photos* — attach them right here in the thread.\\n"
+                    f"Then reply `done` in this thread to save them.\\n"
+                    f"(`skip` to pass, `exit` to stop.)\\n\\n"
+                    f"_Just type the word on its own — no slash._"
+                )
                 new_ts = slack.post_message(INVENTORY_CHANNEL, message_text)
                 slack.post_message(channel, f"Showing `{next_lid}` above — reply to it with the photos.", thread_ts=session.get("thread_ts"))
 

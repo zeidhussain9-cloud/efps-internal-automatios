@@ -88,6 +88,11 @@ Resources:
         Command:
           Type: Api
           Properties: { Path: /slack/commands, Method: post }
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action: [dynamodb:GetItem, dynamodb:PutItem, dynamodb:DeleteItem]
+              Resource: [!Ref SessionsTableArn]
 
   EFPSEvents:
     Type: AWS::Serverless::Function
@@ -98,6 +103,11 @@ Resources:
         Events:
           Type: Api
           Properties: { Path: /slack/events, Method: post }
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action: [dynamodb:GetItem, dynamodb:PutItem, dynamodb:DeleteItem]
+              Resource: [!Ref SessionsTableArn]
 
   EFPSInteractive:
     Type: AWS::Serverless::Function

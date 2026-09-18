@@ -56,20 +56,21 @@ def handle(text:str,user_id:str,channel_id:str)->dict:
         current_prop = queue[0]
         listing_id = current_prop['listing_id']
         
-        message_text = (f"*Photos needed — 1 of {total_count}*\\n"
-                        f"`{listing_id}`\\n"
-                        f"• Society: {current_prop.get('society_name') or '—'}\\n"
-                        f"• BHK: {current_prop.get('BHK') or '—'}\\n"
-                        f"• Rent: {current_prop.get('monthly_rent') or '—'}\\n"
-                        f"• Floor: {current_prop.get('floor_number') or '—'}\\n"
-                        f"• Locality: {current_prop.get('locality') or '—'}\\n"
-                        f"• Furnishing: {current_prop.get('furnish_type') or '—'}\\n\\n"
-                        f"*Original message:*\\n"
-                        f"```{str(current_prop.get('raw_message_text',''))[:1200]}```\\n\\n"
-                        f"*Reply to this message with the photos* — attach them right here in the thread, as many as you like, across as many replies as you like.\\n"
-                        f"Then reply `done` in this thread to save them — just the word, no slash.\\n"
-                        f"(`skip` to pass, `exit` to stop.)\\n\\n"
-                        f"_Just type the word on its own — no slash. Here or in the thread, both work._")
+        message_text = (
+            f"*Photos needed — 1 of {total_count}*\\n"
+            f"`{listing_id}`\\n"
+            f"• Society: {current_prop.get('society_name') or '—'}\\n"
+            f"• BHK: {current_prop.get('BHK') or '—'}\\n"
+            f"• Rent: {current_prop.get('monthly_rent') or '—'}\\n"
+            f"• Floor: {current_prop.get('floor_number') or '—'}\\n"
+            f"• Locality: {current_prop.get('locality') or '—'}\\n"
+            f"• Furnishing: {current_prop.get('furnish_type') or '—'}\\n\\n"
+            f"*Original message:*\n```\n{str(current_prop.get('raw_message_text',''))[:1200]}\n```\n\n"
+            f"*Reply to this message with the photos* — attach them right here in the thread, as many as you like, across as many replies as you like.\\n"
+            f"Then reply `done` in this thread to save them — just the word, no slash.\\n"
+            f"(`skip` to pass, `exit` to stop.)\\n\\n"
+            f"_Just type the word on its own — no slash. Here or in the thread, both work._"
+        )
         
         ts = slack.post_message(INVENTORY_CHANNEL, message_text)
         
