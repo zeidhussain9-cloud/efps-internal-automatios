@@ -48,7 +48,7 @@ Globals:
       Variables:
         EFPS_WEBHOOK_LIVE: '1'
         EFPS_WHAPI_LIVE: '1'
-        EFPS_WEBHOOK_TOKEN: !Ref WebhookToken
+        EFPS_WEBHOOK_TOKEN: !Sub '{{resolve:secretsmanager:${WebhookToken}:SecretString:token}}'
         WHAPI_API_TOKEN: !Sub '{{resolve:secretsmanager:${WhApiSecretArn}:SecretString:token:AWSCURRENT}}'
         SLACK_BOT_TOKEN: !Sub '{{resolve:secretsmanager:${SlackSecretArn}:SecretString:bot_token}}'
         SLACK_SIGNING_SECRET: !Sub '{{resolve:secretsmanager:${SlackSecretArn}:SecretString:signing_secret}}'
