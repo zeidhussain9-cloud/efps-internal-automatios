@@ -202,12 +202,13 @@ class GoogleSheetsClient:
 
     @staticmethod
     def _writable_canonical_row(values: list[Any] | tuple[Any, ...]) -> list[Any]:
-        row = schema.validate_row(values)
+        schema.validate_row(values)
+        row = list(values)
         for field in schema.RESERVED_COLUMNS:
             index = schema.NAMES.index(field)
             if str(row[index] or "").strip():
                 raise PermissionError(f"reserved column {field} must remain blank")
-        return list(row[: schema.GRID_WIDTH - len(schema.RESERVED_COLUMNS)])
+        return row[: schema.GRID_WIDTH - len(schema.RESERVED_COLUMNS)]
 
     def write_row(self, spreadsheet_id: str, worksheet_name: str, row_number: int, values: list[Any] | tuple[Any, ...]) -> Any:
         if row_number < 1:

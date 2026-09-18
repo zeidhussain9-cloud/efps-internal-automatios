@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import os
 import sys
+import traceback
 
 sys.path.insert(0, str(__file__).rsplit("/",1)[0] + "/modules/efpd-lead-mgmnt/src")
 sys.path.insert(0, str(__file__).rsplit("/",1)[0] + "/modules/efps-inventory-mgmnt/src")
@@ -49,6 +50,7 @@ def process(payload: dict) -> dict:
             else:
                 results.append(handle_lead(message))
         except Exception as exc:  # noqa: BLE001
+            traceback.print_exc()
             print(f"webhook message {message.message_id} failed: {exc!r}")
             results.append({"message_id":message.message_id,"error":str(exc)})
     return {"handled":len(results),"results":results}
