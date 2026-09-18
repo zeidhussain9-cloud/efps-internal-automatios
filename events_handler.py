@@ -89,8 +89,20 @@ def lambda_handler(event,context):
     if not thread_ts:return {"statusCode":200,"body":""}
     slack=SlackClient(); channel=str(ev.get("channel") or "")
     try:
-        if channel==INVENTORY_CHANNEL and text=="submit": reply=_save_photos(slack,thread_ts,channel); slack.post_message(channel,reply,thread_ts=thread_ts)
-        elif channel==PROPERTY_VERIFICATION_CHANNEL and text=="submit": reply=_save_verification(slack,thread_ts,channel); slack.post_message(channel,reply,thread_ts=thread_ts)
+        if channel==INVENTORY_CHANNEL and text=="submit":
+            try:
+                reply=_save_photos(slack,thread_ts,channel)
+                slack.post_message(channel,reply,thread_ts=thread_ts)
+            except Exception as photo_exc:
+                print(f"Photo submission failed: {photo_exc!r}")
+                slack.post_message(channel,"Something went wrong saving your photos — please try again or contact support.",thread_ts=thread_ts)
+        elif channel==PROPERTY_VERIFICATION_CHANNEL and text=="submit":
+            try:
+                reply=_save_verification(slack,thread_ts,channel)
+                slack.post_message(channel,reply,thread_ts=thread_ts)
+            except Exception as verify_exc:
+                print(f"Verification submission failed: {verify_exc!r}")
+                slack.post_message(channel,"Something went wrong saving your verification — please check your values and try again, or contact support.",thread_ts=thread_ts)
     except Exception as exc:
         print(f"Slack event failed: {exc!r}")
     return {"statusCode":200,"body":""}
