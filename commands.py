@@ -46,34 +46,34 @@ def handle(text:str,user_id:str,channel_id:str)->dict:
         import boto3
         dynamo = boto3.resource("dynamodb")
         table = dynamo.Table("efps-sessions")
-        
+
         queue=[r for _,r in rows if r.get("listing_id") and r.get("intake_status")=="Processed" and not str(r.get("cloudinary_image_urls") or "").strip() and r.get("listing_state")!="Rented Out"]
         if not queue:
             table.delete_item(Key={"user_id": f"slack_photo_session#{channel_id}"})
             return {"response_type":"ephemeral","text":"All caught up — no more properties need photos right now."}
-        
+
         total_count = len(queue)
         current_prop = queue[0]
         listing_id = current_prop['listing_id']
-        
+
         message_text = (
-            f"*Photos needed — 1 of {total_count}*\\n"
-            f"`{listing_id}`\\n"
-            f"• Society: {current_prop.get('society_name') or '—'}\\n"
-            f"• BHK: {current_prop.get('BHK') or '—'}\\n"
-            f"• Rent: {current_prop.get('monthly_rent') or '—'}\\n"
-            f"• Floor: {current_prop.get('floor_number') or '—'}\\n"
-            f"• Locality: {current_prop.get('locality') or '—'}\\n"
-            f"• Furnishing: {current_prop.get('furnish_type') or '—'}\\n\\n"
+            f"*Photos needed — 1 of {total_count}*\n"
+            f"`{listing_id}`\n"
+            f"• Society: {current_prop.get('society_name') or '—'}\n"
+            f"• BHK: {current_prop.get('BHK') or '—'}\n"
+            f"• Rent: {current_prop.get('monthly_rent') or '—'}\n"
+            f"• Floor: {current_prop.get('floor_number') or '—'}\n"
+            f"• Locality: {current_prop.get('locality') or '—'}\n"
+            f"• Furnishing: {current_prop.get('furnish_type') or '—'}\n\n"
             f"*Original message:*\n```\n{str(current_prop.get('raw_message_text',''))[:1200]}\n```\n\n"
-            f"*Reply to this message with the photos* — attach them right here in the thread, as many as you like, across as many replies as you like.\\n"
-            f"Then reply `done` in this thread to save them — just the word, no slash.\\n"
-            f"(`skip` to pass, `exit` to stop.)\\n\\n"
+            f"*Reply to this message with the photos* — attach them right here in the thread, as many as you like, across as many replies as you like.\n"
+            f"Then reply `done` in this thread to save them — just the word, no slash.\n"
+            f"(`skip` to pass, `exit` to stop.)\n\n"
             f"_Just type the word on its own — no slash. Here or in the thread, both work._"
         )
-        
+
         ts = slack.post_message(INVENTORY_CHANNEL, message_text)
-        
+
         session_data = {
             "user_id": f"slack_photo_session#{channel_id}",
             "listing_id": listing_id,
@@ -83,7 +83,7 @@ def handle(text:str,user_id:str,channel_id:str)->dict:
             "queue": [r['listing_id'] for r in queue]
         }
         table.put_item(Item=session_data)
-        
+
         return {"response_type":"ephemeral","text":f"Photo task opened for `{listing_id}` in channel. Thread: {ts}"}
     if cmd=="verify" and len(args)>=2 and args[1].lower()=="start":
         row=next((r for _,r in rows if r.get("status")=="Needs Review"),None)

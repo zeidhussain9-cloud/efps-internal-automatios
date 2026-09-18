@@ -1,22 +1,30 @@
-# Python
-__pycache__/
-*.py[cod]
-*.pyo
+
+# Gemini CLI temporary files
+.gemini/
+*.gemini.history
+output.json
+
+# Local virtual environments
 .venv/
 venv/
 
-# Environment / secrets
-.env
-.env.*
-!.env.example
+# Python caches
+__pycache__/
+*.py[cod]
 
-# OS / editor
+# Build artifacts
+.aws-sam/
+packaged*.yaml
+
+# IDE / OS files
 .DS_Store
-.idea/
 .vscode/
 
-# Local artifacts
-*.log
-coverage.xml
-.coverage
-htmlcov/
+# Aider-generated files
+.aider*
+
+# Local scripts for Gemini
+gemini_scripts/
+\ninternal_slash_command_reference.txt
+\ninternal_lead_life_cycle_ref.txt
+\ninternal_inventory_life_cycle_ref.txt

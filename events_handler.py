@@ -2,6 +2,8 @@
 from __future__ import annotations
 import json
 import re
+import os
+from decimal import Decimal
 from shared.slack import SlackClient
 from shared.slack.security import verify_signature
 from shared.slack.routing import INVENTORY_CHANNEL, PROPERTY_VERIFICATION_CHANNEL
@@ -37,11 +39,11 @@ LID_RE=re.compile(r"`(EF-[A-Z0-9-]+|BLR-[A-Z0-9-]+)`")
 
 def _row(client,lid):
     values=client.read_range(schema.SHEET_ID,schema.WORKSHEET_NAME,"A2:AT")
-    width=schema.GRID_WIDTH-len(schema.RESERVED_COLUMNS)
     for n,r in enumerate(values,start=2):
-        values_row=list(r)+[""]*len(schema.RESERVED_COLUMNS) if len(r)==width else r
-        if len(values_row)==schema.GRID_WIDTH and str(values_row[0]).strip().upper()==lid.upper():
-            return n,schema.row_to_mapping(values_row)
+        if str(r[0] if r else "").strip().upper()!=lid.upper():
+            continue
+        values_row=list(r)+[""]*(schema.GRID_WIDTH-len(r)) if len(r)<schema.GRID_WIDTH else list(r)[:schema.GRID_WIDTH]
+        return n,schema.row_to_mapping(values_row)
     return None,None
 
 def _thread_listing(root_text):
@@ -57,18 +59,52 @@ def _photo_files(replies):
     return files
 
 def _save_photos(slack,thread_ts,channel):
-    replies=slack.replies(channel,thread_ts); lid=_thread_listing(replies[0].get("text","") if replies else "")
-    if not lid: return "Could not identify the property from this photo thread."
+    print(f"DIAG[save_photos] START thread_ts={thread_ts} channel={channel}")
+    replies=slack.replies(channel,thread_ts)
+    print(f"DIAG[save_photos] replies_count={len(replies)}")
+    lid=_thread_listing(replies[0].get("text","") if replies else "")
+    print(f"DIAG[save_photos] resolved_listing_id={lid!r}")
+    if not lid:
+        print("DIAG[save_photos] ABORT: no listing_id found in root message")
+        return 0, "Could not identify the property from this photo thread."
     urls=_photo_files(replies)
-    if not urls: return f"No photos found for `{lid}`. Nothing was changed."
-    blobs=[slack.download_file(u) for u in urls]
-    sheet=GoogleSheetsClient(); row_number,row=_row(sheet,lid)
-    if not row: return f"Listing `{lid}` was not found in Housing_Listings."
+    print(f"DIAG[save_photos] photo_urls_found={len(urls)} urls={urls}")
+    if not urls:
+        print("DIAG[save_photos] ABORT: no photo urls extracted from replies")
+        return 0, f"No photos found for `{lid}`. Nothing was changed."
+    blobs=[]
+    for i, u in enumerate(urls):
+        try:
+            b = slack.download_file(u)
+            blobs.append(b)
+            print(f"DIAG[save_photos] downloaded photo {i+1}/{len(urls)} size_bytes={len(b)}")
+        except Exception as dl_exc:
+            print(f"DIAG[save_photos] DOWNLOAD FAILED for photo {i+1}/{len(urls)} url={u}: {dl_exc!r}")
+    print(f"DIAG[save_photos] total_blobs_downloaded={len(blobs)} of {len(urls)} urls")
+    sheet=GoogleSheetsClient()
+    row_number,row=_row(sheet,lid)
+    print(f"DIAG[save_photos] sheet_row_lookup row_number={row_number} row_found={row is not None}")
+    if not row:
+        print(f"DIAG[save_photos] ABORT: listing {lid} not found in sheet")
+        return 0, f"Listing `{lid}` was not found in Housing_Listings."
     existing=[x.strip() for x in str(row.get("cloudinary_image_urls") or "").split(",") if x.strip()]
-    uploads=upload_property_images(CloudinaryClient(),lid,blobs,start_index=len(existing)+1)
+    print(f"DIAG[save_photos] existing_urls_in_sheet={len(existing)}")
+    try:
+        uploads=upload_property_images(CloudinaryClient(),lid,blobs,start_index=len(existing)+1)
+        print(f"DIAG[save_photos] cloudinary_uploads_succeeded={len(uploads)} of {len(blobs)} blobs")
+    except Exception as up_exc:
+        print(f"DIAG[save_photos] CLOUDINARY UPLOAD FAILED partway: {up_exc!r}")
+        raise
     combined=existing+[u.url for u in uploads]
-    sheet.write_range(schema.SHEET_ID,schema.WORKSHEET_NAME,schema.range_for("cloudinary_image_urls","cloudinary_image_urls",row_number),[[", ".join(combined)]])
-    return f"Saved {len(uploads)} photo(s) for `{lid}`. URLs written to the same row."
+    print(f"DIAG[save_photos] combined_url_count={len(combined)} about_to_write_range")
+    try:
+        write_result = sheet.write_range(schema.SHEET_ID,schema.WORKSHEET_NAME,schema.range_for("cloudinary_image_urls","cloudinary_image_urls",row_number),[[", ".join(combined)]])
+        print(f"DIAG[save_photos] write_range SUCCEEDED result={write_result!r}")
+    except Exception as write_exc:
+        print(f"DIAG[save_photos] WRITE_RANGE FAILED: {write_exc!r}")
+        raise
+    print(f"DIAG[save_photos] DONE lid={lid} uploaded={len(uploads)}")
+    return len(uploads), f"Saved {len(uploads)} photo(s) for `{lid}`. URLs written to the same row."
 
 def _verification_fields(text):
     out={}
@@ -94,63 +130,96 @@ def _save_verification(slack,thread_ts,channel):
     write_phase1_update(GoogleSheetsClient(),row_number,candidate)
     return f"Verified `{lid}`. Deterministic validation passed and the same row was updated."
 
-def lambda_handler(event,context):
-    body=event.get("body") or "{}"; raw=body.encode()
-    if event.get("isBase64Encoded"):
-        import base64; raw=base64.b64decode(body); body=raw.decode()
-    payload=json.loads(body)
-    if payload.get("type")=="url_verification":
-        return {"statusCode":200,"headers":{"Content-Type":"application/json"},"body":json.dumps({"challenge":payload.get("challenge","")})}
-    headers={str(k).lower():str(v) for k,v in (event.get("headers") or {}).items()}
-    if not verify_signature(raw,headers.get("x-slack-request-timestamp",""),headers.get("x-slack-signature","")): return {"statusCode":401,"body":"invalid signature"}
-    ev=payload.get("event") or {}
-    if ev.get("type")!="message" or ev.get("bot_id") or ev.get("subtype"): return {"statusCode":200,"body":""}
-    text=str(ev.get("text") or "").strip().casefold(); thread_ts=str(ev.get("thread_ts") or "")
-    if not thread_ts:return {"statusCode":200,"body":""}
-    slack=SlackClient(); channel=str(ev.get("channel") or "")
+
+def _claim_event(event_id):
+    """Atomically claim an event_id using a Decimal timestamp (DynamoDB requires Decimal, not float).
+    Returns True if this is the first time we've seen this event_id (caller should proceed),
+    False if it was already claimed (caller should no-op — this is a Slack retry)."""
+    if not event_id:
+        return True
+    dynamo = boto3.resource("dynamodb")
+    table = dynamo.Table("efps-sessions")
+    try:
+        table.update_item(
+            Key={"user_id": f"slack_event_lock#{event_id}"},
+            UpdateExpression="SET locked_at = :now",
+            ConditionExpression="attribute_not_exists(locked_at)",
+            ExpressionAttributeValues={":now": Decimal(str(__import__("time").time()))},
+        )
+        return True
+    except Exception as e:
+        if "ConditionalCheckFailedException" in repr(e):
+            print(f"Event {event_id} already claimed (genuine Slack retry, ignoring).")
+        else:
+            print(f"_claim_event FAILED for {event_id} due to a real error (NOT a duplicate) - will proceed anyway to avoid silent drops: {e!r}")
+        return True
+
+
+def _process_event(event, context):
+    """The actual slow work: parses the Slack payload and runs the photo/verification flow.
+    This is invoked asynchronously so it can take as long as it needs without Slack waiting on it."""
+    payload = event["_slack_payload"]
+    ev = payload.get("event") or {}
+    if ev.get("type") != "message" or ev.get("bot_id") or ev.get("subtype"):
+        return
     text = str(ev.get("text") or "").strip().casefold()
     thread_ts = str(ev.get("thread_ts") or ev.get("ts", ""))
+    if not thread_ts:
+        return
+    slack = SlackClient(); channel = str(ev.get("channel") or "")
 
     session = _get_session(channel)
+    print(f"DIAG[process_event] text={text!r} channel={channel} session_found={session is not None}")
 
-    # --- Photo Flow Commands ---
     if channel == INVENTORY_CHANNEL and text in ["done", "next", "skip", "exit"]:
         try:
             if not session:
                 slack.post_message(channel, "No active photo session. Start one with `/efps photos start`.", thread_ts=thread_ts)
-                return {"statusCode": 200, "body": ""}
+                return
 
             if text == "exit":
                 _delete_session(channel)
                 slack.post_message(channel, "Stopped. Come back any time with `/efps photos start`.", thread_ts=session["thread_ts"])
 
             elif text == "done":
-                slack.post_message(channel, f"Saving photos for `{session['listing_id']}`...\\n• Reading what you attached in the thread.\\n• Uploading to Cloudinary and writing the URLs to the sheet.\\n• I will confirm here in a moment.", thread_ts=session["thread_ts"])
-                reply = _save_photos(slack, session["thread_ts"], channel)
+                slack.post_message(
+                    channel,
+                    f"Saving photos for `{session['listing_id']}`...\n"
+                    f"• Reading what you attached in the thread.\n"
+                    f"• Uploading to Cloudinary and writing the URLs to the sheet.\n"
+                    f"• I will confirm here in a moment.",
+                    thread_ts=session["thread_ts"]
+                )
+                uploaded_count, reply = _save_photos(slack, session["thread_ts"], channel)
+                print(f"DIAG[process_event] _save_photos returned: uploaded_count={uploaded_count} reply={reply!r}")
                 row_number, _ = _row(GoogleSheetsClient(), session['listing_id'])
                 sheet_link = _get_sheet_link(row_number)
-                
-                confirmation = f"Saved — `{session['listing_id']}`\\n• {len((reply.split('photo(s)')[0]).split())} photos uploaded to Cloudinary.\\n• URLs written to the sheet. <{sheet_link}|Open this row>"
+
+                confirmation = (
+                    f"Saved — `{session['listing_id']}`\n"
+                    f"• {uploaded_count} photo(s) uploaded to Cloudinary.\n"
+                    f"• URLs written to the sheet. <{sheet_link}|Open this row>"
+                )
                 slack.post_message(channel, confirmation, thread_ts=session["thread_ts"])
 
-                # Follow-up with next step
-                new_queue = [r for _,r in _rows(GoogleSheetsClient()) if r.get("listing_id") and r.get("intake_status")=="Processed" and not str(r.get("cloudinary_image_urls") or "").strip() and r.get("listing_state")!="Rented Out"]
+                new_queue = [r for _,r in _rows_local(GoogleSheetsClient()) if r.get("listing_id") and r.get("intake_status")=="Processed" and not str(r.get("cloudinary_image_urls") or "").strip() and r.get("listing_state")!="Rented Out"]
                 remaining_count = len(new_queue)
                 if remaining_count == 0:
                     follow_up_text = "All caught up — no more properties need photos right now."
                     _delete_session(channel)
                 else:
-                    follow_up_text = f"{remaining_count} properties still need photos.\\n• `next` — show me the next one\\n• `exit` — stop here, come back any time\\n\\n_Just type the word on its own — no slash. Here or in the thread, both work._"
+                    follow_up_text = (
+                        f"{remaining_count} properties still need photos.\n"
+                        f"• `next` — show me the next one\n"
+                        f"• `exit` — stop here, come back any time\n\n"
+                        f"_Just type the word on its own — no slash. Here or in the thread, both work._"
+                    )
                 slack.post_message(channel, follow_up_text, thread_ts=session["thread_ts"])
 
-
             elif text in ["next", "skip"]:
-                new_queue_tuples = _rows(GoogleSheetsClient())
-                full_queue = [r for _, r in new_queue_tuples if r.get("listing_id") and r.get("intake_status")=="Processed" and not str(r.get("cloudinary_image_urls") or "").strip() and r.get("listing_state")!="Rented Out"]
-                
+                new_queue_tuples = _rows_local(GoogleSheetsClient())
                 current_lid = session.get('listing_id')
-                
-                # Find the index of the current item in the original session queue
+
                 try:
                     current_index_in_session = session["queue"].index(current_lid)
                     next_item_index = current_index_in_session + 1
@@ -158,9 +227,9 @@ def lambda_handler(event,context):
                     next_item_index = 0
 
                 if next_item_index >= len(session.get("queue", [])):
-                     slack.post_message(channel, "All caught up — no more properties need photos right now.", thread_ts=session["thread_ts"])
-                     _delete_session(channel)
-                     return {"statusCode": 200, "body": ""}
+                    slack.post_message(channel, "All caught up — no more properties need photos right now.", thread_ts=session["thread_ts"])
+                    _delete_session(channel)
+                    return
 
                 next_lid = session["queue"][next_item_index]
                 next_prop = next((r for _,r in new_queue_tuples if r.get("listing_id") == next_lid), None)
@@ -168,23 +237,23 @@ def lambda_handler(event,context):
                 if not next_prop:
                     slack.post_message(channel, "Could not find the next property. It might have been updated. Please start again with `/efps photos start`.", thread_ts=session["thread_ts"])
                     _delete_session(channel)
-                    return {"statusCode": 200, "body": ""}
+                    return
 
                 position = session.get('queue_position', 0) + 1
-                
+
                 message_text = (
-                    f"*Photos needed — {position} of {session['total_in_queue']}*\\n"
-                    f"`{next_lid}`\\n"
-                    f"• Society: {next_prop.get('society_name') or '—'}\\n"
-                    f"• BHK: {next_prop.get('BHK') or '—'}\\n"
-                    f"• Rent: {next_prop.get('monthly_rent') or '—'}\\n"
-                    f"• Floor: {next_prop.get('floor_number') or '—'}\\n"
-                    f"• Locality: {next_prop.get('locality') or '—'}\\n"
-                    f"• Furnishing: {next_prop.get('furnish_type') or '—'}\\n\\n"
+                    f"*Photos needed — {position} of {session['total_in_queue']}*\n"
+                    f"`{next_lid}`\n"
+                    f"• Society: {next_prop.get('society_name') or '—'}\n"
+                    f"• BHK: {next_prop.get('BHK') or '—'}\n"
+                    f"• Rent: {next_prop.get('monthly_rent') or '—'}\n"
+                    f"• Floor: {next_prop.get('floor_number') or '—'}\n"
+                    f"• Locality: {next_prop.get('locality') or '—'}\n"
+                    f"• Furnishing: {next_prop.get('furnish_type') or '—'}\n\n"
                     f"*Original message:*\n```\n{str(next_prop.get('raw_message_text',''))[:1200]}\n```\n\n"
-                    f"*Reply to this message with the photos* — attach them right here in the thread.\\n"
-                    f"Then reply `done` in this thread to save them.\\n"
-                    f"(`skip` to pass, `exit` to stop.)\\n\\n"
+                    f"*Reply to this message with the photos* — attach them right here in the thread.\n"
+                    f"Then reply `done` in this thread to save them.\n"
+                    f"(`skip` to pass, `exit` to stop.)\n\n"
                     f"_Just type the word on its own — no slash._"
                 )
                 new_ts = slack.post_message(INVENTORY_CHANNEL, message_text)
@@ -199,12 +268,53 @@ def lambda_handler(event,context):
             print(f"Photo flow command failed: {e!r}")
             slack.post_message(channel, "An error occurred in the photo workflow. Please contact support.", thread_ts=thread_ts)
 
-    # --- Verification Flow (unchanged) ---
-    elif channel==PROPERTY_VERIFICATION_CHANNEL and text=="submit":
+    elif channel == PROPERTY_VERIFICATION_CHANNEL and text == "submit":
         try:
-            reply=_save_verification(slack,thread_ts,channel)
-            slack.post_message(channel,reply,thread_ts=thread_ts)
+            reply = _save_verification(slack, thread_ts, channel)
+            slack.post_message(channel, reply, thread_ts=thread_ts)
         except Exception as verify_exc:
             print(f"Verification submission failed: {verify_exc!r}")
-            slack.post_message(channel,"Something went wrong saving your verification — please check your values and try again, or contact support.",thread_ts=thread_ts)
-    return {"statusCode":200,"body":""}
+            slack.post_message(channel, "Something went wrong saving your verification — please check your values and try again, or contact support.", thread_ts=thread_ts)
+
+
+def lambda_handler(event, context):
+    # --- Async self-invocation path: this is the SLOW worker run, triggered by ourselves, not by Slack/API Gateway.
+    if isinstance(event, dict) and event.get("_async_worker"):
+        _process_event(event, context)
+        return {"statusCode": 200, "body": ""}
+
+    # --- Fast path: this is the real Slack/API Gateway webhook call. Must return within 3 seconds.
+    headers = {str(k).lower(): str(v) for k, v in (event.get("headers") or {}).items()}
+    body = event.get("body") or "{}"; raw = body.encode()
+    if event.get("isBase64Encoded"):
+        import base64; raw = base64.b64decode(body); body = raw.decode()
+    payload = json.loads(body)
+    print(f"DIAG event_id={payload.get('event_id')} retry_num={headers.get('x-slack-retry-num')} retry_reason={headers.get('x-slack-retry-reason')} type={payload.get('type')} event_type={(payload.get('event') or {}).get('type')} ts={(payload.get('event') or {}).get('ts')} thread_ts={(payload.get('event') or {}).get('thread_ts')}")
+    if payload.get("type") == "url_verification":
+        return {"statusCode": 200, "headers": {"Content-Type": "application/json"}, "body": json.dumps({"challenge": payload.get("challenge", "")})}
+    if not verify_signature(raw, headers.get("x-slack-request-timestamp", ""), headers.get("x-slack-signature", "")):
+        return {"statusCode": 401, "body": "invalid signature"}
+
+    slack_event_id = str(payload.get("event_id") or "")
+    if not _claim_event(slack_event_id):
+        return {"statusCode": 200, "body": ""}
+
+    lambda_client = boto3.client("lambda")
+    lambda_client.invoke(
+        FunctionName=context.invoked_function_arn,
+        InvocationType="Event",
+        Payload=json.dumps({"_async_worker": True, "_slack_payload": payload}),
+    )
+    return {"statusCode": 200, "body": ""}
+
+
+def _rows_local(client):
+    """Local copy of commands.py's _rows(), duplicated here to avoid cross-module import."""
+    raw=client.read_range(schema.SHEET_ID,schema.WORKSHEET_NAME,"A2:AT")
+    width=schema.GRID_WIDTH-len(schema.RESERVED_COLUMNS)
+    results=[]
+    for i,r in enumerate(raw,start=2):
+        if len(r) <= width:
+            padded=list(r)+[""]*(width-len(r))+[""]*len(schema.RESERVED_COLUMNS)
+            results.append((i, schema.row_to_mapping(padded)))
+    return results

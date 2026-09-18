@@ -5,6 +5,7 @@ import os
 import time
 import urllib.error
 import urllib.request
+import urllib.parse
 from dataclasses import dataclass
 from typing import Any
 API_BASE=os.getenv("EFPS_SLACK_API_BASE","https://slack.com/api")
@@ -54,7 +55,18 @@ class SlackClient:
         if blocks:payload["blocks"]=blocks
         self.call("chat.update",payload=payload)
     def replies(self, channel: str, ts: str) -> list[dict]:
-        return self.call("conversations.replies", payload={"channel": channel, "ts": ts}, http_method="GET").get("messages", [])
+        messages: list[dict] = []
+        cursor = None
+        while True:
+            payload = {"channel": channel, "ts": ts, "limit": 200}
+            if cursor:
+                payload["cursor"] = cursor
+            response = self.call("conversations.replies", payload=payload, http_method="GET")
+            messages.extend(response.get("messages", []))
+            cursor = (response.get("response_metadata") or {}).get("next_cursor") or ""
+            if not cursor:
+                break
+        return messages
     def history(self,channel:str,*,limit:int=100):return list(self.call("conversations.history",payload={"channel":channel,"limit":limit}, http_method="GET").get("messages",[]))
     def files_info(self,file_id:str):return self.call("files.info",{"file":file_id})
     def download_file(self,url:str)->bytes:

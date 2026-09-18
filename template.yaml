@@ -91,7 +91,7 @@ Resources:
       Policies:
         - Statement:
             - Effect: Allow
-              Action: [dynamodb:GetItem, dynamodb:PutItem, dynamodb:DeleteItem]
+              Action: [dynamodb:GetItem, dynamodb:PutItem, dynamodb:DeleteItem, dynamodb:UpdateItem]
               Resource: [!Ref SessionsTableArn]
 
   EFPSEvents:
@@ -106,8 +106,11 @@ Resources:
       Policies:
         - Statement:
             - Effect: Allow
-              Action: [dynamodb:GetItem, dynamodb:PutItem, dynamodb:DeleteItem]
+              Action: [dynamodb:GetItem, dynamodb:PutItem, dynamodb:DeleteItem, dynamodb:UpdateItem]
               Resource: [!Ref SessionsTableArn]
+            - Effect: Allow
+              Action: [lambda:InvokeFunction]
+              Resource: !Sub "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${AWS::StackName}-EFPSEvents-*"
 
   EFPSInteractive:
     Type: AWS::Serverless::Function
