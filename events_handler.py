@@ -198,6 +198,13 @@ def _process_event(event, context):
                     pos += 1
                     continue
 
+                # Skip if already created (has meta_catalog_id)
+                existing_meta_id = str(row.get("meta_catalog_id", "") or "").strip()
+                if existing_meta_id:
+                    slack.post_message(channel, f"⏭️ `{listing_id}` already created (Product ID: {existing_meta_id[:15]}...). Skipping.", thread_ts=catalogue_session["thread_ts"])
+                    pos += 1
+                    continue
+
                 slack.post_message(channel, f"Creating catalogue for `{listing_id}`...", thread_ts=catalogue_session["thread_ts"])
 
                 try:
@@ -207,11 +214,16 @@ def _process_event(event, context):
                 except Exception as pub_exc:
                     error_msg = str(pub_exc)
                     slack.post_message(channel, f"❌ `{listing_id}` failed: {error_msg[:200]}", thread_ts=catalogue_session["thread_ts"])
-                    sheet.write_range(
-                        schema.SHEET_ID, schema.WORKSHEET_NAME,
-                        schema.range_for("error_notes", "error_notes", row_number),
-                        [[f"Catalogue creation failed: {error_msg}"]]
-                    )
+
+                    # Only write error_notes if catalogue wasn't actually created
+                    # (Re-read row to check if publish_product wrote meta_catalog_id before failing)
+                    row_number_check, row_check = _row(sheet, listing_id)
+                    if row_check and not str(row_check.get("meta_catalog_id", "") or "").strip():
+                        sheet.write_range(
+                            schema.SHEET_ID, schema.WORKSHEET_NAME,
+                            schema.range_for("error_notes", "error_notes", row_number),
+                            [[f"Catalogue creation failed: {error_msg}"]]
+                        )
 
                 pos += 1
                 remaining = len(queue) - pos
