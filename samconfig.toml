@@ -1,14 +1,14 @@
 version = 0.1
 
 [default.global.parameters]
-stack_name = "efps-whapi-panel"
+stack_name = "efps-whapi-panel-v2"
 region = "us-east-1"
 
 [default.build.parameters]
 use_container = true
 
 [default.deploy.parameters]
-stack_name = "efps-whapi-panel"
+stack_name = "efps-whapi-panel-v2"
 region = "us-east-1"
 capabilities = "CAPABILITY_IAM"
 confirm_changeset = false
