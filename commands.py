@@ -133,7 +133,7 @@ def handle(text:str,user_id:str,channel_id:str)->dict:
 
         return {"response_type":"ephemeral","text":f"Catalogue session opened. Thread: {ts}"}
     if cmd=="verify" and len(args)>=2 and args[1].lower()=="start":
-        row=next((r for _,r in rows if r.get("status")=="Needs Review"),None)
+        row=next((r for _,r in rows if r.get("status")=="Needs Review" and r.get("listing_state")!="Rented Out"),None)
         if not row:return {"response_type":"ephemeral","text":"No inventory properties currently need verification."}
         blanks=[n for n in ("society_name","locality","pincode","BHK","bathrooms","total_floors","monthly_rent","security_deposit","built_up_area","floor_number","property_subtype","internal_property_type","landmark","furnish_type","preferred_tenant_type","bachelor_preference") if not str(row.get(n,"" )).strip()]
         ts=slack.post_message(PROPERTY_VERIFICATION_CHANNEL,f"*Verification needed — `{row['listing_id']}`*\nBlank fields: {', '.join(blanks) or 'none'}\n\nReply in this thread with `field=value` lines, then `submit`.\n\n```{str(row.get('raw_message_text',''))[:1200]}```")
