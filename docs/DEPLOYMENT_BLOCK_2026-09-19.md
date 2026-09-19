@@ -1,6 +1,22 @@
 # CloudFormation Deployment Block - 2026-09-19
 
-**Status:** 🔴 **BLOCKED** - CloudFormation deployments failing with Secrets Manager errors
+**Status:** ✅ **RESOLVED** - Deployed successfully at 2026-09-19 13:23 IST
+
+---
+
+## RESOLUTION SUMMARY
+
+**Root Cause:** Template requested secret key `api_token`, but secret only contained key `token`
+
+**Solution:** Temporarily added both keys to secret → deployed successfully → removed temporary key
+
+**Deployment Time:** 2026-09-19T04:58:47Z (13:23 IST)
+
+See bottom of this document for complete resolution details.
+
+---
+
+## ORIGINAL INCIDENT REPORT
 
 ## Problem Summary
 
@@ -180,3 +196,104 @@ aws lambda get-function \
 **Status:** Active Incident  
 **Severity:** Medium (production stable, new features blocked)  
 **Contact:** Check AWS Support or Service Health Dashboard
+
+---
+
+## RESOLUTION DETAILS
+
+**Resolved:** 2026-09-19 13:23 IST  
+**Resolution Time:** 2 hours 17 minutes (11:06 - 13:23 IST)
+
+### Actual Root Cause
+
+The CloudFormation stack had an **old deployed template** requesting secret key `api_token`, but the secret was updated to only contain key `token`.
+
+**What Happened:**
+1. Original deployment used `api_token` key
+2. Commit dfef978 changed template to request `token` key
+3. Template deployed successfully BUT secret was never updated
+4. Later, secret was manually updated to have `token` key (removing `api_token`)
+5. CloudFormation tried to validate OLD Lambda env vars → looked for `api_token` → NOT FOUND → deployment failed
+
+**Why It Was Hard to Debug:**
+- Our source `template.yaml` was already correct (requesting `token`)
+- The processed template showed it requesting `api_token` (from deployed stack)
+- CloudFormation validates EXISTING env vars before applying new template
+- Created a catch-22: Can't deploy new template until old env vars validate
+
+### Resolution Steps
+
+**Step 1:** Identified the mismatch
+```bash
+# Checked processed template
+aws cloudformation get-template \
+  --stack-name efps-whapi-panel \
+  --template-stage Processed
+
+# Found: Template requests api_token
+# But: Secret only has token key
+```
+
+**Step 2:** Temporarily added both keys to secret
+```python
+# Added api_token key with same value as token
+secret_json['api_token'] = secret_json['token']
+# Updated secret via AWS SDK
+```
+
+**Step 3:** Deployed successfully
+```bash
+sam build && sam deploy --no-confirm-changeset
+# CloudFormation validated old env vars → found api_token → passed ✓
+# Applied new template → Lambda now uses token key ✓
+```
+
+**Step 4:** Cleaned up temporary key
+```python
+# Removed api_token key, kept only token
+del secret_json['api_token']
+```
+
+### Verification
+
+```bash
+# Lambda updated successfully
+$ aws lambda get-function --function-name efps-whapi-panel-v2-EFPSEvents-sCPbGs4Mbtu2
+LastModified: 2026-09-19T04:58:47.000+0000 ✓
+
+# Secret has correct key
+$ aws secretsmanager get-secret-value --secret-id efps-whapi-panel-token | jq 'keys'
+["token"] ✓
+
+# Template requests correct key  
+$ grep WHAPI_API_TOKEN template.yaml
+{{resolve:secretsmanager:${WhApiSecretArn}:SecretString:token}} ✓
+```
+
+### Key Learnings
+
+1. **CloudFormation validates before updating** - checks existing Lambda env vars can resolve before applying new template
+2. **Secret key names must match** - changing template key name requires matching change in secret
+3. **Use processed template for truth** - shows what CloudFormation actually deployed, not what's in source
+4. **Break the cycle** - when stuck, temporarily make both old and new states valid, then deploy
+
+### What Was Deployed
+
+✅ **Catalogue Creation Fix** (commit 5ae3474)
+- Skips properties that already have meta_catalog_id
+- Protects success state from retry errors
+- Fixes infinite loop/stuck behavior
+
+✅ **IAM Role Updates** (commits 3e67e70, e0fca0b)
+- Hardened DynamoDB permissions
+- Added SessionsTableArn access for Commands/Events
+
+✅ **Environment Variable Fixes**
+- WHAPI_API_TOKEN correctly resolves to `token` key
+- All other secrets already matched their template references
+
+---
+
+**Final Status:** ✅ Resolved and deployed to production  
+**Production Health:** All systems operational  
+**Next Action:** Test catalogue creation with `/efps catalogue start`
