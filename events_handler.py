@@ -195,7 +195,8 @@ def _process_event(event, context):
 
     photo_session = _get_session(channel, "photo")
     catalogue_session = _get_session(channel, "catalogue")
-    print(f"DIAG[process_event] text={text!r} channel={channel} photo={photo_session is not None} catalogue={catalogue_session is not None}")
+    add_property_session = _get_session(channel, "add_property")
+    print(f"DIAG[process_event] text={text!r} channel={channel} photo={photo_session is not None} catalogue={catalogue_session is not None} add_property={add_property_session is not None}")
 
     if channel == INVENTORY_CHANNEL and text in ["go", "skip", "exit"] and catalogue_session:
         try:
@@ -392,6 +393,110 @@ def _process_event(event, context):
         except Exception as e:
             print(f"Photo flow command failed: {e!r}")
             slack.post_message(channel, "An error occurred in the photo workflow. Please contact support.", thread_ts=thread_ts)
+
+    elif channel == INVENTORY_CHANNEL and add_property_session and text in ["done", "cancel", "add more", "exit"]:
+        try:
+            if text == "cancel":
+                _delete_session(channel, "add_property")
+                slack.post_message(channel, "Property entry cancelled. Session closed.", thread_ts=add_property_session["thread_ts"])
+                return
+
+            if text in ["exit", "done"]:
+                if not add_property_session.get("raw_text"):
+                    slack.post_message(channel, "No property details provided. Cancelled.", thread_ts=add_property_session["thread_ts"])
+                    _delete_session(channel, "add_property")
+                    return
+
+                sheet=GoogleSheetsClient()
+                slack.post_message(channel, "Processing property details and images...", thread_ts=add_property_session["thread_ts"])
+
+                raw_text=add_property_session.get("raw_text", "")
+                sys.path.insert(0, str(__file__).rsplit("/",1)[0] + "/modules/efps-inventory-mgmnt/src")
+                from pipeline import process_closed_session, next_listing_id
+
+                try:
+                    out,issues=process_closed_session(raw_text)
+                    listing_id=next_listing_id(sheet)
+                    out["listing_id"]=listing_id
+
+                    uploaded_count, reply=_save_photos(slack, add_property_session["thread_ts"], channel)
+
+                    from shared.google_sheets.client import GoogleSheetsClient as GSC
+                    row_number, _ = _row(sheet, "dummy")
+
+                    if uploaded_count > 0:
+                        out["cloudinary_image_urls"]=_get_cloudinary_urls(sheet, add_property_session["thread_ts"], channel)
+
+                    out["status"]="Pending"
+                    out["intake_status"]="Processed"
+                    out["listing_state"]="Available"
+
+                    new_row_result=sheet.insert_rows(schema.SHEET_ID, schema.WORKSHEET_NAME, [schema.mapping_to_row(out)])
+
+                    slack.post_message(channel,
+                        f"✅ Property Added Successfully!\n\n"
+                        f"Listing ID: `{listing_id}`\n"
+                        f"Images: {uploaded_count} uploaded to Cloudinary ✓\n\n"
+                        f"Status: 🟢 CATALOGUE READY (Photos already added)\n"
+                        f"Next: Ready for Meta Catalogue creation via `/efps catalogue start`\n\n"
+                        f"─────────────────────────────\n"
+                        f"Add another property?\n"
+                        f"Reply: `add more` to start new session  OR  `exit` to close",
+                        thread_ts=add_property_session["thread_ts"])
+
+                    if text in ["exit", "done"]:
+                        _delete_session(channel, "add_property")
+                        return
+                    else:
+                        _delete_session(channel, "add_property")
+                        import time
+                        dynamo=boto3.resource("dynamodb")
+                        table=dynamo.Table("efps-sessions")
+                        new_session={
+                            "user_id":f"slack_add_property_session#{channel}",
+                            "thread_ts":"",
+                            "raw_text":"",
+                            "image_count":0,
+                            "expires_at":int(time.time())+86400,
+                        }
+                        table.put_item(Item=new_session)
+                        ts=slack.post_message(INVENTORY_CHANNEL,
+                            "📝 New Property Entry Session Started\n\n"
+                            "Share property details in THIS THREAD:\n\n"
+                            "1️⃣ Reply with property text\n"
+                            "2️⃣ Attach ALL images\n"
+                            "3️⃣ Reply: `done` or `cancel`")
+                        new_session["thread_ts"]=ts
+                        table.put_item(Item=new_session)
+                        return
+
+                except Exception as process_exc:
+                    error_msg=str(process_exc)
+                    slack.post_message(channel, f"❌ Processing failed: {error_msg[:200]}", thread_ts=add_property_session["thread_ts"])
+                    _delete_session(channel, "add_property")
+                    return
+
+        except Exception as e:
+            print(f"Add property flow failed: {e!r}")
+            slack.post_message(channel, "An error occurred. Please contact support.", thread_ts=thread_ts)
+            _delete_session(channel, "add_property")
+
+    elif channel == INVENTORY_CHANNEL and add_property_session and not text.startswith("/"):
+        if not add_property_session.get("raw_text"):
+            add_property_session["raw_text"]=ev.get("text", "")
+            dynamo=boto3.resource("dynamodb")
+            table=dynamo.Table("efps-sessions")
+            table.put_item(Item=add_property_session)
+            slack.post_message(channel, "✓ Property text captured. Now attach images and reply `done`.", thread_ts=add_property_session["thread_ts"])
+            return
+
+        files=ev.get("files", [])
+        if files:
+            add_property_session["image_count"]=add_property_session.get("image_count", 0)+len(files)
+            dynamo=boto3.resource("dynamodb")
+            table=dynamo.Table("efps-sessions")
+            table.put_item(Item=add_property_session)
+            slack.post_message(channel, f"✓ {len(files)} image(s) captured. Total: {add_property_session['image_count']}. Reply `done` to process.", thread_ts=add_property_session["thread_ts"])
 
     elif channel == PROPERTY_VERIFICATION_CHANNEL and text == "submit":
         try:

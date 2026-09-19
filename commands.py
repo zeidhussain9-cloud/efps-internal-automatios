@@ -12,8 +12,7 @@ from pipeline import process_phase1, write_phase1_update
 HELP="""*EFPS commands*
 `/efps status` — inventory counts
 `/efps show <listing_id>` — show one property
-`/efps run` — process Raw inventory rows
-`/efps fix <listing_id> <field> <value>` — deterministic correction
+`/efps add-property` — add new property with details + images in one session
 `/efps photos start` — show next Processed property without photos
 `/efps catalogue start` — create Meta catalogues for ready properties
 `/efps verify start` — show next Needs Review property
@@ -155,4 +154,35 @@ def handle(text:str,user_id:str,channel_id:str)->dict:
         if errors:return {"response_type":"ephemeral","text":"Correction refused: "+"; ".join(errors)}
         write_phase1_update(client,row_number,projected)
         return {"response_type":"in_channel","text":f"Updated `{lid}` field `{field}`."}
+    if cmd=="add-property":
+        import boto3, time
+        dynamo=boto3.resource("dynamodb")
+        table=dynamo.Table("efps-sessions")
+        session_key=f"slack_add_property_session#{channel_id}"
+        session_data={
+            "user_id":session_key,
+            "thread_ts":"",
+            "raw_text":"",
+            "image_count":0,
+            "expires_at":int(time.time())+86400,
+        }
+        table.put_item(Item=session_data)
+        ts=slack.post_message(INVENTORY_CHANNEL,
+            "📝 Property Entry Session Started\n\n"
+            "Share property details in THIS THREAD:\n\n"
+            "1️⃣ Reply with property text (like WhatsApp message):\n"
+            "   Example:\n"
+            "   _3 BHK, Semi Furnished\n"
+            "   Rent: 45K\n"
+            "   Maintenance: 3K\n"
+            "   Deposit: 1.5L\n"
+            "   Location: Sarjapur Road\n"
+            "   Pets: Allowed_\n\n"
+            "2️⃣ Attach ALL images in next replies\n\n"
+            "3️⃣ When done, reply: `done`\n"
+            "   To cancel: `cancel`"
+        )
+        session_data["thread_ts"]=ts
+        table.put_item(Item=session_data)
+        return {"response_type":"ephemeral","text":f"Property entry session opened in {INVENTORY_CHANNEL}. Thread: {ts}"}
     return {"response_type":"ephemeral","text":f"Unknown command. Use `{TOP_LEVEL_COMMAND} help`."}

@@ -1,7 +1,7 @@
 # EFPS Deployment Guide
 
-**Last Updated:** 2026-09-19 15:45 IST  
-**Current Deployment:** Production LIVE in us-east-1 with Collection Auto-Grouping
+**Last Updated:** 2026-09-19 16:30 IST  
+**Current Deployment:** Production LIVE in us-east-1 with Dual Entry Points + Collection Auto-Grouping
 
 ---
 
@@ -373,12 +373,31 @@ aws cloudformation update-stack \
 
 ---
 
+## Property Entry Points (TWO WAYS)
+
+### Entry Point 1: WhatsApp Webhook (Automatic)
+```
+WhatsApp Message → WhAPI Webhook → Lambda processes → Creates sheet row
+Status: intake_status = "Processed"
+Next: Photos must be uploaded via /efps photos start
+```
+
+### Entry Point 2: Slack Command (Manual with Images)
+```
+/efps add-property → Opens session → User provides text + images → Auto-processes + Auto-flip to Catalogue Ready
+Status: intake_status = "Processed", then auto-flip to "Catalogue Ready"
+Next: Can immediately create Meta Catalogue via /efps catalogue start
+```
+
 ## Post-Deployment Verification Checklist
 
 - [ ] All 6 Lambda functions show recent LastModified timestamp
 - [ ] `/efps status` works in Slack
 - [ ] WhAPI webhook receives messages (test with WhatsApp message)
+- [ ] `/efps add-property` command works and collects text + images
 - [ ] Google Sheet reads/writes work (test with `/efps show <listing_id>`)
+- [ ] Cloudinary image uploads work
+- [ ] Collection auto-grouping works (new catalogue appears in correct collection)
 - [ ] CloudWatch logs show no errors
 - [ ] API Gateway endpoints respond (check `/whapi/webhook?t=TOKEN`)
 
@@ -421,7 +440,9 @@ aws cloudformation update-stack \
 - CloudFormation: https://docs.aws.amazon.com/cloudformation/
 
 **Last Successful Deployment:**
-- Date: 2026-09-19 15:45 IST
-- Feature: Auto-add catalogues to WhatsApp collections by BHK on creation
+- Date: 2026-09-19 16:30 IST
+- Features: Dual entry points + Collection auto-grouping
+  - `/efps add-property` command for manual property creation with images
+  - Auto-add to collections on catalogue creation (by BHK)
 - Deployed By: Claude Haiku 4.5
-- Status: ✅ All systems operational with collection auto-grouping
+- Status: ✅ All systems operational with dual entry flows
