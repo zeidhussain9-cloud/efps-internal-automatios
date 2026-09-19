@@ -116,6 +116,24 @@ def generate_description(row: Mapping[str, Any]) -> tuple[str, str]:
     return title, description
 
 
+def _record_published(sheet: GoogleSheetsClient, row_number: int, product_id: str) -> None:
+    sheet.write_range(
+        schema.SHEET_ID, schema.WORKSHEET_NAME,
+        schema.range_for("meta_catalog_id", "meta_catalog_status", row_number),
+        [[product_id, "Posted"]],
+    )
+    sheet.write_range(
+        schema.SHEET_ID, schema.WORKSHEET_NAME,
+        schema.range_for("intake_status", "intake_status", row_number),
+        [["Published"]],
+    )
+    sheet.write_range(
+        schema.SHEET_ID, schema.WORKSHEET_NAME,
+        schema.range_for("error_notes", "error_notes", row_number),
+        [[""]],
+    )
+
+
 def publish_product(
     row_number: int,
     row: Mapping[str, Any],
@@ -126,6 +144,15 @@ def publish_product(
     listing_id = str(row.get("listing_id") or "")
     if not listing_id:
         raise ValueError("listing_id is missing")
+
+    client = whapi or WhApiClient()
+    sheet = sheets or GoogleSheetsClient()
+
+    existing = client.find_product_by_retailer_id(listing_id)
+    if existing:
+        product_id = str(existing.get("id") or "")
+        _record_published(sheet, row_number, product_id)
+        return {"status": "already_exists", "product_id": product_id, "listing_id": listing_id}
 
     title, description = generate_description(row)
     images = get_image_urls(row)
@@ -138,30 +165,34 @@ def publish_product(
     except (ValueError, TypeError):
         pass
 
-    client = whapi or WhApiClient()
-    result = client.create_product(
-        name=title,
-        description=description,
-        price=rent,
-        currency="INR",
-        images=images,
-        url=str(row.get("google_maps_url") or ""),
-        product_retailer_id=listing_id,
-    )
+    try:
+        result = client.create_product(
+            name=title,
+            description=description,
+            price=rent,
+            currency="INR",
+            images=images,
+            url=str(row.get("google_maps_url") or ""),
+            product_retailer_id=listing_id,
+        )
+    except RuntimeError as exc:
+        err = str(exc)
+        if "Duplicate Item Code" in err:
+            found = client.find_product_by_retailer_id(listing_id)
+            if found:
+                product_id = str(found.get("id") or "")
+                _record_published(sheet, row_number, product_id)
+                return {"status": "recovered_duplicate", "product_id": product_id, "listing_id": listing_id}
+        if "Duplicate Media" in err:
+            raise RuntimeError(
+                f"{listing_id}: images are already used by another WhatsApp product. "
+                f"Re-upload photos to new Cloudinary URLs and update the sheet."
+            ) from exc
+        raise
 
     product_id = str(result.get("id") or result.get("product_id") or "")
     if not product_id:
         raise RuntimeError(f"WhAPI returned no product ID: {result}")
 
-    sheet = sheets or GoogleSheetsClient()
-    sheet.write_range(
-        schema.SHEET_ID, schema.WORKSHEET_NAME,
-        schema.range_for("meta_catalog_id", "meta_catalog_status", row_number),
-        [[product_id, "Posted"]],
-    )
-    sheet.write_range(
-        schema.SHEET_ID, schema.WORKSHEET_NAME,
-        schema.range_for("intake_status", "intake_status", row_number),
-        [["Published"]],
-    )
-    return {"status": "success", "product_id": product_id, "listing_id": listing_id}
+    _record_published(sheet, row_number, product_id)
+    return {"status": "created", "product_id": product_id, "listing_id": listing_id}

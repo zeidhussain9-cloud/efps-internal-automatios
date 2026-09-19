@@ -235,12 +235,17 @@ def _process_event(event, context):
             try:
                 result = publish_product(row_number, row)
                 product_id = result.get("product_id", "")
-                slack.post_message(channel, f"✅ `{listing_id}` → Product ID: {product_id}", thread_ts=catalogue_session["thread_ts"])
+                status = result.get("status", "created")
+                if status == "already_exists":
+                    slack.post_message(channel, f"✅ `{listing_id}` already in WhatsApp → synced Product ID: {product_id}", thread_ts=catalogue_session["thread_ts"])
+                elif status == "recovered_duplicate":
+                    slack.post_message(channel, f"✅ `{listing_id}` recovered from duplicate → Product ID: {product_id}", thread_ts=catalogue_session["thread_ts"])
+                else:
+                    slack.post_message(channel, f"✅ `{listing_id}` → Product ID: {product_id}", thread_ts=catalogue_session["thread_ts"])
             except Exception as pub_exc:
                 error_msg = str(pub_exc)
                 slack.post_message(channel, f"❌ `{listing_id}` failed: {error_msg[:200]}", thread_ts=catalogue_session["thread_ts"])
 
-                # Only write error_notes if catalogue wasn't actually created
                 row_number_check, row_check = _row(sheet, listing_id)
                 if row_check and not str(row_check.get("meta_catalog_id", "") or "").strip():
                     sheet.write_range(

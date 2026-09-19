@@ -187,3 +187,13 @@ class WhApiClient:
         payload["is_hidden"] = is_hidden
         payload["availability"] = availability
         return self.post("/business/products", payload)
+
+    def get_products(self, count: int = 100) -> list[dict]:
+        result = self.get("/business/products", {"count": count})
+        return (result or {}).get("products", [])
+
+    def find_product_by_retailer_id(self, retailer_id: str) -> dict | None:
+        for p in self.get_products():
+            if p.get("product_retailer_id") == retailer_id:
+                return p
+        return None
