@@ -107,6 +107,7 @@ class WhApiClient:
         headers = {
             "Authorization": f"Bearer {self.credentials.token}",
             "Accept": "application/json",
+            "User-Agent": "node-fetch/1.0",
         }
         if payload is not None:
             body = json.dumps(payload).encode("utf-8")
