@@ -181,53 +181,46 @@ def _process_event(event, context):
                 slack.post_message(channel, "Catalogue session stopped.", thread_ts=catalogue_session["thread_ts"])
                 return
 
+            sheet = GoogleSheetsClient()
+            sys.path.insert(0, str(__file__).rsplit("/",1)[0] + "/modules/efps_meta_catalogue_mgmnt/src")
+            from generator import publish_product
+
             pos = int(catalogue_session.get("position", 0))
             queue = catalogue_session.get("queue", [])
 
-            if text == "skip":
+            # Process ALL remaining properties in this invocation
+            while pos < len(queue):
+                listing_id = queue[pos]
+                row_number, row = _row(sheet, listing_id)
+
+                if not row:
+                    slack.post_message(channel, f"Could not find `{listing_id}` in sheet. Skipping.", thread_ts=catalogue_session["thread_ts"])
+                    pos += 1
+                    continue
+
+                slack.post_message(channel, f"Creating catalogue for `{listing_id}`...", thread_ts=catalogue_session["thread_ts"])
+
+                try:
+                    result = publish_product(row_number, row)
+                    product_id = result.get("product_id", "")
+                    slack.post_message(channel, f"✅ `{listing_id}` → Product ID: {product_id}", thread_ts=catalogue_session["thread_ts"])
+                except Exception as pub_exc:
+                    error_msg = str(pub_exc)
+                    slack.post_message(channel, f"❌ `{listing_id}` failed: {error_msg[:200]}", thread_ts=catalogue_session["thread_ts"])
+                    sheet.write_range(
+                        schema.SHEET_ID, schema.WORKSHEET_NAME,
+                        schema.range_for("error_notes", "error_notes", row_number),
+                        [[f"Catalogue creation failed: {error_msg}"]]
+                    )
+
                 pos += 1
+                remaining = len(queue) - pos
+                if remaining > 0:
+                    slack.post_message(channel, f"{remaining} more to go. Processing next...", thread_ts=catalogue_session["thread_ts"])
 
-            if pos >= len(queue):
-                _delete_session(channel, "catalogue")
-                slack.post_message(channel, "All catalogues created. Session closed.", thread_ts=catalogue_session["thread_ts"])
-                return
-
-            listing_id = queue[pos]
-            sheet = GoogleSheetsClient()
-            row_number, row = _row(sheet, listing_id)
-
-            if not row:
-                slack.post_message(channel, f"Could not find `{listing_id}` in sheet. Skipping.", thread_ts=catalogue_session["thread_ts"])
-                catalogue_session["position"] = pos + 1
-                boto3.resource("dynamodb").Table("efps-sessions").put_item(Item=catalogue_session)
-                return
-
-            slack.post_message(channel, f"Creating catalogue for `{listing_id}`...", thread_ts=catalogue_session["thread_ts"])
-
-            try:
-                sys.path.insert(0, str(__file__).rsplit("/",1)[0] + "/modules/efps_meta_catalogue_mgmnt/src")
-                from generator import publish_product
-                result = publish_product(row_number, row)
-                product_id = result.get("product_id", "")
-                slack.post_message(channel, f"✅ `{listing_id}` → Product ID: {product_id}", thread_ts=catalogue_session["thread_ts"])
-            except Exception as pub_exc:
-                error_msg = str(pub_exc)
-                slack.post_message(channel, f"❌ `{listing_id}` failed: {error_msg[:200]}", thread_ts=catalogue_session["thread_ts"])
-                sheet.write_range(
-                    schema.SHEET_ID, schema.WORKSHEET_NAME,
-                    schema.range_for("error_notes", "error_notes", row_number),
-                    [[f"Catalogue creation failed: {error_msg}"]]
-                )
-
-            catalogue_session["position"] = pos + 1
-            boto3.resource("dynamodb").Table("efps-sessions").put_item(Item=catalogue_session)
-
-            remaining = len(queue) - (pos + 1)
-            if remaining > 0:
-                slack.post_message(channel, f"{remaining} more to go. Processing next...", thread_ts=catalogue_session["thread_ts"])
-            else:
-                _delete_session(channel, "catalogue")
-                slack.post_message(channel, "All catalogues created. Session closed.", thread_ts=catalogue_session["thread_ts"])
+            # All done
+            _delete_session(channel, "catalogue")
+            slack.post_message(channel, "All catalogues created. Session closed.", thread_ts=catalogue_session["thread_ts"])
 
         except Exception as e:
             print(f"Catalogue flow failed: {e!r}")
