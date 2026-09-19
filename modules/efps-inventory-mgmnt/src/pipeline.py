@@ -38,6 +38,7 @@ def initial_row(listing_id_value: str, raw_text: str = "", onboarded_on: str = "
         "listing_id": listing_id_value,
         "status": "Raw",
         "intake_status": "Raw",
+        "listing_state": "Available",
         "onboarded_on": onboarded_on or datetime.now(timezone.utc).isoformat(),
         "raw_message_text": raw_text,
         **FIXED,

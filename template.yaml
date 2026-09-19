@@ -17,7 +17,8 @@ Parameters:
   WebhookToken:
     Type: String
     NoEcho: true
-    Description: Existing inbound webhook query-token value for the deployed endpoint
+    AllowedPattern: '^arn:[^:]+:secretsmanager:[^:]+:[0-9]{12}:secret:.+$'
+    Description: Secrets Manager ARN whose JSON {"token":"..."} field contains the inbound webhook query-token
   WhApiSecretArn:
     Type: String
     AllowedPattern: '^arn:[^:]+:secretsmanager:[^:]+:[0-9]{12}:secret:.+$'
@@ -48,7 +49,7 @@ Globals:
       Variables:
         EFPS_WEBHOOK_LIVE: '1'
         EFPS_WHAPI_LIVE: '1'
-        EFPS_WEBHOOK_TOKEN: !Ref WebhookToken
+        EFPS_WEBHOOK_TOKEN: !Sub '{{resolve:secretsmanager:${WebhookToken}:SecretString:token}}'
         WHAPI_API_TOKEN: !Sub '{{resolve:secretsmanager:${WhApiSecretArn}:SecretString:token}}'
         SLACK_BOT_TOKEN: !Sub '{{resolve:secretsmanager:${SlackSecretArn}:SecretString:bot_token}}'
         SLACK_SIGNING_SECRET: !Sub '{{resolve:secretsmanager:${SlackSecretArn}:SecretString:signing_secret}}'

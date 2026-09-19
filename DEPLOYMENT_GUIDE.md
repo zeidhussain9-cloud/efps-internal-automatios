@@ -10,7 +10,7 @@
 ### Region & Account
 - **AWS Region:** `us-east-1` (US East - N. Virginia)
 - **AWS Account ID:** `232812966882`
-- **Stack Name:** `efps-whapi-panel`
+- **Stack Name:** `efps-whapi-panel-v2`
 
 ### What's Hosted Where
 
@@ -34,6 +34,7 @@ efps-sessions       → Inventory/catalogue sessions
 
 **AWS Secrets Manager** (All in us-east-1):
 ```
+efps-whapi-panel-webhook-P8V3wX      → Webhook auth token (JSON: {"token": "..."})
 efps-whapi-panel-token-irrJre       → WhAPI token (JSON: {"token": "..."})
 efps-whapi-panel-slack-Kvle1s       → Slack credentials (JSON: {"bot_token": "...", "signing_secret": "..."})
 efps-whapi-panel-cloudinary-rSOaOu  → Cloudinary credentials (JSON)
@@ -43,7 +44,7 @@ efps-whapi-panel-maps-ipixKU        → Google Maps API key (plain string)
 
 **AWS API Gateway** (us-east-1):
 ```
-https://u84hqrag42.execute-api.us-east-1.amazonaws.com/Prod/
+https://rhy5k50vpf.execute-api.us-east-1.amazonaws.com/Prod/
   ├── /whapi/webhook        → WhAPI webhook endpoint
   ├── /slack/commands       → Slack slash commands
   ├── /slack/events         → Slack events
@@ -159,7 +160,7 @@ Operation                LogicalResourceId        ResourceType             Repla
 * Modify                 EFPSEvents               AWS::Lambda::Function    False
 ...
 
-Successfully created/updated stack - efps-whapi-panel in us-east-1
+Successfully created/updated stack - efps-whapi-panel-v2 in us-east-1
 ```
 
 ### Step 4: Verify Deployment
@@ -189,7 +190,7 @@ All stored in CloudFormation stack (not in samconfig.toml):
 ```bash
 # View current parameters
 aws cloudformation describe-stacks \
-  --stack-name efps-whapi-panel \
+  --stack-name efps-whapi-panel-v2 \
   --region us-east-1 \
   --query 'Stacks[0].Parameters'
 ```
@@ -214,6 +215,14 @@ LeadsStreamArn: arn:aws:dynamodb:us-east-1:232812966882:table/efps-leads/stream/
 ## Secret Management
 
 ### Secret Structure Requirements
+
+**Webhook Token Secret (JSON):**
+```json
+{
+  "token": "YOUR_WEBHOOK_QUERY_TOKEN"
+}
+```
+⚠️ **Must use key name `token`** — this is the `?t=` query parameter value for authenticating inbound WhAPI webhooks
 
 **WhAPI Secret (JSON):**
 ```json
@@ -306,7 +315,7 @@ Error: Stack is in UPDATE_ROLLBACK_COMPLETE state and can not be updated
 ```bash
 # Continue update rollback
 aws cloudformation continue-update-rollback \
-  --stack-name efps-whapi-panel \
+  --stack-name efps-whapi-panel-v2 \
   --region us-east-1
 
 # Wait for stack to return to UPDATE_COMPLETE
@@ -317,7 +326,7 @@ aws cloudformation continue-update-rollback \
 
 **Symptom:**
 ```
-No changes to deploy. Stack efps-whapi-panel is up to date
+No changes to deploy. Stack efps-whapi-panel-v2 is up to date
 ```
 
 **Cause:** No code or template changes since last deployment
@@ -342,13 +351,13 @@ sam build && sam deploy --no-confirm-changeset
 ```bash
 # View previous stack template
 aws cloudformation get-template \
-  --stack-name efps-whapi-panel \
+  --stack-name efps-whapi-panel-v2 \
   --region us-east-1 \
   --template-stage Original
 
 # Rollback to previous stack version
 aws cloudformation update-stack \
-  --stack-name efps-whapi-panel \
+  --stack-name efps-whapi-panel-v2 \
   --region us-east-1 \
   --use-previous-template
 ```
@@ -403,7 +412,7 @@ aws cloudformation update-stack \
 - CloudFormation: https://docs.aws.amazon.com/cloudformation/
 
 **Last Successful Deployment:**
-- Date: 2026-09-19 13:23 IST
-- Commit: 5ae3474
-- Deployed By: Claude Sonnet 4.5
+- Date: 2026-09-19 14:44 IST
+- Fix: Resolve EFPS_WEBHOOK_TOKEN from Secrets Manager (was passing raw ARN)
+- Deployed By: Claude Opus 4.6
 - Status: ✅ All systems operational
