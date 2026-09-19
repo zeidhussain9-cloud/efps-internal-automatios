@@ -123,12 +123,27 @@ def _verification_fields(text):
             if k in schema.BY_NAME and k not in schema.RESERVED_COLUMNS: out[k]=v
     return out
 
+def _maybe_flip_to_catalogue_ready(sheet, row_number, row):
+    if (row.get("intake_status") == "Processed" and
+        row.get("status") == "Pending" and
+        row.get("listing_state") != "Rented Out" and
+        not str(row.get("meta_catalog_id") or "").strip() and
+        str(row.get("cloudinary_image_urls") or "").strip()):
+        sheet.write_range(
+            schema.SHEET_ID, schema.WORKSHEET_NAME,
+            schema.range_for("intake_status", "intake_status", row_number),
+            [["Catalogue Ready"]]
+        )
+        return True
+    return False
+
 def _save_verification(slack,thread_ts,channel):
     replies=slack.replies(channel,thread_ts); lid=_thread_listing(replies[0].get("text","") if replies else "")
     if not lid:return "Could not identify the property from this verification thread."
     changes={}
     for msg in replies[1:]: changes.update(_verification_fields(msg.get("text","")))
-    row_number,row=_row(GoogleSheetsClient(),lid)
+    sheet=GoogleSheetsClient()
+    row_number,row=_row(sheet,lid)
     if not row:return f"Listing `{lid}` was not found."
     candidate=dict(row); candidate.update(changes)
     candidate=process_phase1(str(candidate.get("raw_message_text","")),row=candidate).row
@@ -136,7 +151,8 @@ def _save_verification(slack,thread_ts,channel):
     errors=validate(candidate)
     if errors:return "Verification refused: " + "; ".join(errors)
     candidate["status"]="Pending"; candidate["intake_status"]="Processed"
-    write_phase1_update(GoogleSheetsClient(),row_number,candidate)
+    write_phase1_update(sheet,row_number,candidate)
+    _maybe_flip_to_catalogue_ready(sheet,row_number,candidate)
     return f"Verified `{lid}`. Deterministic validation passed and the same row was updated."
 
 
