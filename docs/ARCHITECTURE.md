@@ -21,6 +21,10 @@ This is the canonical cross-repository architecture reference.
 ### Stage 1 — Initial / Webhook
 Dedicated inventory-listener traffic enters the inventory module. `NEW` opens a property session; subsequent messages are collected until the next `NEW`, which closes the property. A listing identity is created and the raw record is persisted.
 
+**Row insertion:** New properties insert at row 2 (immediately after the header), pushing existing rows down. This keeps the most recent listings at the top of the sheet.
+
+**Image caption extraction:** Media messages (images, videos, documents) with text captions have their caption text extracted and stored in the session. Forwarded property listings sent as images with text descriptions are fully captured.
+
 ### Stage 2 — Deterministic Extraction / Property Processing
 The completed raw property is processed as one business stage with the following deterministic boundary:
 
@@ -43,8 +47,21 @@ The projection audit has established additional source-shape guards at the extra
 
 Existing persisted Sheet Stage-2 values are never extraction input. The raw source remains authoritative for deterministic facts.
 
-### Stage 3 — Downstream Operations
-Stage 3 is the downstream boundary for later consumers. It is not part of the current Inventory Phase-1 publishing implementation.
+### Stage 3 — Meta Catalogue Publishing
+Stage 3 implements Meta/WhatsApp Business catalogue creation and publishing. Properties flow through:
+
+1. **Catalogue Ready gate**: After photos are uploaded (`intake_status=Processed` → automatic check → `intake_status=Catalogue Ready`)
+2. **Manual catalogue creation**: Operator runs `/efps catalogue start` → `go` in thread
+3. **WhAPI product creation**: System calls `POST /business/products` with property description, images, price
+4. **Status update**: On success, writes `meta_catalog_id` (Product ID), `meta_catalog_status=Posted`, `intake_status=Published`
+
+The description generator (`modules/efps_meta_catalogue_mgmnt/src/generator.py`) creates minimalistic catalogue cards:
+- Title from `catalog_title` column (as-is)
+- Clean bullet-list format: rent, deposit, maintenance, size, floor, tenant preferences, pet policy, availability
+- Footer: society/location line + Google Maps link
+- All text deterministic (no AI generation)
+
+Stage 3 writes are restricted to columns AS:AT (`meta_catalog_id`, `meta_catalog_status`) and C (`intake_status`).
 
 ## Canonical sheet
 The single physical shape is `shared/google_sheets/schema.py`: 48 columns A:AV. The schema records owner, stage, allowed values where verified, and declared dependencies.

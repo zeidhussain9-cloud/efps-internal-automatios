@@ -34,7 +34,7 @@ For every implementation, the agent must review all maintained root and `docs/` 
 
 - `modules/efps-inventory-mgmnt/` — property inventory business workflows and rules; current Inventory Phase-1 implementation.
 - `modules/efpd-lead-mgmnt/` — lead/enquiry business workflows and rules.
-- `modules/efps-meta-catalogue-mgmnt/` — reserved future Meta/WhatsApp catalogue business workflows.
+- `modules/efps_meta_catalogue_mgmnt/` — Meta/WhatsApp Business catalogue creation and publishing workflows.
 - `modules/efps-housing-portal-mgmnt/` — reserved future Housing.com automation.
 - `modules/efps-website-mgmnt/` — EasyFind website management and automation.
 

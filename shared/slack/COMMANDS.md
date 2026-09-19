@@ -15,6 +15,7 @@ Canonical command surface migrated from the legacy EFPS panel. There is one Slac
 | `/efps photos next` | Move to the next photo property. |
 | `/efps photos skip` | Skip the current photo property for the session. |
 | `/efps photos exit` | Close the photo session. |
+| `/efps catalogue start` | Start Meta catalogue creation for ready properties. |
 | `/efps pause` | Disable scheduled inventory batches. |
 | `/efps resume` | Re-enable scheduled inventory batches. |
 
@@ -54,6 +55,16 @@ The slash command cannot be used inside a Slack thread. Start the session from t
 - `exit` — close the session.
 
 A sentence containing these words is not automatically a command; command matching must remain explicit.
+
+## Catalogue thread controls
+
+Similar to photo sessions, catalogue creation is thread-based:
+
+- `go` — start creating catalogues for all ready properties, processing one by one with live updates.
+- `skip` — skip the current property (catalogue session only).
+- `exit` — close the catalogue session.
+
+The system automatically advances to the next property after each successful creation. When all properties are processed, the session closes automatically.
 
 ## Ownership constraints for `/efps fix`
 

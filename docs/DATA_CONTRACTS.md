@@ -20,6 +20,7 @@ The completed `raw_message_text` is the only extraction source. Existing Sheet v
 
 ### Direct fields
 
+- `onboarded_on`: formatted as human-readable IST datetime ("19 Sep 2026, 4:55 AM"). Stage 1 captures WhAPI epoch timestamp from the "NEW" boundary message and formats it immediately. This is a presentation field, not an extraction field.
 - `internal_property_type`: resolve explicit source gating evidence first. Explicit negative gating resolves to `Standalone`. Specific/generic gated wording is accepted after explicit labelled evidence. Independently adjudicated community names may resolve through `src/community_property_types.py`. **No gating/standalone evidence is not proof of Standalone; unresolved type is represented as blank until an authoritative adjudication/enrichment source exists.**
 - `society_name`: use the directly supplied society name. Also accept apartment/community/building-name labels. Structured `📍 Name:` markers are source anchors; `📍 Landmark:` and `📍 Location:` are not society names. Strip presentation-only markdown. Placeholder-only values such as `*` or `-` count as blank. If blank after source extraction/enrichment, use the resulting locality.
 - `landmark`: use the directly supplied landmark. A `📍 Landmark:` marker followed only by a Maps URL remains blank. A Maps URL must never be stored as a landmark; the URL belongs to `google_maps_url`. Landmark does not inherit locality.
@@ -88,6 +89,22 @@ The 11-field review is no longer a manually inferred "PARTIAL" list. A field is 
 | AF | `flat_furnishings` | `Wardrobe, Modular Kitchen, Geyser, Fan, Light`; `Wardrobe, Modular Kitchen, Geyser, Fan, Light, Fridge, Washing Machine, TV, Sofa, Bed, Dining Table` |
 
 Column AA `pet_friendly` has no Sheet validation rule; observed/application values are `Yes` and `No`.
+
+## intake_status lifecycle
+
+Column C (`intake_status`) tracks property processing through the full pipeline:
+
+| Value | Stage | Trigger | Next Action |
+|-------|-------|---------|-------------|
+| `Raw` | Stage 1 | Webhook receives "NEW" + property text | Phase-1 deterministic extraction |
+| `Processed` | Stage 2 | Phase-1 extraction + validation complete | Manual photo upload via `/efps photos start` |
+| `Catalogue Ready` | Stage 3 | Photos saved + qualifies for catalogue | Meta catalogue creation via `/efps catalogue start` |
+| `Published` | Stage 3 | Meta catalogue created successfully | Terminal state |
+
+**Auto-flip rules:**
+- `Raw` → `Processed`: Automatic when next "NEW" message triggers `_close()` and Phase-1 runs.
+- `Processed` → `Catalogue Ready`: Automatic when `/efps photos start` → `done` saves photos AND property qualifies (status=Pending, has cloudinary URLs, listing_state≠Rented Out, no existing meta_catalog_id).
+- `Catalogue Ready` → `Published`: Manual via `/efps catalogue start` → `go` when WhAPI catalogue creation succeeds.
 
 ## Stage-1/2 write boundary
 
