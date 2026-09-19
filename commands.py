@@ -109,8 +109,11 @@ def handle(text:str,user_id:str,channel_id:str)->dict:
             society = str(prop.get('society_name') or '').strip()
             bhk = str(prop.get('BHK') or '').strip()
             furnish = str(prop.get('furnish_type') or '').strip()
-            rent = prop.get('monthly_rent')
-            rent_str = f"₹{rent:,}" if rent else "—"
+            rent_raw = prop.get('monthly_rent')
+            try:
+                rent_str = f"₹{int(rent_raw):,}" if rent_raw else "—"
+            except (ValueError, TypeError):
+                rent_str = f"₹{rent_raw}" if rent_raw else "—"
             loc = society if society else str(prop.get('locality') or '').strip()
             lines.append(f"{i}. `{prop['listing_id']}` · {loc} · {furnish} {bhk} · {rent_str}")
         if total > 10:
