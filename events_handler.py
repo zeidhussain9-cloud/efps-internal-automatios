@@ -181,7 +181,7 @@ def _process_event(event, context):
                 slack.post_message(channel, "Catalogue session stopped.", thread_ts=catalogue_session["thread_ts"])
                 return
 
-            pos = catalogue_session.get("position", 0)
+            pos = int(catalogue_session.get("position", 0))
             queue = catalogue_session.get("queue", [])
 
             if text == "skip":
