@@ -159,3 +159,30 @@ class WhApiClient:
 
     def send_text(self, payload: Mapping[str, Any]) -> Any:
         return self.post("/messages/text", payload)
+
+    def create_product(
+        self,
+        name: str,
+        description: str,
+        price: float,
+        currency: str,
+        images: list[str],
+        url: str = "",
+        product_retailer_id: str = "",
+        is_hidden: bool = False,
+        availability: str = "in stock",
+    ) -> Any:
+        payload = {
+            "name": name,
+            "description": description,
+            "price": price,
+            "currency": currency,
+            "images": images,
+        }
+        if url:
+            payload["url"] = url
+        if product_retailer_id:
+            payload["product_retailer_id"] = product_retailer_id
+        payload["is_hidden"] = is_hidden
+        payload["availability"] = availability
+        return self.post("/business/products", payload)

@@ -15,6 +15,7 @@ HELP="""*EFPS commands*
 `/efps run` — process Raw inventory rows
 `/efps fix <listing_id> <field> <value>` — deterministic correction
 `/efps photos start` — show next Processed property without photos
+`/efps catalogue start` — create Meta catalogues for ready properties
 `/efps verify start` — show next Needs Review property
 `/efps help` — this help
 """
@@ -85,6 +86,49 @@ def handle(text:str,user_id:str,channel_id:str)->dict:
         table.put_item(Item=session_data)
 
         return {"response_type":"ephemeral","text":f"Photo task opened for `{listing_id}` in channel. Thread: {ts}"}
+    if cmd=="catalogue" and len(args)>=2 and args[1].lower()=="start":
+        import boto3
+        dynamo = boto3.resource("dynamodb")
+        table = dynamo.Table("efps-sessions")
+
+        queue = [r for _, r in rows if (
+            r.get("listing_id") and
+            r.get("intake_status") == "Catalogue Ready" and
+            r.get("status") == "Pending" and
+            r.get("listing_state") != "Rented Out" and
+            not str(r.get("meta_catalog_id") or "").strip() and
+            str(r.get("cloudinary_image_urls") or "").strip()
+        )]
+        if not queue:
+            table.delete_item(Key={"user_id": f"slack_catalogue_session#{channel_id}"})
+            return {"response_type":"ephemeral","text":"All caught up — no properties ready for catalogue creation."}
+
+        total = len(queue)
+        lines = [f"*Meta Catalogue — {total} {'property' if total == 1 else 'properties'} ready*\n"]
+        for i, prop in enumerate(queue[:10], 1):
+            society = str(prop.get('society_name') or '').strip()
+            bhk = str(prop.get('BHK') or '').strip()
+            furnish = str(prop.get('furnish_type') or '').strip()
+            rent = prop.get('monthly_rent')
+            rent_str = f"₹{rent:,}" if rent else "—"
+            loc = society if society else str(prop.get('locality') or '').strip()
+            lines.append(f"{i}. `{prop['listing_id']}` · {loc} · {furnish} {bhk} · {rent_str}")
+        if total > 10:
+            lines.append(f"...and {total - 10} more")
+        lines.append(f"\nReply `go` in this thread to start creating catalogues.")
+
+        ts = slack.post_message(INVENTORY_CHANNEL, "\n".join(lines))
+
+        session = {
+            "user_id": f"slack_catalogue_session#{channel_id}",
+            "thread_ts": ts,
+            "queue": [r['listing_id'] for r in queue],
+            "position": 0,
+            "total": total,
+        }
+        table.put_item(Item=session)
+
+        return {"response_type":"ephemeral","text":f"Catalogue session opened. Thread: {ts}"}
     if cmd=="verify" and len(args)>=2 and args[1].lower()=="start":
         row=next((r for _,r in rows if r.get("status")=="Needs Review"),None)
         if not row:return {"response_type":"ephemeral","text":"No inventory properties currently need verification."}

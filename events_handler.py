@@ -16,20 +16,22 @@ sys.path.insert(0, str(__file__).rsplit("/",1)[0] + "/modules/efps-inventory-mgm
 from pipeline import write_phase1_update, process_phase1
 import boto3
 
-def _get_session(channel_id):
+def _get_session(channel_id, session_type="photo"):
     dynamo = boto3.resource("dynamodb")
     table = dynamo.Table("efps-sessions")
     try:
-        item = table.get_item(Key={"user_id": f"slack_photo_session#{channel_id}"}).get("Item")
+        key = f"slack_{session_type}_session#{channel_id}"
+        item = table.get_item(Key={"user_id": key}).get("Item")
         return item
     except Exception as e:
         print(f"DynamoDB get_item failed: {e!r}")
         return None
 
-def _delete_session(channel_id):
+def _delete_session(channel_id, session_type="photo"):
     dynamo = boto3.resource("dynamodb")
     table = dynamo.Table("efps-sessions")
-    table.delete_item(Key={"user_id": f"slack_photo_session#{channel_id}"})
+    key = f"slack_{session_type}_session#{channel_id}"
+    table.delete_item(Key={"user_id": key})
 
 def _get_sheet_link(row_number):
     return f"https://docs.google.com/spreadsheets/d/{schema.SHEET_ID}/edit#gid=0&range=A{row_number}"
@@ -168,45 +170,116 @@ def _process_event(event, context):
         return
     slack = SlackClient(); channel = str(ev.get("channel") or "")
 
-    session = _get_session(channel)
-    print(f"DIAG[process_event] text={text!r} channel={channel} session_found={session is not None}")
+    photo_session = _get_session(channel, "photo")
+    catalogue_session = _get_session(channel, "catalogue")
+    print(f"DIAG[process_event] text={text!r} channel={channel} photo={photo_session is not None} catalogue={catalogue_session is not None}")
 
-    if channel == INVENTORY_CHANNEL and text in ["done", "next", "skip", "exit"]:
+    if channel == INVENTORY_CHANNEL and text in ["go", "skip", "exit"] and catalogue_session:
         try:
-            if not session:
-                slack.post_message(channel, "No active photo session. Start one with `/efps photos start`.", thread_ts=thread_ts)
+            if text == "exit":
+                _delete_session(channel, "catalogue")
+                slack.post_message(channel, "Catalogue session stopped.", thread_ts=catalogue_session["thread_ts"])
                 return
 
+            pos = catalogue_session.get("position", 0)
+            queue = catalogue_session.get("queue", [])
+
+            if text == "skip":
+                pos += 1
+
+            if pos >= len(queue):
+                _delete_session(channel, "catalogue")
+                slack.post_message(channel, "All catalogues created. Session closed.", thread_ts=catalogue_session["thread_ts"])
+                return
+
+            listing_id = queue[pos]
+            sheet = GoogleSheetsClient()
+            row_number, row = _row(sheet, listing_id)
+
+            if not row:
+                slack.post_message(channel, f"Could not find `{listing_id}` in sheet. Skipping.", thread_ts=catalogue_session["thread_ts"])
+                catalogue_session["position"] = pos + 1
+                boto3.resource("dynamodb").Table("efps-sessions").put_item(Item=catalogue_session)
+                return
+
+            slack.post_message(channel, f"Creating catalogue for `{listing_id}`...", thread_ts=catalogue_session["thread_ts"])
+
+            try:
+                sys.path.insert(0, str(__file__).rsplit("/",1)[0] + "/modules/efps_meta_catalogue_mgmnt/src")
+                from generator import publish_product
+                result = publish_product(row_number, row)
+                product_id = result.get("product_id", "")
+                slack.post_message(channel, f"✅ `{listing_id}` → Product ID: {product_id}", thread_ts=catalogue_session["thread_ts"])
+            except Exception as pub_exc:
+                error_msg = str(pub_exc)
+                slack.post_message(channel, f"❌ `{listing_id}` failed: {error_msg[:200]}", thread_ts=catalogue_session["thread_ts"])
+                sheet.write_range(
+                    schema.SHEET_ID, schema.WORKSHEET_NAME,
+                    schema.range_for("error_notes", "error_notes", row_number),
+                    [[f"Catalogue creation failed: {error_msg}"]]
+                )
+
+            catalogue_session["position"] = pos + 1
+            boto3.resource("dynamodb").Table("efps-sessions").put_item(Item=catalogue_session)
+
+            remaining = len(queue) - (pos + 1)
+            if remaining > 0:
+                slack.post_message(channel, f"{remaining} more to go. Processing next...", thread_ts=catalogue_session["thread_ts"])
+            else:
+                _delete_session(channel, "catalogue")
+                slack.post_message(channel, "All catalogues created. Session closed.", thread_ts=catalogue_session["thread_ts"])
+
+        except Exception as e:
+            print(f"Catalogue flow failed: {e!r}")
+            slack.post_message(channel, "An error occurred. Please contact support.", thread_ts=thread_ts)
+
+    elif channel == INVENTORY_CHANNEL and text in ["done", "next", "skip", "exit"] and photo_session:
+        try:
             if text == "exit":
-                _delete_session(channel)
-                slack.post_message(channel, "Stopped. Come back any time with `/efps photos start`.", thread_ts=session["thread_ts"])
+                _delete_session(channel, "photo")
+                slack.post_message(channel, "Stopped. Come back any time with `/efps photos start`.", thread_ts=photo_session["thread_ts"])
 
             elif text == "done":
                 slack.post_message(
                     channel,
-                    f"Saving photos for `{session['listing_id']}`...\n"
+                    f"Saving photos for `{photo_session['listing_id']}`...\n"
                     f"• Reading what you attached in the thread.\n"
                     f"• Uploading to Cloudinary and writing the URLs to the sheet.\n"
                     f"• I will confirm here in a moment.",
-                    thread_ts=session["thread_ts"]
+                    thread_ts=photo_session["thread_ts"]
                 )
-                uploaded_count, reply = _save_photos(slack, session["thread_ts"], channel)
+                uploaded_count, reply = _save_photos(slack, photo_session["thread_ts"], channel)
                 print(f"DIAG[process_event] _save_photos returned: uploaded_count={uploaded_count} reply={reply!r}")
-                row_number, _ = _row(GoogleSheetsClient(), session['listing_id'])
+                sheet = GoogleSheetsClient()
+                row_number, row = _row(sheet, photo_session['listing_id'])
                 sheet_link = _get_sheet_link(row_number)
 
+                # Auto-flip to "Catalogue Ready" if qualifies
+                if (row and
+                    row.get("intake_status") == "Processed" and
+                    row.get("status") == "Pending" and
+                    row.get("listing_state") != "Rented Out" and
+                    not str(row.get("meta_catalog_id") or "").strip() and
+                    str(row.get("cloudinary_image_urls") or "").strip()):
+                    sheet.write_range(
+                        schema.SHEET_ID, schema.WORKSHEET_NAME,
+                        schema.range_for("intake_status", "intake_status", row_number),
+                        [["Catalogue Ready"]]
+                    )
+                    print(f"DIAG[process_event] flipped {photo_session['listing_id']} → Catalogue Ready")
+
                 confirmation = (
-                    f"Saved — `{session['listing_id']}`\n"
+                    f"Saved — `{photo_session['listing_id']}`\n"
                     f"• {uploaded_count} photo(s) uploaded to Cloudinary.\n"
                     f"• URLs written to the sheet. <{sheet_link}|Open this row>"
                 )
-                slack.post_message(channel, confirmation, thread_ts=session["thread_ts"])
+                slack.post_message(channel, confirmation, thread_ts=photo_session["thread_ts"])
 
                 new_queue = [r for _,r in _rows_local(GoogleSheetsClient()) if r.get("listing_id") and r.get("intake_status")=="Processed" and not str(r.get("cloudinary_image_urls") or "").strip() and r.get("listing_state")!="Rented Out"]
                 remaining_count = len(new_queue)
                 if remaining_count == 0:
                     follow_up_text = "All caught up — no more properties need photos right now."
-                    _delete_session(channel)
+                    _delete_session(channel, "photo")
                 else:
                     follow_up_text = (
                         f"{remaining_count} properties still need photos.\n"
@@ -214,35 +287,35 @@ def _process_event(event, context):
                         f"• `exit` — stop here, come back any time\n\n"
                         f"_Just type the word on its own — no slash. Here or in the thread, both work._"
                     )
-                slack.post_message(channel, follow_up_text, thread_ts=session["thread_ts"])
+                slack.post_message(channel, follow_up_text, thread_ts=photo_session["thread_ts"])
 
             elif text in ["next", "skip"]:
                 new_queue_tuples = _rows_local(GoogleSheetsClient())
-                current_lid = session.get('listing_id')
+                current_lid = photo_session.get('listing_id')
 
                 try:
-                    current_index_in_session = session["queue"].index(current_lid)
+                    current_index_in_session = photo_session["queue"].index(current_lid)
                     next_item_index = current_index_in_session + 1
                 except (ValueError, KeyError):
                     next_item_index = 0
 
-                if next_item_index >= len(session.get("queue", [])):
-                    slack.post_message(channel, "All caught up — no more properties need photos right now.", thread_ts=session["thread_ts"])
-                    _delete_session(channel)
+                if next_item_index >= len(photo_session.get("queue", [])):
+                    slack.post_message(channel, "All caught up — no more properties need photos right now.", thread_ts=photo_session["thread_ts"])
+                    _delete_session(channel, "photo")
                     return
 
-                next_lid = session["queue"][next_item_index]
+                next_lid = photo_session["queue"][next_item_index]
                 next_prop = next((r for _,r in new_queue_tuples if r.get("listing_id") == next_lid), None)
 
                 if not next_prop:
-                    slack.post_message(channel, "Could not find the next property. It might have been updated. Please start again with `/efps photos start`.", thread_ts=session["thread_ts"])
-                    _delete_session(channel)
+                    slack.post_message(channel, "Could not find the next property. It might have been updated. Please start again with `/efps photos start`.", thread_ts=photo_session["thread_ts"])
+                    _delete_session(channel, "photo")
                     return
 
-                position = session.get('queue_position', 0) + 1
+                position = photo_session.get('queue_position', 0) + 1
 
                 message_text = (
-                    f"*Photos needed — {position} of {session['total_in_queue']}*\n"
+                    f"*Photos needed — {position} of {photo_session['total_in_queue']}*\n"
                     f"`{next_lid}`\n"
                     f"• Society: {next_prop.get('society_name') or '—'}\n"
                     f"• BHK: {next_prop.get('BHK') or '—'}\n"
@@ -257,12 +330,12 @@ def _process_event(event, context):
                     f"_Just type the word on its own — no slash._"
                 )
                 new_ts = slack.post_message(INVENTORY_CHANNEL, message_text)
-                slack.post_message(channel, f"Showing `{next_lid}` above — reply to it with the photos.", thread_ts=session.get("thread_ts"))
+                slack.post_message(channel, f"Showing `{next_lid}` above — reply to it with the photos.", thread_ts=photo_session.get("thread_ts"))
 
-                session["listing_id"] = next_lid
-                session["thread_ts"] = new_ts
-                session["queue_position"] = position
-                boto3.resource("dynamodb").Table("efps-sessions").put_item(Item=session)
+                photo_session["listing_id"] = next_lid
+                photo_session["thread_ts"] = new_ts
+                photo_session["queue_position"] = position
+                boto3.resource("dynamodb").Table("efps-sessions").put_item(Item=photo_session)
 
         except Exception as e:
             print(f"Photo flow command failed: {e!r}")
