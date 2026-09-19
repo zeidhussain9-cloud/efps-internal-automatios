@@ -257,6 +257,9 @@ def _process_event(event, context):
                     slack.post_message(channel, f"✅ `{listing_id}` already in WhatsApp → synced Product ID: {product_id}", thread_ts=catalogue_session["thread_ts"])
                 elif status == "recovered_duplicate":
                     slack.post_message(channel, f"✅ `{listing_id}` recovered from duplicate → Product ID: {product_id}", thread_ts=catalogue_session["thread_ts"])
+                elif status == "created_no_collection":
+                    warning = result.get("warning", "Unknown error")
+                    slack.post_message(channel, f"⚠️ `{listing_id}` created but NOT added to collection: {warning}\nProduct ID: {product_id}", thread_ts=catalogue_session["thread_ts"])
                 else:
                     slack.post_message(channel, f"✅ `{listing_id}` → Product ID: {product_id}", thread_ts=catalogue_session["thread_ts"])
             except Exception as pub_exc:

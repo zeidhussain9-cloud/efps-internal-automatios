@@ -75,20 +75,33 @@ def _determine_collection_id(bhk: str) -> str:
         return COLLECTION_MAPPING["4plus_BHK"]
 
 
-def _add_product_to_collection(client: WhApiClient, product_id: str, bhk: str) -> bool:
+def _add_product_to_collection(client: WhApiClient, product_id: str, bhk: str) -> tuple[bool, str]:
+    """Add product to collection by BHK. Returns (success, message)."""
     collection_id = _determine_collection_id(bhk)
+    collection_name = next((k for k, v in COLLECTION_MAPPING.items() if v == collection_id), "Unknown")
+
     try:
         result = client.patch(
             "/business/collections",
             {
                 "id": collection_id,
-                "products_to_add": [product_id],
+                "add_products": [product_id],
             }
         )
-        return bool(result and result.get("status") == "APPROVED")
+
+        if result and result.get("status") == "APPROVED":
+            msg = f"Product {product_id} added to {collection_name}"
+            print(f"✅ Collection: {msg}")
+            return True, msg
+        else:
+            error = f"WhAPI rejected collection add: {result}"
+            print(f"⚠️ Collection: {error}")
+            return False, error
+
     except Exception as e:
-        print(f"Failed to add product {product_id} to collection {collection_id}: {e}")
-        return False
+        error = f"Collection API error: {str(e)}"
+        print(f"⚠️ Collection: {error}")
+        return False, error
 
 
 def generate_description(row: Mapping[str, Any]) -> tuple[str, str]:
@@ -236,6 +249,10 @@ def publish_product(
     _record_published(sheet, row_number, product_id)
 
     bhk = str(row.get("BHK") or "").strip()
-    _add_product_to_collection(client, product_id, bhk)
+    collection_success, collection_msg = _add_product_to_collection(client, product_id, bhk)
+
+    if not collection_success:
+        print(f"⚠️ {listing_id}: Collection assignment failed - {collection_msg}")
+        return {"status": "created_no_collection", "product_id": product_id, "listing_id": listing_id, "warning": collection_msg}
 
     return {"status": "created", "product_id": product_id, "listing_id": listing_id}
