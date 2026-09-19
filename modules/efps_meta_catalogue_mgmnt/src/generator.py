@@ -7,6 +7,13 @@ from shared.google_sheets.client import GoogleSheetsClient
 from shared.google_sheets import schema
 from shared.whatsapp_whapi.client import WhApiClient
 
+COLLECTION_MAPPING = {
+    "1RK_1BHK": "3633492786810534",
+    "2BHK": "1870009094415279",
+    "3BHK": "1620981473020102",
+    "4plus_BHK": "2220392692158816",
+}
+
 
 def _indian_currency(value: Any) -> str:
     try:
@@ -50,6 +57,38 @@ def get_image_urls(row: Mapping[str, Any], limit: int = 10) -> list[str]:
     if not urls_str:
         return []
     return [u.strip() for u in urls_str.replace(",", " ").split() if u.strip()][:limit]
+
+
+def _determine_collection_id(bhk: str) -> str:
+    try:
+        bhk_str = str(bhk or "").strip()
+        bhk_num = float(bhk_str.split()[0])
+        if bhk_num == 1 or bhk_num == 1.5:
+            return COLLECTION_MAPPING["1RK_1BHK"]
+        elif bhk_num == 2 or bhk_num == 2.5:
+            return COLLECTION_MAPPING["2BHK"]
+        elif bhk_num == 3 or bhk_num == 3.5:
+            return COLLECTION_MAPPING["3BHK"]
+        else:
+            return COLLECTION_MAPPING["4plus_BHK"]
+    except (ValueError, IndexError, AttributeError):
+        return COLLECTION_MAPPING["4plus_BHK"]
+
+
+def _add_product_to_collection(client: WhApiClient, product_id: str, bhk: str) -> bool:
+    collection_id = _determine_collection_id(bhk)
+    try:
+        result = client.patch(
+            "/business/collections",
+            {
+                "id": collection_id,
+                "products_to_add": [product_id],
+            }
+        )
+        return bool(result and result.get("status") == "APPROVED")
+    except Exception as e:
+        print(f"Failed to add product {product_id} to collection {collection_id}: {e}")
+        return False
 
 
 def generate_description(row: Mapping[str, Any]) -> tuple[str, str]:
@@ -195,4 +234,8 @@ def publish_product(
         raise RuntimeError(f"WhAPI returned no product ID: {result}")
 
     _record_published(sheet, row_number, product_id)
+
+    bhk = str(row.get("BHK") or "").strip()
+    _add_product_to_collection(client, product_id, bhk)
+
     return {"status": "created", "product_id": product_id, "listing_id": listing_id}

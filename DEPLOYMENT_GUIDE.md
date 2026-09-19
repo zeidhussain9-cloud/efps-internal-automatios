@@ -1,7 +1,7 @@
 # EFPS Deployment Guide
 
-**Last Updated:** 2026-09-19 13:30 IST  
-**Current Deployment:** Production LIVE in us-east-1
+**Last Updated:** 2026-09-19 15:45 IST  
+**Current Deployment:** Production LIVE in us-east-1 with Collection Auto-Grouping
 
 ---
 
@@ -58,10 +58,19 @@ aws-sam-cli-managed-default-samclisourcebucket-lcmwkhh54fgy
 ```
 
 ### External Integrations
-- **WhAPI:** whapi.cloud account for WhatsApp Business
+- **WhAPI:** whapi.cloud account for WhatsApp Business with 4 collections
 - **Slack:** workspace with bot installed
 - **Google Sheets:** Housing_Listings spreadsheet
 - **Cloudinary:** Media storage for property images
+
+### WhatsApp Collections (Auto-grouped by BHK)
+When catalogues are created, they automatically join their collection:
+```
+🏠 1RK & 1BHK       (ID: 3633492786810534)  → 1 RK, 1 BHK, 1.5 BHK
+🏡 2BHK             (ID: 1870009094415279)  → 2 BHK, 2.5 BHK
+🏡 3BHK             (ID: 1620981473020102)  → 3 BHK, 3.5 BHK
+🏘️ 4+ BHK          (ID: 2220392692158816)  → 4 BHK and above
+```
 
 ---
 
@@ -412,7 +421,7 @@ aws cloudformation update-stack \
 - CloudFormation: https://docs.aws.amazon.com/cloudformation/
 
 **Last Successful Deployment:**
-- Date: 2026-09-19 14:44 IST
-- Fix: Resolve EFPS_WEBHOOK_TOKEN from Secrets Manager (was passing raw ARN)
-- Deployed By: Claude Opus 4.6
-- Status: ✅ All systems operational
+- Date: 2026-09-19 15:45 IST
+- Feature: Auto-add catalogues to WhatsApp collections by BHK on creation
+- Deployed By: Claude Haiku 4.5
+- Status: ✅ All systems operational with collection auto-grouping
