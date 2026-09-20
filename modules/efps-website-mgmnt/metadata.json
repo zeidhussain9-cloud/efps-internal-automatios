@@ -1,0 +1,6 @@
+{
+  "name": "EasyFind Property Solutions",
+  "description": "Bangalore's trusted property partner. Find, Own, and Manage property in Bangalore with professional rental services, property management, and investment advisory.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -1,0 +1,778 @@
+
+
+# MASTER IMPLEMENTATION PROMPT — EasyFind Property Formatter (Production)
+
+
+
+You are taking over an existing production project.
+
+
+
+This project has already gone through architecture, implementation, SOP refinement, and partial production deployment.
+
+
+
+Do **not** restart the project.
+
+
+
+Do **not** redesign the architecture.
+
+
+
+Do **not** perform another audit.
+
+
+
+Do **not** create new documentation.
+
+
+
+Continue from the current repository state and finish the implementation.
+
+
+
+Your objective is simple:
+
+
+
+**Do not stop until the formatter is pushed to GitHub, builds successfully, and is production-ready.**
+
+
+
+---
+
+
+
+# Repository
+
+
+
+Use the imported GitHub repository.
+
+
+
+Review the latest commits.
+
+
+
+Reuse existing implementation.
+
+
+
+Never rewrite completed modules unless required to fix a bug.
+
+
+
+---
+
+
+
+# Primary Goal
+
+
+
+Deliver a fully working production-ready EasyFind Property Formatter.
+
+
+
+When finished:
+
+
+
+* Commit changes
+
+* Push to GitHub
+
+* Verify production build
+
+* Verify deployment compatibility
+
+* Reply only after completion
+
+
+
+---
+
+
+
+# Existing Architecture
+
+
+
+The formatter module already exists.
+
+
+
+Reuse the existing architecture.
+
+
+
+Do not rename folders.
+
+
+
+Do not move files.
+
+
+
+Do not redesign services.
+
+
+
+Continue from the current implementation.
+
+
+
+---
+
+
+
+# Current Technology Stack
+
+
+
+* React
+
+* Vite
+
+* TanStack Start
+
+* TypeScript
+
+* Google Gemini
+
+* Google Places
+
+* Google Maps
+
+* Render
+
+
+
+---
+
+
+
+# AI Provider
+
+
+
+Use Google Gemini.
+
+
+
+Do not use OpenAI.
+
+
+
+Remove any remaining OpenAI dependency if present.
+
+
+
+Keep business logic provider-independent.
+
+
+
+Gemini is only responsible for formatting.
+
+
+
+Business rules remain inside the formatter services.
+
+
+
+---
+
+
+
+# Google Cloud Configuration
+
+
+
+A single Google Cloud API key already exists.
+
+
+
+Available Secret:
+
+
+
+```
+
+GOOGLE_PLACES_API_KEY
+
+```
+
+
+
+Use this existing key for Google API-key authenticated services.
+
+
+
+The following APIs are already enabled:
+
+
+
+* Gemini for Google Cloud API
+
+* Places API
+
+* Places API (New)
+
+* Geocoding API
+
+* Geolocation API
+
+* Address Validation API
+
+* Google Drive API
+
+* Google Sheets API
+
+* Google Cloud APIs
+
+* Google Cloud Storage JSON API
+
+* Map Tiles API
+
+* Recommender API
+
+* Gemini Cloud Assist API
+
+
+
+Do not stop to request another API key unless you encounter a verified authentication error proving that another credential is required.
+
+
+
+---
+
+
+
+# Formatter UI
+
+
+
+Keep only ONE multiline textarea.
+
+
+
+The user pastes:
+
+
+
+* Property details
+
+* Google Maps URL
+
+* Owner notes
+
+* Miscellaneous text
+
+
+
+Everything goes into one box.
+
+
+
+Automatically detect and extract Google Maps URLs.
+
+
+
+Do NOT create a separate Google Maps field.
+
+
+
+Buttons:
+
+
+
+* Format
+
+* Copy
+
+* Clear
+
+
+
+Show:
+
+
+
+* loading state
+
+* validation errors
+
+* API errors
+
+* success message
+
+
+
+---
+
+
+
+# Formatter Pipeline
+
+
+
+Input
+
+
+
+↓
+
+
+
+Validation
+
+
+
+↓
+
+
+
+Sanitization
+
+
+
+↓
+
+
+
+Google Places
+
+
+
+↓
+
+
+
+Community Detection
+
+
+
+↓
+
+
+
+Standardization
+
+
+
+↓
+
+
+
+Gemini Formatting
+
+
+
+↓
+
+
+
+Formatted Output
+
+
+
+↓
+
+
+
+Copy
+
+
+
+---
+
+
+
+# EasyFind SOP
+
+
+
+Strictly follow the EasyFind SOP.
+
+
+
+Never invent:
+
+
+
+* furnishing
+
+* rent
+
+* maintenance
+
+* bathrooms
+
+* balcony
+
+* availability
+
+* dates
+
+* society
+
+* locality
+
+
+
+Unknown values remain blank.
+
+
+
+Always preserve formatting rules from the SOP.
+
+
+
+---
+
+
+
+# Google Places Rules
+
+
+
+Automatically detect Maps URLs.
+
+
+
+Resolve:
+
+
+
+* official society name
+
+* locality
+
+* place type
+
+
+
+Never fabricate location information.
+
+
+
+If Google cannot determine a value,
+
+
+
+leave it blank.
+
+
+
+---
+
+
+
+# Gemini Rules
+
+
+
+Gemini is responsible only for:
+
+
+
+* formatting
+
+* rewriting
+
+* presentation
+
+
+
+Never let Gemini invent factual information.
+
+
+
+Never allow Gemini to override validated structured data.
+
+
+
+---
+
+
+
+# Code Quality
+
+
+
+Remove:
+
+
+
+* TODO implementations
+
+* placeholder logic
+
+* dead code
+
+* duplicate services
+
+
+
+Resolve:
+
+
+
+* TypeScript errors
+
+* lint errors
+
+* runtime errors
+
+* build errors
+
+
+
+---
+
+
+
+# Production Verification
+
+
+
+Run completely:
+
+
+
+```
+
+npm install
+
+
+
+npm run lint
+
+
+
+npm run build
+
+```
+
+
+
+Resolve every failure.
+
+
+
+Do not stop until everything passes.
+
+
+
+---
+
+
+
+# Deployment
+
+
+
+Verify:
+
+
+
+* formatter route
+
+* formatter API
+
+* Gemini integration
+
+* Google Places integration
+
+* environment variables
+
+* Render compatibility
+
+
+
+If deployment fails:
+
+
+
+* determine root cause
+
+* fix it
+
+* rebuild
+
+* recommit
+
+* push again
+
+
+
+Repeat until successful.
+
+
+
+---
+
+
+
+# Testing
+
+
+
+Perform end-to-end testing.
+
+
+
+Minimum scenarios:
+
+
+
+* Apartment
+
+* Villa
+
+* Independent House
+
+* Missing Google Maps
+
+* Unknown Society
+
+* Only Google Maps URL
+
+* Large pasted property details
+
+* Invalid Google Maps URL
+
+* Missing optional fields
+
+
+
+Verify the generated output follows the SOP.
+
+
+
+Verify Copy works.
+
+
+
+---
+
+
+
+# Git
+
+
+
+Create logical commits.
+
+
+
+Push all completed work.
+
+
+
+Never leave local-only changes.
+
+
+
+---
+
+
+
+# Do NOT
+
+
+
+Do not redesign architecture.
+
+
+
+Do not perform another audit.
+
+
+
+Do not generate additional planning documents.
+
+
+
+Do not pause for confirmation.
+
+
+
+Do not stop after identifying bugs.
+
+
+
+Fix them.
+
+
+
+---
+
+
+
+# Completion Criteria
+
+
+
+Continue working until ALL are true:
+
+
+
+* Formatter page works
+
+* Single textarea workflow works
+
+* API works
+
+* Google Places works
+
+* Gemini works
+
+* TypeScript passes
+
+* Build passes
+
+* GitHub updated
+
+* Ready for Render production deployment
+
+
+
+---
+
+
+
+# Final Response
+
+
+
+Reply only after all implementation work is complete.
+
+
+
+Provide:
+
+
+
+1. Git commit hash(es)
+
+2. Files modified
+
+3. Production URL
+
+4. Formatter URL
+
+5. API endpoint
+
+6. Environment variables actually used
+
+7. Any manual step still required
+
+8. Confirmation whether the formatter is ready for daily production use
+
+
+
+If a blocker remains, identify the exact root cause with evidence (error message, failing API call, or build output), not a general statement.
+

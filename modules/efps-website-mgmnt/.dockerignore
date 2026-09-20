@@ -1,0 +1,14 @@
+node_modules
+dist
+.git
+.git_backup
+.git_corrupted
+.env
+.env.local
+.lovable
+.ai
+attached_assets
+npm-debug.log
+README.md
+AGENT_README.md
+AGENTS.md

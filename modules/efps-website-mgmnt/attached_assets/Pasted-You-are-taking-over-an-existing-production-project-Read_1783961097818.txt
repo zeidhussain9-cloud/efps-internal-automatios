@@ -1,0 +1,276 @@
+You are taking over an existing production project.
+
+Read the repository first.
+
+Do NOT restart the project.
+
+Do NOT redesign the architecture.
+
+Do NOT perform another audit.
+
+Do NOT create additional planning documents.
+
+Continue from the current repository state.
+
+==================================================
+PROJECT
+==================================================
+
+EasyFind Property Formatter
+
+The formatter already exists.
+
+Recent commits have already:
+
+- implemented the formatter module
+- implemented parser
+- implemented deterministic template formatter
+- integrated Google Places
+- implemented API layer
+- implemented frontend
+- prepared production deployment
+
+Assume these implementations already exist.
+
+Reuse them.
+
+==================================================
+OBJECTIVE
+==================================================
+
+Your only objective is to finish the project until it is LIVE.
+
+Do not stop after analysis.
+
+Do not stop after finding bugs.
+
+Fix them.
+
+Continue until the formatter is working in production.
+
+==================================================
+CURRENT ARCHITECTURE
+==================================================
+
+User
+
+↓
+
+/formatter
+
+↓
+
+Single Multiline Input
+
+↓
+
+Validation
+
+↓
+
+Sanitization
+
+↓
+
+Property Parser
+
+↓
+
+Google Places
+
+↓
+
+Community Detection
+
+↓
+
+Standardization
+
+↓
+
+Template Formatter
+
+↓
+
+Formatted Output
+
+↓
+
+Copy Button
+
+No AI is required for Version 1.
+
+Do not reintroduce Gemini or OpenAI.
+
+==================================================
+GOOGLE SERVICES
+==================================================
+
+Already available in Replit Secrets:
+
+GOOGLE_PLACES_API_KEY
+
+Use it for:
+
+- Places API
+- Places API (New)
+- Geocoding API
+
+Automatically extract Google Maps URLs.
+
+Never fabricate location data.
+
+==================================================
+UI REQUIREMENTS
+==================================================
+
+One multiline textbox only.
+
+User pastes:
+
+- property details
+- WhatsApp text
+- Housing listing
+- MagicBricks listing
+- Google Maps link
+
+Everything together.
+
+Automatically detect the Maps URL.
+
+Do NOT create another Maps textbox.
+
+Buttons:
+
+- Format Property
+- Copy
+- Clear
+
+Loading state.
+
+Validation errors.
+
+Success state.
+
+==================================================
+SOP
+==================================================
+
+Strictly follow the EasyFind SOP.
+
+Never invent:
+
+- rent
+- maintenance
+- furnishing
+- bathrooms
+- balcony
+- dates
+- society
+- locality
+
+Unknown values remain blank.
+
+==================================================
+PRODUCTION TASKS
+==================================================
+
+Review the current implementation.
+
+Identify every remaining blocker.
+
+Fix every blocker.
+
+Verify:
+
+- formatter route
+- formatter API
+- Google Places integration
+- parser
+- template formatter
+- copy button
+- build
+- routing
+- Render compatibility
+
+Run:
+
+npm install
+
+npm run lint
+
+npm run build
+
+Resolve every issue.
+
+Commit.
+
+Push to GitHub.
+
+Verify deployment.
+
+Repeat until the formatter is working.
+
+==================================================
+DO NOT
+==================================================
+
+Do not redesign architecture.
+
+Do not rewrite completed services.
+
+Do not replace parser.
+
+Do not replace template formatter.
+
+Do not introduce AI.
+
+Do not create placeholder implementations.
+
+==================================================
+COMPLETION CRITERIA
+==================================================
+
+Continue until ALL are true:
+
+✓ Formatter page loads
+
+✓ Formatter API works
+
+✓ Google Places works
+
+✓ Template formatter works
+
+✓ Build passes
+
+✓ Lint passes
+
+✓ GitHub updated
+
+✓ Render deployment successful
+
+✓ /formatter accessible
+
+✓ Ready for daily production use
+
+==================================================
+FINAL RESPONSE
+==================================================
+
+Reply only after implementation is complete.
+
+Include:
+
+1. Git commit hash(es)
+
+2. Files modified
+
+3. Production URL
+
+4. Formatter URL
+
+5. API endpoint
+
+6. Remaining manual steps (if any)
+
+7. Confirmation that the formatter is fully operational and ready for production.

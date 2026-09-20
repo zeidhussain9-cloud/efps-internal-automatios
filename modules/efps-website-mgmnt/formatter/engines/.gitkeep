@@ -1,0 +1,9 @@
+# Engines Directory
+#
+# Purpose: Core processing engines for the formatter
+#
+# Subdirectories:
+# - sop-engine.ts (SOP logic)
+# - property-parser.ts (Property parsing)
+#
+# These engines handle the core transformation logic.

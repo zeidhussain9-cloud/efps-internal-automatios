@@ -1,0 +1,15 @@
+{
+  "examples": [
+    {
+      "input": "2BHK in Sarjapur Road, semi-furnished, 40000 rent, 4000 maintenance, 2 bathrooms, 1 balcony, floor 4/4, Google Maps: https://maps.google.com/...",
+      "expectedOutput": "Semi-furnished 2 BHK with 2 bathrooms & 1 balcony\nRent : ₹40k\nMaintenance : ₹4k\nDeposit : ₹1.7L\nFloor : 4/4\nCommunity : Gated\nLocation : Sarjapur Road\n\n*Prestige Lakeside Habitat*\nhttps://maps.google.com/...",
+      "notes": "Example with complete information from gated society"
+    },
+    {
+      "input": "1BHK, Whitefield, fully furnished, 35000, Google Maps URL",
+      "expectedOutput": "[Placeholder for phase 3 - after AI formatting]",
+      "notes": "Example with minimal information - will need API enrichment"
+    }
+  ],
+  "status": "PLACEHOLDER - Will be populated during Phase 3 testing"
+}

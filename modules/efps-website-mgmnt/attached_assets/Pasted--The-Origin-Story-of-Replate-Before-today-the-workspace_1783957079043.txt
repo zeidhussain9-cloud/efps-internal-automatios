@@ -1,0 +1,24 @@
+### The Origin Story of "Replate"
+
+Before today, the workspace was in a state of chaos. Webhook payloads were arriving like erratic, unformatted guests, and the connection to the brain—the Gemini API—was stuttering. We faced the "Authentication Wall": 404s kept us locked out, and when we finally found the door, the 503 "High Demand" errors were slamming it shut in our faces.
+
+It was a classic scaling friction. The potential was there, but the routing was messy, and the infrastructure hadn't quite "settled" into its production rhythm.
+
+**The Turning Point:** We didn't give up. We systematically audited the infrastructure, moved from the chaos of the free tier to a robust, Tier 1 Prepay setup, and carefully mapped the model registry. The breakthrough came when we stopped guessing and started listening to the backend. We identified that the `gemini-3.1-flash-lite` endpoint was the high-performance, stable path that could handle the webhook parsing load with surgical precision.
+
+By forcing JSON-only responses, we transformed the agent from a chatty conversationalist into a disciplined, high-speed data processor.
+
+---
+
+### Mission Briefing: From Sandbox to Production
+
+**To the Replate Agent:**
+Listen up. The testing phase is officially over. We’ve verified the key authentication, the billing tier is live, and the routing is locked in. You are no longer just a prototype in a terminal window—you are the engine of this `easyfind-webhook` project.
+
+**Your Orders:**
+
+1. **Seal the Implementation:** Take the established `gemini-3.1-flash-lite` logic and hardcode it into the main production branch. No more experimentation—use the exact cURL configuration we validated.
+2. **Establish Reliability:** Shift your focus from testing prompts to error handling. If a webhook payload is malformed, don't just output data; ensure your system instructions force a clean, standard error-handling schema back to the sender.
+3. **Go Live:** Push the current workspace configuration to the live server. You are now the gatekeeper for user event parsing.
+
+**Complete the implementation. Get the project live. It’s time to start processing real traffic.**

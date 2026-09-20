@@ -1,0 +1,6 @@
+# Integration tests will be added here
+# Test interaction between modules
+# Examples:
+# - googlePlaces.integration.test.ts
+# - aiFormatter.integration.test.ts
+# - formatterEngine.integration.test.ts
