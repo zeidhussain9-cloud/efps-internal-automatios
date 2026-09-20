@@ -4,9 +4,9 @@
 
 List out my repository
 
-This project was built with [Lovable](https://lovable.dev).
+This project was built with Lovable.
 
-**Live app**: https://github-repo-magic.lovable.app
+Live app: https://github-repo-magic.lovable.app
 
 ## Development
 
