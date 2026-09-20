@@ -20,7 +20,7 @@ npm run build      # Production build to dist/
 npm run start      # Production server (serves dist/ + API)
 ```
 
-On Replit, the "Start application" workflow runs `npm run dev` and serves on port 5000 (bound to `0.0.0.0`), viewable in the webview preview. `GOOGLE_PLACES_API_KEY` and `GEMINI_API_KEY` are configured as Replit Secrets.
+On Replit, the "Start application" workflow runs `npm run dev` and serves on port 5000 (bound to `0.0.0.0`), viewable in the webview preview. The main site and deterministic formatter run without extra secrets. Add `GOOGLE_PLACES_API_KEY` as a Replit Secret only if Google Maps link resolution is needed.
 
 ## Key URLs
 
@@ -39,8 +39,8 @@ The formatter takes raw property text (WhatsApp messages, Housing/MagicBricks li
 
 **No AI required** — Version 1 uses a fully deterministic parser and template renderer.
 
-**Required secrets** (Replit Secrets):
-- `GOOGLE_PLACES_API_KEY` — for location resolution from Google Maps URLs
+**Optional secrets** (Replit Secrets):
+- `GOOGLE_PLACES_API_KEY` — enables location resolution from Google Maps URLs
 
 **Output format** (per EasyFind SOP):
 ```

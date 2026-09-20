@@ -1,30 +1,37 @@
-# GitHub Repo Lister
+# EasyFind Property Solutions
 
-@connector:github:"GitHub API" 
+EasyFind Property Solutions is a property services website for Bangalore covering rentals, property sales, property management, NRI assistance, and investment advisory.
 
+The project also includes an internal property formatter at `/formatter` for turning raw listing details, WhatsApp messages, and Google Maps links into a standardized listing format.
 
-
-List out my repository
-
-This project was built with [Lovable](https://lovable.dev).
-
-**Live app**: https://github-repo-magic.lovable.app
-
-## Build with Lovable
-
-Continue developing this project in the [Lovable editor](https://lovable.dev/projects/9045953c-32f3-4b5d-be83-6881ad9241b2).
-
-- **Ship faster**: describe what you want to build and Lovable handles the code.
-- **Stay in sync**: every change made in Lovable is committed straight to this repository.
-- **Full ownership**: this code is yours. Push to `main` on GitHub and your changes sync back into Lovable, ready for your next prompt.
+**Live app**: Not published yet. Use the Replit Preview while developing.
 
 ## Development
 
-Prefer working locally? You need Node.js and npm — [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating).
+You need Node.js and npm — [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating).
 
 ```sh
-git clone <this-repository-url>
-cd <repository-name>
-npm i
+npm install
 npm run dev
 ```
+
+The development server listens on port 5000 and includes the formatter API.
+
+## Available routes
+
+- `/` — EasyFind landing page and contact form
+- `/formatter` — Internal property formatter
+- `/api/formatter/health` — Formatter API health check
+
+## Optional configuration
+
+Add `GOOGLE_PLACES_API_KEY` as an environment variable to enable location resolution from Google Maps URLs. The main site and deterministic formatter work without additional secrets.
+
+## Production
+
+```sh
+npm run build
+npm run start
+```
+
+The production server serves the built site and formatter API together.
