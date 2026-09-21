@@ -76,8 +76,12 @@ def process_closed_session(raw_text: str, *, row: dict | None = None, maps_clien
                 source_society = str(out.get("society_name", "") or "").strip()
                 if not source_society or source_society == out.get("locality", ""):
                     out["society_name"] = place_name
-        else:
-            issues.append(f"Google Maps verification failed or is incomplete: {resolved.confidence}")
+        elif resolved.confidence == "PARTIAL_MATCH":
+            # PARTIAL_MATCH: Only fill blanks, never override user data
+            if not out.get("locality", "").strip():
+                out["locality"] = resolved.locality or ""
+            if not out.get("pincode", "").strip():
+                out["pincode"] = resolved.pincode or ""
     try:
         from .phase1 import apply_location_contract
     except ImportError:

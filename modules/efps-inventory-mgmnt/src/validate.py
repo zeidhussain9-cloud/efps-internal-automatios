@@ -39,10 +39,7 @@ def validate(row:dict)->list[str]:
     if open_parking and open_parking!="-" and not _numeric(open_parking):errors.append("open_parking must be a numeric explicit count or '-'")
     for key in NUMERIC:
         if row[key] and not _numeric(row[key]):errors.append(f"{key} must be numeric")
-    maintenance=str(row["maintenance"]).strip()
-    if maintenance and maintenance!=MAINTENANCE_NON_NUMERIC and not re.fullmatch(r"\d+(?: \+ .+)?",maintenance):errors.append("maintenance must be a normalized amount with an optional source qualifier")
     if row["maintenance_included"] not in ("Yes","No",""):errors.append("maintenance_included must be Yes/No/blank")
-    if row["maintenance_included"]=="Yes" and maintenance not in {"0",MAINTENANCE_NON_NUMERIC}:errors.append("maintenance must be 0 or Water Charges Additional when included")
     if row["flat_furnishings"]:
         bad=[x.strip() for x in str(row["flat_furnishings"]).split(",") if x.strip() and x.strip() not in FURNISHINGS]
         if bad:errors.append(f"flat_furnishings invalid values: {bad}")

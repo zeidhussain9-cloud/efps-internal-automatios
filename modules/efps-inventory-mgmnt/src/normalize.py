@@ -31,6 +31,7 @@ def normalize_maintenance(value:str)->str:
     if raw.lower()=="included":return "0"
     if re.fullmatch(r"included\s*\+\s*(?:water|water\s*charges?)",raw,re.I):return "Water Charges Additional"
     if re.fullmatch(r"0\s*\+\s*(?:water|water\s*charges?)",raw,re.I):return "Water Charges Additional"
+    if re.fullmatch(r"water\s*charges?",raw,re.I):return "Water Charges Additional"
     m=_MAINT_NUMERIC.fullmatch(raw)
     if not m:return re.sub(r"(?<=\d),(?=\d)","",raw)
     n=float(m.group(1).replace(",","")); unit=(m.group(2) or "").lower()
