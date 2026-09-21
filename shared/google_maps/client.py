@@ -23,7 +23,7 @@ class GoogleMapsClient:
     API = "https://maps.googleapis.com/maps/api/geocode/json"
     SHORT_HOSTS = ("maps.app.goo.gl", "goo.gl", "maps.google.com", "share.google")
     MAP_URL_RE = re.compile(
-        r"https?://(?:maps\.app\.goo\.gl|goo\.gl|www\.google\.com/maps|maps\.google\.com|share\.google)\S+",
+        r"https?://(?:maps\.app\.goo\.gl|goo\.gl|www\.google\.com/maps|maps\.google\.com|share\.google)[^<>\s|]+",
         re.I,
     )
 
@@ -37,16 +37,24 @@ class GoogleMapsClient:
                 self.api_key = ""
 
     @classmethod
+    def normalize_source_link(cls, value: str) -> str:
+        """Return the URL portion of a plain or Slack-wrapped source link."""
+        normalized = (value or "").strip()
+        if normalized.startswith("<") and "|" in normalized:
+            normalized = normalized[1:].split("|", 1)[0]
+        return normalized.strip("<>\"'*").rstrip(".,);]}*")
+
+    @classmethod
     def extract_url(cls, text: str) -> str:
         """Extract the exact supported Maps URL from source text without network access."""
         match = cls.MAP_URL_RE.search(text or "")
         if not match:
             return ""
-        return match.group(0).strip("<>\"'").rstrip(".,);]}")
+        return cls.normalize_source_link(match.group(0))
 
     @classmethod
     def is_maps_url(cls, value: str) -> bool:
-        return bool(cls.MAP_URL_RE.fullmatch((value or "").strip().strip("<>\"'")))
+        return bool(cls.MAP_URL_RE.fullmatch(cls.normalize_source_link(value)))
 
     @classmethod
     def expand(cls, url: str) -> str:
@@ -76,7 +84,7 @@ class GoogleMapsClient:
         return ""
 
     def resolve(self, *, maps_url: str = "", address: str = "") -> MapsResolution:
-        source = maps_url.strip() or self.extract_url(address)
+        source = self.normalize_source_link(maps_url) or self.extract_url(address)
         if not source and not address.strip():
             return MapsResolution()
         if not self.api_key:
@@ -84,6 +92,8 @@ class GoogleMapsClient:
         query = self._query_from_url(self.expand(source)) if source else address.strip()
         if not query:
             query = address.strip()
+        if not query:
+            return MapsResolution(canonical_url=source, confidence="NOT_FOUND")
         params = {"address": query, "key": self.api_key}
         if re.fullmatch(r"-?\d{1,3}\.\d{4,},-?\d{1,3}\.\d{4,}", query):
             params = {"latlng": query, "key": self.api_key}

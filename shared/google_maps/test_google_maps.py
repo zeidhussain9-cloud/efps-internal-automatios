@@ -79,3 +79,20 @@ def test_does_not_capture_adjacent_text_as_part_of_maps_url():
     source_url = "https://maps.app.goo.gl/Example123"
     raw = f"{source_url}\nNext field: Bengaluru"
     assert GoogleMapsClient.extract_url(raw) == source_url
+
+
+def test_normalizes_slack_wrapped_maps_link():
+    source_url = "https://maps.app.goo.gl/Example123"
+    wrapped = f"<{source_url}|maps.app.goo.gl>"
+    assert GoogleMapsClient.normalize_source_link(wrapped) == source_url
+    assert GoogleMapsClient.extract_url(wrapped) == source_url
+    assert GoogleMapsClient.is_maps_url(wrapped)
+
+
+def test_resolve_does_not_call_geocoding_for_empty_query():
+    client = GoogleMapsClient(api_key="test-key")
+    with patch("requests.get") as get:
+        result = client.resolve(maps_url="<https://maps.app.goo.gl/opaque|maps.app.goo.gl>")
+    get.assert_not_called()
+    assert result.canonical_url == "https://maps.app.goo.gl/opaque"
+    assert result.confidence == "NOT_FOUND"

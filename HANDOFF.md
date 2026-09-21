@@ -90,3 +90,15 @@ PYTHONPATH=.:modules/efps-inventory-mgmnt python tools/run_phase1_rows.py --star
 The normal runner skips rows already marked `Processed`; already-processed rows use the controlled dependency-repair tool. Live production processing must start only from an exact local checkout of the accepted `main` commit and after the regression/audit suite passes locally.
 
 No production credentials or secrets are part of the repository hardening.
+
+## Shared Google Maps wrapper hardening — 2026-09-21
+
+`shared/google_maps/client.py` now normalizes plain and Slack-wrapped Maps
+links (`<URL|label>`) before extraction and resolution, and returns
+`NOT_FOUND` without making a blank-query Google request when a short URL cannot
+yield a usable query. Regression coverage is in
+`shared/google_maps/test_google_maps.py` (12 tests passing). Both WhAPI and
+Slack closed-session processing remain routed through the shared
+`pipeline.process_closed_session()` Maps call; no flow-specific parser was
+added. This is repository-level verification only; live runtime deployment
+and Google API probing remain separate acceptance gates.
