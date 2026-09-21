@@ -63,6 +63,7 @@ Globals:
         SLACK_INVENTORY_CHANNEL: 'C0BTQGG8VT3'
         SLACK_VERIFICATION_CHANNEL: 'C0BUHUHRK0Q'
         PYTHONPATH: 'modules/efpd-lead-mgmnt/src:modules/efps-inventory-mgmnt/src'
+        LEAD_WORKER_ARN: !Sub 'arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${AWS::StackName}-EFPSLeadWorker-*'
 
 Resources:
   EFPSWebhook:
@@ -94,6 +95,9 @@ Resources:
             - Effect: Allow
               Action: [dynamodb:GetItem, dynamodb:PutItem, dynamodb:DeleteItem, dynamodb:UpdateItem]
               Resource: [!Ref SessionsTableArn]
+            - Effect: Allow
+              Action: [lambda:InvokeFunction]
+              Resource: !Sub 'arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${AWS::StackName}-EFPSLeadWorker-*'
 
   EFPSEvents:
     Type: AWS::Serverless::Function

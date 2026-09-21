@@ -135,3 +135,18 @@ These commands created a redundant correction/verification layer outside the aut
 - `run` — batch execution trigger
 
 This is repository-level change only. Slack bot deployment, command registration, and live endpoint verification remain separate acceptance gates.
+
+## Lead worker Lambda invocation — 2026-09-21
+
+`/efps run` command now fully operational. The command invokes `EFPSLeadWorker` Lambda to trigger the lead ingestion worker on demand.
+
+**What was fixed:**
+- `template.yaml` Globals: Added `LEAD_WORKER_ARN` environment variable containing the ARN pattern for `EFPSLeadWorker` Lambda
+- `template.yaml` EFPSCommands IAM policy: Added `lambda:InvokeFunction` permission scoped to `EFPSLeadWorker` function ARN pattern
+
+**Verification:**
+- `commands.py` `_run_worker()` function checks for `LEAD_WORKER_ARN` and invokes with `InvocationType=Event` (fire-and-forget)
+- Error handling catches Lambda exceptions and returns user-friendly feedback
+- Payload includes source metadata `{"source": "manual_slack_trigger"}`
+
+Deployment note: SAM stack parameters must be supplied at deploy time; no default values are hardcoded. Once deployed, `/efps run` is available for manual lead worker triggers.
