@@ -253,15 +253,26 @@ def _process_event(event, context):
                 result = publish_product(row_number, row)
                 product_id = result.get("product_id", "")
                 status = result.get("status", "created")
+                bhk = str(row.get("BHK") or "").strip()
+
                 if status == "already_exists":
                     slack.post_message(channel, f"✅ `{listing_id}` already in WhatsApp → synced Product ID: {product_id}", thread_ts=catalogue_session["thread_ts"])
                 elif status == "recovered_duplicate":
                     slack.post_message(channel, f"✅ `{listing_id}` recovered from duplicate → Product ID: {product_id}", thread_ts=catalogue_session["thread_ts"])
-                elif status == "created_no_collection":
-                    warning = result.get("warning", "Unknown error")
-                    slack.post_message(channel, f"⚠️ `{listing_id}` created but NOT added to collection: {warning}\nProduct ID: {product_id}", thread_ts=catalogue_session["thread_ts"])
                 else:
-                    slack.post_message(channel, f"✅ `{listing_id}` → Product ID: {product_id}", thread_ts=catalogue_session["thread_ts"])
+                    slack.post_message(channel, f"✅ `{listing_id}` catalogue created → Product ID: {product_id}", thread_ts=catalogue_session["thread_ts"])
+
+                slack.post_message(channel, f"⏳ Assigning `{listing_id}` to {bhk or 'BHK'} collection (30s cooldown)...", thread_ts=catalogue_session["thread_ts"])
+                import time
+                time.sleep(30)
+
+                from generator import assign_to_collection
+                coll_ok, coll_msg = assign_to_collection(product_id, bhk)
+                if coll_ok:
+                    slack.post_message(channel, f"✅ `{listing_id}` added to collection.", thread_ts=catalogue_session["thread_ts"])
+                else:
+                    slack.post_message(channel, f"⚠️ `{listing_id}` collection assignment failed: {coll_msg}", thread_ts=catalogue_session["thread_ts"])
+
             except Exception as pub_exc:
                 error_msg = str(pub_exc)
                 slack.post_message(channel, f"❌ `{listing_id}` failed: {error_msg[:200]}", thread_ts=catalogue_session["thread_ts"])

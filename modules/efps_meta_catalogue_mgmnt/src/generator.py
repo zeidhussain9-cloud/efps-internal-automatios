@@ -83,7 +83,14 @@ def _resolve_collection(client: WhApiClient, key: str) -> tuple[str, str] | None
     return None
 
 
-def _add_product_to_collection(client: WhApiClient, product_id: str, bhk: str) -> tuple[bool, str]:
+def assign_to_collection(
+    product_id: str,
+    bhk: str,
+    *,
+    whapi: WhApiClient | None = None,
+) -> tuple[bool, str]:
+    """Add a product to its BHK collection. Returns (success, message)."""
+    client = whapi or WhApiClient()
     key = _bhk_to_collection_key(bhk)
 
     match = _resolve_collection(client, key)
@@ -265,12 +272,5 @@ def publish_product(
         raise RuntimeError(f"WhAPI returned no product ID: {result}")
 
     _record_published(sheet, row_number, product_id)
-
-    bhk = str(row.get("BHK") or "").strip()
-    collection_success, collection_msg = _add_product_to_collection(client, product_id, bhk)
-
-    if not collection_success:
-        print(f"⚠️ {listing_id}: Collection assignment failed - {collection_msg}")
-        return {"status": "created_no_collection", "product_id": product_id, "listing_id": listing_id, "warning": collection_msg}
 
     return {"status": "created", "product_id": product_id, "listing_id": listing_id}

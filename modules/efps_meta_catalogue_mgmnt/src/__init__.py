@@ -1,2 +1,2 @@
 # Make src a package
-from .generator import generate_description, get_image_urls, publish_product
+from .generator import assign_to_collection, generate_description, get_image_urls, publish_product
