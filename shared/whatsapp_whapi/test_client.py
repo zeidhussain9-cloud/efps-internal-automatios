@@ -111,3 +111,36 @@ def test_find_products_by_image_url(monkeypatch: pytest.MonkeyPatch) -> None:
     matches = client.find_products_by_image_url(["https://cdn/img1", "https://cdn/img3"])
     assert len(matches) == 2
     assert {m["id"] for m in matches} == {"p1", "p3"}
+
+
+def test_get_collections(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("EFPS_WHAPI_LIVE", "1")
+
+    def transport(req):
+        assert req.method == "GET"
+        assert req.full_url.endswith("/business/collections")
+        return {"collections": [{"id": "c1", "name": "Test"}, {"id": "c2", "name": "Other"}]}
+
+    client = WhApiClient(WhApiCredentials("t"), base_url="https://e.test", transport=transport)
+    result = client.get_collections()
+    assert len(result) == 2
+    assert result[0]["id"] == "c1"
+
+
+def test_edit_collection(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("EFPS_WHAPI_LIVE", "1")
+    seen: dict = {}
+
+    def transport(req):
+        import json as _json
+        seen["method"] = req.method
+        seen["url"] = req.full_url
+        seen["body"] = _json.loads(req.data) if req.data else None
+        return {"id": "c1", "status": "APPROVED"}
+
+    client = WhApiClient(WhApiCredentials("t"), base_url="https://e.test", transport=transport)
+    result = client.edit_collection("c1", add_products=["p1", "p2"])
+    assert seen["method"] == "POST"
+    assert seen["url"].endswith("/business/collections/c1")
+    assert seen["body"] == {"add_products": ["p1", "p2"]}
+    assert result["status"] == "APPROVED"

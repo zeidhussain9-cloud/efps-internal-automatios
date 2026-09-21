@@ -217,3 +217,21 @@ class WhApiClient:
             if url_set & set(p_images):
                 matches.append(p)
         return matches
+
+    def get_collections(self) -> list[dict]:
+        result = self.get("/business/collections")
+        return (result or {}).get("collections", [])
+
+    def edit_collection(
+        self,
+        collection_id: str,
+        *,
+        add_products: list[str] | None = None,
+        remove_products: list[str] | None = None,
+    ) -> dict:
+        payload: dict[str, Any] = {}
+        if add_products:
+            payload["add_products"] = add_products
+        if remove_products:
+            payload["remove_products"] = remove_products
+        return self.post(f"/business/collections/{collection_id}", payload)

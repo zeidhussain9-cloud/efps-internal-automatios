@@ -7,11 +7,11 @@ from shared.google_sheets.client import GoogleSheetsClient
 from shared.google_sheets import schema
 from shared.whatsapp_whapi.client import WhApiClient
 
-COLLECTION_MAPPING = {
-    "1RK_1BHK": "3633492786810534",
-    "2BHK": "1870009094415279",
-    "3BHK": "1620981473020102",
-    "4plus_BHK": "2220392692158816",
+COLLECTION_NAMES = {
+    "1RK_1BHK": "1RK & 1BHK",
+    "2BHK": "2BHK",
+    "3BHK": "3BHK",
+    "4plus_BHK": "4+ BHK",
 }
 
 
@@ -59,44 +59,51 @@ def get_image_urls(row: Mapping[str, Any], limit: int = 10) -> list[str]:
     return [u.strip() for u in urls_str.replace(",", " ").split() if u.strip()][:limit]
 
 
-def _determine_collection_id(bhk: str) -> str:
+def _bhk_to_collection_key(bhk: str) -> str:
     try:
-        bhk_str = str(bhk or "").strip()
-        bhk_num = float(bhk_str.split()[0])
-        if bhk_num == 1 or bhk_num == 1.5:
-            return COLLECTION_MAPPING["1RK_1BHK"]
-        elif bhk_num == 2 or bhk_num == 2.5:
-            return COLLECTION_MAPPING["2BHK"]
-        elif bhk_num == 3 or bhk_num == 3.5:
-            return COLLECTION_MAPPING["3BHK"]
+        bhk_num = float(str(bhk or "").strip().split()[0])
+        if bhk_num <= 1.5:
+            return "1RK_1BHK"
+        elif bhk_num <= 2.5:
+            return "2BHK"
+        elif bhk_num <= 3.5:
+            return "3BHK"
         else:
-            return COLLECTION_MAPPING["4plus_BHK"]
+            return "4plus_BHK"
     except (ValueError, IndexError, AttributeError):
-        return COLLECTION_MAPPING["4plus_BHK"]
+        return "4plus_BHK"
+
+
+def _resolve_collection(client: WhApiClient, key: str) -> tuple[str, str] | None:
+    """Fetch live collections and match by name. Returns (id, name) or None."""
+    target = COLLECTION_NAMES[key]
+    for coll in client.get_collections():
+        if target in coll.get("name", ""):
+            return coll["id"], coll["name"]
+    return None
 
 
 def _add_product_to_collection(client: WhApiClient, product_id: str, bhk: str) -> tuple[bool, str]:
-    """Add product to collection by BHK. Returns (success, message)."""
-    collection_id = _determine_collection_id(bhk)
-    collection_name = next((k for k, v in COLLECTION_MAPPING.items() if v == collection_id), "Unknown")
+    key = _bhk_to_collection_key(bhk)
 
+    match = _resolve_collection(client, key)
+    if not match:
+        error = f"Collection for {key} not found in live catalogue"
+        print(f"⚠️ Collection: {error}")
+        return False, error
+
+    collection_id, collection_name = match
     try:
-        result = client.patch(
-            "/business/collections",
-            {
-                "id": collection_id,
-                "add_products": [product_id],
-            }
-        )
+        result = client.edit_collection(collection_id, add_products=[product_id])
 
         if result and result.get("status") == "APPROVED":
             msg = f"Product {product_id} added to {collection_name}"
             print(f"✅ Collection: {msg}")
             return True, msg
-        else:
-            error = f"WhAPI rejected collection add: {result}"
-            print(f"⚠️ Collection: {error}")
-            return False, error
+
+        error = f"WhAPI rejected collection add: {result}"
+        print(f"⚠️ Collection: {error}")
+        return False, error
 
     except Exception as e:
         error = f"Collection API error: {str(e)}"
