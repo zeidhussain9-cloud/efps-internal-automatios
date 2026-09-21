@@ -140,7 +140,7 @@ def test_edit_collection(monkeypatch: pytest.MonkeyPatch) -> None:
 
     client = WhApiClient(WhApiCredentials("t"), base_url="https://e.test", transport=transport)
     result = client.edit_collection("c1", add_products=["p1", "p2"])
-    assert seen["method"] == "POST"
+    assert seen["method"] == "PATCH"
     assert seen["url"].endswith("/business/collections/c1")
     assert seen["body"] == {"add_products": ["p1", "p2"]}
     assert result["status"] == "APPROVED"

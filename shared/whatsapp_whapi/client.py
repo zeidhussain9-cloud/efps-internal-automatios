@@ -234,4 +234,4 @@ class WhApiClient:
             payload["add_products"] = add_products
         if remove_products:
             payload["remove_products"] = remove_products
-        return self.post(f"/business/collections/{collection_id}", payload)
+        return self.patch(f"/business/collections/{collection_id}", payload)
