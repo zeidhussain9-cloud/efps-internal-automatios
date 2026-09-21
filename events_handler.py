@@ -9,13 +9,13 @@ from datetime import datetime, timezone, timedelta
 from decimal import Decimal
 from shared.slack import SlackClient
 from shared.slack.security import verify_signature
-from shared.slack.routing import INVENTORY_CHANNEL, PROPERTY_VERIFICATION_CHANNEL
+from shared.slack.routing import INVENTORY_CHANNEL
 from shared.google_sheets.client import GoogleSheetsClient
 from shared.google_sheets import schema
 from shared.cloudinary.client import CloudinaryClient
 from shared.cloudinary.media import upload_property_images
 sys.path.insert(0, str(__file__).rsplit("/", 1)[0] + "/modules/efps-inventory-mgmnt/src")
-from pipeline import write_phase1_update, process_phase1
+from pipeline import process_closed_session, next_listing_id, initial_row
 import boto3
 
 _SESSIONS_TABLE = os.environ.get("SESSIONS_TABLE_NAME", "efps-sessions")
@@ -201,49 +201,7 @@ def _maybe_flip_to_catalogue_ready(
     return False
 
 
-# ─────────────────────────────────────────────────────────
-# Verification save
-# ─────────────────────────────────────────────────────────
-
-def _verification_fields(text: str) -> dict:
-    out = {}
-    for line in str(text or "").splitlines():
-        if "=" in line:
-            k, v = line.split("=", 1)
-            k = k.strip()
-            v = v.strip()
-            if k in schema.BY_NAME and k not in schema.RESERVED_COLUMNS:
-                out[k] = v
-    return out
-
-
-def _save_verification(slack: SlackClient, thread_ts: str, channel: str) -> str:
-    replies = slack.replies(channel, thread_ts)
-    lid = _thread_listing(replies[0].get("text", "") if replies else "")
-    if not lid:
-        return "Could not identify the property from this verification thread."
-    changes = {}
-    for msg in replies[1:]:
-        changes.update(_verification_fields(msg.get("text", "")))
-    sheet = GoogleSheetsClient()
-    row_number, row = _row(sheet, lid)
-    if not row:
-        return f"Listing `{lid}` was not found."
-    candidate = dict(row)
-    candidate.update(changes)
-    candidate = process_phase1(str(candidate.get("raw_message_text", "")), row=candidate).row
-    # Apply changes on top of the phase-1 result (user corrections win)
-    candidate.update(changes)
-    # Set terminal statuses BEFORE validation so validate() sees the correct values
-    candidate["status"] = "Pending"
-    candidate["intake_status"] = "Processed"
-    from validate import validate
-    errors = validate(candidate)
-    if errors:
-        return "Verification refused: " + "; ".join(errors)
-    write_phase1_update(sheet, row_number, candidate)
-    _maybe_flip_to_catalogue_ready(sheet, row_number, candidate)
-    return f"Verified `{lid}`. Deterministic validation passed and the row was updated."
+# Verification save was removed — /efps verify workflow is not part of the current implementation.
 
 
 # ─────────────────────────────────────────────────────────
@@ -375,18 +333,9 @@ def _process_event(event: dict, context: object) -> None:
         )
         return
 
-    # ── Verification submit ────────────────────────────────────────────────
-    if channel == PROPERTY_VERIFICATION_CHANNEL and text == "submit":
-        try:
-            reply = _save_verification(slack, thread_ts, channel)
-            slack.post_message(channel, reply, thread_ts=thread_ts)
-        except Exception as verify_exc:
-            print(f"Verification submission failed: {verify_exc!r}")
-            slack.post_message(
-                channel,
-                "Something went wrong saving your verification — check your values and try again.",
-                thread_ts=thread_ts,
-            )
+    # ── Verification submit ─ REMOVED ─────────────────────────────────────
+    # The /efps verify workflow and PROPERTY_VERIFICATION_CHANNEL listener
+    # were removed. If a "submit" message arrives, it is silently ignored.
 
 
 # ─────────────────────────────────────────────────────────

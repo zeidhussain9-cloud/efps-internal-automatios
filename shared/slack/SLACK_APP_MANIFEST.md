@@ -35,7 +35,7 @@ features:
     - command: /efps
       url: <NEW_REPOSITORY_SLASH_COMMAND_ENDPOINT>
       description: EasyFind operations panel
-      usage_hint: status | run | show | fix | verify | photos | bug | pause
+      usage_hint: help | status | run | show | add-property | photos | catalogue | assign
       should_escape: false
 
 oauth_config:

@@ -69,7 +69,7 @@ Current command families:
 - `show <listing_id>` — display property details
 - `run` — force-run lead ingestion worker
 
-The bare thread words `done`, `submit`, `next`, `skip`, and `exit` are session controls where applicable. They are not Slack slash commands.
+The bare thread words `done`, `next`, `skip`, and `exit` are session controls where applicable. They are not Slack slash commands. (`submit` was a control word for the removed `/efps verify` workflow and is no longer active.)
 
 ## Capability boundary
 

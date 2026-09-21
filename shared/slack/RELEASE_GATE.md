@@ -30,7 +30,7 @@ The new Phase-1 operational surface is the one top-level `/efps` command with th
 - `add-property`
 - `photos start`
 - `catalogue start|update`
-- `assign <user> to <listing_id>`
+- `assign <listing_id>`
 
 **Removed commands** (no longer part of implementation):
 - `fix <listing_id> <field> <value>` — use direct Sheet editing or future admin tools

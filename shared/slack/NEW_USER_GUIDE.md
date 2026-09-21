@@ -110,9 +110,15 @@ For photo sessions:
 
 `done / skip / next / exit`
 
-For verification sessions:
+For property entry sessions:
 
-`submit / skip / next / exit`
+`done / cancel / add more / exit`
+
+For catalogue sessions:
+
+`go / yes / no / exit / skip`
+
+Note: `submit` was a thread control for the removed `/efps verify` workflow and is no longer recognised.
 
 ## 9. What is intentionally not part of current Slack behavior
 

@@ -129,7 +129,7 @@ These commands created a redundant correction/verification layer outside the aut
 - `add-property` — new property intake
 - `photos start` — photo collection workflow
 - `catalogue start|update` — catalogue image management
-- `assign <user> to <listing_id>` — task assignment
+- `assign <listing_id>` — retry collection assignment
 - `status` — system status
 - `show <listing_id>` — property details
 - `run` — batch execution trigger
@@ -150,3 +150,30 @@ This is repository-level change only. Slack bot deployment, command registration
 - Payload includes source metadata `{"source": "manual_slack_trigger"}`
 
 Deployment note: SAM stack parameters must be supplied at deploy time; no default values are hardcoded. Once deployed, `/efps run` is available for manual lead worker triggers.
+
+## Stale verify code and docs cleanup — 2026-09-21
+
+Removed all remaining `/efps verify` dead code and stale documentation references.
+
+**Code removed from `events_handler.py`:**
+- `PROPERTY_VERIFICATION_CHANNEL` import
+- `_verification_fields()` function
+- `_save_verification()` function
+- `write_phase1_update` and `process_phase1` imports (used only by the above)
+- The `PROPERTY_VERIFICATION_CHANNEL` event listener branch in `_process_event()`
+- Replaced listener block with a tombstone comment
+
+**Docs updated:**
+- `shared/slack/README.md` — removed `submit` from the listed session control words
+- `shared/slack/NEW_USER_GUIDE.md` — section 8 rewritten with current session words per workflow; `submit` noted as removed
+- `shared/slack/PHASE1_BOUNDARY.md` — workflow B changed from active verify description to REMOVED notice; required channels updated to remove `#epf-prop-aprovals`
+- `shared/slack/IMPLEMENTATION_MAP.md` — `verify_session.py` row updated to REMOVED state
+- `shared/slack/SLACK_APP_MANIFEST.md` — `usage_hint` updated to remove `fix` and `verify`, now reflects actual command surface
+- `shared/slack/RELEASE_GATE.md` — `assign` command syntax corrected from `assign <user> to <listing_id>` to `assign <listing_id>`
+- `HANDOFF.md` — `assign` syntax corrected in command surface list
+
+**Current production-grade command surface (all 9):**
+- `help`, `status`, `show`, `assign`, `run` — fully hardened, no open issues
+- `add-property`, `photos start`, `catalogue start`, `catalogue update` — functionally hardened; session-initiation atomicity (post_message + DynamoDB write) is the one remaining non-atomic gap
+
+Repository and documentation are now consistent with each other and with the live code.

@@ -8,7 +8,7 @@ This maps the legacy Slack behavior to the new repository without copying obsole
 |---|---|
 | `modules/efps-whapi-panel/src/commands.py` | `shared/slack/COMMANDS.md` for transport-facing command surface; inventory module owns actual inventory actions |
 | `photo_session.py` | `shared/slack/PHASE1_BULK_PHOTOS.md` for operator contract; inventory/media owners implement row selection and Cloudinary persistence |
-| `verify_session.py` | `shared/slack/PROPERTY_VERIFICATION.md` for operator contract; inventory module owns correction/revalidation |
+| `verify_session.py` | **REMOVED** — `/efps verify` workflow is not part of the current implementation. `PROPERTY_VERIFICATION.md` is marked obsolete. `_save_verification()` and the `PROPERTY_VERIFICATION_CHANNEL` listener have been removed from `events_handler.py`. |
 | `notify.py` | `shared/slack/client.py` for reusable Slack transport |
 | `crash_report.py` / `bugs.py` | Slack operational bug surface; runtime owner remains responsible for recording failures |
 | `lead_card.py` / `digest.py` | Lead-specific Slack behavior; retained as capability knowledge and outside inventory-only completion gate |

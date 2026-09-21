@@ -12,9 +12,9 @@ The canonical inventory record remains `Housing_Listings`. Slack can initiate an
 
 Slack can start a batch with `/efps run`, show status, and publish the completion report. The deterministic pipeline owns the processing decision and the sheet owns the resulting canonical row.
 
-### B. Property verification
+### B. Property verification — REMOVED
 
-Rows that reach `Needs Review` are eligible for the verification queue. The operator answers questions in the property's Slack thread. On `submit`, the owning inventory module applies the corrections, re-runs deterministic dependencies, validates the row, and writes the same row. A failed validation must not be silently accepted.
+The automated Slack verification queue (previously workflow B) has been removed. Properties requiring corrections should be handled through direct Sheet editing or future admin tools. The `_save_verification()` function and `PROPERTY_VERIFICATION_CHANNEL` listener have been removed from `events_handler.py`.
 
 ### C. Bulk photo collection
 
@@ -38,10 +38,11 @@ No time-window matching, sender guessing, or property inference is permitted.
 
 ## Required channel roles
 
-- `#eps-wapi-pannel`: inventory operations, batch reports, manual fixes, photo sessions.
-- `#epf-prop-aprovals`: human property verification queue.
+- `#eps-wapi-pannel`: inventory operations, batch reports, photo sessions, catalogue sessions, property entry.
 - `#eps-runtime-error-bugs-reporting`: runtime and bug handling.
 - `#efps-leads`: lead operations are retained in Slack capability documentation but are outside the inventory-only Phase-1 acceptance path unless the owning lead module is separately activated.
+
+`#epf-prop-aprovals` is no longer a required channel. The `/efps verify` workflow that used it has been removed.
 
 The exact channel identifiers are maintained in `CHANNELS.md` and must not be invented in code.
 
