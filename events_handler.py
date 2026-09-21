@@ -533,23 +533,20 @@ def _process_event(event, context):
             if text == "add more":
                 if phase == "completed":
                     _delete_session(channel, "add_property")
-                    new_session = {
-                        "user_id": f"slack_add_property_session#{channel}",
-                        "thread_ts": "",
-                        "messages_json": "[]",
-                        "listing_id": "",
-                        "phase": "collecting",
-                        "expires_at": int(time.time()) + 86400,
-                    }
-                    boto3.resource("dynamodb").Table("efps-sessions").put_item(Item=new_session)
                     ts = slack.post_message(INVENTORY_CHANNEL,
                         "📝 New Property Entry Session\n\n"
                         "Share property details in THIS THREAD:\n"
                         "• One message or multiple — all will be captured\n"
                         "• Reply `done` when finished\n\n"
                         "Commands: `done` | `cancel`")
-                    new_session["thread_ts"] = ts
-                    boto3.resource("dynamodb").Table("efps-sessions").put_item(Item=new_session)
+                    new_session = {
+                        "thread_ts": ts,
+                        "messages_json": "[]",
+                        "listing_id": "",
+                        "phase": "collecting",
+                        "expires_at": int(time.time()) + 86400,
+                    }
+                    _update_session(channel, "add_property", new_session)
                 else:
                     slack.post_message(channel, "Finish current property first. `done` or `cancel`.", thread_ts=thread)
                 return

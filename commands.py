@@ -159,15 +159,6 @@ def handle(text:str,user_id:str,channel_id:str)->dict:
         dynamo=boto3.resource("dynamodb")
         table=dynamo.Table("efps-sessions")
         session_key=f"slack_add_property_session#{channel_id}"
-        session_data={
-            "user_id":session_key,
-            "thread_ts":"",
-            "messages_json":"[]",
-            "listing_id":"",
-            "phase":"collecting",
-            "expires_at":int(time.time())+86400,
-        }
-        table.put_item(Item=session_data)
         ts=slack.post_message(INVENTORY_CHANNEL,
             "📝 Property Entry Session Started\n\n"
             "Share property details in THIS THREAD:\n"
@@ -176,7 +167,14 @@ def handle(text:str,user_id:str,channel_id:str)->dict:
             "Then I'll process the property and ask for photos.\n\n"
             "Commands: `done` | `cancel`"
         )
-        session_data["thread_ts"]=ts
+        session_data={
+            "user_id":session_key,
+            "thread_ts":ts,
+            "messages_json":"[]",
+            "listing_id":"",
+            "phase":"collecting",
+            "expires_at":int(time.time())+86400,
+        }
         table.put_item(Item=session_data)
         return {"response_type":"ephemeral","text":f"Property entry session opened in {INVENTORY_CHANNEL}. Thread: {ts}"}
     return {"response_type":"ephemeral","text":f"Unknown command. Use `{TOP_LEVEL_COMMAND} help`."}
