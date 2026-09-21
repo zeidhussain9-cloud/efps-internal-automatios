@@ -29,7 +29,16 @@ Google Maps handling has two distinct operations:
 1. **Extract** the exact Maps URL present in `raw_message_text`.
 2. **Resolve/enrich** that URL when runtime/network access is available.
 
-Short links are expanded by `GoogleMapsClient.expand()` when possible. The resolved URL is then converted into a Geocoding query using coordinates, a place path, or supported query parameters. Verified results can provide canonical Maps URL, formatted address, locality, pincode, coordinates, and confidence.
+Plain URLs and Slack-wrapped links such as `<URL|label>` are normalized to the
+actual URL before extraction or resolution. Short links are expanded by
+`GoogleMapsClient.expand()` when possible. The resolved URL is then converted
+into a Geocoding query using coordinates, a place path, or supported query
+parameters. Verified results can provide canonical Maps URL, formatted
+address, locality, pincode, coordinates, and confidence.
+
+If a source URL cannot yield a usable query (and no address fallback is
+provided), resolution returns `NOT_FOUND` without making a blank `address=`
+Google request.
 
 This separation is intentional: a network redirect must never be required merely to recognize a source URL.
 
@@ -42,6 +51,10 @@ A `📍 Name:` marker followed by a Maps URL produces a society/property-name ca
 A `📍 Landmark:` marker followed by a Maps URL must leave `landmark` blank and place the URL in `google_maps_url`.
 
 Verified Maps enrichment may replace locality and provide pincode, but failure to run enrichment does not invalidate correct source locality extraction.
+
+Both the WhAPI closed-session runtime and the Slack `done` runtime delegate
+closed property details to the same `process_closed_session()` path, which
+calls this shared client; neither flow owns a separate Maps parser.
 
 ## Current audit state — 2026-09-15
 
