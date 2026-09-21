@@ -162,25 +162,19 @@ def handle(text:str,user_id:str,channel_id:str)->dict:
         session_data={
             "user_id":session_key,
             "thread_ts":"",
-            "raw_text":"",
-            "image_count":0,
+            "messages_json":"[]",
+            "listing_id":"",
+            "phase":"collecting",
             "expires_at":int(time.time())+86400,
         }
         table.put_item(Item=session_data)
         ts=slack.post_message(INVENTORY_CHANNEL,
             "📝 Property Entry Session Started\n\n"
-            "Share property details in THIS THREAD:\n\n"
-            "1️⃣ Reply with property text (like WhatsApp message):\n"
-            "   Example:\n"
-            "   _3 BHK, Semi Furnished\n"
-            "   Rent: 45K\n"
-            "   Maintenance: 3K\n"
-            "   Deposit: 1.5L\n"
-            "   Location: Sarjapur Road\n"
-            "   Pets: Allowed_\n\n"
-            "2️⃣ Attach ALL images in next replies\n\n"
-            "3️⃣ When done, reply: `done`\n"
-            "   To cancel: `cancel`"
+            "Share property details in THIS THREAD:\n"
+            "• One message or multiple — all will be captured\n"
+            "• Reply `done` when finished\n\n"
+            "Then I'll process the property and ask for photos.\n\n"
+            "Commands: `done` | `cancel`"
         )
         session_data["thread_ts"]=ts
         table.put_item(Item=session_data)

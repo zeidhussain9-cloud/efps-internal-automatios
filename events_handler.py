@@ -411,123 +411,170 @@ def _process_event(event, context):
             slack.post_message(channel, "An error occurred in the photo workflow. Please contact support.", thread_ts=thread_ts)
 
     elif channel == INVENTORY_CHANNEL and add_property_session and text in ["done", "cancel", "add more", "exit"]:
+        phase = str(add_property_session.get("phase", "collecting"))
+        thread = add_property_session.get("thread_ts", thread_ts)
         try:
+            # ── cancel: discard session, no row insertion ──
             if text == "cancel":
-                _delete_session(channel, "add_property")
-                slack.post_message(channel, "Property entry cancelled. Session closed.", thread_ts=add_property_session["thread_ts"])
-                return
-
-            if text == "exit" and add_property_session.get("completed"):
-                _delete_session(channel, "add_property")
-                slack.post_message(channel, "Session closed.", thread_ts=add_property_session["thread_ts"])
-                return
-
-            if text == "add more" and add_property_session.get("completed"):
-                _delete_session(channel, "add_property")
-                new_session={
-                    "user_id": f"slack_add_property_session#{channel}",
-                    "thread_ts": "",
-                    "raw_text": "",
-                    "image_count": 0,
-                    "expires_at": int(time.time()) + 86400,
-                }
-                boto3.resource("dynamodb").Table("efps-sessions").put_item(Item=new_session)
-                ts = slack.post_message(INVENTORY_CHANNEL,
-                    "📝 New Property Entry Session Started\n\n"
-                    "Share property details in THIS THREAD:\n\n"
-                    "1️⃣ Reply with property text\n"
-                    "2️⃣ Attach ALL images\n"
-                    "3️⃣ Reply: `done` or `cancel`")
-                new_session["thread_ts"] = ts
-                boto3.resource("dynamodb").Table("efps-sessions").put_item(Item=new_session)
-                return
-
-            if text in ["exit", "done"]:
-                if not add_property_session.get("raw_text"):
-                    slack.post_message(channel, "No property details provided. Cancelled.", thread_ts=add_property_session["thread_ts"])
+                if phase in ("awaiting_photos", "completed"):
+                    slack.post_message(channel, "Row already added. Use `done` to continue or `exit` to close.", thread_ts=thread)
+                else:
                     _delete_session(channel, "add_property")
+                    slack.post_message(channel, "Property entry cancelled. Session closed.", thread_ts=thread)
+                return
+
+            # ── done (collecting): process text → insert row → ask for photos ──
+            if text == "done" and phase == "collecting":
+                messages = json.loads(add_property_session.get("messages_json", "[]"))
+                if not messages:
+                    slack.post_message(channel, "No property details provided. Send details first, or `cancel` to discard.", thread_ts=thread)
                     return
 
-                sheet = GoogleSheetsClient()
-                slack.post_message(channel, "Processing property details and images...", thread_ts=add_property_session["thread_ts"])
-
-                raw_text = add_property_session.get("raw_text", "")
-                sys.path.insert(0, str(__file__).rsplit("/", 1)[0] + "/modules/efps-inventory-mgmnt/src")
-                from pipeline import process_closed_session, next_listing_id
+                raw_text = "\n".join(messages)
+                slack.post_message(channel, "Processing property details...", thread_ts=thread)
 
                 try:
-                    out, issues = process_closed_session(raw_text)
+                    sheet = GoogleSheetsClient()
+                    sys.path.insert(0, str(__file__).rsplit("/", 1)[0] + "/modules/efps-inventory-mgmnt/src")
+                    from pipeline import process_closed_session, next_listing_id, initial_row
+
                     listing_id = next_listing_id(sheet)
-                    out["listing_id"] = listing_id
                     ist = timezone(timedelta(hours=5, minutes=30))
-                    out["onboarded_on"] = datetime.now(ist).strftime("%-d %b %Y, %-I:%M %p")
+                    onboarded_on = datetime.now(ist).strftime("%-d %b %Y, %-I:%M %p")
 
-                    replies = slack.replies(channel, add_property_session["thread_ts"])
-                    photo_urls = _photo_files(replies)
-                    uploaded_count = 0
-                    if photo_urls:
-                        blobs = []
-                        for u in photo_urls:
-                            try:
-                                blobs.append(slack.download_file(u))
-                            except Exception as dl_exc:
-                                print(f"DIAG[add_property] photo download failed: {dl_exc!r}")
-                        if blobs:
-                            uploads = upload_property_images(CloudinaryClient(), listing_id, blobs)
-                            uploaded_count = len(uploads)
-                            out["cloudinary_image_urls"] = ", ".join(up.url for up in uploads)
-
-                    out["status"] = "Pending"
-                    out["intake_status"] = "Processed"
-                    out["listing_state"] = "Available"
+                    initial = initial_row(listing_id, raw_text, onboarded_on)
+                    out, issues = process_closed_session(raw_text, row=initial)
 
                     sheet.insert_rows(schema.SHEET_ID, schema.WORKSHEET_NAME, [schema.mapping_to_row(out)])
 
-                    if uploaded_count > 0:
-                        status_line = f"Status: 🟢 CATALOGUE READY\nNext: Ready for Meta Catalogue creation via `/efps catalogue start`"
-                    else:
-                        status_line = f"Status: 🟡 NEEDS PHOTOS\nNext: Upload photos via `/efps photos start`, then catalogue"
+                    status = out.get("status", "")
+                    issue_lines = ""
+                    if issues:
+                        issue_lines = "\n".join(f"  • {i}" for i in issues[:5])
+                        issue_lines = f"\n⚠️ Review flags:\n{issue_lines}"
 
                     slack.post_message(channel,
-                        f"✅ Property Added Successfully!\n\n"
-                        f"Listing ID: `{listing_id}`\n"
-                        f"Images: {uploaded_count} uploaded to Cloudinary\n\n"
-                        f"{status_line}\n\n"
-                        f"─────────────────────────────\n"
-                        f"Reply: `add more` to add another property  OR  `exit` to close",
-                        thread_ts=add_property_session["thread_ts"])
+                        f"✅ Property row added: `{listing_id}` (Status: {status}){issue_lines}\n\n"
+                        f"Now attach photos in this thread, then reply `done`.\n"
+                        f"Reply `done` now to skip photos.",
+                        thread_ts=thread)
 
-                    add_property_session["completed"] = True
+                    add_property_session["phase"] = "awaiting_photos"
+                    add_property_session["listing_id"] = listing_id
                     _update_session(channel, "add_property", add_property_session)
-                    return
 
                 except Exception as process_exc:
-                    error_msg = str(process_exc)
-                    slack.post_message(channel, f"❌ Processing failed: {error_msg[:200]}", thread_ts=add_property_session["thread_ts"])
+                    slack.post_message(channel, f"❌ Processing failed: {str(process_exc)[:200]}", thread_ts=thread)
                     _delete_session(channel, "add_property")
-                    return
+                return
+
+            # ── done (awaiting_photos): process photos → complete ──
+            if text == "done" and phase == "awaiting_photos":
+                listing_id = add_property_session.get("listing_id", "")
+                replies = slack.replies(channel, thread)
+                photo_urls = _photo_files(replies)
+                uploaded_count = 0
+
+                if photo_urls:
+                    slack.post_message(channel, f"Processing {len(photo_urls)} image(s)...", thread_ts=thread)
+                    blobs = []
+                    for u in photo_urls:
+                        try:
+                            blobs.append(slack.download_file(u))
+                        except Exception as dl_exc:
+                            print(f"DIAG[add_property] photo download failed: {dl_exc!r}")
+                    if blobs:
+                        try:
+                            sheet = GoogleSheetsClient()
+                            uploads = upload_property_images(CloudinaryClient(), listing_id, blobs)
+                            uploaded_count = len(uploads)
+                            row_number, row = _row(sheet, listing_id)
+                            if row:
+                                existing = [x.strip() for x in str(row.get("cloudinary_image_urls") or "").split(",") if x.strip()]
+                                combined = existing + [u.url for u in uploads]
+                                sheet.write_range(schema.SHEET_ID, schema.WORKSHEET_NAME,
+                                    schema.range_for("cloudinary_image_urls", "cloudinary_image_urls", row_number),
+                                    [[", ".join(combined)]])
+                                _maybe_flip_to_catalogue_ready(sheet, row_number, {**row, "cloudinary_image_urls": ", ".join(combined)})
+                        except Exception as up_exc:
+                            slack.post_message(channel, f"❌ Photo upload failed: {str(up_exc)[:200]}", thread_ts=thread)
+
+                if uploaded_count > 0:
+                    slack.post_message(channel, f"✅ {uploaded_count} photo(s) uploaded for `{listing_id}`.", thread_ts=thread)
+                else:
+                    slack.post_message(channel, f"No photos found. Skipping.", thread_ts=thread)
+
+                add_property_session["phase"] = "completed"
+                _update_session(channel, "add_property", add_property_session)
+                slack.post_message(channel,
+                    f"─────────────────────────────\n"
+                    f"Reply: `add more` for next property  |  `exit` to close",
+                    thread_ts=thread)
+                return
+
+            # ── done (completed): already done ──
+            if text == "done" and phase == "completed":
+                slack.post_message(channel, "Already done. Reply `add more` or `exit`.", thread_ts=thread)
+                return
+
+            # ── exit ──
+            if text == "exit":
+                if phase == "completed":
+                    _delete_session(channel, "add_property")
+                    slack.post_message(channel, "Session closed.", thread_ts=thread)
+                elif phase == "awaiting_photos":
+                    _delete_session(channel, "add_property")
+                    slack.post_message(channel, f"Photos skipped. Session closed. Property `{add_property_session.get('listing_id', '')}` is saved.", thread_ts=thread)
+                else:
+                    slack.post_message(channel, "Use `cancel` to discard, or `done` to process.", thread_ts=thread)
+                return
+
+            # ── add more ──
+            if text == "add more":
+                if phase == "completed":
+                    _delete_session(channel, "add_property")
+                    new_session = {
+                        "user_id": f"slack_add_property_session#{channel}",
+                        "thread_ts": "",
+                        "messages_json": "[]",
+                        "listing_id": "",
+                        "phase": "collecting",
+                        "expires_at": int(time.time()) + 86400,
+                    }
+                    boto3.resource("dynamodb").Table("efps-sessions").put_item(Item=new_session)
+                    ts = slack.post_message(INVENTORY_CHANNEL,
+                        "📝 New Property Entry Session\n\n"
+                        "Share property details in THIS THREAD:\n"
+                        "• One message or multiple — all will be captured\n"
+                        "• Reply `done` when finished\n\n"
+                        "Commands: `done` | `cancel`")
+                    new_session["thread_ts"] = ts
+                    boto3.resource("dynamodb").Table("efps-sessions").put_item(Item=new_session)
+                else:
+                    slack.post_message(channel, "Finish current property first. `done` or `cancel`.", thread_ts=thread)
+                return
 
         except Exception as e:
             print(f"Add property flow failed: {e!r}")
-            slack.post_message(channel, "An error occurred. Please contact support.", thread_ts=thread_ts)
-            _delete_session(channel, "add_property")
+            slack.post_message(channel, "An error occurred. Please contact support.", thread_ts=thread)
 
     elif channel == INVENTORY_CHANNEL and add_property_session and not text.startswith("/"):
-        if not add_property_session.get("raw_text"):
-            add_property_session["raw_text"]=ev.get("text", "")
-            dynamo=boto3.resource("dynamodb")
-            table=dynamo.Table("efps-sessions")
-            table.put_item(Item=add_property_session)
-            slack.post_message(channel, "✓ Property text captured. Now attach images and reply `done`.", thread_ts=add_property_session["thread_ts"])
-            return
+        phase = str(add_property_session.get("phase", "collecting"))
+        thread = add_property_session.get("thread_ts", thread_ts)
 
-        files=ev.get("files", [])
-        if files:
-            add_property_session["image_count"]=add_property_session.get("image_count", 0)+len(files)
-            dynamo=boto3.resource("dynamodb")
-            table=dynamo.Table("efps-sessions")
-            table.put_item(Item=add_property_session)
-            slack.post_message(channel, f"✓ {len(files)} image(s) captured. Total: {add_property_session['image_count']}. Reply `done` to process.", thread_ts=add_property_session["thread_ts"])
+        if phase == "collecting":
+            msg_text = str(ev.get("text", "")).strip()
+            if msg_text:
+                messages = json.loads(add_property_session.get("messages_json", "[]"))
+                messages.append(msg_text)
+                add_property_session["messages_json"] = json.dumps(messages)
+                _update_session(channel, "add_property", add_property_session)
+                slack.post_message(channel, f"✓ Message {len(messages)} captured. Send more or reply `done` to process.", thread_ts=thread)
+
+        elif phase == "awaiting_photos":
+            files = ev.get("files", [])
+            if files:
+                slack.post_message(channel, f"✓ {len(files)} image(s) received. Attach more or reply `done` to process.", thread_ts=thread)
 
     elif channel == PROPERTY_VERIFICATION_CHANNEL and text == "submit":
         try:
