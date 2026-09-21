@@ -27,13 +27,17 @@ The new Phase-1 operational surface is the one top-level `/efps` command with th
 - `status`
 - `run`
 - `show <listing_id>`
-- `fix <listing_id> <field> <value>`
-- `verify start|submit|next|skip|exit`
-- `photos start|done|next|skip|exit`
-- `bug report|submit|cancel|show|fix`
-- `bugs`
-- `pause`
-- `resume`
+- `add-property`
+- `photos start`
+- `catalogue start|update`
+- `assign <user> to <listing_id>`
+
+**Removed commands** (no longer part of implementation):
+- `fix <listing_id> <field> <value>` — use direct Sheet editing or future admin tools
+- `verify start|submit|next|skip|exit` — verification workflow removed
+- `bug report|submit|cancel|show|fix` — not yet implemented
+- `bugs` — not yet implemented
+- `pause` / `resume` — batch control removed
 
 No society approval command or society approval workflow is part of Phase 1.
 
@@ -52,22 +56,11 @@ The batch flow must:
 7. publish a batch report to the inventory Slack channel;
 8. leave the canonical sheet row as the source of truth.
 
-### 4. Property verification
+### 4. Property verification — REMOVED
 
-The Slack verification queue is driven from rows whose status is `Needs Review`.
+The automated Slack verification queue previously driven from rows with `Needs Review` status has been removed from the implementation.
 
-The operator must be able to:
-
-1. start verification;
-2. receive one property at a time in a thread;
-3. answer only fields requiring human attention;
-4. use `skip`, `next`, and `exit` controls;
-5. `submit` the corrections;
-6. re-run deterministic dependencies and validation;
-7. write the corrected canonical values back to the same row;
-8. move the row out of `Needs Review` only after successful validation.
-
-Verification does not create or update a separate society-approval/profile table.
+Properties requiring corrections should be handled through direct Sheet editing or future admin tools.
 
 ### 5. Photo collection — temporary Phase-1 path
 
@@ -128,15 +121,18 @@ Production readiness requires live verification of at least:
 - `/efps status`
 - `/efps run`
 - `/efps show <listing_id>`
-- `/efps fix <listing_id> <field> <value>` with ownership rejection tested
-- `Needs Review` verification thread from start through `submit`
+- `/efps add-property` with full intake workflow
 - photo session from `photos start` through thread attachments and `done`
 - Cloudinary upload and same-row URL persistence
 - no-photo retry behavior
 - batch completion Slack report
 - batch error/bug reporting
-- pause/resume behavior
 - Slack signature rejection for an invalid request
+
+**Removed from acceptance tests:**
+- `/efps fix <listing_id> <field> <value>` — command removed
+- `Needs Review` verification thread — workflow removed
+- pause/resume behavior — not implemented
 
 A source-code review is not a substitute for these live checks.
 

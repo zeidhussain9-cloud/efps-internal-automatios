@@ -8,10 +8,9 @@
 
 | Channel | ID | Role |
 |---|---|---|
-| `#eps-wapi-pannel` | `C0BTQGG8VT3` | Inventory panel: batch reports, property commands, photo sessions. |
+| `#eps-wapi-pannel` | `C0BTQGG8VT3` | Inventory panel: batch reports, property commands, photo sessions, catalogue sessions. |
 | `#efps-leads` | `C0BTM6PH55L` | Lead cards, lead threads and the live lead dashboard. |
 | `#eps-runtime-error-bugs-reporting` | `C0BUHV01L8Y` | Runtime and manual bug reporting. |
-| `#epf-prop-aprovals` | `C0BUHUHRK0Q` | Property human-verification session channel. The historical name remains; this is not a society-approval channel. |
 
 ## Historical channels
 
@@ -35,11 +34,11 @@ These are historical references, not automatically active destinations.
 
 ### Inventory panel
 
-Batch summaries, `/efps status`, `/efps run`, `/efps show`, `/efps fix`, photo sessions, and pause/resume operations belong here.
+Batch summaries, `/efps status`, `/efps run`, `/efps show`, `/efps add-property`, photo sessions, and catalogue operations belong here.
 
-### Property verification
+### Property verification channel — retired
 
-Human verification sessions belong in `#epf-prop-aprovals`. The channel name is legacy terminology; its current purpose is property verification only.
+`#epf-prop-aprovals` is no longer used for automated verification sessions. The `/efps verify` workflow has been removed. The channel remains in the workspace but has no active bot-driven workflow.
 
 ### Leads
 

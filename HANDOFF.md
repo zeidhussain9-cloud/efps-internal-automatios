@@ -102,3 +102,36 @@ Slack closed-session processing remain routed through the shared
 `pipeline.process_closed_session()` Maps call; no flow-specific parser was
 added. This is repository-level verification only; live runtime deployment
 and Google API probing remain separate acceptance gates.
+
+## Slack command surface reduction — 2026-09-21
+
+`/efps fix` and `/efps verify` commands have been removed from the implementation.
+
+**What was removed:**
+- `/efps fix <listing_id> <field> <value>` — manual field correction command
+- `/efps verify start|next|skip|exit|submit` — property verification workflow
+
+**Rationale:**
+These commands created a redundant correction/verification layer outside the authoritative Sheet. Properties requiring corrections should be edited directly in the Sheet or through future admin tools.
+
+**Files modified:**
+- `commands.py` — rewritten to handle only: `help`, `add-property`, `photos start`, `catalogue start|update`, `assign`, `status`, `show`, `run`
+- `shared/slack/COMMANDS.md` — command table updated, removed commands documented
+- `shared/slack/README.md` — command families list updated
+- `shared/slack/CHANNELS.md` — verification channel marked retired
+- `shared/slack/BATCH_OPERATIONS.md` — verify workflow section removed
+- `shared/slack/NEW_USER_GUIDE.md` — fix/verify documentation removed
+- `shared/slack/PROPERTY_VERIFICATION.md` — marked obsolete with explanation
+- `shared/slack/RELEASE_GATE.md` — acceptance tests updated
+
+**Current command surface:**
+- `help` — usage guide
+- `add-property` — new property intake
+- `photos start` — photo collection workflow
+- `catalogue start|update` — catalogue image management
+- `assign <user> to <listing_id>` — task assignment
+- `status` — system status
+- `show <listing_id>` — property details
+- `run` — batch execution trigger
+
+This is repository-level change only. Slack bot deployment, command registration, and live endpoint verification remain separate acceptance gates.

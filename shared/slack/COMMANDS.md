@@ -1,88 +1,54 @@
 # Slack Command Surface
 
-Canonical command surface migrated from the legacy EFPS panel. There is one Slack slash command: `/efps`. Slack registers only that command; EFPS routes subcommands internally.
+Canonical command surface for EFPS Inventory Management. There is one Slack slash command: `/efps`. Slack registers only that command; EFPS routes subcommands internally.
 
 ## Inventory channel — `#eps-wapi-pannel`
 
 | Command | Purpose |
 |---|---|
 | `/efps help` | Show command help. |
-| `/efps status` | Show Raw/Processed/Needs Review counts, row count and batch state. |
-| `/efps run` | Dispatch a batch run immediately unless batches are paused. |
+| `/efps status` | Show pipeline stage counts (Raw, Processed, Catalogue Ready, Published, Rented Out). |
+| `/efps run` | Force-run the WhatsApp lead ingestion worker. |
 | `/efps show <listing_id>` | Display selected canonical property fields and row link. |
-| `/efps fix <listing_id> <field> <value>` | Apply one manual correction, re-run deterministic dependencies, validate, and write the same row. |
+| `/efps add-property` | Start a new property entry session in a thread. |
 | `/efps photos start` | Start the no-photo property queue. |
-| `/efps photos next` | Move to the next photo property. |
-| `/efps photos skip` | Skip the current photo property for the session. |
-| `/efps photos exit` | Close the photo session. |
 | `/efps catalogue start` | Start Meta catalogue creation for ready properties. |
-| `/efps pause` | Disable scheduled inventory batches. |
-| `/efps resume` | Re-enable scheduled inventory batches. |
-
-## Property verification channel — `#epf-prop-aprovals`
-
-| Command/session control | Purpose |
-|---|---|
-| `/efps verify start` | Start the human verification queue for rows needing review. |
-| `/efps verify next` | Move to the next verification item. |
-| `/efps verify skip` | Skip the current item for the session. |
-| `/efps verify exit` | Close the verification session. |
-| `/efps verify submit` | Submit the current answers when invoked through the command surface. |
-| bare `submit` in the property thread | Submit the current verification answers. |
-| bare `next` / `skip` / `exit` | Session controls in the property thread. |
-
-## Runtime bug channel — `#eps-runtime-error-bugs-reporting`
-
-| Command | Purpose |
-|---|---|
-| `/efps bug report` | Start a guided bug report. |
-| `/efps bug submit` | Submit the active bug interview. |
-| `/efps bug cancel` | Cancel the active bug interview. |
-| `/efps bug show <BUG-ID>` | Show one bug. |
-| `/efps bug fix <BUG-ID> <note>` | Record the fix and close the bug. |
-| `/efps bugs` | Flush unannounced failures and list open bugs. |
+| `/efps catalogue update` | Delete catalogues for rented-out properties. |
+| `/efps assign <listing_id>` | Retry collection assignment for a property. |
 
 ## Lead channel — `#efps-leads`
 
 No lead-specific slash command is required by the migrated implementation. Lead cards are updated through Slack Block Kit interactions and threads.
 
-## Photo thread controls
+## Session thread controls
 
-The slash command cannot be used inside a Slack thread. Start the session from the channel view, then use plain words in the session thread:
+Sessions run in threads. Start from the channel view with a slash command, then use plain words in the thread. Commands are only recognized when they appear as standalone words, not within sentences.
 
-- `done` — dispatch photo save for the current property.
-- `next` / `skip` — advance/pass according to session behavior.
-- `exit` — close the session.
+### Property entry (`/efps add-property`)
+- `done` — complete entry and process the property
+- `cancel` — abandon the session
 
-A sentence containing these words is not automatically a command; command matching must remain explicit.
+### Photo sessions (`/efps photos start`)
+- `done` — save photos and move to next property
+- `skip` — skip current property
+- `exit` — close the session
 
-## Catalogue thread controls
-
-Similar to photo sessions, catalogue creation is thread-based:
-
-- `go` — start creating catalogues for all ready properties, processing one by one with live updates.
-- `skip` — skip the current property (catalogue session only).
-- `exit` — close the catalogue session.
-
-The system automatically advances to the next property after each successful creation. When all properties are processed, the session closes automatically.
-
-## Ownership constraints for `/efps fix`
-
-The legacy implementation explicitly blocks direct correction of:
-
-- Maps-owned: `locality`, `city`, `pincode`, `google_maps_url`.
-- System-owned: `listing_id`, `raw_message_text`, `intake_status`, `source_group`, `inventory_locked`.
-- Downstream-owned: `posted_url`, `posted_at`, `meta_catalog_id`, `meta_catalog_status`.
-
-Manual fixes must not bypass deterministic normalization or validation.
+### Catalogue sessions (`/efps catalogue start` or `update`)
+- `go` — start processing (catalogue start)
+- `yes` — confirm deletion (catalogue update)
+- `no` / `exit` — cancel the operation
+- `skip` — skip current property (catalogue start only)
 
 ## Removed / forbidden commands
 
-The following are **not part of the new repository**:
+The following are **not part of the current implementation**:
 
-- `/efps approve`
-- `/efps societies`
-- `/efps society <name>`
-- Any separate society approval queue/card/workflow.
+- `/efps fix <listing_id> <field> <value>` — removed; use Sheet editing or future admin tools
+- `/efps verify start|next|skip|exit|submit` — removed; verification workflow removed
+- `/efps pause` / `/efps resume` — batch control removed
+- `/efps approve` — never implemented in new repository
+- `/efps societies` / `/efps society <name>` — obsolete society approval queue
+- `/efps bug *` — bug tracking commands not in current scope
 
-The legacy source contained contradictory society-approval prose. It is obsolete and intentionally excluded.
+The legacy source contained contradictory workflows. Commands listed here are obsolete and intentionally excluded.
+

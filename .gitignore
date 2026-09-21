@@ -23,6 +23,9 @@ packaged*.yaml
 # Aider-generated files
 .aider*
 
+# Secrets / credential backups — never commit
+SECRETS_BACKUP.csv
+
 # Local scripts for Gemini
 gemini_scripts/
 \ninternal_slash_command_reference.txt

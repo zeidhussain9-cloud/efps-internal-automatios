@@ -1,12 +1,19 @@
 """Meta catalogue description generator and WhAPI publisher."""
 from __future__ import annotations
 import re
+import time
 from datetime import datetime, date
 from typing import Any, Mapping
 from shared.google_sheets.client import GoogleSheetsClient
 from shared.google_sheets import schema
 from shared.whatsapp_whapi.client import WhApiClient
 
+# Minimum seconds to wait between product creation and collection assignment.
+# WhAPI returns 429 if the assignment call follows the create call too quickly.
+_COLLECTION_ASSIGN_COOLDOWN_SECONDS = 30
+
+# BHK-to-collection mapping.  Keys are canonical internal keys;
+# values must be substrings of the live WhatsApp collection names.
 COLLECTION_NAMES = {
     "1RK_1BHK": "1RK & 1BHK",
     "2BHK": "2BHK",
@@ -60,6 +67,7 @@ def get_image_urls(row: Mapping[str, Any], limit: int = 10) -> list[str]:
 
 
 def _bhk_to_collection_key(bhk: str) -> str:
+    """Map a BHK string to one of the four canonical collection keys."""
     try:
         bhk_num = float(str(bhk or "").strip().split()[0])
         if bhk_num <= 1.5:
@@ -75,7 +83,12 @@ def _bhk_to_collection_key(bhk: str) -> str:
 
 
 def _resolve_collection(client: WhApiClient, key: str) -> tuple[str, str] | None:
-    """Fetch live collections and match by name. Returns (id, name) or None."""
+    """Fetch live collections and match by name substring.
+
+    Returns (collection_id, collection_name) or None when the collection
+    cannot be found.  Uses substring matching so the emoji prefix in live
+    collection names ("🏠 1RK & 1BHK") does not prevent matching.
+    """
     target = COLLECTION_NAMES[key]
     for coll in client.get_collections():
         if target in coll.get("name", ""):
@@ -89,33 +102,90 @@ def assign_to_collection(
     *,
     whapi: WhApiClient | None = None,
 ) -> tuple[bool, str]:
-    """Add a product to its BHK collection. Returns (success, message)."""
+    """Add a product to its BHK collection.
+
+    Returns (success: bool, message: str).
+
+    Root-cause fix: the PATCH /business/collections/{id} response returns
+    the updated collection object — it does NOT return {"status": "APPROVED"}.
+    We therefore check that the response is a non-error dict rather than
+    looking for a specific status key.
+
+    NOTE: WhAPI enforces a rate limit between product creation and collection
+    assignment.  Always wait at least _COLLECTION_ASSIGN_COOLDOWN_SECONDS
+    after calling publish_product() before calling this function, or use
+    publish_and_assign() which handles the wait automatically.
+    """
     client = whapi or WhApiClient()
     key = _bhk_to_collection_key(bhk)
 
     match = _resolve_collection(client, key)
     if not match:
-        error = f"Collection for {key} not found in live catalogue"
-        print(f"⚠️ Collection: {error}")
+        error = f"Collection for BHK key '{key}' not found in live catalogue"
+        print(f"⚠️  Collection: {error}")
         return False, error
 
     collection_id, collection_name = match
     try:
         result = client.edit_collection(collection_id, add_products=[product_id])
 
-        if result and result.get("status") == "APPROVED":
-            msg = f"Product {product_id} added to {collection_name}"
+        # edit_collection() does a PATCH which returns the updated collection
+        # object on success, or raises RuntimeError on HTTP error.  A non-None
+        # dict that lacks an explicit "error" key means success.
+        if isinstance(result, dict) and "error" not in result:
+            msg = f"Product {product_id} added to '{collection_name}'"
             print(f"✅ Collection: {msg}")
             return True, msg
 
-        error = f"WhAPI rejected collection add: {result}"
-        print(f"⚠️ Collection: {error}")
+        # Unexpected shape — treat as failure but surface the raw response
+        error = f"Unexpected WhAPI response shape: {str(result)[:150]}"
+        print(f"⚠️  Collection: {error}")
         return False, error
 
+    except RuntimeError as e:
+        raw = str(e)
+        # 429 means we were too fast after product creation — caller should retry
+        if "429" in raw or "Too Many Requests" in raw.lower():
+            error = f"Rate-limited (429) — wait {_COLLECTION_ASSIGN_COOLDOWN_SECONDS}s and retry"
+            print(f"⚠️  Collection: {error}")
+            return False, error
+        error = f"Collection API error: {raw}"
+        print(f"⚠️  Collection: {error}")
+        return False, error
     except Exception as e:
         error = f"Collection API error: {str(e)}"
-        print(f"⚠️ Collection: {error}")
+        print(f"⚠️  Collection: {error}")
         return False, error
+
+
+def publish_and_assign(
+    row_number: int,
+    row: Mapping[str, Any],
+    *,
+    whapi: WhApiClient | None = None,
+    sheets: GoogleSheetsClient | None = None,
+) -> tuple[dict, bool, str]:
+    """Create/reconcile a WhatsApp product and assign it to its BHK collection.
+
+    Handles the mandatory cooldown between creation and assignment automatically.
+
+    Returns: (publish_result, assign_ok, assign_message)
+    Raises ValueError or RuntimeError on unrecoverable publish failure.
+    """
+    result = publish_product(row_number, row, whapi=whapi, sheets=sheets)
+    product_id = result["product_id"]
+    bhk = str(row.get("BHK") or "").strip()
+
+    # Only wait for newly created products, not already-existing ones.
+    if result.get("status") == "created":
+        print(
+            f"ℹ️  publish_and_assign: waiting {_COLLECTION_ASSIGN_COOLDOWN_SECONDS}s "
+            f"before collection assignment for {result.get('listing_id')}"
+        )
+        time.sleep(_COLLECTION_ASSIGN_COOLDOWN_SECONDS)
+
+    assign_ok, assign_msg = assign_to_collection(product_id, bhk, whapi=whapi)
+    return result, assign_ok, assign_msg
 
 
 def generate_description(row: Mapping[str, Any]) -> tuple[str, str]:
@@ -182,19 +252,24 @@ def generate_description(row: Mapping[str, Any]) -> tuple[str, str]:
     return title, description
 
 
-def _record_published(sheet: GoogleSheetsClient, row_number: int, product_id: str) -> None:
+def _record_published(
+    sheet: GoogleSheetsClient, row_number: int, product_id: str
+) -> None:
     sheet.write_range(
-        schema.SHEET_ID, schema.WORKSHEET_NAME,
+        schema.SHEET_ID,
+        schema.WORKSHEET_NAME,
         schema.range_for("meta_catalog_id", "meta_catalog_status", row_number),
         [[product_id, "Posted"]],
     )
     sheet.write_range(
-        schema.SHEET_ID, schema.WORKSHEET_NAME,
+        schema.SHEET_ID,
+        schema.WORKSHEET_NAME,
         schema.range_for("intake_status", "intake_status", row_number),
         [["Published"]],
     )
     sheet.write_range(
-        schema.SHEET_ID, schema.WORKSHEET_NAME,
+        schema.SHEET_ID,
+        schema.WORKSHEET_NAME,
         schema.range_for("error_notes", "error_notes", row_number),
         [[""]],
     )
@@ -207,6 +282,11 @@ def publish_product(
     whapi: WhApiClient | None = None,
     sheets: GoogleSheetsClient | None = None,
 ) -> dict:
+    """Create or reconcile a WhatsApp Business product for the given property row.
+
+    Returns a dict with keys: status, product_id, listing_id.
+    Raises ValueError or RuntimeError on unrecoverable failure.
+    """
     listing_id = str(row.get("listing_id") or "")
     if not listing_id:
         raise ValueError("listing_id is missing")
@@ -214,16 +294,21 @@ def publish_product(
     client = whapi or WhApiClient()
     sheet = sheets or GoogleSheetsClient()
 
+    # Idempotency: if the product already exists in WhatsApp, sync and return
     existing = client.find_product_by_retailer_id(listing_id)
     if existing:
         product_id = str(existing.get("id") or "")
         _record_published(sheet, row_number, product_id)
-        return {"status": "already_exists", "product_id": product_id, "listing_id": listing_id}
+        return {
+            "status": "already_exists",
+            "product_id": product_id,
+            "listing_id": listing_id,
+        }
 
     title, description = generate_description(row)
     images = get_image_urls(row)
     if not images:
-        raise ValueError(f"{listing_id}: no images available")
+        raise ValueError(f"{listing_id}: no images available — upload photos first")
 
     rent = 0
     try:
@@ -248,7 +333,11 @@ def publish_product(
             if found:
                 product_id = str(found.get("id") or "")
                 _record_published(sheet, row_number, product_id)
-                return {"status": "recovered_duplicate", "product_id": product_id, "listing_id": listing_id}
+                return {
+                    "status": "recovered_duplicate",
+                    "product_id": product_id,
+                    "listing_id": listing_id,
+                }
         if "Duplicate Media" in err:
             conflicts = client.find_products_by_image_url(images)
             if conflicts:
@@ -257,13 +346,13 @@ def publish_product(
                     for c in conflicts
                 ]
                 raise RuntimeError(
-                    f"{listing_id}: images are already used by WhatsApp product(s): "
+                    f"{listing_id}: images already used by WhatsApp product(s): "
                     f"{', '.join(conflict_ids)}. "
-                    f"Delete the conflicting product or re-upload photos with different images."
+                    "Delete the conflicting product or re-upload photos with different images."
                 ) from exc
             raise RuntimeError(
-                f"{listing_id}: images are already used by another WhatsApp product. "
-                f"Re-upload photos to new Cloudinary URLs and update the sheet."
+                f"{listing_id}: images already used by another WhatsApp product. "
+                "Re-upload photos to new Cloudinary URLs and update the sheet."
             ) from exc
         raise
 
@@ -272,5 +361,8 @@ def publish_product(
         raise RuntimeError(f"WhAPI returned no product ID: {result}")
 
     _record_published(sheet, row_number, product_id)
-
-    return {"status": "created", "product_id": product_id, "listing_id": listing_id}
+    return {
+        "status": "created",
+        "product_id": product_id,
+        "listing_id": listing_id,
+    }

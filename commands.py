@@ -1,180 +1,397 @@
-"""EFPS slash-command router for migrated inventory and lead surfaces."""
+"""Slack /efps slash command router and business logic."""
 from __future__ import annotations
+import json
+import os
+import re
 import sys
+import time
+import boto3
+from shared.slack import SlackClient
+from shared.slack.routing import INVENTORY_CHANNEL
 from shared.google_sheets.client import GoogleSheetsClient
 from shared.google_sheets import schema
-from shared.slack.routing import INVENTORY_CHANNEL, PROPERTY_VERIFICATION_CHANNEL, TOP_LEVEL_COMMAND
-from shared.slack import SlackClient
-sys.path.insert(0,"modules/efpd-lead-mgmnt/src")
-sys.path.insert(0,"modules/efps-inventory-mgmnt/src")
-from pipeline import process_phase1, write_phase1_update
 
-HELP="""*EFPS commands*
-`/efps status` — inventory counts
-`/efps show <listing_id>` — show one property
-`/efps add-property` — add new property with details + images in one session
-`/efps photos start` — show next Processed property without photos
-`/efps catalogue start` — create Meta catalogues for ready properties
-`/efps verify start` — show next Needs Review property
-`/efps help` — this help
+HELP = """\
+*EFPS Manual Inventory Commands*
+
+*Property Entry*
+  `/efps add-property`  —  Start new property entry session
+
+*Photo Workflows*
+  `/efps photos start`  —  Begin uploading photos for processed properties
+
+*Catalogue Management*
+  `/efps catalogue start`  —  Create WhatsApp catalogues for ready properties
+  `/efps catalogue update`  —  Delete catalogues for rented-out properties
+  `/efps assign <listing_id>`  —  Retry collection assignment for a property
+
+*Status & Search*
+  `/efps status`  —  Show inventory pipeline stage counts
+  `/efps show <listing_id>`  —  Display full details for a specific property
+
+*Maintenance*
+  `/efps run`  —  Force-run the WhatsApp lead ingestion worker
+
+Need help? Ask in #efps-support.\
 """
 
-def _rows(client):
-    raw=client.read_range(schema.SHEET_ID,schema.WORKSHEET_NAME,"A2:AT")
-    width=schema.GRID_WIDTH-len(schema.RESERVED_COLUMNS)
-    results=[]
-    for i,r in enumerate(raw,start=2):
+_SESSION_TTL_SECONDS = 86400  # 24 h
+_SESSIONS_TABLE = os.environ.get("SESSIONS_TABLE_NAME", "efps-sessions")
+
+# Valid listing ID format: EF-YYMM-XXXX or BLR-YYMM-XXXX
+_LISTING_ID_RE = re.compile(r"^[A-Z]{2,4}-\d{4}-[A-Z0-9]{4}$", re.IGNORECASE)
+
+
+def _validate_listing_id(lid: str) -> str | None:
+    """Return the normalised listing ID, or None if invalid."""
+    clean = str(lid or "").strip()
+    if not clean or len(clean) > 30 or not _LISTING_ID_RE.match(clean):
+        return None
+    return clean.upper()
+
+
+def _update_session(channel_id: str, session_type: str, session_data: dict) -> None:
+    dynamo = boto3.resource("dynamodb")
+    table = dynamo.Table(_SESSIONS_TABLE)
+    key = f"slack_{session_type}_session#{channel_id}"
+    session_data["user_id"] = key
+    # Always refresh TTL — setdefault would freeze it at creation time
+    session_data["expires_at"] = int(time.time()) + _SESSION_TTL_SECONDS
+    table.put_item(Item=session_data)
+
+
+def _rows(client: GoogleSheetsClient) -> list[tuple[int, dict]]:
+    raw = client.read_range(schema.SHEET_ID, schema.WORKSHEET_NAME, "A2:AT")
+    width = schema.GRID_WIDTH - len(schema.RESERVED_COLUMNS)
+    results = []
+    for i, r in enumerate(raw, start=2):
         if len(r) <= width:
-            padded=list(r)+[""]*(width-len(r))+[""]*len(schema.RESERVED_COLUMNS)
+            padded = list(r) + [""] * (width - len(r)) + [""] * len(schema.RESERVED_COLUMNS)
             results.append((i, schema.row_to_mapping(padded)))
     return results
 
-def handle(text:str,user_id:str,channel_id:str)->dict:
-    args=text.strip().split(None,2); cmd=args[0].lower() if args else "help"
-    client=GoogleSheetsClient(); slack=SlackClient()
-    if cmd in {"help",""}: return {"response_type":"ephemeral","text":HELP}
-    rows=_rows(client)
-    if cmd=="status":
-        raw=sum(r.get("intake_status")=="Raw" for _,r in rows); processed=sum(r.get("intake_status")=="Processed" for _,r in rows); review=sum(r.get("status")=="Needs Review" for _,r in rows)
-        return {"response_type":"in_channel","text":f"*Inventory status*\n• Raw: {raw}\n• Processed: {processed}\n• Needs Review: {review}\n• Total: {len(rows)}"}
-    if cmd=="show" and len(args)>=2:
-        lid=args[1].strip().upper(); row=next((r for _,r in rows if str(r.get("listing_id","" )).strip().upper()==lid),None)
-        if not row:return {"response_type":"ephemeral","text":f"No listing `{lid}` found."}
-        fields=[("BHK","BHK"),("Rent","monthly_rent"),("Locality","locality"),("Society","society_name"),("Type","internal_property_type"),("Furnishing","furnish_type")]
-        return {"response_type":"ephemeral","text":"\n".join([f"*`{lid}`*"]+[f"• {k}: {row.get(v) or '—'}" for k,v in fields])}
-    if cmd=="photos" and len(args)>=2 and args[1].lower()=="start":
-        import boto3
-        dynamo = boto3.resource("dynamodb")
-        table = dynamo.Table("efps-sessions")
 
-        queue=[r for _,r in rows if r.get("listing_id") and r.get("intake_status")=="Processed" and not str(r.get("cloudinary_image_urls") or "").strip() and r.get("listing_state")!="Rented Out"]
-        if not queue:
-            table.delete_item(Key={"user_id": f"slack_photo_session#{channel_id}"})
-            return {"response_type":"ephemeral","text":"All caught up — no more properties need photos right now."}
+def _row_by_listing_id(client: GoogleSheetsClient, lid: str) -> tuple[int | None, dict | None]:
+    for n, r in _rows(client):
+        if str(r.get("listing_id") or "").strip().upper() == lid.upper():
+            return n, r
+    return None, None
 
-        total_count = len(queue)
-        current_prop = queue[0]
-        listing_id = current_prop['listing_id']
 
-        message_text = (
-            f"*Photos needed — 1 of {total_count}*\n"
-            f"`{listing_id}`\n"
-            f"• Society: {current_prop.get('society_name') or '—'}\n"
-            f"• BHK: {current_prop.get('BHK') or '—'}\n"
-            f"• Rent: {current_prop.get('monthly_rent') or '—'}\n"
-            f"• Floor: {current_prop.get('floor_number') or '—'}\n"
-            f"• Locality: {current_prop.get('locality') or '—'}\n"
-            f"• Furnishing: {current_prop.get('furnish_type') or '—'}\n\n"
-            f"*Original message:*\n```\n{str(current_prop.get('raw_message_text',''))[:1200]}\n```\n\n"
-            f"*Reply to this message with the photos* — attach them right here in the thread, as many as you like, across as many replies as you like.\n"
-            f"Then reply `done` in this thread to save them — just the word, no slash.\n"
-            f"(`skip` to pass, `exit` to stop.)\n\n"
-            f"_Just type the word on its own — no slash. Here or in the thread, both work._"
+def _sheet_link(row_number: int) -> str:
+    return f"https://docs.google.com/spreadsheets/d/{schema.SHEET_ID}/edit#gid=0&range=A{row_number}"
+
+
+def handle(text: str, user_id: str, channel_id: str) -> str:
+    """Route /efps <command> to its handler. Return the user-facing reply."""
+    try:
+        return _dispatch(text, user_id, channel_id)
+    except Exception as e:  # noqa: BLE001
+        print(f"EFPS command handler unhandled error: {e!r}")
+        import traceback; traceback.print_exc()
+        return f"❌ An unexpected error occurred processing your command. Please try again or contact support."
+
+
+def _dispatch(text: str, user_id: str, channel_id: str) -> str:
+    """Inner router — exceptions here are caught by handle()."""
+    parts = str(text or "").strip().split()
+    command = parts[0].casefold() if parts else "help"
+
+    if command in {"help", ""}:
+        return HELP
+
+    if command == "add-property":
+        return _add_property(channel_id)
+
+    if command == "photos" and len(parts) > 1 and parts[1].casefold() == "start":
+        return _photos_start(channel_id)
+
+    if command == "catalogue":
+        if len(parts) > 1:
+            sub = parts[1].casefold()
+            if sub == "start":
+                return _catalogue_start(channel_id)
+            if sub == "update":
+                return _catalogue_update(channel_id)
+        return "Usage: `/efps catalogue start` or `/efps catalogue update`"
+
+    if command == "assign":
+        if len(parts) < 2:
+            return "Usage: `/efps assign <listing_id>`"
+        return _assign(parts[1])
+
+    if command == "status":
+        return _status()
+
+    if command == "show":
+        if len(parts) < 2:
+            return "Usage: `/efps show <listing_id>`"
+        return _show(parts[1])
+
+    if command == "run":
+        return _run_worker()
+
+    return f"Unknown command: `{command}`. Type `/efps help` for usage."
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Command implementations
+# ──────────────────────────────────────────────────────────────────────────────
+
+def _add_property(channel_id: str) -> str:
+    slack = SlackClient()
+    ts = slack.post_message(
+        INVENTORY_CHANNEL,
+        "📝 *New Property Entry Session*\n\n"
+        "Share property details in THIS THREAD:\n"
+        "• One message or multiple — all will be captured\n"
+        "• Reply `done` when finished\n\n"
+        "Commands: `done` | `cancel`",
+    )
+    _update_session(channel_id, "add_property", {
+        "thread_ts": ts,
+        "messages_json": "[]",
+        "listing_id": "",
+        "phase": "collecting",
+    })
+    return "Property entry started. Check the new thread above."
+
+
+def _photos_start(channel_id: str) -> str:
+    slack = SlackClient()
+    sheet = GoogleSheetsClient()
+
+    queue = [
+        r
+        for _, r in _rows(sheet)
+        if r.get("listing_id")
+        and r.get("intake_status") == "Processed"
+        and not str(r.get("cloudinary_image_urls") or "").strip()
+        and r.get("listing_state") != "Rented Out"
+    ]
+
+    if not queue:
+        return "All caught up — no properties need photos right now."
+
+    first = queue[0]
+    lid = first["listing_id"]
+    msg_text = (
+        f"*Photos needed — 1 of {len(queue)}*\n"
+        f"`{lid}`\n"
+        f"• Society: {first.get('society_name') or '—'}\n"
+        f"• BHK: {first.get('BHK') or '—'}\n"
+        f"• Rent: {first.get('monthly_rent') or '—'}\n"
+        f"• Floor: {first.get('floor_number') or '—'}\n"
+        f"• Locality: {first.get('locality') or '—'}\n"
+        f"• Furnishing: {first.get('furnish_type') or '—'}\n\n"
+        f"*Original message:*\n```\n{str(first.get('raw_message_text', ''))[:1200]}\n```\n\n"
+        f"*Reply to this message with the photos.*\n"
+        f"Then reply `done` to save them. (`skip` to pass, `exit` to stop.)\n\n"
+        f"_Just the word on its own — no slash._"
+    )
+    thread_ts = slack.post_message(INVENTORY_CHANNEL, msg_text)
+
+    _update_session(channel_id, "photo", {
+        "thread_ts": thread_ts,
+        "listing_id": lid,
+        "queue": [r["listing_id"] for r in queue],
+        "queue_position": 0,
+        "total_in_queue": len(queue),
+    })
+    return f"Photo session started — showing the first of {len(queue)} properties above."
+
+
+def _catalogue_start(channel_id: str) -> str:
+    slack = SlackClient()
+    sheet = GoogleSheetsClient()
+
+    queue = [
+        r.get("listing_id")
+        for _, r in _rows(sheet)
+        if r.get("listing_id")
+        and r.get("intake_status") == "Catalogue Ready"
+        and not str(r.get("meta_catalog_id") or "").strip()
+        and r.get("listing_state") != "Rented Out"
+    ]
+
+    if not queue:
+        return "All caught up — no properties need catalogues right now."
+
+    thread_ts = slack.post_message(
+        INVENTORY_CHANNEL,
+        f"*Catalogue Creation Session*\n\n"
+        f"{len(queue)} {'property' if len(queue) == 1 else 'properties'} ready for WhatsApp catalogue.\n\n"
+        f"Reply `go` to start creating catalogues.\n"
+        f"Reply `exit` to cancel.",
+    )
+
+    _update_session(channel_id, "catalogue", {
+        "thread_ts": thread_ts,
+        "queue": queue,
+        "position": 0,
+        "total": len(queue),
+    })
+    return f"Catalogue session started — {len(queue)} properties in queue."
+
+
+def _catalogue_update(channel_id: str) -> str:
+    """Start rented-out catalogue deletion flow."""
+    slack = SlackClient()
+    sheet = GoogleSheetsClient()
+
+    candidates = [
+        {
+            "listing_id": r.get("listing_id"),
+            "product_id": str(r.get("meta_catalog_id") or "").strip(),
+        }
+        for _, r in _rows(sheet)
+        if r.get("listing_id")
+        and r.get("listing_state") == "Rented Out"
+        and str(r.get("meta_catalog_id") or "").strip()
+    ]
+
+    if not candidates:
+        return "No rented-out properties with catalogues found. Nothing to delete."
+
+    summary = "\n".join(f"  • `{c['listing_id']}`" for c in candidates)
+    thread_ts = slack.post_message(
+        INVENTORY_CHANNEL,
+        f"*Catalogue Deletion — Rented Out Properties*\n\n"
+        f"Found {len(candidates)} rented-out {'property' if len(candidates) == 1 else 'properties'} with catalogues:\n{summary}\n\n"
+        f"⚠️ This will DELETE the WhatsApp Business products for these properties.\n\n"
+        f"Reply `yes` to confirm deletion.\n"
+        f"Reply `no` or `exit` to cancel.",
+    )
+
+    _update_session(channel_id, "catalogue_update", {
+        "thread_ts": thread_ts,
+        "queue": candidates,
+        "phase": "awaiting_confirm",
+    })
+    return f"Catalogue update started — {len(candidates)} properties listed above."
+
+
+def _assign(listing_id: str) -> str:
+    """Retry collection assignment for a property that already has a meta_catalog_id."""
+    clean = _validate_listing_id(listing_id)
+    if not clean:
+        return f"Invalid listing ID `{listing_id[:30]}`. Expected format: EF-YYMM-XXXX."
+
+    sheet = GoogleSheetsClient()
+    row_number, row = _row_by_listing_id(sheet, clean)
+    if not row:
+        return f"Property `{clean}` not found in Housing_Listings."
+
+    product_id = str(row.get("meta_catalog_id") or "").strip()
+    if not product_id:
+        return f"`{clean}` has no WhatsApp product ID. Run `/efps catalogue start` first."
+
+    bhk = str(row.get("BHK") or "").strip()
+
+    # Guard against sys.path accumulation across Lambda invocations
+    _generator_path = str(__file__).rsplit("/", 1)[0] + "/modules/efps_meta_catalogue_mgmnt/src"
+    if _generator_path not in sys.path:
+        sys.path.insert(0, _generator_path)
+    from generator import assign_to_collection  # noqa: PLC0415
+
+    success, msg = assign_to_collection(product_id, bhk)
+    if success:
+        return f"✅ `{clean}` assigned to BHK collection: {msg}"
+    return f"❌ `{clean}` collection assignment failed: {msg}"
+
+
+def _status() -> str:
+    sheet = GoogleSheetsClient()
+    all_rows = _rows(sheet)
+
+    raw_count = sum(
+        1 for _, r in all_rows
+        if r.get("listing_id") and r.get("intake_status") == "Raw"
+        and r.get("listing_state") != "Rented Out"
+    )
+    processed_no_photos = sum(
+        1 for _, r in all_rows
+        if r.get("listing_id") and r.get("intake_status") == "Processed"
+        and not str(r.get("cloudinary_image_urls") or "").strip()
+        and r.get("listing_state") != "Rented Out"
+    )
+    catalogue_ready = sum(
+        1 for _, r in all_rows
+        if r.get("listing_id") and r.get("intake_status") == "Catalogue Ready"
+        and not str(r.get("meta_catalog_id") or "").strip()
+        and r.get("listing_state") != "Rented Out"
+    )
+    published = sum(
+        1 for _, r in all_rows
+        if r.get("listing_id") and r.get("intake_status") == "Published"
+        and r.get("listing_state") != "Rented Out"
+    )
+    rented_out = sum(
+        1 for _, r in all_rows
+        if r.get("listing_id") and r.get("listing_state") == "Rented Out"
+    )
+    total_active = sum(
+        1 for _, r in all_rows
+        if r.get("listing_id") and r.get("listing_state") != "Rented Out"
+    )
+
+    return "\n".join([
+        "*EFPS Inventory Pipeline Status*\n",
+        f"Total Active: {total_active}",
+        f"  • Raw (needs processing): {raw_count}",
+        f"  • Processed (needs photos): {processed_no_photos}",
+        f"  • Catalogue Ready (needs catalogue): {catalogue_ready}",
+        f"  • Published: {published}",
+        f"\nRented Out: {rented_out}",
+    ])
+
+
+def _show(listing_id: str) -> str:
+    clean = _validate_listing_id(listing_id)
+    if not clean:
+        return f"Invalid listing ID `{listing_id[:30]}`. Expected format: EF-YYMM-XXXX."
+
+    sheet = GoogleSheetsClient()
+    row_number, row = _row_by_listing_id(sheet, clean)
+    if not row:
+        return f"Property `{clean}` not found in Housing_Listings."
+
+    sheet_link = _sheet_link(row_number)
+    photos = "Yes" if str(row.get("cloudinary_image_urls") or "").strip() else "No"
+    catalogue = str(row.get("meta_catalog_id") or "").strip()
+    catalogue_display = f"Yes (ID: `{catalogue}`)" if catalogue else "No"
+
+    return (
+        f"*Property Details: `{clean}`*\n\n"
+        f"BHK: {row.get('BHK') or '—'}\n"
+        f"Society: {row.get('society_name') or '—'}\n"
+        f"Locality: {row.get('locality') or '—'}\n"
+        f"Rent: ₹{row.get('monthly_rent') or '—'}/mo\n"
+        f"Deposit: ₹{row.get('security_deposit') or '—'}\n"
+        f"Furnishing: {row.get('furnish_type') or '—'}\n"
+        f"Floor: {row.get('floor_number') or '—'}\n\n"
+        f"*Pipeline State*\n"
+        f"Listing State: {row.get('listing_state') or '—'}\n"
+        f"Intake Status: {row.get('intake_status') or '—'}\n"
+        f"QA Status: {row.get('status') or '—'}\n"
+        f"Photos: {photos}\n"
+        f"Catalogue: {catalogue_display}\n\n"
+        f"<{sheet_link}|Open in Google Sheets>"
+    )
+
+
+def _run_worker() -> str:
+    """Invoke the lead ingestion worker Lambda."""
+    import os
+    worker_arn = os.environ.get("LEAD_WORKER_ARN", "")
+    if not worker_arn:
+        return "⚠️ LEAD_WORKER_ARN environment variable not set. Cannot invoke worker."
+    try:
+        boto3.client("lambda").invoke(
+            FunctionName=worker_arn,
+            InvocationType="Event",
+            Payload=json.dumps({"source": "manual_slack_trigger"}),
         )
-
-        ts = slack.post_message(INVENTORY_CHANNEL, message_text)
-
-        session_data = {
-            "user_id": f"slack_photo_session#{channel_id}",
-            "listing_id": listing_id,
-            "thread_ts": ts,
-            "queue_position": 1,
-            "total_in_queue": total_count,
-            "queue": [r['listing_id'] for r in queue]
-        }
-        table.put_item(Item=session_data)
-
-        return {"response_type":"ephemeral","text":f"Photo task opened for `{listing_id}` in channel. Thread: {ts}"}
-    if cmd=="catalogue" and len(args)>=2 and args[1].lower()=="start":
-        import boto3
-        dynamo = boto3.resource("dynamodb")
-        table = dynamo.Table("efps-sessions")
-
-        queue = [r for _, r in rows if (
-            r.get("listing_id") and
-            r.get("intake_status") == "Catalogue Ready" and
-            r.get("status") == "Pending" and
-            r.get("listing_state") != "Rented Out" and
-            not str(r.get("meta_catalog_id") or "").strip() and
-            str(r.get("cloudinary_image_urls") or "").strip()
-        )]
-        if not queue:
-            table.delete_item(Key={"user_id": f"slack_catalogue_session#{channel_id}"})
-            return {"response_type":"ephemeral","text":"All caught up — no properties ready for catalogue creation."}
-
-        total = len(queue)
-        lines = [f"*Meta Catalogue — {total} {'property' if total == 1 else 'properties'} ready*\n"]
-        for i, prop in enumerate(queue[:10], 1):
-            society = str(prop.get('society_name') or '').strip()
-            bhk = str(prop.get('BHK') or '').strip()
-            furnish = str(prop.get('furnish_type') or '').strip()
-            rent_raw = prop.get('monthly_rent')
-            try:
-                rent_str = f"₹{int(rent_raw):,}" if rent_raw else "—"
-            except (ValueError, TypeError):
-                rent_str = f"₹{rent_raw}" if rent_raw else "—"
-            loc = society if society else str(prop.get('locality') or '').strip()
-            lines.append(f"{i}. `{prop['listing_id']}` · {loc} · {furnish} {bhk} · {rent_str}")
-        if total > 10:
-            lines.append(f"...and {total - 10} more")
-        lines.append(f"\nReply `go` in this thread to start creating catalogues.")
-
-        ts = slack.post_message(INVENTORY_CHANNEL, "\n".join(lines))
-
-        session = {
-            "user_id": f"slack_catalogue_session#{channel_id}",
-            "thread_ts": ts,
-            "queue": [r['listing_id'] for r in queue],
-            "position": 0,
-            "total": total,
-        }
-        table.put_item(Item=session)
-
-        return {"response_type":"ephemeral","text":f"Catalogue session opened. Thread: {ts}"}
-    if cmd=="verify" and len(args)>=2 and args[1].lower()=="start":
-        row=next((r for _,r in rows if r.get("status")=="Needs Review" and r.get("listing_state")!="Rented Out"),None)
-        if not row:return {"response_type":"ephemeral","text":"No inventory properties currently need verification."}
-        blanks=[n for n in ("society_name","locality","pincode","BHK","bathrooms","total_floors","monthly_rent","security_deposit","built_up_area","floor_number","property_subtype","internal_property_type","landmark","furnish_type","preferred_tenant_type","bachelor_preference") if not str(row.get(n,"" )).strip()]
-        ts=slack.post_message(PROPERTY_VERIFICATION_CHANNEL,f"*Verification needed — `{row['listing_id']}`*\nBlank fields: {', '.join(blanks) or 'none'}\n\nReply in this thread with `field=value` lines, then `submit`.\n\n```{str(row.get('raw_message_text',''))[:1200]}```")
-        return {"response_type":"ephemeral","text":f"Verification opened for `{row['listing_id']}`. Thread: {ts}"}
-    if cmd=="run": return {"response_type":"ephemeral","text":"Manual batch dispatch is wired through the new inventory pipeline deployment."}
-    if cmd=="fix" and len(args)>=3:
-        lid,rest=args[1].upper(),args[2]; parts=rest.split(None,1)
-        if len(parts)!=2:return {"response_type":"ephemeral","text":"Usage: `/efps fix <listing_id> <field> <value>`"}
-        field,value=parts; found=next(((n,r) for n,r in rows if str(r.get("listing_id","" )).strip().upper()==lid),None)
-        if not found:return {"response_type":"ephemeral","text":f"No listing `{lid}` found."}
-        row_number,row=found
-        blocked={"listing_id","raw_message_text","intake_status","locality","pincode","google_maps_url","posted_url","posted_at","meta_catalog_id","meta_catalog_status",*schema.RESERVED_COLUMNS}
-        if field in blocked or field not in schema.BY_NAME:return {"response_type":"ephemeral","text":f"`{field}` cannot be corrected by `/efps fix`."}
-        candidate=dict(row); candidate[field]=value
-        projected=process_phase1(str(candidate.get("raw_message_text","")),row=candidate).row
-        projected[field]=value
-        from validate import validate
-        errors=validate(projected)
-        if errors:return {"response_type":"ephemeral","text":"Correction refused: "+"; ".join(errors)}
-        write_phase1_update(client,row_number,projected)
-        return {"response_type":"in_channel","text":f"Updated `{lid}` field `{field}`."}
-    if cmd=="add-property":
-        import boto3, time
-        dynamo=boto3.resource("dynamodb")
-        table=dynamo.Table("efps-sessions")
-        session_key=f"slack_add_property_session#{channel_id}"
-        ts=slack.post_message(INVENTORY_CHANNEL,
-            "📝 Property Entry Session Started\n\n"
-            "Share property details in THIS THREAD:\n"
-            "• One message or multiple — all will be captured\n"
-            "• Reply `done` when finished\n\n"
-            "Then I'll process the property and ask for photos.\n\n"
-            "Commands: `done` | `cancel`"
-        )
-        session_data={
-            "user_id":session_key,
-            "thread_ts":ts,
-            "messages_json":"[]",
-            "listing_id":"",
-            "phase":"collecting",
-            "expires_at":int(time.time())+86400,
-        }
-        table.put_item(Item=session_data)
-        return {"response_type":"ephemeral","text":f"Property entry session opened in {INVENTORY_CHANNEL}. Thread: {ts}"}
-    return {"response_type":"ephemeral","text":f"Unknown command. Use `{TOP_LEVEL_COMMAND} help`."}
+        return "✅ Lead ingestion worker triggered. Check CloudWatch logs for progress."
+    except Exception as e:  # noqa: BLE001
+        return f"❌ Failed to invoke worker: {str(e)[:300]}"

@@ -54,29 +54,20 @@ The webhook currently does **not** extract and persist inbound photo binaries in
 
 See `REVERIFY_PHOTOS.md` for bulk operation and recovery details.
 
-### Human property verification
-
-Batch validation can leave a property requiring human review. `/efps verify start` selects the next review item, posts its questions in a thread, and collects answers. The operator replies `submit` to save direct corrections, re-run deterministic dependencies, validate the canonical row, and mark it ready according to the verification workflow. `skip`, `next`, and `exit` control the session.
-
-See `PROPERTY_VERIFICATION.md` and `BATCH_OPERATIONS.md`.
-
 ## Command surface
 
 Slack exposes one top-level slash command: `/efps`. Its subcommands are routed by EFPS code, not separately registered with Slack.
 
 Current command families:
 
-- `help`
-- `status`
-- `run`
-- `show <listing_id>`
-- `fix <listing_id> <field> <value>`
-- `verify start|submit|next|skip|exit`
-- `photos start|done|next|skip|exit`
-- `bug report|submit|cancel|show|fix`
-- `bugs`
-- `pause`
-- `resume`
+- `help` — show usage
+- `add-property` — start property entry session
+- `photos start` — start photo collection workflow
+- `catalogue start|update` — manage WhatsApp catalogues
+- `assign <listing_id>` — retry collection assignment
+- `status` — show pipeline stage counts
+- `show <listing_id>` — display property details
+- `run` — force-run lead ingestion worker
 
 The bare thread words `done`, `submit`, `next`, `skip`, and `exit` are session controls where applicable. They are not Slack slash commands.
 

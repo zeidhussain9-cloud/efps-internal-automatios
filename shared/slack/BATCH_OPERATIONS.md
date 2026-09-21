@@ -6,10 +6,8 @@ The legacy template recorded three inventory batch schedules corresponding to ap
 
 ## Batch controls
 
-- `/efps status` — inspect Raw, Processed and Needs Review counts and batch state.
-- `/efps run` — dispatch a batch immediately unless paused.
-- `/efps pause` — disable scheduled inventory batch rules.
-- `/efps resume` — re-enable scheduled inventory batch rules.
+- `/efps status` — inspect pipeline stage counts (Raw, Processed, Catalogue Ready, Published, Rented Out).
+- `/efps run` — force-run the lead ingestion worker immediately.
 
 ## What a batch does
 
@@ -38,19 +36,11 @@ The legacy notifier sends one batch-level report rather than one Slack message p
 
 A no-work batch may still post a healthy summary.
 
-## Human review after a batch
+## Human review after batch processing
 
-When a batch produces review-required properties:
+Properties requiring review should be corrected through direct Sheet editing or future admin tools. The automated `/efps verify` workflow has been removed.
 
-1. Read the batch report.
-2. Open the property verification channel.
-3. Run `/efps verify start`.
-4. Work one property at a time in its thread.
-5. Submit verified answers.
-6. Re-check the canonical row.
-7. Run the next batch only when operationally appropriate.
-
-Do not treat a Slack report as the canonical state; use the inventory row for final state.
+Do not treat Slack reports as the canonical state; use the inventory row for final state.
 
 ## Failure behavior
 

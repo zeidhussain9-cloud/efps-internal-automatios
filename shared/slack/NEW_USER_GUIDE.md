@@ -54,49 +54,17 @@ The EFPS application routes the subcommand.
 /efps status
 /efps run
 /efps show <listing_id>
-/efps fix <listing_id> <field> <value>
-/efps pause
-/efps resume
-```
-
-### Property verification
-
-```text
-/efps verify start
-```
-
-Inside the property thread use the bare words:
-
-```text
-submit
-skip
-next
-exit
-```
-
-### Bulk photos
-
-```text
+/efps add-property
 /efps photos start
+/efps catalogue start
+/efps catalogue update
+/efps assign <listing_id>
 ```
 
-Inside the property thread use:
-
-```text
-done
-skip
-next
-exit
-```
-
-### Bug handling
-
-```text
-/efps bug report
-/efps bugs
-/efps bug show <BUG-ID>
-/efps bug fix <BUG-ID> <note>
-```
+Thread controls (plain words, no slash):
+- Property entry: `done`, `cancel`
+- Photos: `done`, `skip`, `exit`
+- Catalogue: `go`, `yes`, `no`, `exit`, `skip`
 
 ## 4. Bulk photo procedure — current Phase-1 method
 
@@ -120,21 +88,9 @@ The WhatsApp webhook currently does not reliably provide a persisted photo-to-pr
 - Do not delete existing Cloudinary URLs during recovery.
 - Do not treat photo contents as proof of property identity.
 
-## 5. Property verification during batch processing
+## 5. Property verification — REMOVED
 
-A batch can leave a property as `Needs Review` when deterministic validation or required location verification cannot safely complete.
-
-1. Run `/efps verify start` in the property-verification channel.
-2. EFPS presents one review property at a time.
-3. Answer the requested fields in the thread.
-4. Use `skip` to leave a field blank or pass the property according to the session control.
-5. When the answers are complete, reply `submit`.
-6. The inventory module applies the corrections to the same row.
-7. Deterministic dependencies are re-run.
-8. Validation runs again.
-9. Only a successfully validated correction is written as ready for the next step.
-
-The verification flow does **not** create a society approval queue or society profile workflow.
+The automated `/efps verify` workflow has been removed. Properties requiring corrections should be edited directly in the Sheet or through future admin tools.
 
 ## 6. What a batch report means
 
@@ -142,17 +98,9 @@ A batch report is an operational summary. Use `/efps status` to inspect current 
 
 A Slack report must never be treated as the canonical data source. When a report and the sheet disagree, inspect the canonical row and pipeline state.
 
-## 7. Manual correction
+## 6. Manual correction — REMOVED
 
-Use:
-
-```text
-/efps fix <listing_id> <field> <value>
-```
-
-The command must respect ownership boundaries. Maps-owned, system-owned, and downstream-owned fields are not arbitrary manual-edit fields.
-
-A correction must be re-normalized and validated before the same row is persisted.
+The `/efps fix` command has been removed. Use direct Sheet editing or future admin tools for manual corrections.
 
 ## 8. Session-thread rule
 
