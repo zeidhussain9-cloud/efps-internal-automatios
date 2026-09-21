@@ -48,7 +48,7 @@ def upload_property_images(
     result: list[Upload] = []
     for index, blob in enumerate(blobs, start=start_index):
         public_id = property_public_id(listing_id, index)
-        payload = client.upload_bytes(blob, public_id=public_id, overwrite=False)
+        payload = client.upload_bytes(blob, public_id=public_id, overwrite=True)
         result.append(
             Upload(
                 url=str(payload["secure_url"]),

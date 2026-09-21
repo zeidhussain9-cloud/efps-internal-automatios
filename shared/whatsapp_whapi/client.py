@@ -189,11 +189,31 @@ class WhApiClient:
         return self.post("/business/products", payload)
 
     def get_products(self, count: int = 100) -> list[dict]:
-        result = self.get("/business/products", {"count": count})
-        return (result or {}).get("products", [])
+        all_products: list[dict] = []
+        params: dict[str, Any] = {"count": min(count, 100)}
+        while True:
+            result = self.get("/business/products", params)
+            page = (result or {}).get("products", [])
+            all_products.extend(page)
+            if len(all_products) >= count or len(page) < params["count"]:
+                break
+            cursor = (result or {}).get("paging", {}).get("cursors", {}).get("after")
+            if not cursor:
+                break
+            params["after"] = cursor
+        return all_products
 
     def find_product_by_retailer_id(self, retailer_id: str) -> dict | None:
-        for p in self.get_products():
+        for p in self.get_products(count=10000):
             if p.get("product_retailer_id") == retailer_id:
                 return p
         return None
+
+    def find_products_by_image_url(self, image_urls: list[str]) -> list[dict]:
+        url_set = set(image_urls)
+        matches = []
+        for p in self.get_products(count=10000):
+            p_images = [str(img.get("link") or img) for img in (p.get("images") or [])]
+            if url_set & set(p_images):
+                matches.append(p)
+        return matches

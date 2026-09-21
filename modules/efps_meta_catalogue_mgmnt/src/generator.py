@@ -236,6 +236,17 @@ def publish_product(
                 _record_published(sheet, row_number, product_id)
                 return {"status": "recovered_duplicate", "product_id": product_id, "listing_id": listing_id}
         if "Duplicate Media" in err:
+            conflicts = client.find_products_by_image_url(images)
+            if conflicts:
+                conflict_ids = [
+                    f"{c.get('product_retailer_id', '?')}(id={c.get('id', '?')})"
+                    for c in conflicts
+                ]
+                raise RuntimeError(
+                    f"{listing_id}: images are already used by WhatsApp product(s): "
+                    f"{', '.join(conflict_ids)}. "
+                    f"Delete the conflicting product or re-upload photos with different images."
+                ) from exc
             raise RuntimeError(
                 f"{listing_id}: images are already used by another WhatsApp product. "
                 f"Re-upload photos to new Cloudinary URLs and update the sheet."

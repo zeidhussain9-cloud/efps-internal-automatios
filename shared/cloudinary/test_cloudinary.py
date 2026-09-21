@@ -57,7 +57,7 @@ def test_uploads_are_deterministic_and_injected() -> None:
         "properties/EFPS-123/photo_1",
         "properties/EFPS-123/photo_2",
     ]
-    assert calls[0]["overwrite"] is False
+    assert calls[0]["overwrite"] is True
 
 
 def test_lead_uploads_are_separate_namespace() -> None:
@@ -78,6 +78,41 @@ def test_catalog_urls_limit() -> None:
 
     uploads = [U(str(i)) for i in range(12)]
     assert catalog_urls(uploads).split(", ") == [str(i) for i in range(10)]
+
+
+def test_property_reupload_overwrites_existing_asset() -> None:
+    """Regression: overwrite=True ensures re-uploading the same public_id
+    produces a new URL instead of silently returning the stale one."""
+    call_count = 0
+
+    def fake_uploader(blob: bytes, **kwargs: object) -> dict[str, str]:
+        nonlocal call_count
+        call_count += 1
+        assert kwargs["overwrite"] is True
+        return {"secure_url": f"https://res.cloudinary.test/{kwargs['public_id']}/v{call_count}"}
+
+    client = CloudinaryClient(
+        CloudinaryCredentials("cloud", "key", "secret"), uploader=fake_uploader
+    )
+    run1 = upload_property_images(client, "EF-TEST", [b"img1"])
+    run2 = upload_property_images(client, "EF-TEST", [b"img2_different"])
+    assert run1[0].public_id == run2[0].public_id
+    assert run1[0].url != run2[0].url
+
+
+def test_lead_upload_does_not_overwrite() -> None:
+    """Lead uploads remain non-overwriting (different ownership semantics)."""
+    calls: list[dict] = []
+
+    def fake_uploader(blob: bytes, **kwargs: object) -> dict[str, str]:
+        calls.append(dict(kwargs))
+        return {"secure_url": "https://res.cloudinary.test/image"}
+
+    client = CloudinaryClient(
+        CloudinaryCredentials("cloud", "key", "secret"), uploader=fake_uploader
+    )
+    upload_lead_images(client, "919900000000", "m-1", [b"a"])
+    assert calls[0]["overwrite"] is False
 
 
 def test_fingerprint_is_stable() -> None:
