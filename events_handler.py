@@ -413,6 +413,9 @@ def _process_event(event, context):
     elif channel == INVENTORY_CHANNEL and add_property_session and text in ["done", "cancel", "add more", "exit"]:
         phase = str(add_property_session.get("phase", "collecting"))
         thread = add_property_session.get("thread_ts", thread_ts)
+        # Ignore commands from threads that don't match the active session
+        if thread != thread_ts:
+            return
         try:
             # ── cancel: discard session, no row insertion ──
             if text == "cancel":
@@ -553,11 +556,16 @@ def _process_event(event, context):
 
         except Exception as e:
             print(f"Add property flow failed: {e!r}")
-            slack.post_message(channel, "An error occurred. Please contact support.", thread_ts=thread)
+            import traceback
+            traceback.print_exc()
+            slack.post_message(channel, f"An error occurred: {str(e)[:200]}\nPlease contact support.", thread_ts=thread)
 
     elif channel == INVENTORY_CHANNEL and add_property_session and not text.startswith("/"):
         phase = str(add_property_session.get("phase", "collecting"))
         thread = add_property_session.get("thread_ts", thread_ts)
+        # Ignore messages from threads that don't match the active session
+        if thread != thread_ts:
+            return
 
         if phase == "collecting":
             msg_text = str(ev.get("text", "")).strip()
