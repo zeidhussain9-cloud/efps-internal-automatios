@@ -8,7 +8,6 @@ Canonical command surface for EFPS Inventory Management. There is one Slack slas
 |---|---|
 | `/efps help` | Show command help. |
 | `/efps status` | Show pipeline stage counts (Raw, Processed, Catalogue Ready, Published, Rented Out). |
-| `/efps run` | Force-run the WhatsApp lead ingestion worker. |
 | `/efps show <listing_id>` | Display selected canonical property fields and row link. |
 | `/efps add-property` | Start a new property entry session in a thread. |
 | `/efps photos start` | Start the no-photo property queue. |
@@ -43,6 +42,7 @@ Sessions run in threads. Start from the channel view with a slash command, then 
 
 The following are **not part of the current implementation**:
 
+- `/efps run` — removed; lead ingestion is fully automated on schedule (3x daily) with no manual trigger needed
 - `/efps fix <listing_id> <field> <value>` — removed; use Sheet editing or future admin tools
 - `/efps verify start|next|skip|exit|submit` — removed; verification workflow removed
 - `/efps pause` / `/efps resume` — batch control removed

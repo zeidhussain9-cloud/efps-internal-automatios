@@ -10,7 +10,7 @@ The canonical inventory record remains `Housing_Listings`. Slack can initiate an
 
 ### A. Batch processing
 
-Slack can start a batch with `/efps run`, show status, and publish the completion report. The deterministic pipeline owns the processing decision and the sheet owns the resulting canonical row.
+Slack shows status with `/efps status`. The deterministic pipeline owns the processing decision and the sheet owns the resulting canonical row. Lead ingestion runs automatically on schedule (3x daily) with no manual trigger.
 
 ### B. Property verification — REMOVED
 

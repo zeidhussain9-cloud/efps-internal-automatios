@@ -34,7 +34,7 @@ These are historical references, not automatically active destinations.
 
 ### Inventory panel
 
-Batch summaries, `/efps status`, `/efps run`, `/efps show`, `/efps add-property`, photo sessions, and catalogue operations belong here.
+Batch summaries, `/efps status`, `/efps show`, `/efps add-property`, photo sessions, and catalogue operations belong here.
 
 ### Property verification channel — retired
 

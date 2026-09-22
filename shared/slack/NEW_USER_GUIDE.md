@@ -19,9 +19,7 @@ Slack does not replace deterministic extraction and does not become a second inv
 Use for inventory operations:
 
 - `/efps status`
-- `/efps run`
 - `/efps show <listing_id>`
-- `/efps fix <listing_id> <field> <value>`
 - `/efps photos start`
 - batch completion/error reports
 
@@ -52,7 +50,6 @@ The EFPS application routes the subcommand.
 ```text
 /efps help
 /efps status
-/efps run
 /efps show <listing_id>
 /efps add-property
 /efps photos start
@@ -94,7 +91,9 @@ The automated `/efps verify` workflow has been removed. Properties requiring cor
 
 ## 6. What a batch report means
 
-A batch report is an operational summary. Use `/efps status` to inspect current queue/state and `/efps run` to trigger an on-demand run when the schedules are active.
+A batch report is an operational summary. Use `/efps status` to inspect current queue/state.
+
+Lead ingestion runs automatically on schedule (3x daily at 2:30 AM, 6:30 AM, and 12:30 PM UTC). No manual trigger is needed.
 
 A Slack report must never be treated as the canonical data source. When a report and the sheet disagree, inspect the canonical row and pipeline state.
 

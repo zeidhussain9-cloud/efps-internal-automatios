@@ -25,7 +25,6 @@ The new Phase-1 operational surface is the one top-level `/efps` command with th
 
 - `help`
 - `status`
-- `run`
 - `show <listing_id>`
 - `add-property`
 - `photos start`
@@ -33,6 +32,7 @@ The new Phase-1 operational surface is the one top-level `/efps` command with th
 - `assign <listing_id>`
 
 **Removed commands** (no longer part of implementation):
+- `run` — removed; lead ingestion is fully automated on schedule with no manual trigger
 - `fix <listing_id> <field> <value>` — use direct Sheet editing or future admin tools
 - `verify start|submit|next|skip|exit` — verification workflow removed
 - `bug report|submit|cancel|show|fix` — not yet implemented
@@ -43,7 +43,7 @@ No society approval command or society approval workflow is part of Phase 1.
 
 ### 3. Batch control
 
-Scheduled and manual batch execution must expose operational status through Slack without making Slack part of canonical data persistence.
+Scheduled batch execution must expose operational status through Slack without making Slack part of canonical data persistence. Lead ingestion runs automatically on schedule (3x daily at 2:30 AM, 6:30 AM, and 12:30 PM UTC) with no manual trigger.
 
 The batch flow must:
 
@@ -119,7 +119,6 @@ Production readiness requires live verification of at least:
 
 - `/efps help`
 - `/efps status`
-- `/efps run`
 - `/efps show <listing_id>`
 - `/efps add-property` with full intake workflow
 - photo session from `photos start` through thread attachments and `done`
@@ -130,6 +129,7 @@ Production readiness requires live verification of at least:
 - Slack signature rejection for an invalid request
 
 **Removed from acceptance tests:**
+- `/efps run` — command removed; batch is fully automatic
 - `/efps fix <listing_id> <field> <value>` — command removed
 - `Needs Review` verification thread — workflow removed
 - pause/resume behavior — not implemented

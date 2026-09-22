@@ -21,7 +21,6 @@ HELP = (
     "- `/efps assign <listing_id>` - assign a property to its BHK collection\n"
     "- `/efps status` - show inventory pipeline stage counts\n"
     "- `/efps show <listing_id>` - show full details for one property\n"
-    "- `/efps run` - manually trigger the WhatsApp lead ingestion worker\n"
     "- `/efps help` - show this message"
 )
 

@@ -7,11 +7,8 @@ The legacy template recorded three inventory batch schedules corresponding to ap
 ## Batch controls
 
 - `/efps status` — inspect pipeline stage counts (Raw, Processed, Catalogue Ready, Published, Rented Out).
-- `/efps run` — force-run the lead ingestion worker immediately.
 
-## What a batch does
-
-The Slack command only dispatches the batch. The owning inventory pipeline performs the actual work.
+Lead ingestion runs automatically on schedule. No manual trigger is needed.
 
 For the current three-stage architecture:
 
