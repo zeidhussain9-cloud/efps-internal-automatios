@@ -240,60 +240,81 @@ def generate_description(row: Mapping[str, Any]) -> tuple[str, str]:
     internal_type = str(row.get("internal_property_type") or "").strip()
     society = str(row.get("society_name") or "").strip()
     locality = str(row.get("locality") or "").strip()
-    maps_url = str(row.get("google_maps_url") or "").strip()
+    landmark = str(row.get("landmark") or "").strip()
     raw_text = str(row.get("raw_message_text") or "")
 
+    # Detect if society is real (different from locality/landmark)
+    real_society = society if society and society != locality and society != landmark else ""
+
+    # Build description body with bullet format
     lines = []
 
-    rent = row.get("monthly_rent")
-    if rent:
-        lines.append(f"Rent: ₹{_indian_currency(rent)}/mo")
+    # Line 1: • Bathrooms • Balconies
+    bathrooms = str(row.get("bathrooms") or "").strip()
+    balconies = str(row.get("balconies") or "").strip()
+    line1_parts = []
+    if bathrooms:
+        line1_parts.append(f"{bathrooms} Bathroom{'s' if bathrooms != '1' else ''}")
+    if balconies:
+        line1_parts.append(f"{balconies} Balcon{'ies' if balconies != '1' else 'y'}")
+    if line1_parts:
+        lines.append("• " + " • ".join(line1_parts))
+
+    # Line 2: • Area Sq.Ft • Floor
+    area = row.get("built_up_area")
+    floor_num = str(row.get("floor_number") or "").strip()
+    total_floors = str(row.get("total_floors") or "").strip()
+    if area and floor_num and total_floors:
+        lines.append(f"• {_indian_currency(area)} Sq.Ft • {floor_num}{'th' if floor_num else ''} of {total_floors} floors")
+    elif area:
+        lines.append(f"• {_indian_currency(area)} Sq.Ft")
+
+    # Line 3: • Tenant • Pet Friendly
+    tenant = str(row.get("preferred_tenant_type") or "").strip()
+    pet = str(row.get("pet_friendly") or "").strip()
+    line3_parts = []
+    if tenant:
+        line3_parts.append(tenant)
+    if pet and pet != "-":
+        pet_text = "Pet Friendly" if pet.lower() in ["yes", "y"] else "Not Pet Friendly"
+        line3_parts.append(pet_text)
+    if line3_parts:
+        lines.append("• " + " • ".join(line3_parts))
+
+    # Empty line
+    lines.append("")
+
+    # Deposit, Maintenance, Available From
     deposit = row.get("security_deposit")
     if deposit:
-        lines.append(f"Deposit: ₹{_indian_currency(deposit)}")
+        lines.append(f"• Deposit ₹{_indian_currency(deposit)}")
+
     maint = row.get("maintenance")
     maint_included = str(row.get("maintenance_included") or "").strip().lower()
     if maint_included in ("yes", "included"):
-        lines.append("Maintenance: Included")
+        lines.append("• Maintenance: Included")
     elif maint:
-        lines.append(f"Maintenance: ₹{_indian_currency(maint)}")
-
-    area = row.get("built_up_area")
-    if area:
-        lines.append(f"Size: {_indian_currency(area)} sqft")
-    floor_num = str(row.get("floor_number") or "").strip()
-    total_floors = str(row.get("total_floors") or "").strip()
-    if floor_num and total_floors:
-        lines.append(f"Floor: {floor_num} of {total_floors}")
-    elif floor_num:
-        lines.append(f"Floor: {floor_num}")
-
-    tenant = str(row.get("preferred_tenant_type") or "").strip()
-    if tenant:
-        lines.append(f"Preferred Tenant: {tenant}")
+        maint_str = str(maint).strip()
+        lines.append(f"• Maintenance: {maint_str}")
 
     avail = _available_from(raw_text)
     if avail:
-        lines.append(f"Available From: {avail}")
+        lines.append(f"• Available From: {avail}")
 
-    pet = str(row.get("pet_friendly") or "").strip()
-    if pet and pet != "-":
-        lines.append(f"Pet Friendly: {pet}")
+    # Empty line before footer
+    lines.append("")
+
+    # Footer: show society name or "📍 Landmark:"
+    if real_society:
+        lines.append(f"✨ {real_society}")
+    else:
+        lines.append("📍 Landmark:")
 
     body = "\n".join(lines)
 
-    footer_parts = []
-    if internal_type in ("Gated Community", "Semi Gated") and society:
-        loc = f"{society}, {locality}" if locality and locality != society else society
-        footer_parts.append(f"✨ {loc}")
-    elif locality:
-        footer_parts.append(f"✨ {locality}")
-    if maps_url:
-        footer_parts.append(f"\U0001f4cd Map: {maps_url}")
-    footer = "\n".join(footer_parts)
-
-    description = f"\U0001f3e1 {title}\n\n{body}\n\n{footer}"
-    return title, description
+    # Return title WITH emoji for name field, description without title repetition
+    title_with_emoji = f"\U0001f3e1 {title}"
+    return title_with_emoji, body
 
 
 def _record_published(

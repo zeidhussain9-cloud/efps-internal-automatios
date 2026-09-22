@@ -117,8 +117,14 @@ def construct_deterministic_highlights(row:dict,raw_text:str,original_subtype:st
     return list(dict.fromkeys(fragments))
 def build_catalog_title(row:dict)->str:
     if _usable(row.get("catalog_title","")):return str(row["catalog_title"]).strip()
-    parts=[];furnish=str(row.get("furnish_type","")).strip();bhk=str(row.get("BHK","")).strip();location=str(row.get("locality","")).strip()
+    parts=[];furnish=str(row.get("furnish_type","")).strip();bhk=str(row.get("BHK","")).strip();location=str(row.get("locality","")).strip();internal_type=str(row.get("internal_property_type","")).strip()
+    # Detect special features (Duplex, Villa, etc.)
+    special_features=["Duplex","Villa","Penthouse","Independent House","Row House"];special_feature=None
+    for feature in special_features:
+        if feature.lower()in internal_type.lower():special_feature=feature;break
+    # Build title: furnish + special_feature + BHK + for Rent
     if furnish:parts.append(furnish)
+    if special_feature:parts.append(special_feature)
     if bhk:parts.append(bhk)
     title=" ".join(parts)+" for Rent" if parts else "Property for Rent"
     return f"{title} - {location}" if location else title
