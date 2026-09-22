@@ -141,8 +141,20 @@ def assign_to_collection(
                 print(f"✅ Collection: {msg}")
                 return True, msg
 
-            # Unexpected shape — treat as failure but surface the raw response
-            error = f"Unexpected WhAPI response shape: {str(result)[:150]}"
+            # WhAPI returns operation_timeout as a 200 with {"error": "operation_timeout"}
+            # when its backend cannot complete the assignment in time.  Treat this as a
+            # transient failure and retry once, the same way we handle 429.
+            whapi_err = str(result.get("error", "")) if isinstance(result, dict) else ""
+            if whapi_err == "operation_timeout" and attempt == 0:
+                print(
+                    f"⚠️  Collection: WhAPI operation_timeout for {product_id} — "
+                    f"retrying in {_429_retry_delay}s"
+                )
+                time.sleep(_429_retry_delay)
+                continue
+
+            # Any other unexpected shape — surface the raw response
+            error = f"Unexpected WhAPI response: {str(result)[:150]}"
             print(f"⚠️  Collection: {error}")
             return False, error
 

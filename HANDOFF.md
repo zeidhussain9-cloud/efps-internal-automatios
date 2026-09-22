@@ -84,6 +84,6 @@ These are future live-runtime verification tasks, not unresolved Phase-1 impleme
 - `catalogue start` — catalogue image management
 - `catalogue update` — catalogue update workflow
 
-**Known gap:** Session-initiation atomicity (post_message + DynamoDB write) is non-atomic for session-based commands.
+**Known behaviour:** WhAPI returns `{"error": "operation_timeout"}` as an HTTP 200 on the PATCH `/business/collections/{id}` endpoint when its backend is slow. `assign_to_collection` now detects this and retries once with the same 10s backoff used for 429.
 
 **Removed commands:** `/efps fix` and `/efps verify` removed 2026-09-21. Properties requiring corrections should be edited directly in the Sheet or through future admin tools.
