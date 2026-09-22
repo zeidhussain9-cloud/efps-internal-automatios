@@ -72,17 +72,45 @@ def _sheet_link(row_number: int) -> str:
     return f"https://docs.google.com/spreadsheets/d/{schema.SHEET_ID}/edit#gid=0&range=A{row_number}"
 
 
-def handle(text: str, user_id: str, channel_id: str) -> str:
+def handle(text: str, user_id: str, channel_id: str, *, response_url: str = "") -> str:
     """Route /efps <command> to its handler. Return the user-facing reply."""
     try:
-        return _dispatch(text, user_id, channel_id)
+        return _dispatch(text, user_id, channel_id, response_url=response_url)
     except Exception as e:  # noqa: BLE001
         print(f"EFPS command handler unhandled error: {e!r}")
         import traceback; traceback.print_exc()
         return f"❌ An unexpected error occurred processing your command. Please try again or contact support."
 
 
-def _dispatch(text: str, user_id: str, channel_id: str) -> str:
+def handle_async(payload: dict) -> None:
+    """Execute the slow part of a command that was deferred via async Lambda self-invoke.
+
+    Called by commands_handler when the Lambda event contains "_efps_async".
+    Posts the result back to Slack via response_url.
+    """
+    op = payload.get("_efps_async")
+    response_url = payload.get("response_url", "")
+    try:
+        if op == "assign":
+            result = _assign_do_work(
+                payload["listing_id"],
+                payload["product_id"],
+                payload["bhk"],
+            )
+        else:
+            result = f"❌ Unknown async operation: {op!r}"
+    except Exception as e:  # noqa: BLE001
+        print(f"handle_async error ({op}): {e!r}")
+        import traceback; traceback.print_exc()
+        result = f"❌ Async operation failed unexpectedly: {str(e)[:200]}"
+
+    if response_url:
+        _post_response_url(response_url, result)
+    else:
+        print(f"handle_async result (no response_url): {result}")
+
+
+def _dispatch(text: str, user_id: str, channel_id: str, *, response_url: str = "") -> str:
     """Inner router — exceptions here are caught by handle()."""
     parts = str(text or "").strip().split()
     command = parts[0].casefold() if parts else "help"
@@ -108,7 +136,7 @@ def _dispatch(text: str, user_id: str, channel_id: str) -> str:
     if command == "assign":
         if len(parts) < 2:
             return "Usage: `/efps assign <listing_id>`"
-        return _assign(parts[1])
+        return _assign(parts[1], response_url=response_url)
 
     if command == "status":
         return _status()
@@ -290,14 +318,46 @@ def _catalogue_update(channel_id: str) -> str:
     return f"Catalogue update started — {len(candidates)} properties listed above."
 
 
-def _assign(listing_id: str) -> str:
-    """Retry collection assignment for a property that already has a meta_catalog_id."""
+def _post_response_url(response_url: str, text: str) -> None:
+    """POST a delayed response back to Slack via response_url."""
+    from urllib import request as _req
+    payload = json.dumps({"response_type": "ephemeral", "text": text}).encode("utf-8")
+    req = _req.Request(
+        response_url,
+        data=payload,
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+    try:
+        with _req.urlopen(req, timeout=10) as r:
+            r.read()
+    except Exception as e:  # noqa: BLE001
+        print(f"⚠️  response_url POST failed: {e!r}")
+
+
+def _assign(listing_id: str, *, response_url: str = "") -> str:
+    """Retry collection assignment for a property that already has a meta_catalog_id.
+
+    Slack enforces a 3-second response deadline on the original HTTP call.
+    assign_to_collection() can take up to 70s (GET collections + PATCH +
+    10s backoff retry).  We beat the deadline by:
+
+      1. Doing fast validation (ID check + sheet lookup) inline — under 3s.
+      2. Invoking THIS same Lambda asynchronously (Event invocation) with a
+         synthetic payload that carries the pre-validated data and response_url.
+      3. Returning an ack string immediately so Slack gets its 200 in time.
+
+    The async re-invocation picks up via the "_assign_async" synthetic command,
+    does the WhAPI work, then POSTs the result to response_url.
+
+    If response_url is empty (local/test calls), fall back to synchronous.
+    """
     clean = _validate_listing_id(listing_id)
     if not clean:
         return f"Invalid listing ID `{listing_id[:30]}`. Expected format: EF-YYMM-XXXX."
 
     sheet = GoogleSheetsClient()
-    row_number, row = _row_by_listing_id(sheet, clean)
+    _, row = _row_by_listing_id(sheet, clean)
     if not row:
         return f"Property `{clean}` not found in Housing_Listings."
 
@@ -307,7 +367,39 @@ def _assign(listing_id: str) -> str:
 
     bhk = str(row.get("BHK") or "").strip()
 
-    # Guard against sys.path accumulation across Lambda invocations
+    if not response_url:
+        # Fallback for local/test — run synchronously
+        return _assign_do_work(clean, product_id, bhk)
+
+    # Invoke this Lambda asynchronously so the WhAPI work happens outside
+    # the 3-second Slack deadline window.
+    self_arn = os.environ.get("AWS_LAMBDA_FUNCTION_NAME", "")
+    if not self_arn:
+        # No ARN available (local dev) — fall back to synchronous
+        return _assign_do_work(clean, product_id, bhk)
+
+    async_payload = json.dumps({
+        "_efps_async": "assign",
+        "listing_id": clean,
+        "product_id": product_id,
+        "bhk": bhk,
+        "response_url": response_url,
+    })
+    try:
+        boto3.client("lambda").invoke(
+            FunctionName=self_arn,
+            InvocationType="Event",  # fire-and-forget, returns immediately
+            Payload=async_payload.encode("utf-8"),
+        )
+    except Exception as e:  # noqa: BLE001
+        print(f"⚠️  async self-invoke failed: {e!r} — falling back to sync")
+        return _assign_do_work(clean, product_id, bhk)
+
+    return f"⏳ Assigning `{clean}` to BHK collection — result will follow shortly..."
+
+
+def _assign_do_work(clean: str, product_id: str, bhk: str) -> str:
+    """Run the actual WhAPI assignment call. Used by both sync and async paths."""
     _generator_path = str(__file__).rsplit("/", 1)[0] + "/modules/efps_meta_catalogue_mgmnt/src"
     if _generator_path not in sys.path:
         sys.path.insert(0, _generator_path)

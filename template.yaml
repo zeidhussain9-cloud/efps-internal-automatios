@@ -97,7 +97,9 @@ Resources:
               Resource: [!Ref SessionsTableArn]
             - Effect: Allow
               Action: [lambda:InvokeFunction]
-              Resource: !Sub 'arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${AWS::StackName}-EFPSLeadWorker-*'
+              Resource:
+                - !Sub 'arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${AWS::StackName}-EFPSLeadWorker-*'
+                - !Sub 'arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${AWS::StackName}-EFPSCommands-*'
 
   EFPSEvents:
     Type: AWS::Serverless::Function
