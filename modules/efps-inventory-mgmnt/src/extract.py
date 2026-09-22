@@ -42,7 +42,7 @@ def _first_line_value(text: str, labels: tuple[str, ...]) -> str:
 def _marker_candidates(text: str) -> tuple[str, str, str]:
     """Read the common EFPS '📍 Name:' source marker without swallowing URLs."""
     society=""; landmark=""; maps_url=GoogleMapsClient.extract_url(text)
-    pattern=re.compile(r"📍\s*([^:\n|]+?)\s*:\s*(?:\n\s*)?",re.I)
+    pattern=re.compile(r"(?:📍|:round_pushpin:|:pushpin:)\s*([^:\n|]+?)\s*:\s*(?:\n\s*)?",re.I)
     for match in pattern.finditer(text or ""):
         name=_clean_source_value(match.group(1))
         tail=(text[match.end():match.end()+500] if match.end() < len(text or "") else "")

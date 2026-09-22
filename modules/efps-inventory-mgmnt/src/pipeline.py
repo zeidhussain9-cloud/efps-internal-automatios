@@ -66,11 +66,11 @@ def process_closed_session(raw_text: str, *, row: dict | None = None, maps_clien
     if maps_url:
         resolved = maps.resolve(maps_url=maps_url)
         if resolved.confidence == "VERIFIED":
-            out.update({
-                "google_maps_url": resolved.canonical_url or maps_url,
-                "locality": resolved.locality or out.get("locality", ""),
-                "pincode": resolved.pincode or out.get("pincode", ""),
-            })
+            out["google_maps_url"] = resolved.canonical_url or maps_url
+            if not out.get("locality", "").strip():
+                out["locality"] = resolved.locality or out.get("locality", "")
+            if not out.get("pincode", "").strip():
+                out["pincode"] = resolved.pincode or out.get("pincode", "")
             place_name = str(getattr(resolved, "place_name", "") or "").strip()
             if place_name:
                 source_society = str(out.get("society_name", "") or "").strip()
