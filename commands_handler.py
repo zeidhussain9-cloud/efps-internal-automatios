@@ -26,4 +26,9 @@ def lambda_handler(event, context):
     try: response=commands.handle(form.get("text",""),form.get("user_id",""),form.get("channel_id",""),response_url=response_url)
     except Exception as exc:
         print(f"command failed: {exc!r}"); response={"response_type":"ephemeral","text":"Command failed safely; check runtime logs."}
-    return {"statusCode":200,"headers":{"Content-Type":"application/json"},"body":json.dumps(response)}
+    # Normalise: commands.handle() returns a plain string; wrap it in the
+    # Slack payload envelope before JSON-serialising so Slack renders it
+    # correctly.  Dict responses (e.g. error fallback above) pass through as-is.
+    if isinstance(response, str):
+        response = {"response_type": "ephemeral", "text": response}
+    return {"statusCode":200,"headers":{"Content-Type":"application/json"},"body":json.dumps(response, ensure_ascii=False)}

@@ -11,19 +11,19 @@ from shared.slack.routing import INVENTORY_CHANNEL
 from shared.google_sheets.client import GoogleSheetsClient
 from shared.google_sheets import schema
 
-HELP = """\
-*EFPS Commands*
-
-• `/efps add-property` — start a new property entry session
-• `/efps photos start` — upload photos for the next unphoto'd property
-• `/efps catalogue start` — create WhatsApp catalogue entries for ready properties
-• `/efps catalogue update` — remove catalogue entries for rented-out properties
-• `/efps assign <listing_id>` — assign a property to its BHK collection
-• `/efps status` — show inventory pipeline stage counts
-• `/efps show <listing_id>` — show full details for one property
-• `/efps run` — manually trigger the WhatsApp lead ingestion worker
-• `/efps help` — show this message\
-"""
+HELP = (
+    "*EFPS Commands*\n"
+    "\n"
+    "- `/efps add-property` - start a new property entry session\n"
+    "- `/efps photos start` - upload photos for the next unphoto'd property\n"
+    "- `/efps catalogue start` - create WhatsApp catalogue entries for ready properties\n"
+    "- `/efps catalogue update` - remove catalogue entries for rented-out properties\n"
+    "- `/efps assign <listing_id>` - assign a property to its BHK collection\n"
+    "- `/efps status` - show inventory pipeline stage counts\n"
+    "- `/efps show <listing_id>` - show full details for one property\n"
+    "- `/efps run` - manually trigger the WhatsApp lead ingestion worker\n"
+    "- `/efps help` - show this message"
+)
 
 _SESSION_TTL_SECONDS = 86400  # 24 h
 _SESSIONS_TABLE = os.environ.get("SESSIONS_TABLE_NAME", "efps-sessions")
