@@ -12,27 +12,17 @@ from shared.google_sheets.client import GoogleSheetsClient
 from shared.google_sheets import schema
 
 HELP = """\
-*EFPS Manual Inventory Commands*
+*EFPS Commands*
 
-*Property Entry*
-  `/efps add-property`  —  Start new property entry session
-
-*Photo Workflows*
-  `/efps photos start`  —  Begin uploading photos for processed properties
-
-*Catalogue Management*
-  `/efps catalogue start`  —  Create WhatsApp catalogues for ready properties
-  `/efps catalogue update`  —  Delete catalogues for rented-out properties
-  `/efps assign <listing_id>`  —  Retry collection assignment for a property
-
-*Status & Search*
-  `/efps status`  —  Show inventory pipeline stage counts
-  `/efps show <listing_id>`  —  Display full details for a specific property
-
-*Maintenance*
-  `/efps run`  —  Force-run the WhatsApp lead ingestion worker
-
-Need help? Ask in #efps-support.\
+• `/efps add-property` — start a new property entry session
+• `/efps photos start` — upload photos for the next unphoto'd property
+• `/efps catalogue start` — create WhatsApp catalogue entries for ready properties
+• `/efps catalogue update` — remove catalogue entries for rented-out properties
+• `/efps assign <listing_id>` — assign a property to its BHK collection
+• `/efps status` — show inventory pipeline stage counts
+• `/efps show <listing_id>` — show full details for one property
+• `/efps run` — manually trigger the WhatsApp lead ingestion worker
+• `/efps help` — show this message\
 """
 
 _SESSION_TTL_SECONDS = 86400  # 24 h
