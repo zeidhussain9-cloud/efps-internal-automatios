@@ -148,12 +148,20 @@ def _add_property(channel_id: str) -> str:
         "• Reply `done` when finished\n\n"
         "Commands: `done` | `cancel`",
     )
-    _update_session(channel_id, "add_property", {
-        "thread_ts": ts,
-        "messages_json": "[]",
-        "listing_id": "",
-        "phase": "collecting",
-    })
+    try:
+        _update_session(channel_id, "add_property", {
+            "thread_ts": ts,
+            "messages_json": "[]",
+            "listing_id": "",
+            "phase": "collecting",
+        })
+    except Exception as e:
+        # Rollback: remove the orphaned thread so Slack and DynamoDB stay consistent.
+        try:
+            slack.call("chat.delete", {"channel": INVENTORY_CHANNEL, "ts": ts})
+        except Exception:
+            pass
+        raise RuntimeError(f"Session record could not be created; thread was rolled back. ({e!r})")
     return "Property entry started. Check the new thread above."
 
 
@@ -191,13 +199,20 @@ def _photos_start(channel_id: str) -> str:
     )
     thread_ts = slack.post_message(INVENTORY_CHANNEL, msg_text)
 
-    _update_session(channel_id, "photo", {
-        "thread_ts": thread_ts,
-        "listing_id": lid,
-        "queue": [r["listing_id"] for r in queue],
-        "queue_position": 0,
-        "total_in_queue": len(queue),
-    })
+    try:
+        _update_session(channel_id, "photo", {
+            "thread_ts": thread_ts,
+            "listing_id": lid,
+            "queue": [r["listing_id"] for r in queue],
+            "queue_position": 0,
+            "total_in_queue": len(queue),
+        })
+    except Exception as e:
+        try:
+            slack.call("chat.delete", {"channel": INVENTORY_CHANNEL, "ts": thread_ts})
+        except Exception:
+            pass
+        raise RuntimeError(f"Session record could not be created; thread was rolled back. ({e!r})")
     return f"Photo session started — showing the first of {len(queue)} properties above."
 
 
@@ -225,12 +240,19 @@ def _catalogue_start(channel_id: str) -> str:
         f"Reply `exit` to cancel.",
     )
 
-    _update_session(channel_id, "catalogue", {
-        "thread_ts": thread_ts,
-        "queue": queue,
-        "position": 0,
-        "total": len(queue),
-    })
+    try:
+        _update_session(channel_id, "catalogue", {
+            "thread_ts": thread_ts,
+            "queue": queue,
+            "position": 0,
+            "total": len(queue),
+        })
+    except Exception as e:
+        try:
+            slack.call("chat.delete", {"channel": INVENTORY_CHANNEL, "ts": thread_ts})
+        except Exception:
+            pass
+        raise RuntimeError(f"Session record could not be created; thread was rolled back. ({e!r})")
     return f"Catalogue session started — {len(queue)} properties in queue."
 
 
@@ -263,11 +285,18 @@ def _catalogue_update(channel_id: str) -> str:
         f"Reply `no` or `exit` to cancel.",
     )
 
-    _update_session(channel_id, "catalogue_update", {
-        "thread_ts": thread_ts,
-        "queue": candidates,
-        "phase": "awaiting_confirm",
-    })
+    try:
+        _update_session(channel_id, "catalogue_update", {
+            "thread_ts": thread_ts,
+            "queue": candidates,
+            "phase": "awaiting_confirm",
+        })
+    except Exception as e:
+        try:
+            slack.call("chat.delete", {"channel": INVENTORY_CHANNEL, "ts": thread_ts})
+        except Exception:
+            pass
+        raise RuntimeError(f"Session record could not be created; thread was rolled back. ({e!r})")
     return f"Catalogue update started — {len(candidates)} properties listed above."
 
 

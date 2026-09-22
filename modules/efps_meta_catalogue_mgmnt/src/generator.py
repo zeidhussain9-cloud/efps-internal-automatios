@@ -126,36 +126,54 @@ def assign_to_collection(
         return False, error
 
     collection_id, collection_name = match
-    try:
-        result = client.edit_collection(collection_id, add_products=[product_id])
 
-        # edit_collection() does a PATCH which returns the updated collection
-        # object on success, or raises RuntimeError on HTTP error.  A non-None
-        # dict that lacks an explicit "error" key means success.
-        if isinstance(result, dict) and "error" not in result:
-            msg = f"Product {product_id} added to '{collection_name}'"
-            print(f"✅ Collection: {msg}")
-            return True, msg
+    _429_retry_delay = 10  # seconds to wait before the single 429 retry
 
-        # Unexpected shape — treat as failure but surface the raw response
-        error = f"Unexpected WhAPI response shape: {str(result)[:150]}"
-        print(f"⚠️  Collection: {error}")
-        return False, error
+    for attempt in range(2):  # attempt 0 = first try, attempt 1 = one retry
+        try:
+            result = client.edit_collection(collection_id, add_products=[product_id])
 
-    except RuntimeError as e:
-        raw = str(e)
-        # 429 means we were too fast after product creation — caller should retry
-        if "429" in raw or "Too Many Requests" in raw.lower():
-            error = f"Rate-limited (429) — wait {_COLLECTION_ASSIGN_COOLDOWN_SECONDS}s and retry"
+            # edit_collection() does a PATCH which returns the updated collection
+            # object on success, or raises RuntimeError on HTTP error.  A non-None
+            # dict that lacks an explicit "error" key means success.
+            if isinstance(result, dict) and "error" not in result:
+                msg = f"Product {product_id} added to '{collection_name}'"
+                print(f"✅ Collection: {msg}")
+                return True, msg
+
+            # Unexpected shape — treat as failure but surface the raw response
+            error = f"Unexpected WhAPI response shape: {str(result)[:150]}"
             print(f"⚠️  Collection: {error}")
             return False, error
-        error = f"Collection API error: {raw}"
-        print(f"⚠️  Collection: {error}")
-        return False, error
-    except Exception as e:
-        error = f"Collection API error: {str(e)}"
-        print(f"⚠️  Collection: {error}")
-        return False, error
+
+        except RuntimeError as e:
+            raw = str(e)
+            if "429" in raw or "Too Many Requests" in raw.lower():
+                if attempt == 0:
+                    # One automatic retry after a short backoff
+                    print(
+                        f"⚠️  Collection: rate-limited (429) for {product_id} — "
+                        f"retrying in {_429_retry_delay}s"
+                    )
+                    time.sleep(_429_retry_delay)
+                    continue
+                # Second attempt also 429 — give up and let caller decide
+                error = (
+                    f"Rate-limited (429) after retry — "
+                    f"wait {_COLLECTION_ASSIGN_COOLDOWN_SECONDS}s and run `/efps assign`"
+                )
+                print(f"⚠️  Collection: {error}")
+                return False, error
+            error = f"Collection API error: {raw}"
+            print(f"⚠️  Collection: {error}")
+            return False, error
+        except Exception as e:
+            error = f"Collection API error: {str(e)}"
+            print(f"⚠️  Collection: {error}")
+            return False, error
+
+    # Unreachable — loop always returns — but satisfies type checkers
+    return False, "assign_to_collection: unexpected loop exit"
 
 
 def publish_and_assign(
@@ -185,6 +203,20 @@ def publish_and_assign(
         time.sleep(_COLLECTION_ASSIGN_COOLDOWN_SECONDS)
 
     assign_ok, assign_msg = assign_to_collection(product_id, bhk, whapi=whapi)
+
+    # One retry: WhAPI can still 429 even after the initial cooldown when the
+    # platform is under load.  This covers the known orphaned-product cases
+    # (EF-2609-NNWN, EF-2609-9176).  A second consecutive 429 is surfaced to
+    # the caller as a normal (False, msg) result — the operator can use
+    # `/efps assign <listing_id>` to retry manually.
+    if not assign_ok and ("429" in assign_msg or "Rate-limited" in assign_msg):
+        print(
+            f"ℹ️  publish_and_assign: 429 on first assignment attempt for "
+            f"{result.get('listing_id')} — retrying after {_COLLECTION_ASSIGN_COOLDOWN_SECONDS}s"
+        )
+        time.sleep(_COLLECTION_ASSIGN_COOLDOWN_SECONDS)
+        assign_ok, assign_msg = assign_to_collection(product_id, bhk, whapi=whapi)
+
     return result, assign_ok, assign_msg
 
 
@@ -343,6 +375,7 @@ def publish_product(
             if conflicts:
                 conflict_ids = [
                     f"{c.get('product_retailer_id', '?')}(id={c.get('id', '?')})"
+                    if isinstance(c, dict) else repr(c)
                     for c in conflicts
                 ]
                 raise RuntimeError(
@@ -355,6 +388,13 @@ def publish_product(
                 "Re-upload photos to new Cloudinary URLs and update the sheet."
             ) from exc
         raise
+
+    # WhAPI occasionally returns a plain error string instead of a dict
+    # (e.g. "Image limit exceeded: max 10 images").  Calling .get() on a
+    # string raises AttributeError and crashes the caller.  Surface it as a
+    # RuntimeError so the broad except in the thread handler catches it cleanly.
+    if isinstance(result, str):
+        raise RuntimeError(f"{listing_id}: WhAPI error response: {result}")
 
     product_id = str(result.get("id") or result.get("product_id") or "")
     if not product_id:

@@ -14,8 +14,13 @@ from shared.google_sheets.client import GoogleSheetsClient
 from shared.google_sheets import schema
 from shared.cloudinary.client import CloudinaryClient
 from shared.cloudinary.media import upload_property_images
-sys.path.insert(0, str(__file__).rsplit("/", 1)[0] + "/modules/efps-inventory-mgmnt/src")
+_inventory_src = str(__file__).rsplit("/", 1)[0] + "/modules/efps-inventory-mgmnt/src"
+if _inventory_src not in sys.path:
+    sys.path.insert(0, _inventory_src)
 from pipeline import process_closed_session, next_listing_id, initial_row
+_catalogue_src = str(__file__).rsplit("/", 1)[0] + "/modules/efps_meta_catalogue_mgmnt/src"
+if _catalogue_src not in sys.path:
+    sys.path.insert(0, _catalogue_src)
 import boto3
 
 _SESSIONS_TABLE = os.environ.get("SESSIONS_TABLE_NAME", "efps-sessions")
@@ -39,7 +44,10 @@ def _get_session(channel_id: str, session_type: str = "photo") -> dict | None:
         expires_at = item.get("expires_at")
         if expires_at and int(time.time()) > int(expires_at):
             print(f"DIAG[get_session] TTL expired for {key} — purging orphan")
-            _delete_session_by_key(key)
+            try:
+                _delete_session_by_key(key)
+            except Exception:
+                pass  # Best-effort purge; returning None is still correct
             return None
         return item
     except Exception as e:
@@ -55,7 +63,11 @@ def _delete_session_by_key(key: str) -> None:
     try:
         boto3.resource("dynamodb").Table(_SESSIONS_TABLE).delete_item(Key={"user_id": key})
     except Exception as e:
+        # Log and re-raise: a failed delete leaves a zombie session that blocks
+        # the channel for up to 24 h (TTL).  Callers that can tolerate failure
+        # (e.g. the TTL-expiry purge path) must catch this explicitly.
         print(f"DynamoDB delete_item failed for {key}: {e!r}")
+        raise
 
 
 def _update_session(channel_id: str, session_type: str, session_data: dict) -> None:
@@ -360,9 +372,6 @@ def _handle_catalogue_thread(
             return
 
         sheet = GoogleSheetsClient()
-        sys.path.insert(
-            0, str(__file__).rsplit("/", 1)[0] + "/modules/efps_meta_catalogue_mgmnt/src"
-        )
         from generator import publish_and_assign, assign_to_collection
 
         pos = int(session.get("position", 0))
@@ -489,7 +498,7 @@ def _handle_catalogue_thread(
         _update_session(channel, "catalogue", session)
         _post_catalogue_continue(slack, channel, session, pos + 1, queue)
 
-    except Exception as e:
+    except (ValueError, RuntimeError) as e:
         print(f"Catalogue thread handler failed: {e!r}")
         import traceback; traceback.print_exc()
         slack.post_message(
@@ -556,10 +565,6 @@ def _handle_catalogue_update_thread(
                     thread_ts=session["thread_ts"],
                 )
                 return
-
-            sys.path.insert(
-                0, str(__file__).rsplit("/", 1)[0] + "/modules/efps_meta_catalogue_mgmnt/src"
-            )
 
             slack.post_message(
                 channel,
@@ -642,7 +647,7 @@ def _handle_catalogue_update_thread(
                 "Reply `yes` to confirm deletion, or `no`/`exit` to cancel.",
                 thread_ts=session["thread_ts"],
             )
-    except Exception as e:
+    except (ValueError, RuntimeError) as e:
         print(f"Catalogue update thread handler failed: {e!r}")
         import traceback; traceback.print_exc()
         _delete_session(channel, "catalogue_update")
@@ -796,7 +801,7 @@ def _handle_photo_thread(
             boto3.resource("dynamodb").Table(_SESSIONS_TABLE).put_item(Item=session)
             return
 
-    except Exception as e:
+    except (ValueError, RuntimeError) as e:
         print(f"Photo thread handler failed: {e!r}")
         import traceback; traceback.print_exc()
         slack.post_message(
@@ -1064,7 +1069,7 @@ def _handle_add_property_command(
                 )
             return
 
-    except Exception as e:
+    except (ValueError, RuntimeError) as e:
         print(f"Add-property command handler failed: {e!r}")
         import traceback; traceback.print_exc()
         slack.post_message(
