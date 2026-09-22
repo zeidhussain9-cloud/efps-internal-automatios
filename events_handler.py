@@ -611,8 +611,8 @@ def _handle_catalogue_update_thread(
                         sheet.write_range(
                             schema.SHEET_ID,
                             schema.WORKSHEET_NAME,
-                            schema.range_for("meta_catalog_id", "meta_catalog_status", row_number),
-                            [["", ""]],
+                            schema.range_for("meta_catalog_status", "meta_catalog_status", row_number),
+                            [["Removed"]],
                         )
                         sheet.write_range(
                             schema.SHEET_ID,
