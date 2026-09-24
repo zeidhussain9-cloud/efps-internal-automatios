@@ -166,7 +166,7 @@ def _add_property(channel_id: str) -> str:
         "Commands: `done` | `cancel`",
     )
     try:
-        _update_session(channel_id, "add_property", {
+        _update_session(INVENTORY_CHANNEL, "add_property", {
             "thread_ts": ts,
             "messages_json": "[]",
             "listing_id": "",
@@ -217,7 +217,7 @@ def _photos_start(channel_id: str) -> str:
     thread_ts = slack.post_message(INVENTORY_CHANNEL, msg_text)
 
     try:
-        _update_session(channel_id, "photo", {
+        _update_session(INVENTORY_CHANNEL, "photo", {
             "thread_ts": thread_ts,
             "listing_id": lid,
             "queue": [r["listing_id"] for r in queue],
@@ -258,7 +258,7 @@ def _catalogue_start(channel_id: str) -> str:
     )
 
     try:
-        _update_session(channel_id, "catalogue", {
+        _update_session(INVENTORY_CHANNEL, "catalogue", {
             "thread_ts": thread_ts,
             "queue": queue,
             "position": 0,
@@ -303,7 +303,7 @@ def _catalogue_update(channel_id: str) -> str:
     )
 
     try:
-        _update_session(channel_id, "catalogue_update", {
+        _update_session(INVENTORY_CHANNEL, "catalogue_update", {
             "thread_ts": thread_ts,
             "queue": candidates,
             "phase": "awaiting_confirm",

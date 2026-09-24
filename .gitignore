@@ -30,6 +30,6 @@ SECRETS_BACKUP.csv
 
 # Local scripts for Gemini
 gemini_scripts/
-\ninternal_slash_command_reference.txt
-\ninternal_lead_life_cycle_ref.txt
-\ninternal_inventory_life_cycle_ref.txt
+internal_slash_command_reference.txt
+internal_lead_life_cycle_ref.txt
+internal_inventory_life_cycle_ref.txt

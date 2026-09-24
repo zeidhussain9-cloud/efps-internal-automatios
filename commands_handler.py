@@ -23,6 +23,7 @@ def lambda_handler(event, context):
     form={k:v[0] for k,v in parse_qs(body).items() if v}
     if form.get("command") != "/efps": return {"statusCode":200,"body":json.dumps({"response_type":"ephemeral","text":"Unknown Slack command."})}
     response_url = form.get("response_url", "")
+    print(f"DIAG[slash_command] command={form.get('text','')} channel_id={form.get('channel_id','')} user_id={form.get('user_id','')}")
     try: response=commands.handle(form.get("text",""),form.get("user_id",""),form.get("channel_id",""),response_url=response_url)
     except Exception as exc:
         print(f"command failed: {exc!r}"); response={"response_type":"ephemeral","text":"Command failed safely; check runtime logs."}
