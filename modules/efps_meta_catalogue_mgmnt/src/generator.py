@@ -91,7 +91,7 @@ def _resolve_collection(client: WhApiClient, key: str) -> tuple[str, str] | None
     """
     target = COLLECTION_NAMES[key]
     for coll in client.get_collections():
-        if target in coll.get("name", ""):
+        if target.lower() in coll.get("name", "").lower():
             return coll["id"], coll["name"]
     return None
 
