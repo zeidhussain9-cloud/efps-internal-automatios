@@ -8,6 +8,7 @@ on:
       - 'crm-server.mjs'
       - 'package.json'
       - 'package-lock.json'
+      - 'docs/crm/**'
       - '.github/workflows/crm-synthetic-ci.yml'
   workflow_dispatch:
 jobs:
