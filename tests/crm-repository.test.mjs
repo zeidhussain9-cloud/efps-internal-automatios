@@ -1,12 +1,16 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {createCrmRepository,normalizeConnectionString} from '../src/crm-repository.mjs';
+import {createCrmRepository,normalizeConnectionString,connectionEndpointClass} from '../src/crm-repository.mjs';
 test('normalizes direct Supabase URL to IPv4 session pooler',()=>{
  const input='postgresql://postgres:p%40ssword@db.qttcutwzehtskfcwxkwj.supabase.co:5432/postgres';
  const out=normalizeConnectionString(input);
  assert.match(out,/@aws-0-ap-south-1\.pooler\.supabase\.com:5432\/postgres/);
  assert.match(out,/postgres\.qttcutwzehtskfcwxkwj:.*@/);
  assert.match(out,/sslmode=require/);
+});
+test('reports normalized endpoint class without exposing connection details',()=>{
+ assert.equal(connectionEndpointClass('postgresql://postgres:fictional@db.qttcutwzehtskfcwxkwj.supabase.co:5432/postgres'),'supabase_session_pooler_ipv4');
+ assert.equal(connectionEndpointClass('postgresql://postgres:fictional@db.example.invalid:5432/postgres'),'external_or_unknown');
 });
 test('leaves non-Supabase URLs unchanged',()=>{
  const input='postgresql://postgres:fictional@db.example.invalid:5432/postgres';
