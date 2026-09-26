@@ -15,7 +15,6 @@ export function projectSheetRows(values){
   if(rows.has(id))throw Error('Duplicate listing_id in Housing_Listings: '+id);
   row.cloudinary_image_urls=row.cloudinary_image_urls.split(',').map(x=>x.trim()).filter(Boolean);
   const sourceHash=hashRow(row);
-  delete row.raw_message_text;delete row.whatsapp_contact_link;delete row.whatsapp_group_link;delete row.error_notes;delete row.source_group;delete row.inventory_locked;
   rows.set(id,{row,sourceHash});
  }
  return [...rows.values()];
