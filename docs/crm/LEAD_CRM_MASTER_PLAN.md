@@ -132,3 +132,15 @@ Real local-data connection comes after the local SQLite migration/reconciliation
 - [ ] Verify latest CI unit, HTTP and Chromium results separately from user-approved browser appearance.
 - [ ] Then inspect existing Ollama settings by name/presence only and configure Google service-account JSON in Render for read-only Sheets access.
 See `CRM_DATABASE_MIGRATION_GATE.md`.
+
+
+## Supabase Free — provisioned 2026-09-26
+- [x] Created `easyfind-crm` in Efps, Mumbai (`ap-south-1`), project ref `qttcutwzehtskfcwxkwj`; Supabase confirmed $0/month project creation cost.
+- [x] Applied server-only CRM core migration: nine RLS-enabled tables; revoked anon/authenticated grants; no browser-facing policies.
+- [x] Added three missing foreign-key indexes and committed matching schema migrations.
+- [x] Verified schema via SQL: zero customer leads and zero messages; no real data imported.
+- [ ] Connect Render with a private server-only database connection through secure environment configuration; no database credentials have been fetched, printed or modified.
+- [ ] Implement and test authenticated durable server CRUD, raw webhook event log, per-source AI cursor, append-only requirement evidence, safe retries and restore-tested independent backups before any real data.
+- [ ] Reconcile historical Mac SQLite source with authorized local access, without modifying the source file. Do not use Desktop Commander without explicit permission.
+- [ ] Configure existing Ollama environment variables and read-only Google Sheets service account after synthetic database integration tests and access controls.
+- [ ] Store media only in Cloudinary; PostgreSQL stores external media references, never media bytes.
