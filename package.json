@@ -11,14 +11,17 @@
     "db:migrate": "node scripts/migrate-crm.mjs"
   },
   "dependencies": {
-    "@vitejs/plugin-react": "^4.3.4",
-    "vite": "^5.4.11",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
-    "lucide-react": "^0.468.0",
-    "pg": "^8.13.1"
+    "@vitejs/plugin-react": "4.3.4",
+    "vite": "5.4.11",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "lucide-react": "0.468.0",
+    "pg": "8.13.1"
   },
   "devDependencies": {
     "playwright": "1.63.0"
+  },
+  "engines": {
+    "node": ">=24.0.0"
   }
 }
