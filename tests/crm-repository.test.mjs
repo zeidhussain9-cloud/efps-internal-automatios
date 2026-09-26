@@ -19,6 +19,7 @@ test('reports normalized endpoint class without exposing connection details',()=
  assert.equal(connectionEndpointClass('postgresql://postgres:fictional@db.qttcutwzehtskfcwxkwj.supabase.co:5432/postgres'),'supabase_session_pooler_ipv4');
  assert.equal(connectionEndpointClass('postgresql://postgres:fictional@db.example.invalid:5432/postgres'),'external_or_unknown');
  assert.equal(connectionEndpointClass('not-a-url'),'invalid_url');
+ assert.equal(connectionEndpointClass('postgresql://postgres:p@ss#word@db.qttcutwzehtskfcwxkwj.supabase.co:5432/postgres'),'supabase_session_pooler_ipv4');
 });
 test('leaves non-Supabase URLs unchanged',()=>{
  const input='postgresql://postgres:fictional@db.example.invalid:5432/postgres';
