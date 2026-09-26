@@ -5,6 +5,7 @@ on:
     paths:
       - 'src/**'
       - 'tests/**'
+      - 'crm-server.mjs'
       - 'package.json'
       - 'package-lock.json'
       - '.github/workflows/crm-synthetic-ci.yml'
@@ -21,8 +22,8 @@ jobs:
         with:
           node-version: '24'
       - run: npm install
-      - run: npm test
       - run: npm run build
+      - run: npm test
       - run: npm install --no-save playwright
       - run: npx playwright install --with-deps chromium
       - run: npm run test:browser
