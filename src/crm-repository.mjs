@@ -61,7 +61,7 @@ export function normalizeConnectionString(value){
  }
  return value;
 }
-export function connectionStringShape(value){
+export function connectionStringShape(value,{sslCaConfigured=Boolean(process.env.DATABASE_SSL_CA)}={}){
  const raw=typeof value==='string'?value.trim():'';
  const unquoted=trimConnectionString(value)||'';
  const parts=parseWhatwg(unquoted)||parseLoosePostgresUrl(unquoted);
@@ -79,7 +79,7 @@ export function connectionStringShape(value){
   usernamePresent:Boolean(parts?.username),
   passwordPresent:Boolean(parts?.password),
   databasePathPresent:Boolean(parts?.pathAndQuery),
-  sslCaConfigured:Boolean(process.env.DATABASE_SSL_CA)
+  sslCaConfigured
  };
 }
 export function connectionEndpointClass(value){
