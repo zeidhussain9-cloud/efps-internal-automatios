@@ -158,3 +158,7 @@ See `CRM_DATABASE_MIGRATION_GATE.md`.
 - [x] Added startup-only credential-presence and database-connectivity checks without printing secret values, plus unit tests.
 - [ ] Verify the latest Render deployment and inspect sanitized application logs to establish whether the user-added `DATABASE_URL`, auth, Ollama and Sheets settings are present and PostgreSQL is reachable.
 - [ ] Do not infer correctness from a variable being present alone. Keep `CRM_REAL_DATA_ENABLED` disabled and do not enable database read routes until authentication and connection checks pass.
+
+
+### Verified Render startup flags — 2026-09-26 17:26 UTC
+The live CRM startup diagnostic reported: `DATABASE_URL` absent; `CRM_DB_READ_ENABLED` false; both Basic Auth variables absent; Ollama endpoint and model present; Google Sheets service-account credential and sheet ID absent; `CRM_REAL_DATA_ENABLED` false. Database probe reported `not configured`. These are runtime observations for `easyfind-crm-d01-d05`, not a claim about another service or pending environment edits. Do not enable the DB API or import customer data until the missing server-only settings are configured and a subsequent deployment logs `connected` with authentication configured. Do not copy secret values into documentation or chat.
