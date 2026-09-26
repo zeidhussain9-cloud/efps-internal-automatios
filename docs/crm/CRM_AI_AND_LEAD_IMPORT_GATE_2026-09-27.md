@@ -18,3 +18,12 @@
 2. Independently verify encrypted Supabase backup and restore to an isolated target, then reconcile 735/23,454/966 against the curated 308/6,064 source by stable IDs and source attribution. Prepare a read-only dry-run manifest with zero PII in logs.
 3. Review production authentication, access scopes, retention and operator override; approve D06–D08. Only then authorize a controlled, audited real-data import. Keep `CRM_DB_WRITE_ENABLED` and `CRM_REAL_DATA_ENABLED` disabled until gates pass.
 4. Confirm the latest live Render deployment, GitHub Actions result and browser journey after each change. `main` must never be modified.
+
+## Superseding hosted-AI and steering verification — 2026-09-27
+
+- [x] Hosted Ollama Cloud `gpt-oss:20b` returned a successful fictional `L-1001` proposal from Render at 2026-09-26 21:25:38 UTC; the provider returned `bhk`, `location`, `budget`, `pets` and `uncertainties`. The corrected adapter accepts JSON and fenced JSON. This supersedes the earlier unverified-provider statement above.
+- [x] Dedicated root `steering.md` is the **only** CRM model system instruction. `src/ollama-adapter.mjs` reads and caches it server-side, limits it to 2 KiB and sends it with one fictional fixture per on-demand invocation; it does not send `CORE_STEERING.md` or the full business-context document.
+- [x] Steering tests verify company, business, role, JSON contract, size and single-request behavior; full suite/build/browser must pass on the new commit and Render must independently verify the deployed change.
+- [ ] Disable optional `CRM_OLLAMA_STARTUP_SMOKE_ENABLED` after the new deployment's one-time validation to avoid spending tokens on every restart. On-demand fictional analysis remains enabled.
+- [ ] Complete representative fictional fixture evaluation, error/retry/timeout validation and operator review; a single successful response does not establish production accuracy.
+- [ ] Independent encrypted backup/isolated restore, source-provenance reconciliation and D06–D08 approval remain **blocked**. No real lead import or automatic WhatsApp send.

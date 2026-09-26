@@ -154,3 +154,7 @@ The credential architecture is now explicitly split:
 3. third-party runtime acceptance → independently verified AWS probes.
 
 The migration itself does not prove live third-party connectivity. Each integration requires its own runtime acceptance probe.
+
+## CRM dedicated deployment — verified 2026-09-27
+
+The separate CRM UI deploys **only** from `crm-ui-dashboard` to Render service `easyfind-crm-d01-d05` (`srv-darsv560tbcc73cu4ip0`), URL `https://easyfind-crm-d01-d05.onrender.com`. It uses Supabase project `qttcutwzehtskfcwxkwj` through server-side TLS and hosted Ollama Cloud `gpt-oss:20b` through server-only `OLLAMA_BASE_URL`, `OLLAMA_MODEL`, `OLLAMA_API_KEY`. A fictional hosted response was verified in Render logs at 2026-09-26 21:25:38 UTC. Root `steering.md` is bundled in the deployed repository and read server-side. No local model is installed. Repository `main` remains untouched by this UI work.

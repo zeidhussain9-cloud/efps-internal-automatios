@@ -1,4 +1,8 @@
+import {readFile} from 'node:fs/promises';
 // Server-side Ollama adapter. Disabled until the synthetic pilot gate is explicitly enabled.
+const steeringUrl=new URL('../steering.md',import.meta.url);
+let steeringPromise;
+export async function modelSteering(){if(!steeringPromise)steeringPromise=readFile(steeringUrl,'utf8').then(text=>{if(Buffer.byteLength(text,'utf8')>2048||!text.trim())throw Error('Invalid model steering');return text.trim()}).catch(error=>{steeringPromise=null;throw error});return steeringPromise;}
 const allowed=new Set(['L-1001','L-1002','L-1003','L-1004']);
 export function ollamaSettings(env){const base=env.OLLAMA_BASE_URL||env.OLLAMA_HOST;const model=env.OLLAMA_MODEL||env.OLLAMA_MODEL_NAME;return {ready:Boolean(base&&model),base,model,hasKey:Boolean(env.OLLAMA_API_KEY)};}
 export async function analyzeFictionalLead({leadId,env,fetcher=fetch}){
@@ -12,9 +16,10 @@ export async function analyzeFictionalLead({leadId,env,fetcher=fetch}){
  'L-1004':'Fictional renter: 2 BHK Sarjapur Road, budget INR 60000, wants a viewing.'
  }[leadId];
  const endpoint=new URL('/api/chat',config.base);if(endpoint.protocol!=='https:'&&endpoint.hostname!=='localhost'&&endpoint.hostname!=='127.0.0.1')throw Error('Insecure Ollama endpoint');
+ const steering=await modelSteering();
  const controller=new AbortController();const timeout=setTimeout(()=>controller.abort(),20000);
  try{
-  const response=await fetcher(endpoint,{method:'POST',headers:{'Content-Type':'application/json',...(env.OLLAMA_API_KEY?{Authorization:'Bearer '+env.OLLAMA_API_KEY}:{})},body:JSON.stringify({model:config.model,stream:false,format:'json',messages:[{role:'system',content:'Extract fictional rental requirements. Return JSON with keys bhk,location,budget,pets,uncertainties. Do not invent missing facts or propose sending messages.'},{role:'user',content:fixture}]}),signal:controller.signal});
+  const response=await fetcher(endpoint,{method:'POST',headers:{'Content-Type':'application/json',...(env.OLLAMA_API_KEY?{Authorization:'Bearer '+env.OLLAMA_API_KEY}:{})},body:JSON.stringify({model:config.model,stream:false,format:'json',messages:[{role:'system',content:steering},{role:'user',content:fixture}]}),signal:controller.signal});
   if(!response.ok)throw Error('Ollama request failed ('+response.status+')');
   let body;try{body=await response.json()}catch{throw Error('Provider returned non-JSON HTTP body')}if(typeof body?.message?.content!=='string'){const shape=body?.message?'message_without_content':'no_message';throw Error('Provider response shape: '+shape)}let parsed;const raw=body.message.content.trim();const fenced=raw.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/i);const candidate=fenced?fenced[1].trim():raw;try{parsed=JSON.parse(candidate)}catch{throw Error(candidate?'Provider message is not JSON':'Provider message is empty')}
   if(!parsed||typeof parsed!=='object'||Array.isArray(parsed))throw Error('Invalid model JSON');

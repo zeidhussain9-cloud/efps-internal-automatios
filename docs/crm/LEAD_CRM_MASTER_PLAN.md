@@ -190,3 +190,13 @@ Supabase `easyfind-crm` (`qttcutwzehtskfcwxkwj`, Mumbai) is ACTIVE_HEALTHY and i
 ## 2026-09-27 — Inventory UI reconciliation correction
 - The live Inventory UI now uses `/api/inventory/overview` (all active database mirror rows, not only available matching rows), with responsive cards, Cloudinary media gallery, detailed property panel, filters and reconciliation totals. Existing lead-matching endpoint continues to restrict to Available properties.
 - Latest verified database baseline: 81 current properties = 65 Available + 16 Rented Out; 76/81 have source image URLs. City and state are missing in the current source snapshot on all 81, so locality is shown and city/state is labeled not recorded. A Cloudinary image returned HTTP 200 image/jpeg. UI code deployed on `crm-ui-dashboard` only; see `CRM_INVENTORY_SYNC_RUNBOOK.md` for evidence and remaining scheduler/mutation gates.
+
+## 2026-09-27 — Dedicated CRM AI steering and current gates (supersedes earlier pending AI claims)
+
+- [x] Hosted Ollama `gpt-oss:20b` authenticated and returned the expected five-key fictional proposal in the live Render startup smoke test at 21:25:38 UTC on 2026-09-26.
+- [x] Add a dedicated root `steering.md` for this CRM model only. It contains concise EFPS rental-brokerage context, internal-assistant role, strict JSON schema, human authority, untrusted-input handling and inventory/source boundaries. Do not send repository-wide `CORE_STEERING.md` to the model.
+- [x] Load and cache steering server-side, enforce a 2-KiB upper bound and keep each model request to one compact system message and one fictional enquiry. No local model installation, browser-side API key, repeated retrieval or automatic calls on page navigation.
+- [x] Add steering-specific tests; verify complete application, build, browser and CI results separately.
+- [ ] Independently verify the new steering-bearing live Render request and turn off optional startup smoke after acceptance to avoid repeated provider usage.
+- [ ] Finish representative synthetic extraction evaluation, durable audited CRUD, independently restore-tested encrypted backups, 735/23,454/966 source reconciliation and D06–D08 approvals before any real customer import.
+- [ ] Production-grade operator session auth, retention policy and final credential rotation remain gated; `CRM_REAL_DATA_ENABLED` and `CRM_DB_WRITE_ENABLED` stay disabled.

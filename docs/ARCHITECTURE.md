@@ -132,3 +132,7 @@ The D01–D05 prototype uses synthetic data only. It must not read or write live
 ## Documentation authority
 
 `docs/DATA_CONTRACTS.md` owns cross-module field semantics and dependencies. `docs/DETERMINISTIC_FIELD_RESOLUTION.md` owns candidate resolution and precedence. `docs/INVENTORY_SOURCE_EXTRACTION.md` owns source segmentation and extraction boundaries. `docs/DOCUMENT_MAP.md` owns documentation roles. `docs/MIGRATION_LIVE_SYSTEM_MAP_20260916.md` owns the approved live-system migration boundary.
+
+## CRM hosted AI boundary — 2026-09-27
+
+The `crm-ui-dashboard` branch deploys a separate authenticated Render CRM. `src/ollama-adapter.mjs` reads and caches dedicated root `steering.md` as its single system instruction (maximum 2 KiB), then sends only the selected fixed fictional fixture to the existing hosted Ollama `/api/chat` endpoint. The API key remains server-side in Render. This is separate from repository-agent `CORE_STEERING.md` and from the deterministic Housing_Listings inventory mirror. Real customer inference and automatic WhatsApp sending remain disabled.

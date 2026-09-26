@@ -106,3 +106,11 @@ These are future live-runtime verification tasks, not unresolved Phase-1 impleme
 **Known behaviour:** WhAPI returns `{"error": "operation_timeout"}` as an HTTP 200 on the PATCH `/business/collections/{id}` endpoint when its backend is slow. `assign_to_collection` now detects this and retries once with the same 10s backoff used for 429.
 
 **Removed commands:** `/efps fix` and `/efps verify` removed 2026-09-21. Properties requiring corrections should be edited directly in the Sheet or through future admin tools.
+
+## Active CRM UI handoff — 2026-09-27 (supersedes historical CRM-reconciliation-only heading)
+
+- The **only** CRM UI development/deployment branch is `crm-ui-dashboard`. `main` is untouched and remains the separate Inventory/legacy branch.
+- Render `easyfind-crm-d01-d05` successfully called hosted Ollama `gpt-oss:20b` with fictional `L-1001` at 2026-09-26 21:25:38 UTC. The five expected keys were returned. No local model.
+- Dedicated root `steering.md` is the only CRM model system instruction, loaded and cached by `src/ollama-adapter.mjs` (2-KiB maximum). It conveys EFPS brokerage purpose, model role, structured extraction, operator control and no invented facts. Repository `CORE_STEERING.md` remains separate.
+- Application tests, build, browser and GitHub Actions must pass on the new steering commit; confirm new Render deployment before claiming the steering-bearing hosted request is live. Disable optional `CRM_OLLAMA_STARTUP_SMOKE_ENABLED` after final acceptance to avoid restart inference.
+- No real customer data imported; Supabase still holds three fictional test leads and zero messages at last independent count. The historical source audit found 735 leads, 23,454 conversations and 966 events. D06–D08, backup/restore, source reconciliation, production auth and final credential rotation remain open.

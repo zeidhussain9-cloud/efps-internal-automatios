@@ -59,3 +59,7 @@ Update every affected document in the same work session. Documents not affected 
 9. Preserve audit snapshots as historical evidence; reconcile their findings into the current canonical documents instead of creating competing truths.
 
 Documentation is part of implementation. A change is not complete when code and maintained repository truth knowingly disagree.
+
+## CRM model steering document
+
+Root `steering.md` is **Executable** model input for the CRM adapter only. Its owner is the CRM model-integration workstream. Keep it concise, schema-aligned and derived from the canonical `docs/BUSINESS_CONTEXT.md` without duplicating the full business rulebook. `CORE_STEERING.md` remains the mandatory and separate governance protocol for repository agents. Review `steering.md`, its adapter tests and the CRM gate whenever model behavior or business context changes.

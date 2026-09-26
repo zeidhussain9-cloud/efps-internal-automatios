@@ -154,3 +154,7 @@ D01–D05 prototype:
 ## 11. Figma handoff
 
 Figma defines editable visual composition. This specification defines behavior/data meaning. Neither may invent fields or silently change business rules.
+
+## AI pilot implementation checkpoint — 2026-09-27
+
+The deployed on-demand `AI & Drafts` control currently analyzes **only a fixed fictional fixture** by lead ID. It does not yet send the lead workspace's displayed message history or human-edited requirements. The hosted provider has been verified, and its server-side dedicated `steering.md` supplies compact EFPS role and JSON extraction instructions. Human Accept/Reject remains required; full D04 source-backed delta analysis, versioned durable evidence and real-data access are future gates.

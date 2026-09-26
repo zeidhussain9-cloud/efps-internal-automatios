@@ -32,6 +32,8 @@
 | Repository-wide AI skill changes | `.gemini/skills/README.md`, affected skill, relevant governance docs |
 | Repository-specific custom skill changes | `.gemini/skills/README.md`, affected skill and references, relevant capability/module docs |
 
+| CRM hosted-model prompt/steering change | Root `steering.md`, `src/ollama-adapter.mjs`, `tests/ollama-adapter.test.mjs`, `docs/crm/CRM_AI_AND_LEAD_IMPORT_GATE_2026-09-27.md`, `docs/crm/LEAD_CRM_MASTER_PLAN.md`, `docs/crm/CRM_RENDER_CONFIGURATION.md`, `HANDOFF.md`; update `docs/BUSINESS_CONTEXT.md` only when business truth actually changes. |
+
 ## Mandatory agent behavior
 
 For **every implementation**, the agent must review **all maintained root documents and all documents inside `docs/`** against the resulting repository reality. It must update every document that is affected and must confirm the remaining documents are still accurate. This full review is mandatory even when the change appears small.

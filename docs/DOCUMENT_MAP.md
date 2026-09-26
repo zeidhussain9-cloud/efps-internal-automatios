@@ -106,3 +106,12 @@ For every implementation, the agent must review all maintained root and `docs/` 
 Presence of a shared capability boundary does not imply that every runtime feature is complete or live.
 
 If a new maintained document is required, add it to this map and define its role before treating it as repository truth.
+
+## CRM-only model instructions
+
+| Document | Role |
+|---|---|
+| Root `steering.md` | Executable, compact, dedicated system instruction for the CRM hosted Ollama model; not repository-agent governance. Canonical business facts remain in `docs/BUSINESS_CONTEXT.md`. |
+| `docs/crm/CRM_AI_AND_LEAD_IMPORT_GATE_2026-09-27.md` | Dated verification of hosted model, dedicated steering and remaining real-data gates. |
+
+`src/ollama-adapter.mjs` loads only `steering.md` as model system context. Repository agents must still follow `CORE_STEERING.md`; the hosted model does not receive it.

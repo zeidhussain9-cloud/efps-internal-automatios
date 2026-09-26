@@ -54,3 +54,9 @@ No live WhAPI ingestion, automatic WhatsApp sending or live customer data is ena
 - [x] Canonical worksheet verified as `Housing_Listings`.
 - [x] CRM adapter keeps the spreadsheet ID out of application source and reads it from server-side configuration.
 - [ ] Real service-account credential is present in Render (current runtime flag: false) and read-only Sheets access has not yet been exercised.
+
+## 2026-09-27 — Hosted Ollama verified; dedicated steering
+
+The historical 'later gate' instructions above predate the successful Render fictional request. At 2026-09-26 21:25:38 UTC, Render logged a successful `gpt-oss:20b` fictional analysis returning the five required fields. `OLLAMA_BASE_URL`, `OLLAMA_MODEL` and `OLLAMA_API_KEY` are server-side Render settings; never print or copy credential values into Git, browser bundles or logs. The model is hosted: **do not install it locally**.
+
+The root `steering.md` is the dedicated executable CRM model instruction; the adapter caches it and enforces a 2-KiB maximum. The operator-only `CORE_STEERING.md` and complete `docs/BUSINESS_CONTEXT.md` are not sent to the provider. `CRM_SYNTHETIC_AI_ENABLED=true` allows only the four hardcoded fictional IDs. `CRM_OLLAMA_STARTUP_SMOKE_ENABLED` is optional diagnostic traffic and should be `false` after acceptance to avoid extra inference on restarts. No real lead data, automated send or production writes are authorized.

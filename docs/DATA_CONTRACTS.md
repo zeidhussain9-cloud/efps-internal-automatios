@@ -146,3 +146,7 @@ AI-derived values never overwrite human-authoritative fields without an explicit
 ## Verification boundary
 
 Production Google Sheets access, the 48-column contract, write boundary, Google Maps access/application path, and live dropdown observations have been verified. Repository changes to deterministic rules require regression coverage before live production extraction. The recurring production dataset must always be re-run from the commit that contains the fix under review; prior projection output is evidence of that earlier commit only.
+
+## CRM fictional AI proposal contract — 2026-09-27
+
+The dedicated root `steering.md` instructs the hosted CRM model to return one JSON object with `bhk`, `location`, `budget`, `pets` and `uncertainties`. Unknown scalar values are `null`; uncertainties are a string array. The current adapter parses JSON or fenced JSON and returns the proposal for human Accept/Reject; it does not persist AI-derived values or assert property facts. The provider receives only fixed fictional pilot fixtures. Historical SQLite customer data and Housing_Listings inventory are separate sources and are not added to model context.

@@ -32,3 +32,7 @@ Do not delete legacy internal-automation code or docs merely because they are no
 
 ## Completion gate
 Do not call this stage finished until code tests, end-to-end browser tests, deployment checks, privacy checks and the synthetic model pilot are independently verified.
+
+## Superseding checkpoint — 2026-09-27
+
+The initial provider-unavailable and unauthenticated states above are historical. Render authenticated hosted Ollama `gpt-oss:20b` and received a five-key fictional response at 2026-09-26 21:25:38 UTC. The CRM adapter now reads dedicated compact root `steering.md`; model input remains fictional-only and operator-reviewed. Durable production workflows, full synthetic evaluation, isolated restore and D06–D08 remain open.

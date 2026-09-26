@@ -91,3 +91,7 @@ The CRM reconciliation documents explicitly distinguish the historical WhatsApp/
 ## Production status
 
 The repository-level migration reconciliation is complete on its dedicated migration branch. Production acceptance is not claimed by this commit: AWS deployment, Slack registration, WhAPI cutover, secret injection, synthetic live Inventory traffic, and old-runtime zero-traffic confirmation remain runtime gates.
+
+## CRM UI branch and dedicated model steering
+
+The sole active CRM UI branch is `crm-ui-dashboard`; **do not change `main` for CRM UI work**. The hosted CRM Ollama adapter reads compact root `steering.md` as its dedicated system instruction. This file is **not** a replacement for repository-agent `CORE_STEERING.md`, and the full business-context document is not sent to the hosted model. The pilot is fictional-only and the provider key stays in Render. See `docs/crm/LEAD_CRM_MASTER_PLAN.md`.
