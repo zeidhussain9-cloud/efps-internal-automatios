@@ -15,7 +15,7 @@ The public `/health` endpoint reports only synthetic mode and access mode, never
 
 ## Ollama configuration — later gate
 
-The operator has stated the Ollama API key and model name have already been placed in a Render environment. **Inspect the variable names and target service without revealing their values**, then adapt the server-side provider configuration to those names. Do not overwrite existing credentials, infer an endpoint from a model name, expose the API key to the browser or claim the provider is connected until a synthetic request succeeds. Ollama local `localhost` endpoints on Render refer to Render, not the operator's Mac. If using an external provider, verify its exact base URL and API protocol. Restrict model input to fictional pilot records until the live-data gate is approved.
+The operator has stated the Ollama API key and model name have already been placed in a Render environment. A server-only adapter and authenticated fictional-fixture route are implemented but disabled by default. **Inspect the variable names and target service without revealing their values**, then adapt the server-side provider configuration to those names. Do not overwrite existing credentials, infer an endpoint from a model name, expose the API key to the browser or claim the provider is connected until a synthetic request succeeds. Ollama local `localhost` endpoints on Render refer to Render, not the operator's Mac. If using an external provider, verify its exact base URL and API protocol. Restrict model input to fictional pilot records until the live-data gate is approved. The adapter accepts `OLLAMA_BASE_URL` (or `OLLAMA_HOST`), `OLLAMA_MODEL` (or `OLLAMA_MODEL_NAME`) and optional `OLLAMA_API_KEY`; map existing names without duplicating secrets. Only set `CRM_SYNTHETIC_AI_ENABLED=true` after server access credentials are active and the endpoint is verified. The route accepts only the four fictional fixture IDs and never client-supplied conversations.
 
 ## Read-only Google Sheets configuration — later gate
 
@@ -27,7 +27,7 @@ The existing Slack integration owns creation and updates of Housing Listings. CR
 | `HOUSING_SHEET_ID` | Spreadsheet ID of the verified Housing Listings document |
 | `HOUSING_SHEET_TAB` | Exact verified worksheet name, expected `Housing_Listings` unless source differs |
 
-Grant the service-account email **Viewer** access to the verified spreadsheet. Do not give it Editor access or share the JSON publicly. The CRM must not write to the sheet or create a competing inventory workflow. Base64 is transport encoding, not encryption; treat it as a secret. Do not configure any real sheet access until the synthetic pilot and access gate are verified.
+A read-only service-account adapter is implemented and disabled by default with `CRM_SYNTHETIC_SHEETS_ENABLED` (unset). Do not enable it until the intended real sheet and access policy are approved. Grant the service-account email **Viewer** access to the verified spreadsheet. Do not give it Editor access or share the JSON publicly. The CRM must not write to the sheet or create a competing inventory workflow. Base64 is transport encoding, not encryption; treat it as a secret. Do not configure any real sheet access until the synthetic pilot and access gate are verified.
 
 ## Release checks
 
