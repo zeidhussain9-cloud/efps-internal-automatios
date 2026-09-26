@@ -13,6 +13,14 @@ createServer(async(req,res)=>{
   const mode=accessMode(process.env);
   if(mode==='misconfigured'){res.writeHead(503,security);return res.end('CRM access configuration incomplete');}
   if(mode==='protected'&&!authorized(req.headers.authorization,process.env.CRM_BASIC_AUTH_USERNAME,process.env.CRM_BASIC_AUTH_PASSWORD)){res.writeHead(401,{...security,'WWW-Authenticate':'Basic realm="EasyFind CRM"'});return res.end('Authentication required');}
+  if(p==='/api/ai/analyze'&&req.method==='POST'){
+   if(mode!=='protected'||process.env.CRM_SYNTHETIC_AI_ENABLED!=='true'){res.writeHead(403,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify({error:'Synthetic AI disabled'}));}
+   try{
+    let raw='';for await(const chunk of req){raw+=chunk;if(raw.length>1024)throw Error('Request too large');}
+    const body=JSON.parse(raw);const result=await analyzeFictionalLead({leadId:body.leadId,env:process.env});
+    res.writeHead(200,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify(result));
+   }catch(e){res.writeHead(422,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify({error:e.message==='Unknown fictional lead'?e.message:'Synthetic AI request failed'}));}
+  }
   if(!['GET','HEAD'].includes(req.method)){res.writeHead(405,security);return res.end('Method not allowed');}
   if(p.startsWith('/api/')){res.writeHead(404,security);return res.end('API not enabled');}
   let f=resolve(join(root,p));
