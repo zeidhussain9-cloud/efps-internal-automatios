@@ -144,3 +144,11 @@ See `CRM_DATABASE_MIGRATION_GATE.md`.
 - [ ] Reconcile historical Mac SQLite source with authorized local access, without modifying the source file. Do not use Desktop Commander without explicit permission.
 - [ ] Configure existing Ollama environment variables and read-only Google Sheets service account after synthetic database integration tests and access controls.
 - [ ] Store media only in Cloudinary; PostgreSQL stores external media references, never media bytes.
+
+
+## 2026-09-26 — Read-only database integration checkpoint
+- [x] Added `src/crm-repository.mjs` with parameterized PostgreSQL health/list/get operations and repository tests.
+- [x] Added server-only `/api/db/status`, `/api/db/leads`, `/api/db/leads/:id` routes, gated by `CRM_DB_READ_ENABLED=true`, `DATABASE_URL` and configured Basic Auth; no database write routes.
+- [x] Reconciled the database migration gate and canonical data model docs with the provisioned Supabase state.
+- [ ] Independently verify new deployment and CI, securely connect Render, and run synthetic authenticated DB integration tests.
+- [ ] Implement full durable CRUD/event/AI-evidence model and restore-tested backups before real customer import. D06–D08 remain unresolved.
