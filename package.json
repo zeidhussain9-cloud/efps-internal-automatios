@@ -8,7 +8,9 @@
     "start": "node crm-server.mjs",
     "test": "node --test tests/crm-logic.test.mjs tests/synthetic-storage.test.mjs tests/server-auth.test.mjs tests/ollama-adapter.test.mjs tests/housing-sheet-adapter.test.mjs tests/server-integration.test.mjs tests/historical-import-plan.test.mjs tests/migration.test.mjs tests/crm-repository.test.mjs tests/crm-startup-check.test.mjs",
     "test:browser": "node --test tests/browser.test.mjs",
-    "db:migrate": "node scripts/migrate-crm.mjs"
+    "db:migrate": "node scripts/migrate-crm.mjs",
+    "db:backup": "node scripts/backup-crm.mjs",
+    "db:restore": "node scripts/restore-crm.mjs"
   },
   "dependencies": {
     "@vitejs/plugin-react": "4.3.4",
