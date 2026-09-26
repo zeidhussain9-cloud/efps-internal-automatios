@@ -8,9 +8,17 @@ test('normalizes direct Supabase URL to IPv4 session pooler',()=>{
  assert.match(out,/postgres\.qttcutwzehtskfcwxkwj:.*@/);
  assert.match(out,/sslmode=require/);
 });
+test('normalizes a raw special-character password without exposing it',()=>{
+ const input='postgresql://postgres:p@ss#word@db.qttcutwzehtskfcwxkwj.supabase.co:5432/postgres';
+ const out=normalizeConnectionString(input);
+ assert.match(out,/@aws-0-ap-south-1\\.pooler\\.supabase\\.com:5432\\/postgres\\?sslmode=require/);
+ assert.match(out,/postgres\\.qttcutwzehtskfcwxkwj:.*@/);
+ assert.match(out,/p%40ss%23word/);
+});
 test('reports normalized endpoint class without exposing connection details',()=>{
  assert.equal(connectionEndpointClass('postgresql://postgres:fictional@db.qttcutwzehtskfcwxkwj.supabase.co:5432/postgres'),'supabase_session_pooler_ipv4');
  assert.equal(connectionEndpointClass('postgresql://postgres:fictional@db.example.invalid:5432/postgres'),'external_or_unknown');
+ assert.equal(connectionEndpointClass('not-a-url'),'invalid_url');
 });
 test('leaves non-Supabase URLs unchanged',()=>{
  const input='postgresql://postgres:fictional@db.example.invalid:5432/postgres';
