@@ -34,7 +34,7 @@ jobs:
         run: python tools/repository_audit.py
       - name: Run inventory and deterministic regression suite
         env:
-          PYTHONPATH: .:modules/efps-inventory-mgmnt
+          PYTHONPATH: .:modules/efps-inventory-mgmnt:modules/efps-inventory-mgmnt/src
         run: |
           python -m pytest -q shared/google_sheets/test_schema.py modules/efps-inventory-mgmnt/tests modules/efps-inventory-mgmnt/src/test_inventory_pipeline.py tools/test_deterministic_edge_cases.py
           python tools/projection_regression_check.py
