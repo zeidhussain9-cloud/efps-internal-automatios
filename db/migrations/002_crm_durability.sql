@@ -65,3 +65,38 @@ REVOKE ALL ON TABLE crm_idempotency_keys FROM anon, authenticated;
 ALTER TABLE crm_property_media ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON TABLE crm_property_media FROM anon, authenticated;
 COMMIT;
+
+CREATE OR REPLACE FUNCTION crm_reject_append_only_mutation() RETURNS trigger
+LANGUAGE plpgsql AS $$
+BEGIN
+ RAISE EXCEPTION 'append-only CRM record cannot be modified';
+END;
+$$;
+
+DROP TRIGGER IF EXISTS crm_messages_append_only ON crm_messages;
+CREATE TRIGGER crm_messages_append_only BEFORE UPDATE OR DELETE ON crm_messages
+FOR EACH ROW EXECUTE FUNCTION crm_reject_append_only_mutation();
+
+DROP TRIGGER IF EXISTS crm_activity_append_only ON crm_activity;
+CREATE TRIGGER crm_activity_append_only BEFORE UPDATE OR DELETE ON crm_activity
+FOR EACH ROW EXECUTE FUNCTION crm_reject_append_only_mutation();
+
+DROP TRIGGER IF EXISTS crm_requirement_evidence_append_only ON crm_requirement_evidence;
+CREATE TRIGGER crm_requirement_evidence_append_only BEFORE UPDATE OR DELETE ON crm_requirement_evidence
+FOR EACH ROW EXECUTE FUNCTION crm_reject_append_only_mutation();
+
+DROP TRIGGER IF EXISTS crm_property_actions_append_only ON crm_property_actions;
+CREATE TRIGGER crm_property_actions_append_only BEFORE UPDATE OR DELETE ON crm_property_actions
+FOR EACH ROW EXECUTE FUNCTION crm_reject_append_only_mutation();
+
+CREATE OR REPLACE FUNCTION crm_touch_lead_updated_at() RETURNS trigger
+LANGUAGE plpgsql AS $$
+BEGIN
+ NEW.updated_at=now();
+ RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS crm_leads_touch_updated_at ON crm_leads;
+CREATE TRIGGER crm_leads_touch_updated_at BEFORE UPDATE ON crm_leads
+FOR EACH ROW EXECUTE FUNCTION crm_touch_lead_updated_at();
