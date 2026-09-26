@@ -7,11 +7,11 @@ import {createCrmRepository} from './src/crm-repository.mjs';
 import {startupDatabaseCheck} from './src/crm-startup-check.mjs';
 const root=resolve('dist');
 const mime={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.svg':'image/svg+xml','.png':'image/png','.ico':'image/x-icon'};
-const security={'X-Content-Type-Options':'nosniff','Referrer-Policy':'no-referrer','X-Frame-Options':'DENY','Cache-Control':'no-store','Content-Security-Policy':"default-src 'self'; img-src 'self' https: data:; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'"};
+const security={'X-Content-Type-Options':'nosniff','Referrer-Policy':'no-referrer','X-Frame-Options':'DENY','Cache-Control':'no-store','Strict-Transport-Security':'max-age=31536000','Permissions-Policy':'geolocation=(),camera=(),microphone=()','Cross-Origin-Opener-Policy':'same-origin','Cross-Origin-Resource-Policy':'same-origin','X-Permitted-Cross-Domain-Policies':'none','Content-Security-Policy':"default-src 'self'; img-src 'self' https: data:; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'"};
 createServer(async(req,res)=>{
  try{
   const p=decodeURIComponent(new URL(req.url,'http://localhost').pathname);
-  if(p==='/health'){res.writeHead(200,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify({ok:true,mode:'synthetic',access:accessMode(process.env)}));}
+  if(p==='/health'){res.writeHead(200,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify({ok:true}));}
   const mode=accessMode(process.env);
   if(mode==='misconfigured'){res.writeHead(503,security);return res.end('CRM access configuration incomplete');}
   if(mode==='protected'&&!authorized(req.headers.authorization,process.env.CRM_BASIC_AUTH_USERNAME,process.env.CRM_BASIC_AUTH_PASSWORD)){res.writeHead(401,{...security,'WWW-Authenticate':'Basic realm="EasyFind CRM"'});return res.end('Authentication required');}
@@ -28,7 +28,7 @@ createServer(async(req,res)=>{
     else if(p==='/api/db/leads'){
      const q=new URL(req.url,'http://localhost').searchParams;
      const raw=q.get('limit')??'50';
-     if(!/^\\d{1,3}$/.test(raw)){res.writeHead(400,security);return res.end('Invalid limit');}
+     if(!/^\d{1,3}$/.test(raw)){res.writeHead(400,security);return res.end('Invalid limit');}
      data={leads:await repo.listLeads(Number(raw))};
     }else{
      const id=decodeURIComponent(p.slice('/api/db/leads/'.length));
