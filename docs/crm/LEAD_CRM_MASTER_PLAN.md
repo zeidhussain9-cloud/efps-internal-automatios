@@ -74,7 +74,7 @@ The existing Slack automation alone creates and updates the Housing Listings She
 - [ ] Validate counts and sampling against the lead audit.
 
 ### Phase 4 — Live integrations, later
-- [ ] Configure later read-only CRM consumption of the existing Slack-maintained Housing Listings Sheet, including edit-audit provenance; service-account JSON belongs in Render only.
+- [x] Implement disabled-by-default read-only Sheets adapter and mocked service-account tests; no inventory writes.\n- [ ] Configure later read-only CRM consumption of the existing Slack-maintained Housing Listings Sheet, including edit-audit provenance; service-account JSON belongs in Render only.
 - [ ] Future WhAPI webhook ingestion.
 - [ ] AI production execution.
 - [ ] Controlled CRM synchronization.
@@ -87,10 +87,10 @@ The existing Slack automation alone creates and updates the Housing Listings She
 - [x] Implement synthetic Activity, Settings, follow-ups, inventory search/no-image fallback and per-lead pin/exclude state.\n- [ ] Complete production D01–D05: secure auth, durable lead history, real verified inventory media, AI and advanced workflows.
 - [x] Extract reusable tested domain logic for queue filtering, matching, validation and follow-ups; add unit tests and CI.\n- [ ] Finish UI component refactor and browser end-to-end tests.
 - [ ] Identify genuinely stale CRM files before any deletion.
-- [x] Synthetic browser persistence, schema-version/corruption recovery, requirements validation and optional server-side Basic Auth gate implemented.\n- [ ] Verify CI and access behavior; production durable database, backups and full session authentication remain pending.
+- [x] Synthetic browser persistence, schema-version/corruption recovery, requirements validation and optional server-side Basic Auth gate implemented.\n- [ ] Verify CI and access behavior; production durable database, backups and full session authentication remain pending. Render preview uses browser-only fictional persistence.
 - [x] Add first fictional seed fixtures with known expected extraction outcomes and basic fixture tests (not yet representative of raw-data distributions).
 - [ ] Inspect authorized local raw extraction and generate fictional representative fixtures with expected results.
-- [ ] Verify existing Ollama Render variable names without disclosing or overwriting secrets; implement and test secured server-side adapter on synthetic data.
+- [x] Implement gated server-side Ollama adapter and mocked unit tests using only fictional fixture IDs; human Accept/Reject UI added.\n- [ ] Verify existing Ollama Render variable names without disclosing or overwriting secrets; enable and run a real synthetic model request after access control.
 - [ ] Verify model extraction, incremental updates, matching, draft safety and failure/retry handling.
 - [ ] Review D06–D08 and obtain pilot approval before live data.
 
