@@ -1,104 +1,49 @@
 import pg from 'pg';
 const SUPABASE_SESSION_POOLER_HOST='aws-0-ap-south-1.pooler.supabase.com';
-const trimConnectionString=value=>{
- if(typeof value!=='string')return value;
- const trimmed=value.trim();
- if((trimmed.startsWith('"')&&trimmed.endsWith('"'))||(trimmed.startsWith("'")&&trimmed.endsWith("'")))return trimmed.slice(1,-1).trim();
- return trimmed;
-};
+const trimConnectionString=value=>{if(typeof value!=='string')return value;const trimmed=value.trim();if((trimmed.startsWith('"')&&trimmed.endsWith('"'))||(trimmed.startsWith("'")&&trimmed.endsWith("'")))return trimmed.slice(1,-1).trim();return trimmed};
 const decodePart=value=>{try{return decodeURIComponent(value)}catch{return value}};
 const encodePart=value=>encodeURIComponent(decodePart(value));
-function parseLoosePostgresUrl(value){
- const trimmed=trimConnectionString(value);
- if(!/^postgres(?:ql)?:\/\//i.test(trimmed))return null;
- const body=trimmed.slice(trimmed.indexOf('://')+3);
- const at=body.lastIndexOf('@');
- if(at<=0)return null;
- const userInfo=body.slice(0,at);
- const remainder=body.slice(at+1);
- const colon=userInfo.indexOf(':');
- const username=colon>=0?userInfo.slice(0,colon):userInfo;
- const password=colon>=0?userInfo.slice(colon+1):'';
- const cutCandidates=[remainder.indexOf('/'),remainder.indexOf('?')].filter(n=>n>=0);
- const cut=cutCandidates.length?Math.min(...cutCandidates):-1;
- const authority=cut>=0?remainder.slice(0,cut):remainder;
- const pathAndQuery=cut>=0?remainder.slice(cut):'/postgres';
- const hostMatch=authority.match(/^([^:]+)(?::(\d+))?$/);
- if(!hostMatch)return null;
- return {hostname:hostMatch[1],port:hostMatch[2]||'',username,password,pathAndQuery};
-}
-function parseWhatwg(value){
- try{
-  const url=new URL(trimConnectionString(value));
-  if(/^postgres(?:ql)?$/i.test(url.protocol.replace(':',''))&&url.hostname)return {
-   hostname:url.hostname,port:url.port,username:url.username,password:url.password,pathAndQuery:url.pathname+(url.search||'')
-  };
- }catch{}
- return null;
-}
-function recognizedParts(value){
- const whatwg=parseWhatwg(value);
- if(whatwg&&(
-   /^db\.[a-z0-9]+\.supabase\.co$/i.test(whatwg.hostname)||
-   /^aws-[0-9-]+-[a-z0-9-]+\.pooler\.supabase\.com$/i.test(whatwg.hostname)
- ))return whatwg;
- return parseLoosePostgresUrl(value);
-}
-export function normalizeConnectionString(value){
- if(!value)return value;
- const parts=recognizedParts(value);
- if(!parts)return value;
- const direct=parts.hostname.match(/^db\.([a-z0-9]+)\.supabase\.co$/i);
- const pooler=parts.hostname.match(/^aws-[0-9-]+-([a-z0-9-]+)\.pooler\.supabase\.com$/i);
- if(direct){
-  return 'postgresql://postgres.'+direct[1]+':'+encodePart(parts.password)+'@'+SUPABASE_SESSION_POOLER_HOST+':5432/postgres';
- }
- if(pooler&&parts.port==='5432'){
-  const projectRef=parts.username.match(/^postgres\.([a-z0-9]+)$/i)?.[1];
-  if(projectRef){
-   return 'postgresql://postgres.'+projectRef+':'+encodePart(parts.password)+'@'+SUPABASE_SESSION_POOLER_HOST+':5432/postgres';
-  }
- }
- return value;
-}
-export function connectionStringShape(value,{sslCaConfigured=Boolean(process.env.DATABASE_SSL_CA)}={}){
- const raw=typeof value==='string'?value.trim():'';
- const unquoted=trimConnectionString(value)||'';
- const parts=parseWhatwg(unquoted)||parseLoosePostgresUrl(unquoted);
- const host=parts?.hostname||'';
- const hostClass=/^db\.[a-z0-9]+\.supabase\.co$/i.test(host)?'supabase_direct':/^aws-[0-9-]+-[a-z0-9-]+\.pooler\.supabase\.com$/i.test(host)?'supabase_pooler':'other';
- return {
-  present:Boolean(raw),
-  length:raw.length,
-  outerQuotes:Boolean(raw.length>=2&&((raw.startsWith('"')&&raw.endsWith('"'))||(raw.startsWith("'")&&raw.endsWith("'")))),
-  postgresScheme:/^postgres(?:ql)?:\/\//i.test(unquoted),
-  hasUserInfoAt:unquoted.includes('@'),
-  parsed:Boolean(parts),
-  hostClass,
-  port:parts?.port||'default',
-  usernamePresent:Boolean(parts?.username),
-  passwordPresent:Boolean(parts?.password),
-  databasePathPresent:Boolean(parts?.pathAndQuery),
-  sslCaConfigured
- };
-}
-export function connectionEndpointClass(value){
- if(!value)return 'missing';
- const normalized=normalizeConnectionString(value);
- const parts=parseWhatwg(normalized)||parseLoosePostgresUrl(normalized);
- if(!parts)return 'invalid_url';
- if(parts.hostname===SUPABASE_SESSION_POOLER_HOST&&parts.port==='5432')return 'supabase_session_pooler_ipv4';
- if(/^db\.[a-z0-9]+\.supabase\.co$/i.test(parts.hostname))return 'supabase_direct_ipv6_or_addon';
- if(/\.pooler\.supabase\.com$/i.test(parts.hostname))return 'supabase_pooler_other';
- return 'external_or_unknown';
-}
+function parseLoosePostgresUrl(value){const trimmed=trimConnectionString(value);if(!/^postgres(?:ql)?:\/\//i.test(trimmed))return null;const body=trimmed.slice(trimmed.indexOf('://')+3);const at=body.lastIndexOf('@');if(at<=0)return null;const userInfo=body.slice(0,at),remainder=body.slice(at+1);const colon=userInfo.indexOf(':');const username=colon>=0?userInfo.slice(0,colon):userInfo,password=colon>=0?userInfo.slice(colon+1):'';const cutCandidates=[remainder.indexOf('/'),remainder.indexOf('?')].filter(n=>n>=0);const cut=cutCandidates.length?Math.min(...cutCandidates):-1;const authority=cut>=0?remainder.slice(0,cut):remainder,pathAndQuery=cut>=0?remainder.slice(cut):'/postgres';const hostMatch=authority.match(/^([^:]+)(?::(\d+))?$/);if(!hostMatch)return null;return{hostname:hostMatch[1],port:hostMatch[2]||'',username,password,pathAndQuery}};
+function parseWhatwg(value){try{const url=new URL(trimConnectionString(value));if(/^postgres(?:ql)?$/i.test(url.protocol.replace(':',''))&&url.hostname)return{hostname:url.hostname,port:url.port,username:url.username,password:url.password,pathAndQuery:url.pathname+(url.search||'')}}catch{}return null}
+function recognizedParts(value){const whatwg=parseWhatwg(value);if(whatwg&&(/^db\.[a-z0-9]+\.supabase\.co$/i.test(whatwg.hostname)||/^aws-[0-9-]+-[a-z0-9-]+\.pooler\.supabase\.com$/i.test(whatwg.hostname)))return whatwg;return parseLoosePostgresUrl(value)}
+export function normalizeConnectionString(value){if(!value)return value;const parts=recognizedParts(value);if(!parts)return value;const direct=parts.hostname.match(/^db\.([a-z0-9]+)\.supabase\.co$/i),pooler=parts.hostname.match(/^aws-[0-9-]+-([a-z0-9-]+)\.pooler\.supabase\.com$/i);if(direct)return'postgresql://postgres.'+direct[1]+':'+encodePart(parts.password)+'@'+SUPABASE_SESSION_POOLER_HOST+':5432/postgres';if(pooler&&parts.port==='5432'){const projectRef=parts.username.match(/^postgres\.([a-z0-9]+)$/i)?.[1];if(projectRef)return'postgresql://postgres.'+projectRef+':'+encodePart(parts.password)+'@'+SUPABASE_SESSION_POOLER_HOST+':5432/postgres'}return value}
+export function connectionStringShape(value,{sslCaConfigured=Boolean(process.env.DATABASE_SSL_CA)}={}){const raw=typeof value==='string'?value.trim():'',unquoted=trimConnectionString(value)||'',parts=parseWhatwg(unquoted)||parseLoosePostgresUrl(unquoted),host=parts?.hostname||'',hostClass=/^db\.[a-z0-9]+\.supabase\.co$/i.test(host)?'supabase_direct':/^aws-[0-9-]+-[a-z0-9-]+\.pooler\.supabase\.com$/i.test(host)?'supabase_pooler':'other';return{present:Boolean(raw),length:raw.length,outerQuotes:Boolean(raw.length>=2&&((raw.startsWith('"')&&raw.endsWith('"'))||(raw.startsWith("'")&&raw.endsWith("'")))),postgresScheme:/^postgres(?:ql)?:\/\//i.test(unquoted),hasUserInfoAt:unquoted.includes('@'),parsed:Boolean(parts),hostClass,port:parts?.port||'default',usernamePresent:Boolean(parts?.username),passwordPresent:Boolean(parts?.password),databasePathPresent:Boolean(parts?.pathAndQuery),sslCaConfigured}}
+export function connectionEndpointClass(value){if(!value)return'missing';const normalized=normalizeConnectionString(value),parts=parseWhatwg(normalized)||parseLoosePostgresUrl(normalized);if(!parts)return'invalid_url';if(parts.hostname===SUPABASE_SESSION_POOLER_HOST&&parts.port==='5432')return'supabase_session_pooler_ipv4';if(/^db\.[a-z0-9]+\.supabase\.co$/i.test(parts.hostname))return'supabase_direct_ipv6_or_addon';if(/\.pooler\.supabase\.com$/i.test(parts.hostname))return'supabase_pooler_other';return'external_or_unknown'}
+const jsonObject=value=>{if(value===undefined)return{};if(value===null||typeof value!=='object'||Array.isArray(value))throw Error('Expected JSON object');return value};
+const nullableString=(value,name,max=500)=>{if(value===undefined||value===null)return null;if(typeof value!=='string'||value.length>max)throw Error('Invalid '+name);return value};
 export function createCrmRepository({pool,connectionString=process.env.DATABASE_URL,sslCa=process.env.DATABASE_SSL_CA}={}){
  if(!pool&&!connectionString)throw Error('DATABASE_URL required');
- const db=pool||new pg.Pool({connectionString:normalizeConnectionString(connectionString),max:5,connectionTimeoutMillis:5000,ssl:{rejectUnauthorized:true,...(sslCa?{ca:sslCa}: {})}});
- return {
-  async health(){const r=await db.query('SELECT 1 AS ok');return r.rows[0]?.ok===1;},
-  async listLeads(limit=50){if(!Number.isInteger(limit)||limit<1||limit>100)throw Error('Invalid limit');const r=await db.query('SELECT id,display_name,status,priority,requirements,updated_at FROM crm_leads ORDER BY updated_at DESC,id LIMIT $1',[limit]);return r.rows;},
-  async getLead(id){if(typeof id!=='string'||!id||id.length>128)throw Error('Invalid lead ID');const r=await db.query('SELECT * FROM crm_leads WHERE id=$1',[id]);return r.rows[0]||null;},
-  async close(){if(!pool)await db.end();}
+ const db=pool||new pg.Pool({connectionString:normalizeConnectionString(connectionString),max:5,connectionTimeoutMillis:5000,ssl:{rejectUnauthorized:true,...(sslCa?{ca:sslCa}:{})}});
+ const withTx=async fn=>{if(typeof db.connect!=='function')throw Error('Database transaction client unavailable');const client=await db.connect();try{await client.query('BEGIN');const result=await fn(client);await client.query('COMMIT');return result}catch(error){try{await client.query('ROLLBACK')}catch{}throw error}finally{client.release()}};
+ return{
+  async health(){const r=await db.query('SELECT 1 AS ok');return r.rows[0]?.ok===1},
+  async listLeads(limit=50){if(!Number.isInteger(limit)||limit<1||limit>100)throw Error('Invalid limit');const r=await db.query('SELECT id,display_name,status,priority,requirements,updated_at FROM crm_leads ORDER BY updated_at DESC,id LIMIT $1',[limit]);return r.rows},
+  async getLead(id){if(typeof id!=='string'||!id||id.length>128)throw Error('Invalid lead ID');const r=await db.query('SELECT * FROM crm_leads WHERE id=$1',[id]);return r.rows[0]||null},
+  async createLead({id,displayName=null,normalizedPhone=null,status='Review',priority='Medium',requirements={},operatorNotes='',actor}){
+   if(typeof id!=='string'||!/^L-[A-Za-z0-9_-]{1,120}$/.test(id))throw Error('Invalid lead ID');if(!actor||typeof actor!=='string'||actor.length>128)throw Error('Invalid actor');
+   const req=jsonObject(requirements);return withTx(async client=>{const r=await client.query('INSERT INTO crm_leads(id,display_name,normalized_phone,status,priority,requirements,operator_notes) VALUES($1,$2,$3,$4,$5,$6::jsonb,$7) RETURNING *',[id,nullableString(displayName,'display name',200),nullableString(normalizedPhone,'normalized phone',64),status,priority,JSON.stringify(req),operatorNotes]);await client.query('INSERT INTO crm_activity(lead_id,actor,action,details) VALUES($1,$2,$3,$4::jsonb)',[id,actor,'lead.created',JSON.stringify({status,priority})]);return r.rows[0]})},
+  async updateLead({id,displayName,normalizedPhone,status,priority,requirements,operatorNotes,actor}){
+   if(typeof id!=='string'||!id||id.length>128)throw Error('Invalid lead ID');if(!actor||typeof actor!=='string'||actor.length>128)throw Error('Invalid actor');
+   if(status!==undefined&&!['New','Qualified','Contacted','Follow-up','Review','Archived'].includes(status))throw Error('Invalid status');
+   if(priority!==undefined&&!['High','Medium','Low'].includes(priority))throw Error('Invalid priority');
+   const fields=[],args=[];const add=(sql,v)=>{fields.push(sql);args.push(v)};
+   if(displayName!==undefined)add('display_name=$'+(args.length+1),nullableString(displayName,'display name',200));
+   if(normalizedPhone!==undefined)add('normalized_phone=$'+(args.length+1),nullableString(normalizedPhone,'normalized phone',64));
+   if(status!==undefined)add('status=$'+(args.length+1),status);
+   if(priority!==undefined)add('priority=$'+(args.length+1),priority);
+   if(requirements!==undefined)add('requirements=$'+(args.length+1)+'::jsonb',JSON.stringify(jsonObject(requirements)));
+   if(operatorNotes!==undefined)add('operator_notes=$'+(args.length+1),nullableString(operatorNotes,'operator notes',5000)??'');
+   if(!fields.length)throw Error('No lead changes');
+   return withTx(async client=>{args.push(id);const r=await client.query('UPDATE crm_leads SET '+fields.join(',')+',updated_at=now() WHERE id=$'+args.length+' RETURNING *',args);if(!r.rows[0])return null;await client.query('INSERT INTO crm_activity(lead_id,actor,action,details) VALUES($1,$2,$3,$4::jsonb)',[id,actor,'lead.updated',JSON.stringify({fields:fields.map(x=>x.split('=')[0])})]);return r.rows[0]})
+  },
+  async appendActivity({leadId,actor,action,details={}}){if(!leadId||!actor||!action||action.length>128)throw Error('Invalid activity');const r=await db.query('INSERT INTO crm_activity(lead_id,actor,action,details) VALUES($1,$2,$3,$4::jsonb) RETURNING *',[leadId,actor,action,JSON.stringify(jsonObject(details))]);return r.rows[0]},
+  async listActivity(leadId,limit=100){if(!leadId||leadId.length>128||!Number.isInteger(limit)||limit<1||limit>200)throw Error('Invalid activity query');const r=await db.query('SELECT * FROM crm_activity WHERE lead_id=$1 ORDER BY occurred_at DESC,id DESC LIMIT $2',[leadId,limit]);return r.rows},
+  async addFollowup({id,leadId,dueAt,note='',actor}){if(!id||!leadId||!actor)throw Error('Invalid follow-up');if(!/^\d{4}-\d{2}-\d{2}T/.test(String(dueAt)))throw Error('Invalid dueAt');return withTx(async client=>{const r=await client.query('INSERT INTO crm_followups(id,lead_id,due_at,note) VALUES($1,$2,$3,$4) RETURNING *',[id,leadId,dueAt,nullableString(note,'note',2000)||'']);await client.query('INSERT INTO crm_activity(lead_id,actor,action,details) VALUES($1,$2,$3,$4::jsonb)',[leadId,actor,'followup.created',JSON.stringify({followupId:id})]);return r.rows[0]})},
+  async completeFollowup({id,actor}){if(!id||!actor)throw Error('Invalid follow-up');return withTx(async client=>{const r=await client.query('UPDATE crm_followups SET completed_at=now() WHERE id=$1 AND completed_at IS NULL RETURNING *',[id]);if(!r.rows[0])return null;await client.query('INSERT INTO crm_activity(lead_id,actor,action,details) VALUES($1,$2,$3,$4::jsonb)',[r.rows[0].lead_id,actor,'followup.completed',JSON.stringify({followupId:id})]);return r.rows[0]})},
+  async appendRequirementEvidence({leadId,fieldName,value,sourceMessageId=null,sourceNumber='',actor}){if(!leadId||!fieldName||fieldName.length>128||!actor)throw Error('Invalid requirement evidence');const r=await db.query('INSERT INTO crm_requirement_evidence(lead_id,field_name,value,source_message_id,source_number,actor) VALUES($1,$2,$3::jsonb,$4,$5,$6) RETURNING *',[leadId,fieldName,JSON.stringify(jsonObject(value)),sourceMessageId,nullableString(sourceNumber,'source number',128)||'',actor]);return r.rows[0]},
+  async recordProviderEvent({provider,providerEventId,eventType='',payload}){if(!provider||provider.length>64||!providerEventId||providerEventId.length>256)throw Error('Invalid provider event');const r=await db.query('INSERT INTO crm_provider_events(provider,provider_event_id,event_type,payload) VALUES($1,$2,$3,$4::jsonb) ON CONFLICT(provider,provider_event_id) DO NOTHING RETURNING id',[provider,providerEventId,eventType,JSON.stringify(jsonObject(payload))]);return{inserted:Boolean(r.rows[0]),id:r.rows[0]?.id||null}},
+  async getAiCursor(sourceNumber){if(!sourceNumber)throw Error('Invalid source number');const r=await db.query('SELECT * FROM crm_ai_cursors WHERE source_number=$1',[sourceNumber]);return r.rows[0]||null},
+  async setAiCursor({sourceNumber,cursor,lastMessageAt=null}){if(!sourceNumber||typeof cursor!=='string'||cursor.length>500)throw Error('Invalid AI cursor');const r=await db.query('INSERT INTO crm_ai_cursors(source_number,cursor,last_message_at) VALUES($1,$2,$3) ON CONFLICT(source_number) DO UPDATE SET cursor=EXCLUDED.cursor,last_message_at=EXCLUDED.last_message_at,updated_at=now() RETURNING *',[sourceNumber,cursor,lastMessageAt]);return r.rows[0]},
+  async close(){if(!pool)await db.end()}
  };
 }
