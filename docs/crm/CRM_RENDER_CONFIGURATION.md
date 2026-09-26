@@ -19,15 +19,17 @@ The operator has stated the Ollama API key and model name have already been plac
 
 ## Read-only Google Sheets — credential-format reconciliation pending
 
-The existing Slack integration owns creation and updates of Housing Listings. CRM must only read the existing sheet and preserve its editor audit trail. The operator reports already adding the **full JSON service account** and hardcoding the sheet ID. The current adapter does **not** consume arbitrary raw JSON or a hardcoded ID: it checks the following server-side environment names. Its latest startup flags were false for the two checked names, which does not establish that the operator's differently named raw JSON credential is absent. Do not print or overwrite existing credentials. Current adapter inputs:
+The existing Slack integration owns creation and updates of Housing Listings. CRM must only read the existing sheet and preserve its editor audit trail. The operator reports already adding the **full JSON service account** and hardcoding the sheet ID. The adapter now accepts the existing repository credential names (`GOOGLE_SERVICE_ACCOUNT_JSON`, `GOOGLE_APPLICATION_CREDENTIALS`) as well as the CRM-specific Base64 name. Its latest Render runtime already detected the Sheet ID; credential presence must be rechecked after this adapter change. Do not print or overwrite existing credentials. Current adapter inputs:
 
 | Variable | Purpose |
 | --- | --- |
 | `GOOGLE_SERVICE_ACCOUNT_JSON_BASE64` | Base64 of the entire service-account JSON, not the private key alone |
+| `GOOGLE_SERVICE_ACCOUNT_JSON` | Existing legacy raw JSON credential name; accepted server-side |
+| `GOOGLE_APPLICATION_CREDENTIALS` | Existing legacy credential environment name; accepted server-side |
 | `HOUSING_SHEET_ID` | Spreadsheet ID of the verified Housing Listings document |
 | `HOUSING_SHEET_TAB` | Exact verified worksheet name, expected `Housing_Listings` unless source differs |
 
-A read-only service-account adapter is implemented and disabled by default with `CRM_SYNTHETIC_SHEETS_ENABLED`. It currently requires Base64 JSON, a sheet ID environment variable and a tab name; reconcile these with the operator's existing configuration before testing. A hardcoded sheet ID has not been verified in `src/housing-sheet-adapter.mjs`. Do not enable it until the intended real sheet and access policy are approved. Grant the service-account email **Viewer** access to the verified spreadsheet. Do not give it Editor access or share the JSON publicly. The CRM must not write to the sheet or create a competing inventory workflow. Base64 is transport encoding, not encryption; treat it as a secret. Do not configure any real sheet access until the synthetic pilot and access gate are verified.
+A read-only service-account adapter is implemented and disabled by default with `CRM_SYNTHETIC_SHEETS_ENABLED`. It accepts the repository's legacy raw JSON environment names in addition to the CRM-specific Base64 form, plus a sheet ID and tab name. A hardcoded sheet ID has not been verified in `src/housing-sheet-adapter.mjs`. Do not enable it until the intended real sheet and access policy are approved. Grant the service-account email **Viewer** access to the verified spreadsheet. Do not give it Editor access or share the JSON publicly. The CRM must not write to the sheet or create a competing inventory workflow. Base64 is transport encoding, not encryption; treat it as a secret. Do not configure any real sheet access until the synthetic pilot and access gate are verified.
 
 ## Release checks
 
