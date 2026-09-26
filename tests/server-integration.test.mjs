@@ -5,3 +5,20 @@ test('incomplete auth configuration fails closed',async()=>{const{proc,base}=awa
 test('unknown APIs and traversal cannot expose files',async()=>{const{proc,base}=await start();try{assert.equal((await fetch(base+'/api/private')).status,404);assert.equal((await fetch(base+'/missing.js')).status,404);assert.equal((await fetch(base+'/',{method:'PUT'})).status,405)}finally{proc.kill()}});
 
 test('database pilot routes fail closed without opt-in and connection',async()=>{const{proc,base}=await start({CRM_BASIC_AUTH_USERNAME:'pilot',CRM_BASIC_AUTH_PASSWORD:'fictional-secret',CRM_DB_READ_ENABLED:'true',DATABASE_URL:''});try{const auth='Basic '+Buffer.from('pilot:fictional-secret').toString('base64');assert.equal((await fetch(base+'/api/db/status')).status,401);assert.equal((await fetch(base+'/api/db/status',{headers:{Authorization:auth}})).status,404);assert.equal((await fetch(base+'/api/db/leads',{headers:{Authorization:auth}})).status,404)}finally{proc.kill()}});
+
+test('durable DB mutations remain fail-closed until write gate is enabled',async()=>{
+ const{proc,base}=await start({CRM_BASIC_AUTH_USERNAME:'pilot',CRM_BASIC_AUTH_PASSWORD:'fictional-secret',CRM_DB_WRITE_ENABLED:'true',DATABASE_URL:''});
+ try{
+  const auth='Basic '+Buffer.from('pilot:fictional-secret').toString('base64');
+  const response=await fetch(base+'/api/db/leads',{method:'POST',headers:{Authorization:auth,'Content-Type':'application/json'},body:JSON.stringify({id:'L-1001'})});
+  assert.equal(response.status,404);
+ }finally{proc.kill()}
+});
+test('write gate does not shadow GET lead routes',async()=>{
+ const{proc,base}=await start({CRM_BASIC_AUTH_USERNAME:'pilot',CRM_BASIC_AUTH_PASSWORD:'fictional-secret',CRM_DB_WRITE_ENABLED:'true',CRM_DB_READ_ENABLED:'true',DATABASE_URL:''});
+ try{
+  const auth='Basic '+Buffer.from('pilot:fictional-secret').toString('base64');
+  const response=await fetch(base+'/api/db/leads',{headers:{Authorization:auth}});
+  assert.equal(response.status,404);
+ }finally{proc.kill()}
+});
