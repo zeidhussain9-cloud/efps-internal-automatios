@@ -130,7 +130,7 @@ Real local-data connection comes after the local SQLite migration/reconciliation
 - [ ] Implement durable authenticated production CRUD, transaction-safe audited edits and import dry-run; run full synthetic database integration tests.
 - [ ] Reconcile 735/23,454 original extraction against curated 308/6,064 subset before importing any real records.
 - [ ] Verify latest CI unit, HTTP and Chromium results separately from user-approved browser appearance.
-- [ ] Reconcile the user's reported full service-account JSON and hardcoded sheet ID with the adapter's current Base64/HOUSING_SHEET_ID expectations; verify read-only Sheets access. Ollama endpoint/model are present but not yet exercised.
+- [x] Reconciled the user's reported full service-account JSON with the existing repository credential names; CRM adapter now accepts raw JSON and Base64 forms. Canonical Housing_Listings Sheet ID is verified in `shared/google_sheets/schema.py` and the Render runtime detects a Sheet ID. Read-only Sheets access test remains gated on credential presence and synthetic gate. Ollama endpoint/model are present but not yet exercised.
 See `CRM_DATABASE_MIGRATION_GATE.md`.
 
 
