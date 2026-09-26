@@ -129,7 +129,7 @@ Real local-data connection comes after the local SQLite migration/reconciliation
 - [x] Supabase `easyfind-crm` provisioned as the sole hosted CRM database; no Render PostgreSQL instance is needed. Render DATABASE_URL is present but its connection probe fails; diagnose Supabase pooler/network/TLS/auth before enabling real data. Backup/restore requirements remain open.
 - [ ] Implement durable authenticated production CRUD, transaction-safe audited edits and import dry-run; run full synthetic database integration tests.
 - [ ] Reconcile 735/23,454 original extraction against curated 308/6,064 subset before importing any real records.
-- [ ] Verify latest CI unit, HTTP and Chromium results separately from user-approved browser appearance.
+- [x] Verify latest CI unit, HTTP and Chromium results separately from user-approved browser appearance: GitHub Actions `CRM synthetic CI` run #64 (`83994ee`) succeeded; build passed, all 45 unit/integration tests passed, and Chromium browser journey passed 1/1.
 - [x] Reconciled the user's reported full service-account JSON with the existing repository credential names; CRM adapter now accepts raw JSON and Base64 forms. Canonical Housing_Listings Sheet ID is verified in `shared/google_sheets/schema.py` and the Render runtime detects a Sheet ID. Read-only Sheets access test remains gated on credential presence and synthetic gate. Ollama endpoint/model are present but not yet exercised.
 See `CRM_DATABASE_MIGRATION_GATE.md`.
 
@@ -139,7 +139,7 @@ See `CRM_DATABASE_MIGRATION_GATE.md`.
 - [x] Applied server-only CRM core migration: nine RLS-enabled tables; revoked anon/authenticated grants; no browser-facing policies.
 - [x] Added three missing foreign-key indexes and committed matching schema migrations.
 - [x] Verified schema via SQL: zero customer leads and zero messages; no real data imported.
-- [ ] Fix the existing Render-to-Supabase server-only connection. Latest runtime evidence: `DATABASE_URL` is present but has no PostgreSQL URI scheme and is unparseable; startup consequently reports `invalid_url` / DNS. No Render PostgreSQL service is needed; secret values have not been printed or modified.
+- [ ] Fix the existing Render-to-Supabase server-only connection. Latest runtime evidence (Render startup 2026-09-26 18:39 UTC): `DATABASE_URL` is present but has no PostgreSQL URI scheme and is unparseable (`length=12`, `postgresScheme=false`, `parsed=false`, `hostClass=other`); startup consequently reports `invalid_url` / DNS. No Render PostgreSQL service is needed; secret values have not been printed or modified.
 - [ ] Implement and test authenticated durable server CRUD, raw webhook event log, per-source AI cursor, append-only requirement evidence, safe retries and restore-tested independent backups before any real data.
 - [ ] Reconcile historical Mac SQLite source with authorized local access, without modifying the source file. Do not use Desktop Commander without explicit permission.
 - [ ] Verify the existing Ollama endpoint/model and the user's reported Google service-account JSON and hardcoded sheet ID. Current adapter only recognizes GOOGLE_SERVICE_ACCOUNT_JSON_BASE64, HOUSING_SHEET_ID and HOUSING_SHEET_TAB; presence flags cannot detect other variable names or hardcoded IDs.
