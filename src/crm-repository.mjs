@@ -1,41 +1,71 @@
 import pg from 'pg';
 const SUPABASE_SESSION_POOLER_HOST='aws-0-ap-south-1.pooler.supabase.com';
-// Server-only repository. Prefer the IPv4-compatible Supabase Session Pooler for this
-// persistent Render service when the configured URL points at a Supabase endpoint.
+const trimConnectionString=value=>{
+ if(typeof value!=='string')return value;
+ const trimmed=value.trim();
+ if((trimmed.startsWith('"')&&trimmed.endsWith('"'))||(trimmed.startsWith("'")&&trimmed.endsWith("'")))return trimmed.slice(1,-1).trim();
+ return trimmed;
+};
+const decodePart=value=>{try{return decodeURIComponent(value)}catch{return value}};
+const encodePart=value=>encodeURIComponent(decodePart(value));
+function parseLoosePostgresUrl(value){
+ const trimmed=trimConnectionString(value);
+ if(!/^postgres(?:ql)?:\/\//i.test(trimmed))return null;
+ const body=trimmed.slice(trimmed.indexOf('://')+3);
+ const at=body.lastIndexOf('@');
+ if(at<=0)return null;
+ const userInfo=body.slice(0,at);
+ const remainder=body.slice(at+1);
+ const colon=userInfo.indexOf(':');
+ const username=colon>=0?userInfo.slice(0,colon):userInfo;
+ const password=colon>=0?userInfo.slice(colon+1):'';
+ const cutCandidates=[remainder.indexOf('/'),remainder.indexOf('?')].filter(n=>n>=0);
+ const cut=cutCandidates.length?Math.min(...cutCandidates):-1;
+ const authority=cut>=0?remainder.slice(0,cut):remainder;
+ const pathAndQuery=cut>=0?remainder.slice(cut):'/postgres';
+ const hostMatch=authority.match(/^([^:]+)(?::(\d+))?$/);
+ if(!hostMatch)return null;
+ return {hostname:hostMatch[1],port:hostMatch[2]||'',username,password,pathAndQuery};
+}
+function connectionParts(value){
+ const trimmed=trimConnectionString(value);
+ try{
+  const url=new URL(trimmed);
+  if(/^postgres(?:ql)?$/i.test(url.protocol.replace(':',''))&&url.hostname)return {
+   hostname:url.hostname,port:url.port,username:url.username,password:url.password,pathAndQuery:url.pathname+(url.search||'')
+  };
+ }catch{}
+ return parseLoosePostgresUrl(trimmed);
+}
+function appendSslmode(pathAndQuery){
+ return pathAndQuery.includes('?')?pathAndQuery+'&sslmode=require':pathAndQuery+'?sslmode=require';
+}
 export function normalizeConnectionString(value){
  if(!value)return value;
- try{
-  const url=new URL(value);
-  const direct=url.hostname.match(/^db\.([a-z0-9]+)\.supabase\.co$/i);
-  const pooler=url.hostname.match(/^aws-[0-9-]+-([a-z0-9-]+)\.pooler\.supabase\.com$/i);
-  if(direct){
-   url.hostname=SUPABASE_SESSION_POOLER_HOST;
-   url.port='5432';
-   if(url.username==='postgres')url.username='postgres.'+direct[1];
-   if(!url.searchParams.has('sslmode'))url.searchParams.set('sslmode','require');
-   return url.toString();
+ const parts=connectionParts(value);
+ if(!parts)return value;
+ const direct=parts.hostname.match(/^db\.([a-z0-9]+)\.supabase\.co$/i);
+ const pooler=parts.hostname.match(/^aws-[0-9-]+-([a-z0-9-]+)\.pooler\.supabase\.com$/i);
+ if(direct){
+  return 'postgresql://postgres.'+direct[1]+':'+encodePart(parts.password)+'@'+SUPABASE_SESSION_POOLER_HOST+':5432/postgres?sslmode=require';
+ }
+ if(pooler&&parts.port==='5432'){
+  const projectRef=parts.username.match(/^postgres\.([a-z0-9]+)$/i)?.[1];
+  if(projectRef){
+   return 'postgresql://postgres.'+projectRef+':'+encodePart(parts.password)+'@'+SUPABASE_SESSION_POOLER_HOST+':5432/postgres?sslmode=require';
   }
-  if(pooler&&url.port==='5432'){
-   const projectRef=(url.username||'').match(/^postgres\.([a-z0-9]+)$/i)?.[1];
-   if(projectRef){
-    url.hostname=SUPABASE_SESSION_POOLER_HOST;
-    url.username='postgres.'+projectRef;
-    if(!url.searchParams.has('sslmode'))url.searchParams.set('sslmode','require');
-    return url.toString();
-   }
-  }
-  return value;
- }catch{return value;}
+ }
+ return value;
 }
 export function connectionEndpointClass(value){
  if(!value)return 'missing';
- try{
-  const url=new URL(normalizeConnectionString(value));
-  if(url.hostname===SUPABASE_SESSION_POOLER_HOST&&url.port==='5432')return 'supabase_session_pooler_ipv4';
-  if(/^db\.[a-z0-9]+\.supabase\.co$/i.test(url.hostname))return 'supabase_direct_ipv6_or_addon';
-  if(/\.pooler\.supabase\.com$/i.test(url.hostname))return 'supabase_pooler_other';
-  return 'external_or_unknown';
- }catch{return 'invalid_url';}
+ const normalized=normalizeConnectionString(value);
+ const parts=connectionParts(normalized);
+ if(!parts)return 'invalid_url';
+ if(parts.hostname===SUPABASE_SESSION_POOLER_HOST&&parts.port==='5432')return 'supabase_session_pooler_ipv4';
+ if(/^db\.[a-z0-9]+\.supabase\.co$/i.test(parts.hostname))return 'supabase_direct_ipv6_or_addon';
+ if(/\.pooler\.supabase\.com$/i.test(parts.hostname))return 'supabase_pooler_other';
+ return 'external_or_unknown';
 }
 export function createCrmRepository({pool,connectionString=process.env.DATABASE_URL}={}){
  if(!pool&&!connectionString)throw Error('DATABASE_URL required');
