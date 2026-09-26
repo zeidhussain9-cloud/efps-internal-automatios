@@ -106,8 +106,16 @@ test('synthetic CRM browser journey',async()=>{
     await page.getByRole('dialog',{name:'Property details'}).getByText('Test Society').waitFor();
     await page.getByRole('button',{name:'Close ×'}).click();
 
+    await page.reload();
+    await page.getByText('Property inventory').waitFor();
+    assert.equal(await page.getByRole('button',{name:'Inventory',exact:true}).getAttribute('class').then(x=>x.includes('active')),true);
+
     await page.getByRole('button',{name:'Settings',exact:true}).click();
+    await page.reload();
     assert.equal(await page.getByText(/fictional fixtures only/i).count()>0,true);
+    await page.getByRole('button',{name:'Follow-ups',exact:true}).click();
+    await page.reload();
+    assert.equal(await page.getByText('Fictional follow-up').count(),1);
   }finally{
     await browser?.close();
     server.kill();
