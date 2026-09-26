@@ -16,7 +16,7 @@ export async function analyzeFictionalLead({leadId,env,fetcher=fetch}){
  try{
   const response=await fetcher(endpoint,{method:'POST',headers:{'Content-Type':'application/json',...(env.OLLAMA_API_KEY?{Authorization:'Bearer '+env.OLLAMA_API_KEY}:{})},body:JSON.stringify({model:config.model,stream:false,format:'json',messages:[{role:'system',content:'Extract fictional rental requirements. Return JSON with keys bhk,location,budget,pets,uncertainties. Do not invent missing facts or propose sending messages.'},{role:'user',content:fixture}]}),signal:controller.signal});
   if(!response.ok)throw Error('Ollama request failed ('+response.status+')');
-  const body=await response.json();const parsed=JSON.parse(body?.message?.content||'null');
+  let body;try{body=await response.json()}catch{throw Error('Provider returned non-JSON HTTP body')}if(typeof body?.message?.content!=='string'){const shape=body?.message?'message_without_content':'no_message';throw Error('Provider response shape: '+shape)}let parsed;try{parsed=JSON.parse(body.message.content)}catch{throw Error('Provider message is not JSON')}
   if(!parsed||typeof parsed!=='object'||Array.isArray(parsed))throw Error('Invalid model JSON');
   return {leadId,provider:'ollama',model:config.model,proposal:parsed,fictional:true};
  }finally{clearTimeout(timeout)}
