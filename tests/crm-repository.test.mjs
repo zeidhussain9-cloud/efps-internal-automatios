@@ -35,3 +35,23 @@ test('repository validates limits and uses parameterized SQL',async()=>{
  await assert.rejects(()=>repo.listLeads(101),/Invalid limit/);
  await assert.rejects(()=>repo.getLead(''),/Invalid lead ID/);
 });
+
+test('durable lead mutation is transactional and writes an audit event',async()=>{
+ const calls=[];
+ const client={query:async(sql,args)=>{calls.push(['client',sql,args]);if(sql.startsWith('INSERT INTO crm_leads'))return{rows:[{id:'L-1001',display_name:'A'}]};if(sql.startsWith('INSERT INTO crm_activity'))return{rows:[{id:1}]};return{rows:[]}},release:()=>calls.push(['release'])};
+ const pool={connect:async()=>client};
+ const repo=createCrmRepository({pool});
+ const row=await repo.createLead({id:'L-1001',displayName:'A',actor:'pilot',requirements:{bhk:2}});
+ assert.equal(row.id,'L-1001');assert.equal(calls[0][1],'BEGIN');assert.match(calls[1][1],/^INSERT INTO crm_leads/);assert.match(calls[2][1],/^INSERT INTO crm_activity/);assert.equal(calls[3][1],'COMMIT');assert.equal(calls[4][0],'release');
+});
+test('provider event deduplication relies on a database unique key',async()=>{
+ const calls=[];const pool={query:async(sql,args)=>{calls.push([sql,args]);return{rows:[]}}};
+ const repo=createCrmRepository({pool});
+ const result=await repo.recordProviderEvent({provider:'test',providerEventId:'evt-1',eventType:'message',payload:{id:1}});
+ assert.deepEqual(result,{inserted:false,id:null});assert.match(calls[0][0],/ON CONFLICT\(provider,provider_event_id\) DO NOTHING/);
+});
+test('AI cursor is upserted per source',async()=>{
+ const calls=[];const pool={query:async(sql,args)=>{calls.push([sql,args]);return{rows:[{source_number:'wa-1',cursor:'c1'}]}}};
+ const repo=createCrmRepository({pool});
+ const row=await repo.setAiCursor({sourceNumber:'wa-1',cursor:'c1'});assert.equal(row.cursor,'c1');assert.match(calls[0][0],/ON CONFLICT\(source_number\) DO UPDATE/);
+});
