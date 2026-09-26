@@ -4,6 +4,7 @@ import {join,extname,resolve} from 'node:path';
 import {authorized,accessMode} from './src/server-auth.mjs';
 import {analyzeFictionalLead} from './src/ollama-adapter.mjs';
 import {createCrmRepository} from './src/crm-repository.mjs';
+import {startupDatabaseCheck} from './src/crm-startup-check.mjs';
 const root=resolve('dist');
 const mime={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.svg':'image/svg+xml','.png':'image/png','.ico':'image/x-icon'};
 const security={'X-Content-Type-Options':'nosniff','Referrer-Policy':'no-referrer','X-Frame-Options':'DENY','Cache-Control':'no-store','Content-Security-Policy':"default-src 'self'; img-src 'self' https: data:; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'"};
@@ -55,4 +56,4 @@ createServer(async(req,res)=>{
   const data=await readFile(f);
   res.writeHead(200,{...security,'Content-Type':mime[extname(f)]||'application/octet-stream'});return res.end(req.method==='HEAD'?undefined:data);
  }catch{res.writeHead(500,security);res.end('CRM unavailable');}
-}).listen(Number(process.env.PORT||10000),'0.0.0.0');
+}).listen(Number(process.env.PORT||10000),'0.0.0.0',()=>{void startupDatabaseCheck(process.env);});
