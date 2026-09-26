@@ -10,7 +10,7 @@
 - Source Mac SQLite remains untouched. The original 735 leads/23,454 conversation rows and separately curated 308 leads/6,064 message subset still require reconciliation.
 
 ## Remaining gates
-1. Repair the existing server-only connection from Render to the **already-provisioned Supabase** project; do not create or provision PostgreSQL on Render. Verify whether the URL uses Supabase's IPv4-compatible session pooler (port 5432), URL-encoded password and TLS; determine the actual error safely before changing secrets. Keep existing Ollama variables intact. Never commit, print or expose the connection string to the browser.
+1. Repair the existing server-only connection from Render to the **already-provisioned Supabase** project; do not create or provision PostgreSQL on Render. The CRM repository now recognizes malformed-but-recoverable Supabase URIs and URL-encodes passwords before using the IPv4-compatible session pooler (port 5432). The remaining proof is the next Render startup: endpoint class must resolve to `supabase_session_pooler_ipv4` and `SELECT 1` must succeed. Keep existing Ollama variables intact. Never commit, print or expose the connection string to the browser.
 2. Confirm the Render deploy and GitHub CI test results; test the disabled and authenticated database routes with fictional data.
 3. Implement durable audited CRUD, provider-event inbox and deduplication, incremental AI cursors, human-override evidence and recovery. D06–D08 remain unapproved.
 4. Verify independent encrypted backup and **restore** procedures; Supabase Free must not be treated as the only durable copy of customer conversations.
