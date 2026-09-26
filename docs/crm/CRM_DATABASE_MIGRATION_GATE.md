@@ -1,6 +1,6 @@
 # CRM PostgreSQL deployment gate
 
-**Status (2026-09-26):** Supabase Free project `easyfind-crm` provisioned in Efps, Mumbai (`ap-south-1`), project ref `qttcutwzehtskfcwxkwj`. Schema applied and verified; no customer records imported. Render is still a synthetic preview; its database credential has not been configured.
+**Status (2026-09-26):** Supabase Free project `easyfind-crm` provisioned in Efps, Mumbai (`ap-south-1`), project ref `qttcutwzehtskfcwxkwj`. Schema applied and verified; no customer records imported. Render remains a synthetic-only preview. At 17:41 UTC the Render startup diagnostic confirmed DATABASE_URL and Basic Auth are present, but its database probe failed. Supabase itself was independently queried successfully.
 
 ## Completed
 - Nine PostgreSQL tables exist with RLS enabled. No anon/authenticated policies or table grants; database access is intended only through the protected server.
@@ -10,12 +10,12 @@
 - Source Mac SQLite remains untouched. The original 735 leads/23,454 conversation rows and separately curated 308 leads/6,064 message subset still require reconciliation.
 
 ## Remaining gates
-1. Provision a least-privilege, server-only PostgreSQL connection using Render secret environment configuration. Keep existing Ollama variables intact. Never commit, print or expose the connection string to the browser.
+1. Repair the existing server-only connection from Render to the **already-provisioned Supabase** project; do not create or provision PostgreSQL on Render. Verify whether the URL uses Supabase's IPv4-compatible session pooler (port 5432), URL-encoded password and TLS; determine the actual error safely before changing secrets. Keep existing Ollama variables intact. Never commit, print or expose the connection string to the browser.
 2. Confirm the Render deploy and GitHub CI test results; test the disabled and authenticated database routes with fictional data.
 3. Implement durable audited CRUD, provider-event inbox and deduplication, incremental AI cursors, human-override evidence and recovery. D06–D08 remain unapproved.
 4. Verify independent encrypted backup and **restore** procedures; Supabase Free must not be treated as the only durable copy of customer conversations.
 5. Obtain explicit authorized access to the original SQLite for read-only reconciliation and an import dry-run. Do not use Desktop Commander without authorization.
-6. Configure read-only Housing_Listings Sheets access in Render and evaluate existing Ollama settings without reading or replacing secret values.
+6. Reconcile the user's reported full JSON service-account credential and hardcoded sheet ID with the adapter's current expectation of GOOGLE_SERVICE_ACCOUNT_JSON_BASE64, HOUSING_SHEET_ID and HOUSING_SHEET_TAB; verify without printing secrets. Then test read-only Sheets access and existing Ollama settings.
 7. Only after security, backup, migration and design gates pass, authorize live data and WhAPI.
 
 ## Boundaries
@@ -28,5 +28,8 @@ Slack automation remains the sole writer of `Housing_Listings`; CRM inventory is
 
 `src/crm-startup-check.mjs` now checks **presence only** for `DATABASE_URL`, `CRM_DB_READ_ENABLED`, both Basic Auth variables, Ollama endpoint/model and Google Sheets credential/ID. It performs a server-side `SELECT 1` probe when `DATABASE_URL` is set and logs only `connected`, `failed` or `not configured`. No credential values or database exception details are logged. Startup probe success alone does not verify least-privilege access, backup readiness or suitability for live customer data. Verify the actual sanitized Render application logs after the new commit deploys. Do not paste credentials into chat.
 
-### Verified Render startup flags — 2026-09-26 17:26 UTC
-The live CRM startup diagnostic reported: `DATABASE_URL` absent; `CRM_DB_READ_ENABLED` false; both Basic Auth variables absent; Ollama endpoint and model present; Google Sheets service-account credential and sheet ID absent; `CRM_REAL_DATA_ENABLED` false. Database probe reported `not configured`. These are runtime observations for `easyfind-crm-d01-d05`, not a claim about another service or pending environment edits. Do not enable the DB API or import customer data until the missing server-only settings are configured and a subsequent deployment logs `connected` with authentication configured. Do not copy secret values into documentation or chat.
+### Historical startup checkpoint — superseded (17:26 UTC)
+The 17:26 UTC absence observations are retained only as history. They are not current configuration guidance.
+
+### Latest verified runtime checkpoint — 2026-09-26 17:41 UTC
+Render startup reported databaseUrlPresent=true, databaseReadOptIn=true, authConfigured=true, authIncomplete=false, ollamaEndpointPresent=true, ollamaModelPresent=true, sheetsCredentialPresent=false, sheetsIdPresent=false and liveDataEnabled=false. The Supabase project qttcutwzehtskfcwxkwj was independently confirmed ACTIVE_HEALTHY and SELECT succeeded; nine public tables exist. Render's database connectivity probe failed with details withheld, so the cause is **not yet proven**. No Render-hosted PostgreSQL is required. The Sheets flags inspect only the adapter's expected environment variable names, not every possible user-provided raw JSON variable or a hardcoded sheet ID; do not conclude the user has not supplied credentials. Do not expose secret values or enable live customer data.
