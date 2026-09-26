@@ -13,6 +13,21 @@ export function configurationStatus(env){
   liveDataEnabled:env.CRM_REAL_DATA_ENABLED==='true'
  };
 }
+function databaseFailure(error){
+ const code=error?.code||error?.cause?.code;
+ const name=error?.name||error?.cause?.name;
+ const message=typeof error?.message==='string'?error.message:'';
+ const category=code==='ENETUNREACH'||code==='EHOSTUNREACH'?'network':
+  code==='ENOTFOUND'||code==='EAI_AGAIN'?'dns':
+  code==='ETIMEDOUT'||code==='ESOCKET'?'timeout':
+  code==='ECONNREFUSED'?'refused':
+  code==='ECONNRESET'?'reset':
+  code==='28P01'?'authentication':
+  code==='3D000'?'database':
+  code==='42501'?'permission':
+  ['ERR_TLS_CERT_ALTNAME_INVALID','SELF_SIGNED_CERT_IN_CHAIN','UNABLE_TO_VERIFY_LEAF_SIGNATURE','DEPTH_ZERO_SELF_SIGNED_CERT'].includes(code)||/certificate|TLS|SSL/i.test(message)?'tls':'unknown';
+ return {category,code:code?String(code):null,errorName:name?String(name):null};
+}
 export async function startupDatabaseCheck(env,{createRepository=createCrmRepository,log=console.info}={}){
  const flags=configurationStatus(env);
  // Never log the connection string, credentials, or raw exception.
@@ -27,9 +42,9 @@ export async function startupDatabaseCheck(env,{createRepository=createCrmReposi
   log('CRM database connectivity:',ok?'connected':'failed');
   return ok?'connected':'failed';
  }catch(error){
-  const code=error?.code;
-  const category=code==='ENETUNREACH'||code==='EHOSTUNREACH'?'network':code==='ENOTFOUND'||code==='EAI_AGAIN'?'dns':code==='ETIMEDOUT'?'timeout':code==='ECONNREFUSED'?'refused':code==='28P01'?'authentication':code==='3D000'?'database':code==='42501'?'permission':'unknown';
-  log('CRM database connectivity: failed (category: '+category+')');
+  const diagnostic=databaseFailure(error);
+  log('CRM database connectivity: failed (category: '+diagnostic.category+')');
+  log('CRM database connectivity diagnostic:',JSON.stringify(diagnostic));
   return 'failed';
  }finally{if(repo)try{await repo.close()}catch{}}
 }
