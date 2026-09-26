@@ -44,12 +44,6 @@ function recognizedParts(value){
  ))return whatwg;
  return parseLoosePostgresUrl(value);
 }
-function stripConnectionOptions(pathAndQuery){
- const [path,query='']=pathAndQuery.split('?');
- const params=new URLSearchParams(query);
- params.delete('sslmode');
- return params.toString()?path+'?'+params.toString():path;
-}
 export function normalizeConnectionString(value){
  if(!value)return value;
  const parts=recognizedParts(value);
