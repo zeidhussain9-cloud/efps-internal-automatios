@@ -10,7 +10,8 @@
     "test:browser": "node --test tests/browser.test.mjs",
     "db:migrate": "node scripts/migrate-crm.mjs",
     "db:backup": "node scripts/backup-crm.mjs",
-    "db:restore": "node scripts/restore-crm.mjs"
+    "db:restore": "node scripts/restore-crm.mjs",
+    "inventory:sync": "node scripts/sync-housing-inventory.mjs"
   },
   "dependencies": {
     "@vitejs/plugin-react": "4.3.4",

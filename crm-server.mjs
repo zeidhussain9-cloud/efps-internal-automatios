@@ -1,5 +1,5 @@
 import {createServer} from 'node:http';
-import {randomUUID} from 'node:crypto';
+import {randomUUID,createHmac,timingSafeEqual} from 'node:crypto';
 import {readFile,stat} from 'node:fs/promises';
 import {join,extname,resolve} from 'node:path';
 import {authorized,accessMode} from './src/server-auth.mjs';
@@ -17,6 +17,15 @@ createServer(async(req,res)=>{
   const mode=accessMode(process.env);
   if(mode==='misconfigured'){res.writeHead(503,security);return res.end('CRM access configuration incomplete');}
   if(mode==='protected'&&!authorized(req.headers.authorization,process.env.CRM_BASIC_AUTH_USERNAME,process.env.CRM_BASIC_AUTH_PASSWORD)){res.writeHead(401,{...security,'WWW-Authenticate':'Basic realm="EasyFind CRM"'});return res.end('Authentication required');}
+  if(p==='/api/internal/inventory/sync'&&req.method==='POST'){
+   if(process.env.CRM_INVENTORY_SYNC_ENABLED!=='true'||!process.env.CRM_INVENTORY_SYNC_SECRET){res.writeHead(404,security);return res.end('Inventory sync disabled');}
+   const ts=String(req.headers['x-efps-inventory-timestamp']||'');const provided=String(req.headers['x-efps-inventory-signature']||'');
+   if(!/^\d+$/.test(ts)||Math.abs(Date.now()-Number(ts)*1000)>300000||!/^[a-f0-9]{64}$/i.test(provided)){res.writeHead(401,security);return res.end('Invalid inventory sync authentication');}
+   const expected=createHmac('sha256',process.env.CRM_INVENTORY_SYNC_SECRET).update(ts).digest('hex');
+   if(expected.length!==provided.length||!timingSafeEqual(Buffer.from(expected),Buffer.from(provided.toLowerCase()))){res.writeHead(401,security);return res.end('Invalid inventory sync authentication');}
+   try{const {readCanonicalInventory,syncInventorySnapshot}=await import('./src/inventory-sync.mjs');const rows=await readCanonicalInventory(process.env);const result=await syncInventorySnapshot({rows});res.writeHead(200,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify({ok:true,...result}));}
+   catch(e){res.writeHead(502,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify({ok:false,error:'Inventory sync failed'}));}
+  }
   // Durable database writes: explicit opt-in, protected access and audited in the same transaction.
   if(process.env.CRM_DB_WRITE_ENABLED==='true'&&mode==='protected'&&req.method!=='GET'&&(p==='/api/db/leads'||p.startsWith('/api/db/leads/')||p==='/api/db/followups'||p.startsWith('/api/db/followups/'))){
    if(!process.env.DATABASE_URL){res.writeHead(404,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify({error:'Database write pilot disabled'}));}
@@ -68,6 +77,14 @@ createServer(async(req,res)=>{
     }
     res.writeHead(200,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify(data));
    }finally{await repo.close();}
+  }
+  if(p==='/api/inventory/matches'){
+   if(process.env.CRM_DB_READ_ENABLED!=='true'||!process.env.DATABASE_URL||mode!=='protected'){res.writeHead(404,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify({error:'Inventory database disabled'}));}
+   if(req.method!=='GET'){res.writeHead(405,security);return res.end('Method not allowed');}
+   const q=new URL(req.url,'http://localhost').searchParams;
+   const budgetRaw=q.get('budget');const limitRaw=q.get('limit')||'50';
+   if(budgetRaw!==null&&!/^\d+(?:\.\d{1,2})?$/.test(budgetRaw)||!/^\d{1,3}$/.test(limitRaw)){res.writeHead(400,security);return res.end('Invalid inventory query');}
+   const repo=createCrmRepository();try{const rows=await repo.matchInventory({bhk:q.get('bhk')||'',budget:budgetRaw===null?null:Number(budgetRaw),locality:q.get('locality')||'',furnishing:q.get('furnishing')||'',petFriendly:q.get('pet_friendly')||'',limit:Number(limitRaw)});res.writeHead(200,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify({rows}));}finally{await repo.close()}
   }
   if(p==='/api/ai/analyze'&&req.method==='POST'){
    if(mode!=='protected'||process.env.CRM_SYNTHETIC_AI_ENABLED!=='true'){res.writeHead(403,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify({error:'Synthetic AI disabled'}));}
