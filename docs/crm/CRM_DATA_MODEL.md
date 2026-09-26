@@ -2,7 +2,7 @@
 
 **Canonical repository:** `zeidhussain9-cloud/efps-internal-automatios`  
 **Branch:** `crm-ui-dashboard`  
-**Status:** Reconciled design contract; implementation not started.
+**Status (2026-09-26):** Reconciled design contract; Supabase v1 schema provisioned. Live data import and UI integration pending.
 
 ## 1. Lead data source
 
@@ -111,3 +111,8 @@ Planned application tables/records:
 `customers`, `lead_sources`, `requirements`, `requirement_history`, `conversations`, `messages`, `ai_runs`, `reply_drafts`, `inventory_snapshot`, `property_matches`, `property_interactions`, `inventory_controls`, `audit_events`, `sync_runs`, `sync_conflicts`, `webhook_events`.
 
 These are application-layer records, not replacements for the historical source evidence.
+
+
+## 7. Provisioned operational PostgreSQL schema
+
+Supabase `easyfind-crm` in Mumbai contains nine tables: `crm_schema_migrations`, `crm_leads`, `crm_lead_sources`, `crm_messages`, `crm_followups`, `crm_activity`, `crm_ai_runs`, `crm_drafts`, `crm_property_actions`. The source SQLite is historical migration evidence, not a second live editable database. Stable deduplication is `(source_number,provider_message_id)`. This schema is a **v1 subset** of the broader conceptual entities above; webhook inbox, per-source AI cursor, requirement evidence and backup/restore are not yet implemented. All operational tables have RLS enabled and no browser-facing grants or policies. The server repository currently supports only parameterized reads behind a disabled-by-default API. Media bytes are excluded; future references use Cloudinary URLs.
