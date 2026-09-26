@@ -12,9 +12,12 @@ test('startup probe connects without leaking secrets',async()=>{
  const result=await startupDatabaseCheck({DATABASE_URL:'postgres://private'},{createRepository:()=>({health:async()=>true,close:async()=>{closed=true;}}),log:(...x)=>logs.push(x.join(' '))});
  assert.equal(result,'connected');assert.equal(closed,true);assert.ok(!logs.join(' ').includes('private'));
 });
-test('failed database probe hides error detail',async()=>{
- const logs=[];const result=await startupDatabaseCheck({DATABASE_URL:'postgres://private'},{createRepository:()=>{throw Error('private');},log:(...x)=>logs.push(x.join(' '))});
- assert.equal(result,'failed');assert.ok(!logs.join(' ').includes('private'));
+test('failed database probe hides error detail but exposes safe classification',async()=>{
+ const logs=[];
+ const result=await startupDatabaseCheck({DATABASE_URL:'postgres://private'},{createRepository:()=>{throw Object.assign(Error('private'),{code:'28P01'});},log:(...x)=>logs.push(x.join(' '))});
+ assert.equal(result,'failed');assert.ok(!logs.join(' ').includes('private'));assert.match(logs.join(' '),/category: authentication/);assert.match(logs.join(' '),/errorName/);
 });
-
-test('connection shape excludes secret material',()=>{const shape=connectionStringShape('postgresql://postgres:fictional@db.qttcutwzehtskfcwxkwj.supabase.co:5432/postgres');assert.deepEqual(shape,{present:true,length:81,outerQuotes:false,postgresScheme:true,hasUserInfoAt:true,parsed:true,hostClass:'supabase_direct',port:'5432',usernamePresent:true,passwordPresent:true,databasePathPresent:true});});
+test('connection shape excludes secret material',()=>{
+ const shape=connectionStringShape('postgresql://postgres:fictional@db.qttcutwzehtskfcwxkwj.supabase.co:5432/postgres');
+ assert.deepEqual(shape,{present:true,length:81,outerQuotes:false,postgresScheme:true,hasUserInfoAt:true,parsed:true,hostClass:'supabase_direct',port:'5432',usernamePresent:true,passwordPresent:true,databasePathPresent:true});
+});
