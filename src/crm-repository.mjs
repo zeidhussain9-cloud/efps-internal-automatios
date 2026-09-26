@@ -1,19 +1,41 @@
 import pg from 'pg';
 const SUPABASE_SESSION_POOLER_HOST='aws-0-ap-south-1.pooler.supabase.com';
-// Server-only repository. When the configured Supabase URL is the direct IPv6 endpoint,
-// transparently use the IPv4-compatible Session Pooler for the Render backend.
+// Server-only repository. Prefer the IPv4-compatible Supabase Session Pooler for this
+// persistent Render service when the configured URL points at a Supabase endpoint.
 export function normalizeConnectionString(value){
- if(!value) return value;
+ if(!value)return value;
  try{
   const url=new URL(value);
-  const match=url.hostname.match(/^db\.([a-z0-9]+)\.supabase\.co$/i);
-  if(!match)return value;
-  url.hostname=SUPABASE_SESSION_POOLER_HOST;
-  url.port='5432';
-  if(url.username==='postgres')url.username='postgres.'+match[1];
-  if(!url.searchParams.has('sslmode'))url.searchParams.set('sslmode','require');
-  return url.toString();
+  const direct=url.hostname.match(/^db\.([a-z0-9]+)\.supabase\.co$/i);
+  const pooler=url.hostname.match(/^aws-[0-9-]+-([a-z0-9-]+)\.pooler\.supabase\.com$/i);
+  if(direct){
+   url.hostname=SUPABASE_SESSION_POOLER_HOST;
+   url.port='5432';
+   if(url.username==='postgres')url.username='postgres.'+direct[1];
+   if(!url.searchParams.has('sslmode'))url.searchParams.set('sslmode','require');
+   return url.toString();
+  }
+  if(pooler&&url.port==='5432'){
+   const projectRef=(url.username||'').match(/^postgres\.([a-z0-9]+)$/i)?.[1];
+   if(projectRef){
+    url.hostname=SUPABASE_SESSION_POOLER_HOST;
+    url.username='postgres.'+projectRef;
+    if(!url.searchParams.has('sslmode'))url.searchParams.set('sslmode','require');
+    return url.toString();
+   }
+  }
+  return value;
  }catch{return value;}
+}
+export function connectionEndpointClass(value){
+ if(!value)return 'missing';
+ try{
+  const url=new URL(normalizeConnectionString(value));
+  if(url.hostname===SUPABASE_SESSION_POOLER_HOST&&url.port==='5432')return 'supabase_session_pooler_ipv4';
+  if(/^db\.[a-z0-9]+\.supabase\.co$/i.test(url.hostname))return 'supabase_direct_ipv6_or_addon';
+  if(/\.pooler\.supabase\.com$/i.test(url.hostname))return 'supabase_pooler_other';
+  return 'external_or_unknown';
+ }catch{return 'invalid_url';}
 }
 export function createCrmRepository({pool,connectionString=process.env.DATABASE_URL}={}){
  if(!pool&&!connectionString)throw Error('DATABASE_URL required');
