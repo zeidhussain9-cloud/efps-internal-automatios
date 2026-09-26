@@ -2,7 +2,8 @@
 import {readFile,readdir} from 'node:fs/promises';
 import {fileURLToPath} from 'node:url';
 import {dirname,resolve,basename} from 'node:path';
-import {Client} from 'pg';
+import pg from 'pg';
+const {Client}=pg;
 import {normalizeConnectionString} from '../src/crm-repository.mjs';
 
 export function migrationGuard(env){
