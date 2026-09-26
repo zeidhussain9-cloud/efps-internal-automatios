@@ -122,3 +122,8 @@
 **D01–D05 are approved. D06–D08 remain unresolved.**
 
 Approval is a design state only. No live customer/inventory connection or production write is implied.
+
+
+## Implementation checkpoint — 2026-09-26 (not additional design approval)
+
+Supabase Free `easyfind-crm` has been provisioned in Mumbai with nine server-only, RLS-enabled tables. The backend now contains a disabled-by-default, authenticated, read-only PostgreSQL pilot API. This does **not** resolve or approve D06–D08, enable live webhook ingestion, authorize customer-data import, or constitute production authentication approval. Historical SQLite reconciliation, verified backups/restoration and synthetic integration tests remain prerequisites.
