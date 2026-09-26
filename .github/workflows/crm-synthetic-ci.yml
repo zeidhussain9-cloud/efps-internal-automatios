@@ -6,6 +6,8 @@ on:
       - 'src/**'
       - 'tests/**'
       - 'crm-server.mjs'
+      - 'scripts/**'
+      - 'db/migrations/**'
       - 'package.json'
       - 'package-lock.json'
       - 'docs/crm/**'
