@@ -1,4 +1,16 @@
 import test from 'node:test';import assert from 'node:assert/strict';import{authorized,accessMode}from '../src/server-auth.mjs';
-test('reject missing or malformed authorization',()=>{assert.equal(authorized(null,'operator','example'),false);assert.equal(authorized('Bearer token','operator','example'),false);assert.equal(authorized('Basic !!','operator','example'),false)});
-test('accept only matching basic credentials',()=>{const h='Basic '+Buffer.from('operator:example').toString('base64');assert.equal(authorized(h,'operator','example'),true);assert.equal(authorized(h,'operator','other'),false)});
-test('protection only active with both settings',()=>{assert.equal(accessMode({}),'synthetic-public');assert.equal(accessMode({CRM_BASIC_AUTH_USERNAME:'operator'}),'misconfigured');assert.equal(accessMode({CRM_BASIC_AUTH_USERNAME:'operator',CRM_BASIC_AUTH_PASSWORD:'example'}),'protected')});
+test('reject missing or malformed authorization',()=>{
+ assert.equal(authorized(null,'operator','example'),false);
+ assert.equal(authorized('Bearer token','operator','example'),false);
+ assert.equal(authorized('Basic !!','operator','example'),false);
+ assert.equal(authorized('Basic b3BlcmF0b3I6ZXhhbXBsZQ','operator','example'),false);
+});
+test('accept only matching basic credentials',()=>{
+ const h='Basic '+Buffer.from('operator:example').toString('base64');
+ assert.equal(authorized(h,'operator','example'),true);assert.equal(authorized(h,'operator','other'),false);
+});
+test('protection only active with both settings',()=>{
+ assert.equal(accessMode({}),'synthetic-public');
+ assert.equal(accessMode({CRM_BASIC_AUTH_USERNAME:'operator'}),'misconfigured');
+ assert.equal(accessMode({CRM_BASIC_AUTH_USERNAME:'operator',CRM_BASIC_AUTH_PASSWORD:'example'}),'protected');
+});
