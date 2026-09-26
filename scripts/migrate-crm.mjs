@@ -21,16 +21,21 @@ export async function listMigrationFiles({dir=resolve(dirname(fileURLToPath(impo
 export async function runMigration({env=process.env,read=readFile,connect,dir}={}){
  migrationGuard(env);
  if(typeof connect!=='function')throw Error('Database connector required');
+ const files=await listMigrationFiles({dir});
+ const sqlByFile=new Map();
+ for(const file of files){
+  const sql=await read(resolve(dir||resolve(dirname(fileURLToPath(import.meta.url)),'../db/migrations'),file),'utf8');
+  if(!sql.includes('BEGIN;')||!sql.includes('COMMIT;'))throw Error('Migration transaction markers missing: '+file);
+  sqlByFile.set(file,sql);
+ }
  const db=await connect({connectionString:normalizeConnectionString(env.DATABASE_URL),sslCa:env.DATABASE_SSL_CA});
  try{
   await db.query('CREATE TABLE IF NOT EXISTS crm_schema_migrations(version integer PRIMARY KEY, applied_at timestamptz NOT NULL DEFAULT now())');
-  for(const file of await listMigrationFiles({dir})){
+  for(const file of files){
    const version=Number(file.split('_')[0]);
    const exists=await db.query('SELECT 1 FROM crm_schema_migrations WHERE version=$1',[version]);
-   if(exists.rows[0])continue;
-   const sql=await read(resolve(dir,file),'utf8');
-   if(!sql.includes('BEGIN;')||!sql.includes('COMMIT;'))throw Error('Migration transaction markers missing: '+file);
-   await db.query(sql);
+   if(exists.rows?.[0])continue;
+   await db.query(sqlByFile.get(file));
    await db.query('INSERT INTO crm_schema_migrations(version) VALUES($1) ON CONFLICT DO NOTHING',[version]);
   }
   return{applied:true};
