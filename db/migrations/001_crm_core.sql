@@ -81,4 +81,23 @@ CREATE TABLE IF NOT EXISTS crm_property_actions(
  occurred_at timestamptz NOT NULL DEFAULT now()
 );
 INSERT INTO crm_schema_migrations(version) VALUES(1) ON CONFLICT DO NOTHING;
+-- Supabase server-only access: API roles have no grants or RLS policies.
+ALTER TABLE crm_schema_migrations ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON TABLE crm_schema_migrations FROM anon, authenticated;
+ALTER TABLE crm_leads ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON TABLE crm_leads FROM anon, authenticated;
+ALTER TABLE crm_lead_sources ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON TABLE crm_lead_sources FROM anon, authenticated;
+ALTER TABLE crm_messages ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON TABLE crm_messages FROM anon, authenticated;
+ALTER TABLE crm_followups ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON TABLE crm_followups FROM anon, authenticated;
+ALTER TABLE crm_activity ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON TABLE crm_activity FROM anon, authenticated;
+ALTER TABLE crm_ai_runs ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON TABLE crm_ai_runs FROM anon, authenticated;
+ALTER TABLE crm_drafts ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON TABLE crm_drafts FROM anon, authenticated;
+ALTER TABLE crm_property_actions ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON TABLE crm_property_actions FROM anon, authenticated;
 COMMIT;
