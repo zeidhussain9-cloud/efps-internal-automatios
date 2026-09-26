@@ -55,3 +55,11 @@ test('AI cursor is upserted per source',async()=>{
  const repo=createCrmRepository({pool});
  const row=await repo.setAiCursor({sourceNumber:'wa-1',cursor:'c1'});assert.equal(row.cursor,'c1');assert.match(calls[0][0],/ON CONFLICT\(source_number\) DO UPDATE/);
 });
+
+test('property media accepts only Cloudinary external references',async()=>{
+ const calls=[];const pool={query:async(sql,args)=>{calls.push([sql,args]);return{rows:[{listing_id:'EF-1',media_url:args[1]}]}}};
+ const repo=createCrmRepository({pool});
+ const row=await repo.addPropertyMedia({listingId:'EF-1',mediaUrl:'https://res.cloudinary.com/demo/image/upload/v1/ef-1.jpg',cloudinaryPublicId:'ef-1'});
+ assert.equal(row.listing_id,'EF-1');assert.match(calls[0][0],/crm_property_media/);
+ await assert.rejects(()=>repo.addPropertyMedia({listingId:'EF-1',mediaUrl:'https://example.com/ef-1.jpg'}),/Cloudinary media URL/);
+});
