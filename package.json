@@ -6,7 +6,7 @@
   "scripts": {
     "build": "vite build",
     "start": "node crm-server.mjs",
-    "test": "node --test tests/crm-logic.test.mjs tests/synthetic-storage.test.mjs tests/server-auth.test.mjs tests/ollama-adapter.test.mjs tests/housing-sheet-adapter.test.mjs",
+    "test": "node --test tests/crm-logic.test.mjs tests/synthetic-storage.test.mjs tests/server-auth.test.mjs tests/ollama-adapter.test.mjs tests/housing-sheet-adapter.test.mjs tests/server-integration.test.mjs",
     "test:browser": "node --test tests/browser.test.mjs"
   },
   "dependencies": {
