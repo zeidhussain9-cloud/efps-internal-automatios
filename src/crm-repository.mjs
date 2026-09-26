@@ -67,7 +67,7 @@ export function normalizeConnectionString(value){
 
 export function connectionStringShape(value){
  const raw=typeof value==='string'?value.trim():'';
- const unquoted=trimConnectionString(value);
+ const unquoted=trimConnectionString(value)||'';
  const parts=parseWhatwg(unquoted)||parseLoosePostgresUrl(unquoted);
  const host=parts?.hostname||'';
  const hostClass=/^db\.[a-z0-9]+\.supabase\.co$/i.test(host)?'supabase_direct':/^aws-[0-9-]+-[a-z0-9-]+\.pooler\.supabase\.com$/i.test(host)?'supabase_pooler':'other';
