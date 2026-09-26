@@ -78,7 +78,7 @@ test('synthetic CRM browser journey',async()=>{
 
     await page.getByRole('button',{name:'AI & Drafts',exact:true}).click();
     await page.getByRole('button',{name:'Run AI analysis',exact:true}).click();
-    assert.equal(await page.getByText(/Ollama is disabled or unavailable/i).count()>0,true);
+    await page.getByText(/Ollama is disabled or unavailable/i).first().waitFor({timeout:10000});
 
     const draft='Synthetic reply draft — not sent.';
     await page.locator('textarea').last().fill(draft);
@@ -96,9 +96,15 @@ test('synthetic CRM browser journey',async()=>{
     await page.getByRole('button',{name:'Follow-ups',exact:true}).click();
     assert.equal(await page.getByText('Fictional follow-up').count(),1);
 
+    await page.route('**/api/inventory/overview',route=>route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({rows:[{listing_id:'EF-TEST-01',locality:'Whitefield',society_name:'Test Society',bhk:'3 BHK',monthly_rent:'75000',furnishing:'Semi Furnished',listing_state:'Available',cloudinary_image_urls:['https://res.cloudinary.com/test/image/upload/demo.jpg'],source_record:{city:'Bengaluru'},last_synced_at:'2026-09-27T00:00:00Z'},{listing_id:'EF-TEST-02',locality:'Harlur',bhk:'2 BHK',monthly_rent:'49000',listing_state:'Rented Out',cloudinary_image_urls:[],source_record:{}}],latestSync:{created_at:'2026-09-27T00:00:00Z'}})}));
     await page.getByRole('button',{name:'Inventory',exact:true}).click();
-    await page.getByPlaceholder('Search synthetic inventory…').fill('Whitefield');
+    await page.getByRole('button',{name:'Refresh',exact:true}).click();
+    await page.getByText('2 total = 1 available + 1 rented out').waitFor();
+    await page.getByPlaceholder('Search ID, locality, society or title…').fill('Whitefield');
     assert.equal(await page.getByText('3 BHK · Whitefield').count(),1);
+    await page.getByRole('button',{name:'View property'}).first().click();
+    await page.getByRole('dialog',{name:'Property details'}).getByText('Test Society').waitFor();
+    await page.getByRole('button',{name:'Close ×'}).click();
 
     await page.getByRole('button',{name:'Settings',exact:true}).click();
     assert.equal(await page.getByText(/fictional fixtures only/i).count()>0,true);
