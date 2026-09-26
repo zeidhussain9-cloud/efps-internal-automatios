@@ -13,12 +13,12 @@ test('synthetic CRM browser journey',async t=>{
   browser=await chromium.launch({headless:true});
   const page=await browser.newPage();
   await page.goto(base);
-  await page.getByRole('button',{name:'Leads Inbox'}).click();
+  await page.getByRole('button',{name:'Leads Inbox',exact:true}).click();
   await page.getByRole('button',{name:/Aarav Rao/}).click();
   await page.getByRole('button',{name:'Requirements'}).click();
   await page.getByLabel('Preferred location').fill('Harlur Test');
   await page.reload();
-  await page.getByRole('button',{name:'Leads Inbox'}).click();
+  await page.getByRole('button',{name:'Leads Inbox',exact:true}).click();
   await page.getByRole('button',{name:/Aarav Rao/}).click();
   await page.getByRole('button',{name:'Requirements'}).click();
   assert.equal(await page.getByLabel('Preferred location').inputValue(),'Harlur Test');
