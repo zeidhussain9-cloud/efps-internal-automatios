@@ -4,7 +4,7 @@ import {configurationStatus,startupDatabaseCheck} from '../src/crm-startup-check
 import {connectionStringShape} from '../src/crm-repository.mjs';
 test('reports presence only, not credential contents',()=>{
  const f=configurationStatus({DATABASE_URL:'postgres://private',CRM_BASIC_AUTH_USERNAME:'operator',CRM_BASIC_AUTH_PASSWORD:'private-password',CRM_DB_READ_ENABLED:'true',OLLAMA_HOST:'https://private',OLLAMA_MODEL:'model'});
- assert.equal(f.databaseUrlPresent,true);assert.equal(f.authConfigured,true);assert.equal(f.databaseReadOptIn,true);assert.equal(f.ollamaModelPresent,true);
+ assert.equal(f.databaseUrlPresent,true);assert.equal(f.authConfigured,true);assert.equal(f.databaseReadOptIn,true);assert.equal(f.databaseTlsCaPresent,false);assert.equal(f.ollamaModelPresent,true);
  assert.ok(!JSON.stringify(f).includes('private'));
 });
 test('startup probe connects without leaking secrets',async()=>{
