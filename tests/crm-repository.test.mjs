@@ -70,7 +70,7 @@ test('provider event claiming is lock-protected and refuses already processed ev
  const repo=createCrmRepository({pool:{connect:async()=>client}});
  const claim=await repo.claimProviderEvent({provider:'whapi',providerEventId:'evt-7'});
  assert.deepEqual(claim,{claimed:true,id:7,status:'processing',attempts:2});
- assert.match(calls[1][0],/UPDATE crm_provider_events SET status/);
+ assert.match(calls[2][0],/UPDATE crm_provider_events SET status/);
 });
 test('provider event completion records processed timestamp or failure',async()=>{
  const calls=[];const pool={query:async(sql,args)=>{calls.push([sql,args]);return{rows:[{id:7,status:args[0]}]}}};const repo=createCrmRepository({pool});
