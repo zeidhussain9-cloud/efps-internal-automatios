@@ -9,6 +9,7 @@ test('synthetic CRM browser journey',async t=>{
  try{
   let ready=false;for(let i=0;i<50;i++){try{const r=await fetch(base+'/health');if(r.ok){ready=true;break}}catch{}await new Promise(resolve=>setTimeout(resolve,200))}
   assert.equal(ready,true,'server starts');
+  const denied=await fetch(base+'/api/ai/analyze',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({leadId:'L-1001'})});assert.equal(denied.status,403,'fictional AI is disabled until configured');
   browser=await chromium.launch({headless:true});
   const page=await browser.newPage();
   await page.goto(base);
