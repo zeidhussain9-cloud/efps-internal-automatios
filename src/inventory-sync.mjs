@@ -1,5 +1,6 @@
 import crypto from 'node:crypto';
 import pg from 'pg';
+import {normalizeConnectionString} from './crm-repository.mjs';
 import {readHousingSheet} from './housing-sheet-adapter.mjs';
 const FIELDS=['listing_id','status','intake_status','internal_property_type','listing_state','onboarded_on','raw_message_text','locality','society_name','landmark','pincode','google_maps_url','furnish_type','BHK','bathrooms','balconies','floor_number','total_floors','built_up_area','carpet_area','monthly_rent','maintenance','maintenance_included','security_deposit','preferred_tenant_type','bachelor_preference','pet_friendly','servant_room','covered_parking','open_parking','society_amenities','flat_furnishings','property_highlights','catalog_title','cloudinary_image_urls','age_of_property_years','whatsapp_contact_link','whatsapp_group_link','transaction_type','property_subtype','city','posted_url','posted_at','error_notes','meta_catalog_id','meta_catalog_status','source_group','inventory_locked'];
 const safeString=v=>v===undefined||v===null?'':String(v);
@@ -14,6 +15,7 @@ export function projectSheetRows(values){
   if(rows.has(id))throw Error('Duplicate listing_id in Housing_Listings: '+id);
   row.cloudinary_image_urls=row.cloudinary_image_urls.split(',').map(x=>x.trim()).filter(Boolean);
   const sourceHash=hashRow(row);
+  delete row.raw_message_text;delete row.whatsapp_contact_link;delete row.whatsapp_group_link;delete row.error_notes;delete row.source_group;delete row.inventory_locked;
   rows.set(id,{row,sourceHash});
  }
  return [...rows.values()];
@@ -27,13 +29,14 @@ export function diffInventory(existing, incoming){
 }
 export async function readCanonicalInventory(env=process.env){
  const previous=env.CRM_HOUSING_SHEET_READ_ENABLED;
- if(!env.CRM_HOUSING_SHEET_READ_ENABLED)env.CRM_HOUSING_SHEET_READ_ENABLED='true';
+ if(env.CRM_HOUSING_SHEET_READ_ENABLED!=='true')throw Error('Live Housing Sheet read not enabled');
  try{return projectSheetRows((await readHousingSheet({env})).rows.slice(1))}
  finally{if(previous===undefined)delete env.CRM_HOUSING_SHEET_READ_ENABLED;else env.CRM_HOUSING_SHEET_READ_ENABLED=previous}
 }
 export async function syncInventorySnapshot({rows,connectionString=process.env.DATABASE_URL,sslCa=process.env.DATABASE_SSL_CA,pool}={}){
  if(!connectionString&&!pool)throw Error('DATABASE_URL required');
- const db=pool||new pg.Pool({connectionString,ssl:sslCa?{rejectUnauthorized:true,ca:sslCa}:{rejectUnauthorized:true},max:5,connectionTimeoutMillis:5000});
+ if(!Array.isArray(rows)||rows.length===0)throw Error('Empty inventory snapshot; refusing mass tombstones');
+ const db=pool||new pg.Pool({connectionString:normalizeConnectionString(connectionString),ssl:sslCa?{rejectUnauthorized:true,ca:sslCa}:{rejectUnauthorized:true},max:5,connectionTimeoutMillis:5000});
  const runId=crypto.randomUUID(),now=new Date().toISOString();
  try{
   const current=await db.query('SELECT listing_id,source_kind,source_hash,deleted_at FROM crm_inventory_snapshot');
