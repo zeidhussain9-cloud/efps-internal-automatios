@@ -42,6 +42,18 @@ CREATE TABLE IF NOT EXISTS crm_idempotency_keys(
  created_at timestamptz NOT NULL DEFAULT now()
 );
 
+CREATE TABLE IF NOT EXISTS crm_property_media(
+ id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+ listing_id text NOT NULL,
+ media_url text NOT NULL CHECK(media_url LIKE 'https://res.cloudinary.com/%'),
+ cloudinary_public_id text NOT NULL DEFAULT '',
+ media_type text NOT NULL DEFAULT 'image' CHECK(media_type IN ('image','video')),
+ sort_order integer NOT NULL DEFAULT 0 CHECK(sort_order>=0),
+ created_at timestamptz NOT NULL DEFAULT now(),
+ UNIQUE(listing_id,media_url)
+);
+CREATE INDEX IF NOT EXISTS crm_property_media_listing_idx ON crm_property_media(listing_id,sort_order,id);
+
 ALTER TABLE crm_provider_events ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON TABLE crm_provider_events FROM anon, authenticated;
 ALTER TABLE crm_ai_cursors ENABLE ROW LEVEL SECURITY;
@@ -50,4 +62,6 @@ ALTER TABLE crm_requirement_evidence ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON TABLE crm_requirement_evidence FROM anon, authenticated;
 ALTER TABLE crm_idempotency_keys ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON TABLE crm_idempotency_keys FROM anon, authenticated;
+ALTER TABLE crm_property_media ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON TABLE crm_property_media FROM anon, authenticated;
 COMMIT;
