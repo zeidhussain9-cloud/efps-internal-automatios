@@ -61,7 +61,7 @@ Stage 2 first segments `raw_message_text` into source-message units using `src/s
 
 ## Stage-1/2 Sheets boundary
 
-The inventory contract is 48 columns A:AV. Stage 1/2 writes are restricted to A:D, F:AO, and AU. E, AP:AT, and AV remain protected.
+The inventory contract is 48 columns A:AV. Recurring Stage 1/2 updates are restricted to A:D and F:AO. The initial Stage-1 row insertion currently bootstraps E (`listing_state`) as `Available`; subsequent Stage-1/2 projections protect E. AP:AT are downstream-owned. AU and AV are reserved and must remain blank.
 
 ## Verification
 

@@ -44,6 +44,14 @@ Apply `docs/DOCUMENT_UPDATE_MATRIX.md` and `docs/DOCUMENT_GOVERNANCE.md` for det
 
 Inventory Phase 1 uses three top-level stages only: Initial/Webhook, Deterministic Extraction/Property Processing, and the Downstream Operations boundary. Maps and AI processing are Stage-2 sub-steps; Google Sheets is transport/output.
 
+## Private CRM reconciliation
+
+The canonical CRM implementation repository is `efps-internal-automatios`. CRM reconciliation lives under `docs/crm/` on isolated branches; the legacy `easyfind-website` CRM branch is historical evidence, not the implementation repository.
+
+D01–D04 are approved design decisions. D05 is proposed and is now informed by the verified Housing Listings audit. Figma is the working design environment; Canva remains the visual reference.
+
+The CRM currently has multiple lead data layers: historical WhatsApp backups, legacy `leads.db`, the live Leads Tracker, and current master DynamoDB lead domains. They are not yet proven to be one synchronized dataset. Never declare one universal lead source of truth until the documented reconciliation blockers are closed.
+
 ## Deterministic Inventory architecture
 
 Stage 2 uses `raw_message_text` as its only deterministic extraction source. The flow is canonical source segmentation -> candidate extraction -> field resolution -> normalization -> validation -> Maps enrichment/verification -> optional AI review/wording.

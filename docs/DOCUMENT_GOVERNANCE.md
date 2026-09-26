@@ -27,6 +27,8 @@ Every maintained document must have one clear role and one canonical subject. Do
 - Document roles → `DOCUMENT_MAP.md`
 - AI operating instructions → root `CORE_STEERING.md`, `GEMINI.md`, and `AGENTS.md`
 - Shared capability boundaries/behavior → local shared capability `README.md` plus canonical cross-cutting docs
+- Private CRM documentation → `docs/crm/`; cross-module CRM data/architecture/infrastructure remains owned by `docs/DATA_CONTRACTS.md`, `docs/ARCHITECTURE.md`, and `docs/INFRASTRUCTURE.md` as applicable
+- Dated source audits → `docs/audits/` as historical evidence snapshots; they do not silently become current canonical contracts
 
 ## Mandatory implementation review
 
@@ -54,5 +56,6 @@ Update every affected document in the same work session. Documents not affected 
 6. Update generated documents through their source of truth.
 7. Preserve historical records as historical records.
 8. Add every new maintained document to `DOCUMENT_MAP.md`.
+9. Preserve audit snapshots as historical evidence; reconcile their findings into the current canonical documents instead of creating competing truths.
 
 Documentation is part of implementation. A change is not complete when code and maintained repository truth knowingly disagree.

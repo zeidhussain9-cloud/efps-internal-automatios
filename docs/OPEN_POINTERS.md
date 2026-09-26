@@ -59,6 +59,20 @@ Legacy Inventory extraction, normalization, deterministic business rules, field 
 
 The repository-level migration is complete only when the dedicated migration commit is verified. Production acceptance remains separate until deployment and live probes establish the runtime gates below.
 
+## CRM source-of-truth reconciliation — 2026-09-26
+
+Open blockers before CRM live-data integration:
+
+- Legacy `leads.db` (23,454 conversation rows) does not reconcile with the 6,064-message extraction evidence.
+- Legacy `leads.db` has not been reconciled with current master DynamoDB lead-domain tables.
+- Current Leads Tracker ownership/update mechanism must be verified as an ongoing operating source.
+- Legacy Sheets sync clears/rewrites operational tabs and is unsuitable as a CRM write path.
+- Housing column L has live header `w` while the canonical field is `google_maps_url`.
+- Housing `listing_state` write ownership remains undecided.
+- Housing AU/AV historical contents, if any, require controlled investigation; current contract says both are reserved/blank.
+- Future webhook/import ingestion requires a stable external message/event identity and idempotent storage.
+- D05 design remains proposed; the inventory audit informs it but does not approve it.
+
 ## Governance
 
 When a deterministic pointer is resolved, update this document and the affected architecture/contracts/handoff/control matrix in the same implementation session. The deterministic field contract, regression suite, handoff, and control matrix must remain synchronized with approved business-rule changes.

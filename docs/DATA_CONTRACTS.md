@@ -108,7 +108,40 @@ Column C (`intake_status`) tracks property processing through the full pipeline:
 
 ## Stage-1/2 write boundary
 
-Stage 1/2 writes are restricted to A:D, F:AO, and AU. E (`listing_state`), AP:AT (Housing/Meta downstream fields), and AV (`inventory_locked`) are protected.
+Stage 1/2 writes are restricted to A:D and F:AO. E (`listing_state`), AP:AT (Housing/Meta downstream fields), AU (`source_group`), and AV (`inventory_locked`) are protected/reserved. AU/AV must remain blank.
+
+## CRM cross-domain data contract
+
+### Inventory
+
+CRM reads may project the canonical 48 `Housing_Listings` fields. Read access does not grant write authority.
+
+The live spreadsheet currently has a physical header discrepancy at column L (`w` vs canonical `google_maps_url`). This remains a controlled reconciliation item.
+
+`listing_state` is present in the inventory data and currently has live values, but current Phase-1 code does not own/populate it. CRM write ownership remains pending explicit approval.
+
+### Leads
+
+The historical Leads Tracker exposes:
+- `Leads`: 25 fields
+- `Conversations`: 17 fields
+- `Events`: 9 fields
+- `Extraction Log`, `Findings`, `Priority Sharing`: reference/operational tabs
+
+The legacy SQLite model contains `leads`, `conversations`, and `lead_lifecycle_events`. The current master runtime separately contains the DynamoDB lead/interactions/audit tables.
+
+The uploaded extraction audit reports 6,064 extracted messages versus 23,454 conversation rows in `leads.db`. This is a material source discrepancy and prevents declaring the legacy SQLite database a clean canonical message store until the rows are reconciled against stable source message identifiers.
+
+### CRM provenance
+
+UI values must retain conceptual provenance:
+- Verified source-backed
+- Human-edited CRM
+- AI-derived
+- System state
+- Synthetic/illustrative
+
+AI-derived values never overwrite human-authoritative fields without an explicit review action.
 
 ## Verification boundary
 

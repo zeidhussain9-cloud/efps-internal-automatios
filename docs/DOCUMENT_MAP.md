@@ -80,6 +80,23 @@ Established shared capabilities include:
 
 `MIGRATION_LIVE_SYSTEM_MAP_20260916.md` is the single maintained map for the approved live-system migration. It records which capabilities are retained from current `main`, which live integration components are reconciled, and which legacy Inventory responsibilities are explicitly excluded.
 
+## CRM documentation
+
+The private EasyFind CRM has its canonical documentation under `docs/crm/`:
+
+| Document | Role |
+|---|---|
+| `docs/crm/README.md` | CRM documentation index and current design/status boundary |
+| `docs/crm/CRM_SOURCE_OF_TRUTH_RECONCILIATION.md` | Reconciled source hierarchy, conflicts, authority boundaries and blockers |
+| `docs/crm/CRM_DATA_MODEL.md` | Canonical CRM/UI fields and physical source mappings |
+| `docs/crm/CRM_DESIGN_DECISIONS.md` | D00–D08 design decision register |
+| `docs/crm/CRM_UI_DESIGN_SPEC.md` | UI information architecture and interaction rules |
+| `docs/crm/LEAD_CRM_MASTER_PLAN.md` | CRM delivery sequence and implementation gates |
+| `docs/audits/HOUSING_INVENTORY_SOURCE_OF_TRUTH_AUDIT.md` | Dated Housing Listings evidence snapshot |
+| `docs/audits/LEADS_EXTRACTION_SOURCE_OF_TRUTH_AUDIT.md` | Dated Leads/WhatsApp extraction evidence snapshot |
+
+The audit documents are historical evidence snapshots. The CRM reconciliation documents are the canonical current interpretation for this branch. They must not duplicate or silently overwrite the canonical cross-module contracts owned by `docs/DATA_CONTRACTS.md`, `docs/ARCHITECTURE.md`, and `docs/INFRASTRUCTURE.md`.
+
 ## Single-source rule
 
 One fact or rule should have one canonical home. Other documents may link to or summarize it, but must not create a competing authoritative version.

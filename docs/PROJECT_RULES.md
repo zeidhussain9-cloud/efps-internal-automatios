@@ -64,7 +64,7 @@ Maintenance is a normalized numeric amount with an optional source qualifier; `m
 
 ## Google Sheets
 
-`shared/google_sheets/` owns the technical Sheets client and the canonical physical `Housing_Listings` contract. Full-row operations must use the 48-column A:AV schema; ownership and business workflow remain outside the shared client. Verified Inventory Phase-1 Stage-1/2 write ranges are A:D, F:AO, and AU; E, AP:AT, and AV are protected.
+`shared/google_sheets/` owns the technical Sheets client and the canonical physical `Housing_Listings` contract. Full-row operations must use the 48-column A:AV schema; ownership and business workflow remain outside the shared client. Verified Inventory Phase-1 Stage-1/2 write ranges are A:D and F:AO; E, AP:AT, AU, and AV are protected/reserved. AU and AV must remain blank.
 
 ## Google Maps
 
@@ -86,6 +86,15 @@ Maintenance is a normalized numeric amount with an optional source qualifier; `m
 - Update `HANDOFF.md` whenever current working state changes.
 - Use `DOCUMENT_UPDATE_MATRIX.md` and `DOCUMENT_GOVERNANCE.md` for document ownership and routing.
 - Do not create duplicate authoritative documents.
+
+## CRM workstream
+
+- The canonical CRM implementation repository is this repository, `efps-internal-automatios`.
+- Legacy CRM planning/extraction repositories are evidence only unless their contents are explicitly migrated and reconciled.
+- D01–D04 are approved design decisions; D05 is proposed until the owner approves it.
+- Figma is the working visual design environment; Canva remains the visual reference.
+- Prototype work uses synthetic data and must not mutate live CRM/inventory records until a later explicit integration gate.
+- Do not declare one universal lead source of truth while historical backups, legacy `leads.db`, the live Leads Tracker, and current DynamoDB lead domains remain unreconciled.
 
 ## Security
 

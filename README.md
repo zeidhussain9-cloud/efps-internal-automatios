@@ -75,6 +75,19 @@ The repository now carries the approved live-system operational boundary on top 
 
 Legacy Inventory extraction, normalization, deterministic business rules, field resolution, property processing, validation/business logic, and Stage-2 implementation are explicitly excluded from the migration.
 
+## Private CRM workstream
+
+The private EasyFind CRM is being reconciled and will be implemented in this repository on isolated branches. Canonical CRM documentation lives under `docs/crm/`.
+
+Current design status:
+- D01–D04 approved.
+- D05 proposed and informed by the verified Housing Listings audit.
+- Figma is the working design environment; Canva remains the visual reference.
+- Prototype work is synthetic-data only.
+- Live customer/inventory integrations and production writes remain a later gate.
+
+The CRM reconciliation documents explicitly distinguish the historical WhatsApp/SQLite/Leads Tracker layers from the current master DynamoDB lead runtime. Until those relationships are reconciled, no single legacy dataset is treated as the universal live CRM source.
+
 ## Production status
 
 The repository-level migration reconciliation is complete on its dedicated migration branch. Production acceptance is not claimed by this commit: AWS deployment, Slack registration, WhAPI cutover, secret injection, synthetic live Inventory traffic, and old-runtime zero-traffic confirmation remain runtime gates.

@@ -26,6 +26,9 @@
 | Inventory validation/normalized-storage contract changes | `docs/DATA_CONTRACTS.md`, `docs/DETERMINISTIC_FIELD_RESOLUTION.md`, `docs/PROJECT_RULES.md`, Inventory module `README.md`, affected validation/regression tests, `HANDOFF.md` |
 | Inventory model-audit/reporting behavior changes | `docs/DETERMINISTIC_FIELD_RESOLUTION.md`, `docs/DATA_CONTRACTS.md`, Inventory module `README.md`, `HANDOFF.md`, affected test tooling |
 | Repository overview changes | root `README.md` |
+| CRM data-source/schema reconciliation | `docs/crm/CRM_SOURCE_OF_TRUTH_RECONCILIATION.md`, `docs/crm/CRM_DATA_MODEL.md`, `docs/DATA_CONTRACTS.md`, `docs/OPEN_POINTERS.md`, `HANDOFF.md` |
+| CRM design decision/status changes | `docs/crm/CRM_DESIGN_DECISIONS.md`, `docs/crm/CRM_UI_DESIGN_SPEC.md`, `docs/crm/LEAD_CRM_MASTER_PLAN.md`, affected Figma handoff references, `HANDOFF.md` |
+| CRM prototype repository/runtime changes | `docs/crm/LEAD_CRM_MASTER_PLAN.md`, `docs/crm/CRM_UI_DESIGN_SPEC.md`, `docs/ARCHITECTURE.md`, `docs/INFRASTRUCTURE.md`, `HANDOFF.md` |
 | Repository-wide AI skill changes | `.gemini/skills/README.md`, affected skill, relevant governance docs |
 | Repository-specific custom skill changes | `.gemini/skills/README.md`, affected skill and references, relevant capability/module docs |
 

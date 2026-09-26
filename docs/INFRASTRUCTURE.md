@@ -6,7 +6,27 @@ This is the canonical registry for external systems and verified resource identi
 
 - GitHub repository: `zeidhussain9-cloud/efps-internal-automatios`
 - Default branch: `main`
-- Repository code and deployment contract are maintained on `main`.
+- Repository code and production deployment contract are maintained on `main`. CRM reconciliation and prototype work uses isolated branches and does not modify `main`.
+
+## CRM prototype deployment target
+
+The existing dedicated Render service reserved for the future CRM prototype is:
+
+| Property | Verified value |
+|---|---|
+| Service ID | `srv-dark8jm0tbcc73buokhg` |
+| Service name | `leads-ui-dashboard` |
+| URL | `https://leads-ui-dashboard.onrender.com` |
+| Current repository | `zeidhussain9-cloud/easyfind-website` |
+| Current branch | `feature/leads-automation` |
+| Current root | `leads_automation/leads-ui` |
+| Build | `npm install` |
+| Start | `node simple-server.js` |
+| Auto-deploy | enabled |
+
+This service is **not repointed during reconciliation**. Repository/branch/root changes belong to the later prototype implementation/deployment step.
+
+The Render environment variable names supplied for the future prototype are deployment configuration only. Secret values must never be recorded in Git.
 
 ## Established shared capabilities
 
@@ -41,8 +61,10 @@ The Keychain entries are the local-development credential source. They are not a
 - Canonical local schema: `shared/google_sheets/schema.py`
 - Physical grid: 48 columns, `A:AV`
 - **Current reserved columns: `AU` (`source_group`) and `AV` (`inventory_locked`)**
-- **Current active write boundary: `A:AT`**
-- AU/AV are dummy/reserved columns. Current runtime code must not read, write, populate, or operate on them.
+- **Stage-1/2 recurring write boundary: `A:D` and `F:AO`**
+- **Stage-3 downstream write boundary: `AP:AT` plus `C` for the catalogue lifecycle transition**
+- **Initial row bootstrap:** the current Stage-1 runtime inserts a full 48-field row with `listing_state=Available`; subsequent Stage-1/2 updates protect E.
+- AU/AV are reserved columns. Current runtime code must not populate them.
 - A:AV rows may still be represented in memory to preserve the canonical 48-field schema, but AU/AV positions must remain blank.
 - Stage-3 fields remain downstream-owned according to `shared/google_sheets/schema.py`; the reserved-column rule does not transfer ownership of AU/AV to any runtime stage.
 - Historical live Sheet values in AU/AV require a separate controlled data-cleanup operation and are not changed by repository code.

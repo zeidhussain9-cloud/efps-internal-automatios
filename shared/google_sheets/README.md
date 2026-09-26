@@ -67,16 +67,16 @@ The live Sheet does not allow `Unfurnished` as a `furnish_type` value. The repos
 - `maintenance` depends on `maintenance_included`.
 - `security_deposit` depends on `monthly_rent`.
 
-The current deterministic implementation supplies tiered amenity defaults and furnishing defaults only when the target field is blank. The family/bachelor rule currently has an internal `Not Allowed` outcome that is not a live Sheet dropdown value and therefore remains a contract-reconciliation item. The deterministic amenity default strings likewise require reconciliation with the Sheet's exact combined amenity dropdown options.
+The current deterministic implementation supplies the exact canonical amenity and furnishing bundles only when the target field is blank. `Family` clears `bachelor_preference`; `Open For All` defaults to the exact live value `Open for both`, while explicit valid `Female Only ` or `Male Only` source evidence overrides that default. These rules are application/business contracts rather than Sheet conditional-dropdown rules.
 
 ## Ownership and downstream boundary
 
-- Inventory/panel owns the Stage-1/2 fields and `source_group` at AU.
+- Inventory/panel owns the Stage-1/2 fields. AU (`source_group`) and AV (`inventory_locked`) are reserved and must remain blank.
 - Housing Portal owns AP:AR: `posted_url`, `posted_at`, `error_notes`.
 - Meta Catalogue owns AS:AT: `meta_catalog_id`, `meta_catalog_status`.
 - Lifecycle/control owns E and AV: `listing_state`, `inventory_locked`.
 
-Inventory Stage-1/2 writes are explicitly restricted to A:D, F:AO, and AU so lifecycle/downstream state cannot be erased by a late processing update.
+Inventory Stage-1/2 writes are explicitly restricted to A:D and F:AO. E, AP:AT, AU, and AV are protected/reserved.
 
 ## Canonical schema
 
@@ -99,7 +99,7 @@ The canonical spreadsheet connection has been live-read successfully and the pro
 
 - `A:D`
 - `F:AO`
-- `AU`
+- `AU` (reserved; must remain blank)
 
 The protected Stage-3 ranges are `E`, `AP:AT`, and `AV`.
 

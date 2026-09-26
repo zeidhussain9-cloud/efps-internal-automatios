@@ -37,7 +37,7 @@ _ROWS = [
 ("status",PANEL,STAGE_1,("Raw","Pending","Needs Review"),(),"Raw at creation; Pending after a valid deterministic Phase-1 boundary; Needs Review on deterministic/runtime validation failure."),
 ("intake_status",PANEL,STAGE_1,("Raw","Processed"),(),"Raw at creation; Processed after successful intake + deterministic extraction attempt."),
 ("internal_property_type",PANEL,STAGE_2,("Gated Community","Semi Gated","Standalone"),(),"Required canonical source classification. Direct user-labelled evidence wins; registry is consulted only when source evidence is insufficient; absence never implies Standalone."),
-("listing_state",PANEL,STAGE_3,("Available","Rented Out","On Hold"),(),"Lifecycle/downstream control; not populated by current Phase-1 path."),
+("listing_state",PANEL,STAGE_3,("Available","Rented Out","On Hold"),(),"Lifecycle/downstream control. Initial Stage-1 row bootstrap currently seeds Available; recurring Stage-1/2 projection updates protect this field."),
 ("onboarded_on",PANEL,STAGE_1,(),(),"Onboarding timestamp."),
 ("raw_message_text",PANEL,STAGE_1,(),(),"Authoritative source text assembled from the canonical intake session; never replaced with persisted Stage-2 values."),
 ("locality",PANEL,STAGE_2,(),("google_maps_url",),"Explicit Location/Locality/Area source field; verified Maps may replace it later."),

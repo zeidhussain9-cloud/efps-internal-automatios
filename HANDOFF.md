@@ -2,6 +2,8 @@
 
 ## Current state
 
+The active workstream is **CRM source-of-truth reconciliation only**. Branch `crm/source-of-truth-reconciliation` is based on the canonical `main`. No CRM UI implementation, Figma editing, live customer/inventory connection, or Render repointing is part of this step.
+
 The authorized implementation target is **Inventory Management Phase 1**. The workflow has three top-level stages: Stage 1 Initial/Webhook, Stage 2 Deterministic Extraction/Property Processing, and Stage 3 downstream boundary reserved for later consumers.
 
 ## Stage-2 implementation truth
@@ -59,6 +61,23 @@ No production credentials or secrets are part of the repository hardening.
 - `modules/efps-inventory-mgmnt/src/inventory_runtime.py` as the live Stage-1 durable intake adapter. It owns session capture/deduplication and delegates closed-session processing to the canonical `pipeline.process_closed_session()` implementation.
 - `handler.py` as the scheduled Raw-row worker using only the canonical Inventory package.
 - The SAM live-integration boundary, including the DynamoDB session-table ARN needed by the Stage-1 adapter.
+
+## CRM reconciliation state — 2026-09-26
+
+Canonical CRM documentation is under `docs/crm/`; the two dated audits are preserved under `docs/audits/`.
+
+Reconciled:
+- `efps-internal-automatios` is the canonical CRM implementation repository.
+- D01–D04 remain approved; D05 is proposed and informed by the verified Housing Listings audit.
+- Figma is the working design environment; Canva remains the visual reference.
+- Housing Inventory is the live `Housing_Listings` Google Sheet under the 48-field repository contract.
+- Inventory Stage-1/2 write boundary is A:D and F:AO; AU/AV are reserved and blank.
+- The legacy lead extraction, legacy `leads.db`, Leads Tracker, and current DynamoDB lead runtime are distinct layers that still require reconciliation before live CRM source selection.
+- The current audit reports are evidence snapshots, not permission to mutate production data.
+
+Open blockers are maintained in `docs/OPEN_POINTERS.md`.
+
+Next ordered stage after this reconciliation branch: correct the approved Figma screens and design/approve D05. Implementation and Render deployment follow only after the UI design gate.
 
 ## Remaining external dependencies
 

@@ -81,7 +81,7 @@ monthly_rent -> security_deposit (month-based source form)
 `internal_property_type` has exactly three business values: `Gated Community`, `Semi Gated`, `Standalone`.
 
 ## Stage-1/2 write boundary
-Inventory Stage 1/2 may write A:D, F:AO, and AU. It must not write E (`listing_state`), AP:AT (Housing/Meta downstream fields), or AV (`inventory_locked`). Stage-3 writers are responsible for those protected fields.
+Inventory Stage 1/2 recurring updates write A:D and F:AO. E (`listing_state`) is protected from the recurring Stage-1/2 update; the initial Stage-1 row bootstrap currently sets it to `Available`. AP:AT are downstream-owned by Housing/Meta workflows. AU (`source_group`) and AV (`inventory_locked`) are reserved and must remain blank.
 
 ## Runtime boundary
 Inventory Phase-1 runtime verification has completed successfully for the canonical Google Sheets read/write boundary and for Google Maps direct API access plus application-path consumption. WhAPI live channel identity/subscription/deployment, Cloudinary live upload, and Slack live deployment remain separate runtime acceptance items.
@@ -104,6 +104,30 @@ WhAPI webhook
 `handler.py` is the scheduled Raw-row adapter and calls the canonical Inventory package directly. The SAM template supplies the existing Lead resources plus the `efps-sessions` table ARN required by the Stage-1 durable session store.
 
 No Stage-2 implementation from the legacy system is part of this architecture.
+
+## Private CRM architecture — reconciliation baseline
+
+The private CRM is a separate EFPS business capability and UI product layered over the existing systems. Its canonical implementation repository is `zeidhussain9-cloud/efps-internal-automatios`.
+
+### CRM source layers
+
+**Housing inventory**
+- Current business dataset: live `Housing_Listings` worksheet in spreadsheet `1zdOLWklkWlnVECCtcH4SJj6vm6nEVjINpTT2U2UJEKc`.
+- Physical contract: `shared/google_sheets/schema.py`, 48 columns A:AV.
+- Live Column L currently has physical header `w`; canonical field is `google_maps_url`. Current code maps the canonical physical position, so the mismatch is a live schema/header conflict rather than evidence of a new field.
+
+**Lead data**
+- Historical source evidence: three WhatsApp backup sets and their decrypted `msgstore.db` files.
+- Historical normalized dataset: legacy `leads.db`.
+- Curated historical/operational spreadsheet: the live Leads Tracker with `Leads`, `Conversations`, `Events`, `Extraction Log`, `Findings`, and `Priority Sharing`.
+- Current master runtime: DynamoDB domains `efps-leads`, `efps-interactions`, and `efps-lead-audit`.
+- These lead layers have not yet been proven to be one synchronized dataset. The CRM must not silently choose one as the universal live source.
+
+### CRM data boundary
+
+The future local-first CRM stores source-backed records, controlled CRM state, AI-derived state, and audit/synchronization state separately. The exact model is documented in `docs/crm/CRM_DATA_MODEL.md`.
+
+The D01–D05 prototype uses synthetic data only. It must not read or write live customer or inventory records until a later explicit integration gate.
 
 ## Documentation authority
 

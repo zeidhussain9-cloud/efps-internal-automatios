@@ -24,6 +24,12 @@ The legacy lead worker also consumed the `efps-leads` DynamoDB stream: meaningfu
 
 Only the transport and webhook facts move into `shared/whatsapp_whapi/`. Lead storage, stages, actions, assignment, card behavior, follow-up logic, and all other lead business rules belong here.
 
+## CRM reconciliation boundary
+
+Historical WhatsApp/SQLite extraction artifacts belong to the migration evidence layer. The current master repository lead domain is the DynamoDB-backed implementation in this module; it must not be silently replaced by legacy `leads.db` or the curated Leads Tracker.
+
+The private CRM source hierarchy and unresolved reconciliation conflicts are maintained in `docs/crm/CRM_SOURCE_OF_TRUTH_RECONCILIATION.md`.
+
 ## Status
 
-Canonical home for future lead-management implementation. Inventory workflow is not duplicated here.
+Canonical home for current/future lead-management implementation. Inventory workflow is not duplicated here.
