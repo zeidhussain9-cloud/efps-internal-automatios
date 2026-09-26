@@ -18,7 +18,7 @@ createServer(async(req,res)=>{
   if(mode==='misconfigured'){res.writeHead(503,security);return res.end('CRM access configuration incomplete');}
   if(mode==='protected'&&!authorized(req.headers.authorization,process.env.CRM_BASIC_AUTH_USERNAME,process.env.CRM_BASIC_AUTH_PASSWORD)){res.writeHead(401,{...security,'WWW-Authenticate':'Basic realm="EasyFind CRM"'});return res.end('Authentication required');}
   // Durable database writes: explicit opt-in, protected access and audited in the same transaction.
-  if(process.env.CRM_DB_WRITE_ENABLED==='true'&&mode==='protected'&&(p==='/api/db/leads'||p.startsWith('/api/db/leads/')||p.startsWith('/api/db/followups/'))){
+  if(process.env.CRM_DB_WRITE_ENABLED==='true'&&mode==='protected'&&req.method!=='GET'&&(p==='/api/db/leads'||p.startsWith('/api/db/leads/')||p==='/api/db/followups'||p.startsWith('/api/db/followups/'))){
    if(!process.env.DATABASE_URL){res.writeHead(404,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify({error:'Database write pilot disabled'}));}
    const repo=createCrmRepository();const actor=process.env.CRM_BASIC_AUTH_USERNAME;
    try{
