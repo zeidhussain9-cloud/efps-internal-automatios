@@ -22,3 +22,18 @@ test('write gate does not shadow GET lead routes',async()=>{
   assert.equal(response.status,404);
  }finally{proc.kill()}
 });
+
+test('authenticated fictional AI route reaches Ollama-compatible provider without accepting real leads',async()=>{
+ const {createServer}=await import('node:http');
+ let requests=0;
+ const provider=createServer(async(req,res)=>{requests++;assert.equal(req.url,'/api/chat');assert.equal(req.headers.authorization,'Bearer synthetic-provider-key');let body='';for await(const chunk of req)body+=chunk;const data=JSON.parse(body);assert.equal(data.stream,false);assert.equal(data.model,'test-model');assert.match(data.messages[1].content,/Fictional renter/);res.writeHead(200,{'Content-Type':'application/json'});res.end(JSON.stringify({message:{content:JSON.stringify({bhk:2,location:'Harlur',budget:52000,pets:'preferred',uncertainties:[]})}}))});
+ await new Promise(resolve=>provider.listen(0,'127.0.0.1',resolve));
+ const{proc,base}=await start({CRM_BASIC_AUTH_USERNAME:'pilot',CRM_BASIC_AUTH_PASSWORD:'fictional-secret',CRM_SYNTHETIC_AI_ENABLED:'true',OLLAMA_BASE_URL:'http://127.0.0.1:'+provider.address().port,OLLAMA_MODEL:'test-model',OLLAMA_API_KEY:'synthetic-provider-key'});
+ try{
+  const auth='Basic '+Buffer.from('pilot:fictional-secret').toString('base64');
+  const request=leadId=>fetch(base+'/api/ai/analyze',{method:'POST',headers:{Authorization:auth,'Content-Type':'application/json'},body:JSON.stringify({leadId})});
+  assert.equal((await fetch(base+'/api/ai/analyze',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({leadId:'L-1001'})})).status,401);
+  const rejected=await request('real-customer');assert.equal(rejected.status,422);assert.equal(requests,0);
+  const response=await request('L-1001');assert.equal(response.status,200);const result=await response.json();assert.equal(result.fictional,true);assert.equal(result.proposal.budget,52000);assert.equal(requests,1);
+ }finally{proc.kill();await new Promise(resolve=>provider.close(resolve))}
+});
