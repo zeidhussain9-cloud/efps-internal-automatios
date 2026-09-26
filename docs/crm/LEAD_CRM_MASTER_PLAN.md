@@ -112,3 +112,10 @@ The existing Slack automation alone creates and updates the Housing Listings She
 Prototype is already deployed and visually approved. Live-data connection remains gated on stabilization, synthetic model evaluation, D06–D08 privacy decisions and exact local SQLite reconciliation.
 
 Real local-data connection comes after the local SQLite migration/reconciliation gate.
+
+
+## Latest verification checkpoint
+- Fixed CI dependency installation: no committed package lockfile exists yet, so CI now uses `npm install` rather than `npm ci` and avoids lockfile-dependent caching.
+- Added real HTTP security integration tests for protected content, disabled AI, incomplete access credentials and rejected methods/routes.
+- The latest Render deployment and GitHub Actions browser run must be verified before declaring this stage complete. No Render credential values were read or changed.
+- Existing Ollama credentials should be inspected by name/presence only at the credential-configuration stage; Sheets service-account JSON must be supplied through Render server-only environment configuration, not the repository.
