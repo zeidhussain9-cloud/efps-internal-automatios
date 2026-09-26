@@ -2,9 +2,9 @@
 
 The CRM Render service is `easyfind-crm-d01-d05`, deployed only from `crm-ui-dashboard`. Do not configure the old leads UI or main branch. Keep secrets out of GitHub, the React bundle, chat transcripts and logs.
 
-## Current stage: synthetic-only
+## Current verified stage: synthetic-only (2026-09-26 17:41 UTC)
 
-The browser prototype contains fictional leads and properties. Its versioned browser storage survives reloads **on the same browser**; it is not a secure production database and does not synchronize across devices. Server authentication can be enabled with the two variables below. Until both are set, the preview remains public and MUST NOT receive real customer records. If exactly one is set, the server fails closed.
+The browser prototype contains fictional leads and properties. Its versioned browser storage survives reloads **on the same browser**; it is not a secure production database and does not synchronize across devices. Basic Auth was confirmed configured at the latest Render startup, but it is still a temporary pilot gate. Real customer records remain disabled pending the migration and security gates. If exactly one is set, the server fails closed.
 
 | Variable | Purpose |
 | --- | --- |
@@ -17,9 +17,9 @@ The public `/health` endpoint reports only synthetic mode and access mode, never
 
 The operator has stated the Ollama API key and model name have already been placed in a Render environment. A server-only adapter and authenticated fictional-fixture route are implemented but disabled by default. **Inspect the variable names and target service without revealing their values**, then adapt the server-side provider configuration to those names. Do not overwrite existing credentials, infer an endpoint from a model name, expose the API key to the browser or claim the provider is connected until a synthetic request succeeds. Ollama local `localhost` endpoints on Render refer to Render, not the operator's Mac. If using an external provider, verify its exact base URL and API protocol. Restrict model input to fictional pilot records until the live-data gate is approved. The adapter accepts `OLLAMA_BASE_URL` (or `OLLAMA_HOST`), `OLLAMA_MODEL` (or `OLLAMA_MODEL_NAME`) and optional `OLLAMA_API_KEY`; map existing names without duplicating secrets. Only set `CRM_SYNTHETIC_AI_ENABLED=true` after server access credentials are active and the endpoint is verified. The route accepts only the four fictional fixture IDs and never client-supplied conversations.
 
-## Read-only Google Sheets configuration — later gate
+## Read-only Google Sheets — credential-format reconciliation pending
 
-The existing Slack integration owns creation and updates of Housing Listings. CRM must only read the existing sheet and preserve its editor audit trail. Once ready, provide these **server-only** values in the same Render service:
+The existing Slack integration owns creation and updates of Housing Listings. CRM must only read the existing sheet and preserve its editor audit trail. The operator reports already adding the **full JSON service account** and hardcoding the sheet ID. The current adapter does **not** consume arbitrary raw JSON or a hardcoded ID: it checks the following server-side environment names. Its latest startup flags were false for the two checked names, which does not establish that the operator's differently named raw JSON credential is absent. Do not print or overwrite existing credentials. Current adapter inputs:
 
 | Variable | Purpose |
 | --- | --- |
@@ -27,14 +27,20 @@ The existing Slack integration owns creation and updates of Housing Listings. CR
 | `HOUSING_SHEET_ID` | Spreadsheet ID of the verified Housing Listings document |
 | `HOUSING_SHEET_TAB` | Exact verified worksheet name, expected `Housing_Listings` unless source differs |
 
-A read-only service-account adapter is implemented and disabled by default with `CRM_SYNTHETIC_SHEETS_ENABLED` (unset). Do not enable it until the intended real sheet and access policy are approved. Grant the service-account email **Viewer** access to the verified spreadsheet. Do not give it Editor access or share the JSON publicly. The CRM must not write to the sheet or create a competing inventory workflow. Base64 is transport encoding, not encryption; treat it as a secret. Do not configure any real sheet access until the synthetic pilot and access gate are verified.
+A read-only service-account adapter is implemented and disabled by default with `CRM_SYNTHETIC_SHEETS_ENABLED`. It currently requires Base64 JSON, a sheet ID environment variable and a tab name; reconcile these with the operator's existing configuration before testing. A hardcoded sheet ID has not been verified in `src/housing-sheet-adapter.mjs`. Do not enable it until the intended real sheet and access policy are approved. Grant the service-account email **Viewer** access to the verified spreadsheet. Do not give it Editor access or share the JSON publicly. The CRM must not write to the sheet or create a competing inventory workflow. Base64 is transport encoding, not encryption; treat it as a secret. Do not configure any real sheet access until the synthetic pilot and access gate are verified.
 
 ## Release checks
 
 1. GitHub Actions: `npm test`, `npm run build`, Chromium browser journey.
 2. Render: latest commit is live; `/health` reports synthetic mode and intended access mode.
 3. Synthetic editing survives reloads; follow-ups, per-lead overrides, filtering and error states pass browser checks.
-4. Authenticated access gate verified before any real data. Production durable storage requires a separately approved persistent database and backups; Render free ephemeral filesystem is not sufficient.
+4. Authenticated access gate verified before any real data. Supabase `easyfind-crm` is the sole hosted CRM database; no Render PostgreSQL service is required. Render's existing DATABASE_URL was present but the 17:41 UTC connection probe failed; validate its Supabase IPv4-compatible session pooler URL (5432), TLS and authentication without exposing the secret. Independent backup and restore testing remain required.
 5. Only then connect existing Ollama settings and read-only Sheets credentials, test with fictional data and separately approve real SQLite migration.
 
 No live WhAPI ingestion, automatic WhatsApp sending or live customer data is enabled by this document.
+
+## Latest connection audit — 2026-09-26 17:41 UTC
+- Supabase project `qttcutwzehtskfcwxkwj` ACTIVE_HEALTHY; independent SQL query succeeded; nine public tables.
+- Render DATABASE_URL, CRM_DB_READ_ENABLED, Basic Auth and Ollama endpoint/model present; database probe failed with details withheld. No diagnosis of the exact network/auth/TLS cause is yet proven.
+- Google Sheets startup flags check only GOOGLE_SERVICE_ACCOUNT_JSON_BASE64 and HOUSING_SHEET_ID, not alternative raw JSON names or source-level hardcoding. Operator reports providing full JSON and hardcoded ID; verify mapping rather than requesting new secrets.
+- CRM_REAL_DATA_ENABLED remains false. Do not provision PostgreSQL on Render or import customer records until the Supabase connection and safety gates pass.
