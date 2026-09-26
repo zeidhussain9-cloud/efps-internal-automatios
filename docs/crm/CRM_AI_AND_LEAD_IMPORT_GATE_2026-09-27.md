@@ -1,0 +1,20 @@
+# AI and historical lead import gate — 2026-09-27
+
+## Verified implementation
+- Render CRM deployment `7ed3bee` recovered from an inventory SQL JavaScript escaping error and was confirmed live. Synthetic AI was explicitly enabled through the server-side Render setting. This is **not** evidence that the remote Ollama model responded successfully.
+- Local integration test exercises the actual authenticated `/api/ai/analyze` HTTP route with a local Ollama-compatible test provider: unauthenticated access returns 401, a non-fictional ID returns 422 without calling the provider, and fictional `L-1001` returns a structured proposal. The provider key is passed server-side only. This is a **mock-provider** integration test, not a real remote Ollama request.
+- Full application tests: 58/58 passed; production build and Chromium browser journey passed after rebuilding the local bundle. Commit `83ccdb4` on `crm-ui-dashboard` only. Check the current GitHub Actions run before treating CI as complete.
+
+## Read-only source SQLite audit
+- Original source file: `leads_automation/leads.db`, opened with SQLite `mode=ro`; no data was changed or exported.
+- 735 leads with 735 distinct nonblank phone keys; 23,454 conversations with 23,454 distinct nonblank message IDs; 966 lifecycle events.
+- 0 conversation rows or lifecycle events refer to a phone missing from the lead table. Source extraction grouping has 458, 228 and 49 lead rows respectively (source identifiers deliberately omitted here).
+- Separate `leads_automation/crm.db` has zero rows in its leads, interactions and inventory tables; it is **not** the canonical historical source.
+- Existing curated extraction (308 leads / 6,064 messages) remains unreconciled against the larger historical SQLite. The source schema lacks an explicit conversation source_number column, so deduplication must map message provenance from the audited extraction rather than infer it from customer phone.
+- Supabase at this checkpoint has 3 test leads, 0 messages, 81 active inventory rows and 4 inventory sync runs. Do not merge historical customer data with test records without isolation, backup/restore evidence, provenance reconciliation and authorization.
+
+## Remaining sequential gates
+1. Verify actual remote Ollama response through the authenticated Render route using only fictional ID L-1001; check model identity, structured extraction, timeout and error handling. Never submit real conversations during this pilot.
+2. Independently verify encrypted Supabase backup and restore to an isolated target, then reconcile 735/23,454/966 against the curated 308/6,064 source by stable IDs and source attribution. Prepare a read-only dry-run manifest with zero PII in logs.
+3. Review production authentication, access scopes, retention and operator override; approve D06–D08. Only then authorize a controlled, audited real-data import. Keep `CRM_DB_WRITE_ENABLED` and `CRM_REAL_DATA_ENABLED` disabled until gates pass.
+4. Confirm the latest live Render deployment, GitHub Actions result and browser journey after each change. `main` must never be modified.
