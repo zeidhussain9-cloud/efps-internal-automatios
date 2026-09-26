@@ -14,9 +14,9 @@ CREATE TABLE IF NOT EXISTS public.crm_inventory_sync_runs(
 ALTER TABLE public.crm_inventory_sync_runs ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON public.crm_inventory_sync_runs FROM anon,authenticated;
 CREATE OR REPLACE VIEW public.crm_lead_inventory_matches WITH (security_invoker=true) AS
-SELECT l.id AS lead_id,i.listing_id,i.locality,i.society_name,i.bhk,i.monthly_rent,i.furnishing,i.listing_state,i.cloudinary_image_urls,
+SELECT l.id AS lead_id,i.listing_id,i.locality,i.society_name,i.bhk,i.monthly_rent,i.listing_state,
 (i.bhk=coalesce(l.requirements->>'bhk','')) AS bhk_match,
-(i.monthly_rent<=NULLIF(l.requirements->>'budget','')::numeric) AS within_budget
+(i.monthly_rent<=NULLIF(l.requirements->>'budget','')::numeric) AS within_budget, i.furnishing,i.cloudinary_image_urls
 FROM public.crm_leads l JOIN public.crm_inventory_snapshot i ON i.listing_state='Available' AND i.deleted_at IS NULL
 WHERE l.id LIKE 'L-TEST-INV-%' AND i.bhk=coalesce(l.requirements->>'bhk','')
 AND i.monthly_rent<=NULLIF(l.requirements->>'budget','')::numeric;
