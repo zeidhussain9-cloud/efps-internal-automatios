@@ -64,7 +64,6 @@ ALTER TABLE crm_idempotency_keys ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON TABLE crm_idempotency_keys FROM anon, authenticated;
 ALTER TABLE crm_property_media ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON TABLE crm_property_media FROM anon, authenticated;
-COMMIT;
 
 CREATE OR REPLACE FUNCTION crm_reject_append_only_mutation() RETURNS trigger
 LANGUAGE plpgsql AS $$
@@ -100,3 +99,4 @@ $$;
 DROP TRIGGER IF EXISTS crm_leads_touch_updated_at ON crm_leads;
 CREATE TRIGGER crm_leads_touch_updated_at BEFORE UPDATE ON crm_leads
 FOR EACH ROW EXECUTE FUNCTION crm_touch_lead_updated_at();
+COMMIT;
