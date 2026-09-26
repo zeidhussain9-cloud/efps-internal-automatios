@@ -22,3 +22,8 @@
 Slack automation remains the sole writer of `Housing_Listings`; CRM inventory is read-only. Media bytes remain outside PostgreSQL; store Cloudinary URLs only. No automatic WhatsApp send in v1. Migrations are explicit, never invoked on normal web deployment.
 
 **Supabase security notice:** [RLS enabled with no policies](https://supabase.com/docs/guides/database/database-linter?lint=0008_rls_enabled_no_policy) is deliberate for the current server-only model; do not add browser policies without a reviewed authorization design.
+
+
+## Render credential validation (2026-09-26)
+
+`src/crm-startup-check.mjs` now checks **presence only** for `DATABASE_URL`, `CRM_DB_READ_ENABLED`, both Basic Auth variables, Ollama endpoint/model and Google Sheets credential/ID. It performs a server-side `SELECT 1` probe when `DATABASE_URL` is set and logs only `connected`, `failed` or `not configured`. No credential values or database exception details are logged. Startup probe success alone does not verify least-privilege access, backup readiness or suitability for live customer data. Verify the actual sanitized Render application logs after the new commit deploys. Do not paste credentials into chat.
