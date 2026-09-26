@@ -63,3 +63,17 @@ test('property media accepts only Cloudinary external references',async()=>{
  assert.equal(row.listing_id,'EF-1');assert.match(calls[0][0],/crm_property_media/);
  await assert.rejects(()=>repo.addPropertyMedia({listingId:'EF-1',mediaUrl:'https://example.com/ef-1.jpg'}),/Cloudinary media URL/);
 });
+
+test('provider event claiming is lock-protected and refuses already processed events',async()=>{
+ const calls=[];
+ const client={query:async(sql,args)=>{calls.push([sql,args]);if(sql.startsWith('SELECT id,status,attempts'))return{rows:[{id:7,status:'received',attempts:1}]};return{rows:[]}},release:()=>{}};
+ const repo=createCrmRepository({pool:{connect:async()=>client}});
+ const claim=await repo.claimProviderEvent({provider:'whapi',providerEventId:'evt-7'});
+ assert.deepEqual(claim,{claimed:true,id:7,status:'processing',attempts:2});
+ assert.match(calls[1][0],/UPDATE crm_provider_events SET status/);
+});
+test('provider event completion records processed timestamp or failure',async()=>{
+ const calls=[];const pool={query:async(sql,args)=>{calls.push([sql,args]);return{rows:[{id:7,status:args[0]}]}}};const repo=createCrmRepository({pool});
+ const row=await repo.completeProviderEvent({id:7,status:'processed'});assert.equal(row.status,'processed');assert.match(calls[0][0],/processed_at/);
+ await assert.rejects(()=>repo.completeProviderEvent({id:0}),/Invalid provider event completion/);
+});
