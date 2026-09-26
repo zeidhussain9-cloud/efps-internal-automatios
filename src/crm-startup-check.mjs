@@ -33,12 +33,12 @@ export async function startupDatabaseCheck(env,{createRepository=createCrmReposi
  const flags=configurationStatus(env);
  // Never log the connection string, credentials, or raw exception.
  log('CRM configuration flags:',JSON.stringify(flags));
- log('CRM database endpoint shape:',JSON.stringify(connectionStringShape(env.DATABASE_URL)));
+ log('CRM database endpoint shape:',JSON.stringify(connectionStringShape(env.DATABASE_URL,{sslCaConfigured:Boolean(env.DATABASE_SSL_CA)})));
  log('CRM database endpoint class:',connectionEndpointClass(env.DATABASE_URL));
  if(!flags.databaseUrlPresent){log('CRM database connectivity: not configured');return 'not_configured';}
  let repo;
  try{
-  repo=createRepository({connectionString:env.DATABASE_URL});
+  repo=createRepository({connectionString:env.DATABASE_URL,sslCa:env.DATABASE_SSL_CA});
   const ok=await repo.health();
   log('CRM database connectivity:',ok?'connected':'failed');
   return ok?'connected':'failed';
