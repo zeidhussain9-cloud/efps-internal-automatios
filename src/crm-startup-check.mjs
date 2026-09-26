@@ -8,8 +8,8 @@ export function configurationStatus(env){
   authIncomplete:Boolean(env.CRM_BASIC_AUTH_USERNAME)!==Boolean(env.CRM_BASIC_AUTH_PASSWORD),
   ollamaEndpointPresent:Boolean(env.OLLAMA_BASE_URL||env.OLLAMA_HOST),
   ollamaModelPresent:Boolean(env.OLLAMA_MODEL||env.OLLAMA_MODEL_NAME),
-  sheetsCredentialPresent:Boolean(env.GOOGLE_SERVICE_ACCOUNT_JSON_BASE64),
-  sheetsIdPresent:Boolean(env.HOUSING_SHEET_ID),
+  sheetsCredentialPresent:Boolean(env.GOOGLE_SERVICE_ACCOUNT_JSON_BASE64||env.GOOGLE_APPLICATION_CREDENTIALS),
+  sheetsIdPresent:Boolean(env.HOUSING_SHEET_ID||env.SHEET_ID),
   liveDataEnabled:env.CRM_REAL_DATA_ENABLED==='true'
  };
 }
