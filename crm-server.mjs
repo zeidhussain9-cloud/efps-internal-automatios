@@ -1,4 +1,5 @@
 import {createServer} from 'node:http';
+import {randomUUID} from 'node:crypto';
 import {readFile,stat} from 'node:fs/promises';
 import {join,extname,resolve} from 'node:path';
 import {authorized,accessMode} from './src/server-auth.mjs';
@@ -7,6 +8,7 @@ import {createCrmRepository} from './src/crm-repository.mjs';
 import {startupDatabaseCheck} from './src/crm-startup-check.mjs';
 const root=resolve('dist');
 const mime={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.svg':'image/svg+xml','.png':'image/png','.ico':'image/x-icon'};
+async function readJsonBody(req,maxBytes=16384){let raw='';for await(const chunk of req){raw+=chunk;if(Buffer.byteLength(raw,'utf8')>maxBytes)throw Object.assign(Error('Request too large'),{statusCode:413})}if(!raw.trim())return{};try{const value=JSON.parse(raw);if(!value||typeof value!=='object'||Array.isArray(value))throw Error('JSON object required');return value}catch{throw Object.assign(Error('Invalid JSON body'),{statusCode:400})}}
 const security={'X-Content-Type-Options':'nosniff','Referrer-Policy':'no-referrer','X-Frame-Options':'DENY','Cache-Control':'no-store','Strict-Transport-Security':'max-age=31536000','Permissions-Policy':'geolocation=(),camera=(),microphone=()','Cross-Origin-Opener-Policy':'same-origin','Cross-Origin-Resource-Policy':'same-origin','X-Permitted-Cross-Domain-Policies':'none','Content-Security-Policy':"default-src 'self'; img-src 'self' https: data:; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'"};
 createServer(async(req,res)=>{
  try{
@@ -15,6 +17,34 @@ createServer(async(req,res)=>{
   const mode=accessMode(process.env);
   if(mode==='misconfigured'){res.writeHead(503,security);return res.end('CRM access configuration incomplete');}
   if(mode==='protected'&&!authorized(req.headers.authorization,process.env.CRM_BASIC_AUTH_USERNAME,process.env.CRM_BASIC_AUTH_PASSWORD)){res.writeHead(401,{...security,'WWW-Authenticate':'Basic realm="EasyFind CRM"'});return res.end('Authentication required');}
+  // Durable database writes: explicit opt-in, protected access and audited in the same transaction.
+  if(process.env.CRM_DB_WRITE_ENABLED==='true'&&mode==='protected'&&(p==='/api/db/leads'||p.startsWith('/api/db/leads/')||p.startsWith('/api/db/followups/'))){
+   if(!process.env.DATABASE_URL){res.writeHead(404,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify({error:'Database write pilot disabled'}));}
+   const repo=createCrmRepository();const actor=process.env.CRM_BASIC_AUTH_USERNAME;
+   try{
+    if(p==='/api/db/leads'&&req.method==='POST'){
+     const body=await readJsonBody(req);const lead=await repo.createLead({id:body.id,displayName:body.displayName,normalizedPhone:body.normalizedPhone,status:body.status,priority:body.priority,requirements:body.requirements,operatorNotes:body.operatorNotes,actor});res.writeHead(201,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify(lead));
+    }
+    if(p.startsWith('/api/db/leads/')&&req.method==='PATCH'){
+     const id=decodeURIComponent(p.slice('/api/db/leads/'.length));if(!id||id.includes('/')||id.length>128){res.writeHead(400,security);return res.end('Invalid lead ID')}
+     const body=await readJsonBody(req);const lead=await repo.updateLead({id,displayName:body.displayName,normalizedPhone:body.normalizedPhone,status:body.status,priority:body.priority,requirements:body.requirements,operatorNotes:body.operatorNotes,actor});if(!lead){res.writeHead(404,security);return res.end('Lead not found')}res.writeHead(200,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify(lead));
+    }
+    if(p.match(/^\/api\/db\/leads\/[^/]+\/activity$/)&&req.method==='POST'){
+     const id=decodeURIComponent(p.split('/')[4]);const body=await readJsonBody(req);const row=await repo.appendActivity({leadId:id,actor,action:body.action,details:body.details});res.writeHead(201,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify(row));
+    }
+    if(p.match(/^\/api\/db\/leads\/[^/]+\/evidence$/)&&req.method==='POST'){
+     const id=decodeURIComponent(p.split('/')[4]);const body=await readJsonBody(req);const row=await repo.appendRequirementEvidence({leadId:id,fieldName:body.fieldName,value:body.value,sourceMessageId:body.sourceMessageId,sourceNumber:body.sourceNumber,actor});res.writeHead(201,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify(row));
+    }
+    if(p==='/api/db/followups'&&req.method==='POST'){
+     const body=await readJsonBody(req);const row=await repo.addFollowup({id:body.id||randomUUID(),leadId:body.leadId,dueAt:body.dueAt,note:body.note,actor});res.writeHead(201,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify(row));
+    }
+    if(p.match(/^\/api\/db\/followups\/[^/]+\/complete$/)&&req.method==='POST'){
+     const id=decodeURIComponent(p.split('/')[4]);const row=await repo.completeFollowup({id,actor});if(!row){res.writeHead(404,security);return res.end('Follow-up not found')}res.writeHead(200,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify(row));
+    }
+    if(p==='/api/db/leads' || p.startsWith('/api/db/leads/') || p.startsWith('/api/db/followups/')){res.writeHead(405,security);return res.end('Method not allowed')}
+   }catch(e){const status=e?.statusCode||((e?.code==='23505')?409:422);res.writeHead(status,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify({error:status===409?'Conflict':e?.message==='Request too large'?'Request too large':'Database write rejected'}));}
+   finally{await repo.close()}
+  }
   // Read-only database pilot: explicit opt-in, protected access and no customer writes.
   if(p==='/api/db/status'||p==='/api/db/leads'||p.startsWith('/api/db/leads/')){
    if(process.env.CRM_DB_READ_ENABLED!=='true'||!process.env.DATABASE_URL||mode!=='protected'){
