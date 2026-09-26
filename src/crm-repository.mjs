@@ -44,11 +44,11 @@ function recognizedParts(value){
  ))return whatwg;
  return parseLoosePostgresUrl(value);
 }
-function enforceSslmodeVerifyFull(pathAndQuery){
+function stripConnectionOptions(pathAndQuery){
  const [path,query='']=pathAndQuery.split('?');
  const params=new URLSearchParams(query);
- params.set('sslmode','verify-full');
- return path+'?'+params.toString();
+ params.delete('sslmode');
+ return params.toString()?path+'?'+params.toString():path;
 }
 export function normalizeConnectionString(value){
  if(!value)return value;
@@ -57,12 +57,12 @@ export function normalizeConnectionString(value){
  const direct=parts.hostname.match(/^db\.([a-z0-9]+)\.supabase\.co$/i);
  const pooler=parts.hostname.match(/^aws-[0-9-]+-([a-z0-9-]+)\.pooler\.supabase\.com$/i);
  if(direct){
-  return 'postgresql://postgres.'+direct[1]+':'+encodePart(parts.password)+'@'+SUPABASE_SESSION_POOLER_HOST+':5432'+enforceSslmodeVerifyFull('/postgres');
+  return 'postgresql://postgres.'+direct[1]+':'+encodePart(parts.password)+'@'+SUPABASE_SESSION_POOLER_HOST+':5432/postgres';
  }
  if(pooler&&parts.port==='5432'){
   const projectRef=parts.username.match(/^postgres\.([a-z0-9]+)$/i)?.[1];
   if(projectRef){
-   return 'postgresql://postgres.'+projectRef+':'+encodePart(parts.password)+'@'+SUPABASE_SESSION_POOLER_HOST+':5432'+enforceSslmodeVerifyFull('/postgres');
+   return 'postgresql://postgres.'+projectRef+':'+encodePart(parts.password)+'@'+SUPABASE_SESSION_POOLER_HOST+':5432/postgres';
   }
  }
  return value;
@@ -84,7 +84,8 @@ export function connectionStringShape(value){
   port:parts?.port||'default',
   usernamePresent:Boolean(parts?.username),
   passwordPresent:Boolean(parts?.password),
-  databasePathPresent:Boolean(parts?.pathAndQuery)
+  databasePathPresent:Boolean(parts?.pathAndQuery),
+  sslCaConfigured:Boolean(process.env.DATABASE_SSL_CA)
  };
 }
 export function connectionEndpointClass(value){
@@ -97,9 +98,9 @@ export function connectionEndpointClass(value){
  if(/\.pooler\.supabase\.com$/i.test(parts.hostname))return 'supabase_pooler_other';
  return 'external_or_unknown';
 }
-export function createCrmRepository({pool,connectionString=process.env.DATABASE_URL}={}){
+export function createCrmRepository({pool,connectionString=process.env.DATABASE_URL,sslCa=process.env.DATABASE_SSL_CA}={}){
  if(!pool&&!connectionString)throw Error('DATABASE_URL required');
- const db=pool||new pg.Pool({connectionString:normalizeConnectionString(connectionString),max:5,connectionTimeoutMillis:5000});
+ const db=pool||new pg.Pool({connectionString:normalizeConnectionString(connectionString),max:5,connectionTimeoutMillis:5000,ssl:{rejectUnauthorized:true,...(sslCa?{ca:sslCa}: {})}});
  return {
   async health(){const r=await db.query('SELECT 1 AS ok');return r.rows[0]?.ok===1;},
   async listLeads(limit=50){if(!Number.isInteger(limit)||limit<1||limit>100)throw Error('Invalid limit');const r=await db.query('SELECT id,display_name,status,priority,requirements,updated_at FROM crm_leads ORDER BY updated_at DESC,id LIMIT $1',[limit]);return r.rows;},
