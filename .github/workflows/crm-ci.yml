@@ -21,9 +21,9 @@ jobs:
         run: npm install
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
-      - name: Unit and integration tests
-        run: npm test
       - name: Production build
         run: npm run build
+      - name: Unit and integration tests
+        run: npm test
       - name: Chromium browser journey
         run: npm run test:browser
