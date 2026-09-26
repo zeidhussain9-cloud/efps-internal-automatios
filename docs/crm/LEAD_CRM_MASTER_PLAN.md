@@ -2,7 +2,7 @@
 
 **Canonical repository:** `zeidhussain9-cloud/efps-internal-automatios`  
 **Working branch:** `crm-ui-dashboard`  
-**Current status:** D01–D05 approved; reconciliation complete; UI implementation not started.
+**Current status (2026-09-26):** D01–D05 approved; initial synthetic React prototype live and visually approved. Stabilization and synthetic model pilot active; see `CRM_STABILIZATION_AUDIT.md`.
 
 ## 1. Product goal
 
@@ -48,23 +48,23 @@ Use the verified Housing Listings schema/audit for D05. Live inventory connectio
 - [x] Figma established as working design environment.
 - [x] Prototype remains synthetic-data only.
 
-### Phase 1 — Figma completion — NEXT
+### Phase 1 — Design reconciliation — PARTIAL; approved React preview is working visual baseline
 - [ ] Correct approved D01–D04 screens against the reconciled local-first data model.
 - [x] D05 Inventory Experience approved.
 - [ ] Create/adjust complete D05 Figma screens.
 - [ ] Resolve only the design questions required by the approved flow before implementation.
 
 ### Phase 2 — Prototype implementation
-- [ ] Build D01–D05 dashboard from synthetic data.
+- [x] Initial synthetic D01–D05 React dashboard deployed (feature-completion pending).
 - [ ] Private dashboard shell.
 - [ ] Deterministic inbox/search/filter behavior.
-- [ ] Lead workspace navigation.
-- [ ] Requirements editing simulation.
-- [ ] AI workspace simulation/controlled provider boundary.
-- [ ] Inventory browse/search/match simulation.
-- [ ] Draft preparation simulation.
-- [ ] Activity/history simulation.
-- [ ] Responsive mobile layout.
+- [x] Initial lead workspace tab navigation.
+- [x] Partial requirements editing simulation; remaining fields pending.
+- [x] Provider-unavailable simulation; real Ollama pilot pending.
+- [x] Basic synthetic inventory browse/match; image and search work pending.
+- [x] Basic editable draft preparation; versioning pending.
+- [x] Session-only activity/history simulation; durable history pending.
+- [x] Initial responsive mobile layout; QA pending.
 - [ ] Automated UI tests.
 
 ### Phase 3 — Local-data migration
@@ -79,6 +79,19 @@ Use the verified Housing Listings schema/audit for D05. Live inventory connectio
 - [ ] AI production execution.
 - [ ] Controlled CRM synchronization.
 - [ ] Property-share tracking against real customer data.
+
+### Phase 2A — Stabilization and synthetic model pilot — ACTIVE
+- [x] Deploy initial synthetic React prototype on Render from `crm-ui-dashboard`.
+- [x] User visually approved initial D01–D05 interface.
+- [x] Record baseline audit and cleanup gates in `CRM_STABILIZATION_AUDIT.md`.
+- [ ] Complete D01–D05 behavior, including Activity, Settings, follow-ups, inventory images and scoped lead history.
+- [ ] Refactor monolithic UI and add automated tests.
+- [ ] Identify genuinely stale CRM files before any deletion.
+- [ ] Add synthetic-only persistence, access controls, validation and failure recovery.
+- [ ] Inspect authorized local raw extraction and generate fictional representative fixtures with expected results.
+- [ ] Run Ollama through a secured server-side adapter on synthetic data.
+- [ ] Verify model extraction, incremental updates, matching, draft safety and failure/retry handling.
+- [ ] Review D06–D08 and obtain pilot approval before live data.
 
 ## 5. Non-negotiable architecture rules
 
@@ -95,6 +108,6 @@ Use the verified Housing Listings schema/audit for D05. Live inventory connectio
 
 ## 6. Implementation gate
 
-Prototype implementation can begin only after the approved Figma package matches this branch's `CRM_DATA_MODEL.md`.
+Prototype is already deployed and visually approved. Live-data connection remains gated on stabilization, synthetic model evaluation, D06–D08 privacy decisions and exact local SQLite reconciliation.
 
 Real local-data connection comes after the local SQLite migration/reconciliation gate.
