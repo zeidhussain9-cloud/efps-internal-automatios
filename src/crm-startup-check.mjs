@@ -4,6 +4,7 @@ export function configurationStatus(env){
  return {
   databaseUrlPresent:Boolean(env.DATABASE_URL),
   databaseReadOptIn:env.CRM_DB_READ_ENABLED==='true',
+  databaseWriteOptIn:env.CRM_DB_WRITE_ENABLED==='true',
   databaseTlsCaPresent:Boolean(env.DATABASE_SSL_CA),
   authConfigured:Boolean(env.CRM_BASIC_AUTH_USERNAME&&env.CRM_BASIC_AUTH_PASSWORD),
   authIncomplete:Boolean(env.CRM_BASIC_AUTH_USERNAME)!==Boolean(env.CRM_BASIC_AUTH_PASSWORD),
