@@ -139,7 +139,7 @@ See `CRM_DATABASE_MIGRATION_GATE.md`.
 - [x] Applied server-only CRM core migration: nine RLS-enabled tables; revoked anon/authenticated grants; no browser-facing policies.
 - [x] Added three missing foreign-key indexes and committed matching schema migrations.
 - [x] Verified schema via SQL: zero customer leads and zero messages; no real data imported.
-- [ ] Fix the existing Render-to-Supabase server-only connection (DATABASE_URL is present; startup probe failed at 17:41 UTC). No Render PostgreSQL service is needed; credentials have not been printed or modified.
+- [ ] Fix the existing Render-to-Supabase server-only connection. Latest runtime evidence: `DATABASE_URL` is present but has no PostgreSQL URI scheme and is unparseable; startup consequently reports `invalid_url` / DNS. No Render PostgreSQL service is needed; secret values have not been printed or modified.
 - [ ] Implement and test authenticated durable server CRUD, raw webhook event log, per-source AI cursor, append-only requirement evidence, safe retries and restore-tested independent backups before any real data.
 - [ ] Reconcile historical Mac SQLite source with authorized local access, without modifying the source file. Do not use Desktop Commander without explicit permission.
 - [ ] Verify the existing Ollama endpoint/model and the user's reported Google service-account JSON and hardcoded sheet ID. Current adapter only recognizes GOOGLE_SERVICE_ACCOUNT_JSON_BASE64, HOUSING_SHEET_ID and HOUSING_SHEET_TAB; presence flags cannot detect other variable names or hardcoded IDs.
