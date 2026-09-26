@@ -32,6 +32,6 @@ test('synthetic CRM browser journey',async t=>{
   await page.getByPlaceholder('Search synthetic inventory…').fill('Whitefield');
   assert.equal(await page.getByText('3 BHK · Whitefield').count(),1);
   await page.getByRole('button',{name:'Settings',exact:true}).click();
-  assert.equal(await page.getByText(/fictional records only/i).count()>0,true);
+  assert.equal(await page.getByText(/fictional fixtures only/i).count()>0,true);
  }finally{await browser?.close();server.kill();}
 });
