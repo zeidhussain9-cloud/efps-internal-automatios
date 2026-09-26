@@ -119,3 +119,16 @@ Real local-data connection comes after the local SQLite migration/reconciliation
 - Added real HTTP security integration tests for protected content, disabled AI, incomplete access credentials and rejected methods/routes.
 - The latest Render deployment and GitHub Actions browser run must be verified before declaring this stage complete. No Render credential values were read or changed.
 - Existing Ollama credentials should be inspected by name/presence only at the credential-configuration stage; Sheets service-account JSON must be supplied through Render server-only environment configuration, not the repository.
+
+
+## Production persistence preparation — latest
+- [x] Operator accepted deployed synthetic UI after manually navigating and checking it.
+- [x] Added PostgreSQL v1 schema for CRM-owned leads, source numbers, stable-ID-deduplicated conversations, follow-ups, append-only activity, AI proposals, versioned drafts and per-lead property actions. No editable inventory tables.
+- [x] Added explicit opt-in migration command, tests and three-source historical deduplication planning; migration is **not** automatically invoked by deployment.
+- [x] Verified the Render workspace currently has **no PostgreSQL instance**.
+- [ ] Agree on persistent PostgreSQL plan and backup/restore requirements; provision database and connect server-only DATABASE_URL.
+- [ ] Implement durable authenticated production CRUD, transaction-safe audited edits and import dry-run; run full synthetic database integration tests.
+- [ ] Reconcile 735/23,454 original extraction against curated 308/6,064 subset before importing any real records.
+- [ ] Verify latest CI unit, HTTP and Chromium results separately from user-approved browser appearance.
+- [ ] Then inspect existing Ollama settings by name/presence only and configure Google service-account JSON in Render for read-only Sheets access.
+See `CRM_DATABASE_MIGRATION_GATE.md`.
