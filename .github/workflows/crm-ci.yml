@@ -1,0 +1,30 @@
+name: CRM CI
+
+on:
+  push:
+    branches: [crm-ui-dashboard]
+  pull_request:
+    branches: [crm-ui-dashboard]
+
+permissions:
+  contents: read
+
+jobs:
+  crm:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install dependencies
+        run: npm install
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Unit and integration tests
+        run: npm test
+      - name: Production build
+        run: npm run build
+      - name: Chromium browser journey
+        run: npm run test:browser
