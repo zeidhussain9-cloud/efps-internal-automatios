@@ -64,6 +64,27 @@ export function normalizeConnectionString(value){
  }
  return value;
 }
+
+export function connectionStringShape(value){
+ const raw=typeof value==='string'?value.trim():'';
+ const unquoted=trimConnectionString(value);
+ const parts=parseWhatwg(unquoted)||parseLoosePostgresUrl(unquoted);
+ const host=parts?.hostname||'';
+ const hostClass=/^db\.[a-z0-9]+\.supabase\.co$/i.test(host)?'supabase_direct':/^aws-[0-9-]+-[a-z0-9-]+\.pooler\.supabase\.com$/i.test(host)?'supabase_pooler':'other';
+ return {
+  present:Boolean(raw),
+  length:raw.length,
+  outerQuotes:Boolean(raw.length>=2&&((raw.startsWith('"')&&raw.endsWith('"'))||(raw.startsWith("'")&&raw.endsWith("'")))),
+  postgresScheme:/^postgres(?:ql)?:\/\//i.test(unquoted),
+  hasUserInfoAt:unquoted.includes('@'),
+  parsed:Boolean(parts),
+  hostClass,
+  port:parts?.port||'default',
+  usernamePresent:Boolean(parts?.username),
+  passwordPresent:Boolean(parts?.password),
+  databasePathPresent:Boolean(parts?.pathAndQuery)
+ };
+}
 export function connectionEndpointClass(value){
  if(!value)return 'missing';
  const normalized=normalizeConnectionString(value);
