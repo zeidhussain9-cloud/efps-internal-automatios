@@ -14,9 +14,6 @@ createServer(async(req,res)=>{
  try{
   const p=decodeURIComponent(new URL(req.url,'http://localhost').pathname);
   if(p==='/health'){res.writeHead(200,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify({ok:true}));}
-  const mode=accessMode(process.env);
-  if(mode==='misconfigured'){res.writeHead(503,security);return res.end('CRM access configuration incomplete');}
-  if(mode==='protected'&&!authorized(req.headers.authorization,process.env.CRM_BASIC_AUTH_USERNAME,process.env.CRM_BASIC_AUTH_PASSWORD)){res.writeHead(401,{...security,'WWW-Authenticate':'Basic realm="EasyFind CRM"'});return res.end('Authentication required');}
   if(p==='/api/internal/inventory/sync'&&req.method==='POST'){
    if(process.env.CRM_INVENTORY_SYNC_ENABLED!=='true'||!process.env.CRM_INVENTORY_SYNC_SECRET){res.writeHead(404,security);return res.end('Inventory sync disabled');}
    const ts=String(req.headers['x-efps-inventory-timestamp']||'');const provided=String(req.headers['x-efps-inventory-signature']||'');
@@ -26,6 +23,9 @@ createServer(async(req,res)=>{
    try{const {readCanonicalInventory,syncInventorySnapshot}=await import('./src/inventory-sync.mjs');const rows=await readCanonicalInventory(process.env);const result=await syncInventorySnapshot({rows});res.writeHead(200,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify({ok:true,...result}));}
    catch(e){res.writeHead(502,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify({ok:false,error:'Inventory sync failed'}));}
   }
+  const mode=accessMode(process.env);
+  if(mode==='misconfigured'){res.writeHead(503,security);return res.end('CRM access configuration incomplete');}
+  if(mode==='protected'&&!authorized(req.headers.authorization,process.env.CRM_BASIC_AUTH_USERNAME,process.env.CRM_BASIC_AUTH_PASSWORD)){res.writeHead(401,{...security,'WWW-Authenticate':'Basic realm="EasyFind CRM"'});return res.end('Authentication required');}
   // Durable database writes: explicit opt-in, protected access and audited in the same transaction.
   if(process.env.CRM_DB_WRITE_ENABLED==='true'&&mode==='protected'&&req.method!=='GET'&&(p==='/api/db/leads'||p.startsWith('/api/db/leads/')||p==='/api/db/followups'||p.startsWith('/api/db/followups/'))){
    if(!process.env.DATABASE_URL){res.writeHead(404,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify({error:'Database write pilot disabled'}));}

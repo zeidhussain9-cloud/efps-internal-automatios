@@ -1,0 +1,11 @@
+import {createHmac} from 'node:crypto';
+const endpoint=process.env.CRM_INVENTORY_SYNC_URL;
+const secret=process.env.CRM_INVENTORY_SYNC_SECRET;
+if(!endpoint?.startsWith('https://')||!secret||secret.length<32)throw Error('Inventory sync endpoint or secret missing');
+const timestamp=String(Math.floor(Date.now()/1000));
+const signature=createHmac('sha256',secret).update(timestamp).digest('hex');
+const response=await fetch(endpoint,{method:'POST',headers:{'X-EFPS-Inventory-Timestamp':timestamp,'X-EFPS-Inventory-Signature':signature},signal:AbortSignal.timeout(110000)});
+if(!response.ok)throw Error('Inventory sync HTTP '+response.status);
+const result=await response.json();
+if(!result.ok)throw Error('Inventory sync rejected');
+console.log(JSON.stringify(result));

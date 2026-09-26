@@ -39,12 +39,13 @@ export async function syncInventorySnapshot({rows,connectionString=process.env.D
  const db=pool||new pg.Pool({connectionString:normalizeConnectionString(connectionString),ssl:sslCa?{rejectUnauthorized:true,ca:sslCa}:{rejectUnauthorized:true},max:5,connectionTimeoutMillis:5000});
  const runId=crypto.randomUUID(),now=new Date().toISOString();
  try{
-  const current=await db.query('SELECT listing_id,source_kind,source_hash,deleted_at FROM crm_inventory_snapshot');
-  const existing=new Map(current.rows.map(r=>[r.listing_id,r]));
-  const plan=diffInventory(existing,rows);
   const client=await db.connect();
   try{
    await client.query('BEGIN');
+   await client.query('SELECT pg_advisory_xact_lock(104729, 81)');
+   const current=await client.query('SELECT listing_id,source_kind,source_hash,deleted_at FROM crm_inventory_snapshot');
+   const existing=new Map(current.rows.map(r=>[r.listing_id,r]));
+   const plan=diffInventory(existing,rows);
    if(rows.length){
     await client.query(`WITH incoming AS (SELECT x.* FROM jsonb_to_recordset($1::jsonb) AS x(listing_id text,source_record jsonb,source_hash text,locality text,society_name text,bhk text,monthly_rent numeric,furnishing text,listing_state text,intake_status text,pet_friendly text,cloudinary_image_urls jsonb))
       INSERT INTO crm_inventory_snapshot(listing_id,source_kind,source_tab,source_record,source_hash,locality,society_name,bhk,monthly_rent,furnishing,listing_state,intake_status,pet_friendly,cloudinary_image_urls,source_snapshot_at,last_synced_at,deleted_at)
@@ -57,7 +58,7 @@ export async function syncInventorySnapshot({rows,connectionString=process.env.D
    else await client.query(`UPDATE crm_inventory_snapshot SET deleted_at=$1,last_synced_at=$1 WHERE source_kind='housing_sheet' AND deleted_at IS NULL`,[now]);
    await client.query('INSERT INTO crm_inventory_sync_runs(run_id,source_kind,row_count,changed_count,removed_count) VALUES($1,$2,$3,$4,$5)',[runId,'housing_sheet',plan.total,plan.changed,plan.removed]);
    await client.query('COMMIT');
+   return {...plan,runId,syncedAt:now};
   }catch(e){try{await client.query('ROLLBACK')}catch{}throw e}finally{client.release()}
-  return {...plan,runId,syncedAt:now};
  }finally{if(!pool)await db.end()}
 }
