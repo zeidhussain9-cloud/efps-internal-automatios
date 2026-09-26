@@ -1,3 +1,3 @@
 import {timingSafeEqual} from 'node:crypto';
 export function authorized(header,username,password){if(!username||!password)return false;if(typeof header!=='string'||!header.startsWith('Basic '))return false;let decoded;try{decoded=Buffer.from(header.slice(6),'base64').toString('utf8')}catch{return false}const expected=Buffer.from(username+':'+password),received=Buffer.from(decoded);return received.length===expected.length&&timingSafeEqual(received,expected);}
-export function accessMode(env){return env.CRM_BASIC_AUTH_USERNAME&&env.CRM_BASIC_AUTH_PASSWORD?'protected':'synthetic-public';}
+export function accessMode(env){return Boolean(env.CRM_BASIC_AUTH_USERNAME)!==Boolean(env.CRM_BASIC_AUTH_PASSWORD)?'misconfigured':env.CRM_BASIC_AUTH_USERNAME?'protected':'synthetic-public';}
