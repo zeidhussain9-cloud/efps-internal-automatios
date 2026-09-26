@@ -88,7 +88,7 @@ Use the verified Housing Listings schema/audit for D05. Live inventory connectio
 - [ ] Refactor monolithic UI and add automated tests.
 - [ ] Identify genuinely stale CRM files before any deletion.
 - [ ] Add synthetic-only persistence, access controls, validation and failure recovery.
-- [ ] Inspect authorized local raw extraction and generate fictional representative fixtures with expected results.
+- [x] Add first fictional seed fixtures with known expected extraction outcomes and basic fixture tests (not yet representative of raw-data distributions).\n- [ ] Inspect authorized local raw extraction and generate fictional representative fixtures with expected results.
 - [ ] Run Ollama through a secured server-side adapter on synthetic data.
 - [ ] Verify model extraction, incremental updates, matching, draft safety and failure/retry handling.
 - [ ] Review D06–D08 and obtain pilot approval before live data.
