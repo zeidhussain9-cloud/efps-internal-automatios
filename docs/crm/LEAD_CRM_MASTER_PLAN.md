@@ -2,7 +2,7 @@
 
 **Canonical repository:** `zeidhussain9-cloud/efps-internal-automatios`  
 **Working branch:** `crm-ui-dashboard`  
-**Current status (2026-09-26):** D01–D05 approved; initial synthetic React prototype visually approved. Synthetic follow-ups, requirements, activity, settings and inventory search implemented; domain tests and CI added. Deployment/build and browser QA must be independently verified. See `CRM_STABILIZATION_AUDIT.md` and `CRM_RENDER_CONFIGURATION.md`.
+**Current status (2026-09-26):** D01–D05 approved; initial synthetic React prototype visually approved. Synthetic follow-ups, requirements, activity, settings and inventory search implemented. Render-to-Supabase TLS connectivity is verified with a server-only CA, and GitHub Actions run #81 passed build, all 45 tests and Chromium 1/1. Real customer data remains disabled. See `CRM_STABILIZATION_AUDIT.md` and `CRM_RENDER_CONFIGURATION.md`.
 
 ## 1. Product goal
 
@@ -65,7 +65,7 @@ The existing Slack automation alone creates and updates the Housing Listings She
 - [x] Basic editable draft preparation; versioning pending.
 - [x] Session-only activity/history, follow-up scheduling/completion and settings visibility; durable history pending.
 - [x] Initial responsive mobile layout; QA pending.
-- [x] Chromium browser journey test and CI workflow added for synthetic requirements, persistence, follow-ups, inventory and Settings.\n- [ ] Verify successful CI browser run and deployed build; expand coverage for remaining flows.
+- [x] Chromium browser journey test and CI workflow added for synthetic requirements, persistence, follow-ups, inventory and Settings.\n- [x] Verify successful CI browser run and deployed build: GitHub Actions `CRM synthetic CI` run #81 passed build, 45/45 unit/integration tests and Chromium browser journey 1/1.\n- [ ] Expand browser coverage for remaining flows.
 
 ### Phase 3 — Local-data migration
 - [ ] Inspect exact local SQLite file/schema.
@@ -87,10 +87,10 @@ The existing Slack automation alone creates and updates the Housing Listings She
 - [x] Implement synthetic Activity, Settings, follow-ups, inventory search/no-image fallback and per-lead pin/exclude state.\n- [ ] Complete production D01–D05: secure auth, durable lead history, real verified inventory media, AI and advanced workflows.
 - [x] Extract reusable tested domain logic for queue filtering, matching, validation and follow-ups; add unit tests and CI.\n- [ ] Finish UI component refactor and browser end-to-end tests.
 - [ ] Identify genuinely stale CRM files before any deletion.
-- [x] Synthetic browser persistence, schema-version/corruption recovery, requirements validation and optional server-side Basic Auth gate implemented.\n- [ ] Verify CI and access behavior; production durable database, backups and full session authentication remain pending. Render preview uses browser-only fictional persistence.
+- [x] Synthetic browser persistence, schema-version/corruption recovery, requirements validation and optional server-side Basic Auth gate implemented.\n- [x] Verify CI and access behavior: protected routes, fail-closed auth, hardened headers and Render health behavior covered by tests.\n- [ ] Replace pilot Basic Auth with reviewed production session authentication; durable database and backup controls remain pending. Render preview uses browser-only fictional persistence.
 - [x] Add first fictional seed fixtures with known expected extraction outcomes and basic fixture tests (not yet representative of raw-data distributions).
 - [ ] Inspect authorized local raw extraction and generate fictional representative fixtures with expected results.
-- [x] Implement gated server-side Ollama adapter and mocked unit tests using only fictional fixture IDs; human Accept/Reject UI added.\n- [ ] Verify existing Ollama Render variable names without disclosing or overwriting secrets; enable and run a real synthetic model request after access control.
+- [x] Implement gated server-side Ollama adapter and mocked unit tests using only fictional fixture IDs; human Accept/Reject UI added.\n- [x] Verify Ollama endpoint/model presence without disclosing or overwriting secrets; Render startup confirms both variables are present.\n- [ ] Enable and run a real synthetic model request after the pilot access controls are approved.
 - [ ] Verify model extraction, incremental updates, matching, draft safety and failure/retry handling.
 - [ ] Review D06–D08 and obtain pilot approval before live data.
 
@@ -126,10 +126,10 @@ Real local-data connection comes after the local SQLite migration/reconciliation
 - [x] Added PostgreSQL v1 schema for CRM-owned leads, source numbers, stable-ID-deduplicated conversations, follow-ups, append-only activity, AI proposals, versioned drafts and per-lead property actions. No editable inventory tables.
 - [x] Added explicit opt-in migration command, tests and three-source historical deduplication planning; migration is **not** automatically invoked by deployment.
 - [x] Verified the Render workspace currently has **no PostgreSQL instance**.
-- [x] Supabase `easyfind-crm` provisioned as the sole hosted CRM database; no Render PostgreSQL instance is needed. Render DATABASE_URL is present but its connection probe fails; diagnose Supabase pooler/network/TLS/auth before enabling real data. Backup/restore requirements remain open.
+- [x] Supabase `easyfind-crm` provisioned as the sole hosted CRM database; no Render PostgreSQL instance is needed. Render uses the Supabase IPv4 session pooler with server-only CA verification; the startup `SELECT 1` probe connected successfully at 2026-09-26 18:55 UTC. Real data remains disabled. Backup/restore requirements remain open.
 - [ ] Implement durable authenticated production CRUD, transaction-safe audited edits and import dry-run; run full synthetic database integration tests.
 - [ ] Reconcile 735/23,454 original extraction against curated 308/6,064 subset before importing any real records.
-- [x] Verify latest CI unit, HTTP and Chromium results separately from user-approved browser appearance: GitHub Actions `CRM synthetic CI` run #64 (`83994ee`) succeeded; build passed, all 45 unit/integration tests passed, and Chromium browser journey passed 1/1.
+- [x] Verify latest CI unit, HTTP and Chromium results separately from user-approved browser appearance: GitHub Actions `CRM synthetic CI` run #81 passed build, all 45 unit/integration tests and Chromium browser journey 1/1.
 - [x] Reconciled the user's reported full service-account JSON with the existing repository credential names; CRM adapter now accepts raw JSON and Base64 forms. Canonical Housing_Listings Sheet ID is verified in `shared/google_sheets/schema.py` and the Render runtime detects a Sheet ID. Read-only Sheets access test remains gated on credential presence and synthetic gate. Ollama endpoint/model are present but not yet exercised.
 See `CRM_DATABASE_MIGRATION_GATE.md`.
 
@@ -139,7 +139,7 @@ See `CRM_DATABASE_MIGRATION_GATE.md`.
 - [x] Applied server-only CRM core migration: nine RLS-enabled tables; revoked anon/authenticated grants; no browser-facing policies.
 - [x] Added three missing foreign-key indexes and committed matching schema migrations.
 - [x] Verified schema via SQL: zero customer leads and zero messages; no real data imported.
-- [ ] Fix the existing Render-to-Supabase server-only connection. Latest runtime evidence (Render startup 2026-09-26 18:39 UTC): `DATABASE_URL` is present but has no PostgreSQL URI scheme and is unparseable (`length=12`, `postgresScheme=false`, `parsed=false`, `hostClass=other`); startup consequently reports `invalid_url` / DNS. No Render PostgreSQL service is needed; secret values have not been printed or modified.
+- [x] Fix the existing Render-to-Supabase server-only connection. Render now recognizes `supabase_session_pooler_ipv4`; `DATABASE_SSL_CA` is present; startup reports `CRM database connectivity: connected` at 2026-09-26 18:55 UTC. No Render PostgreSQL service is needed.
 - [ ] Implement and test authenticated durable server CRUD, raw webhook event log, per-source AI cursor, append-only requirement evidence, safe retries and restore-tested independent backups before any real data.
 - [ ] Reconcile historical Mac SQLite source with authorized local access, without modifying the source file. Do not use Desktop Commander without explicit permission.
 - [ ] Verify the existing Ollama endpoint/model and the user's reported Google service-account JSON and hardcoded sheet ID. Current adapter only recognizes GOOGLE_SERVICE_ACCOUNT_JSON_BASE64, HOUSING_SHEET_ID and HOUSING_SHEET_TAB; presence flags cannot detect other variable names or hardcoded IDs.
@@ -150,15 +150,23 @@ See `CRM_DATABASE_MIGRATION_GATE.md`.
 - [x] Added `src/crm-repository.mjs` with parameterized PostgreSQL health/list/get operations and repository tests.
 - [x] Added server-only `/api/db/status`, `/api/db/leads`, `/api/db/leads/:id` routes, gated by `CRM_DB_READ_ENABLED=true`, `DATABASE_URL` and configured Basic Auth; no database write routes.
 - [x] Reconciled the database migration gate and canonical data model docs with the provisioned Supabase state.
-- [ ] Independently verify new deployment and CI, securely connect Render, and run synthetic authenticated DB integration tests.
+- [x] Independently verify the new Render deployment and CI, and securely connect Render to Supabase.\n- [ ] Run authenticated application-level DB route checks against the empty schema.
 - [ ] Implement full durable CRUD/event/AI-evidence model and restore-tested backups before real customer import. D06–D08 remain unresolved.
 
 
 ## 2026-09-26 — Render credential validation checkpoint
 - [x] Added startup-only credential-presence and database-connectivity checks without printing secret values, plus unit tests.
 - [x] Sanitized Render startup at 17:41 UTC: DATABASE_URL, DB read opt-in, Basic Auth and Ollama endpoint/model present; database connection failed. Sheets expected-name flags false, not proof that the user's raw JSON credential or hardcoded ID is absent.
-- [ ] Do not infer correctness from a variable being present alone. Keep `CRM_REAL_DATA_ENABLED` disabled and do not enable database read routes until authentication and connection checks pass.
+- [x] Do not infer correctness from a variable being present alone: startup now checks protected access configuration and the DB handshake. `CRM_REAL_DATA_ENABLED` remains disabled; no live customer data has been imported.
 
 
-### Runtime audit — 2026-09-26 17:41 UTC (supersedes 17:26 checkpoint)
+### Runtime audit — 2026-09-26 17:41 UTC (superseded by 18:55 checkpoint)
 Supabase `easyfind-crm` (`qttcutwzehtskfcwxkwj`, Mumbai) is ACTIVE_HEALTHY and independently accepts SQL; nine public tables verified. Render startup: `databaseUrlPresent=true`, `databaseReadOptIn=true`, `authConfigured=true`, `authIncomplete=false`, Ollama endpoint/model present, `sheetsCredentialPresent=false`, `sheetsIdPresent=false`, `liveDataEnabled=false`; Render database probe failed with error details withheld. The Google flags check only `GOOGLE_SERVICE_ACCOUNT_JSON_BASE64` and `HOUSING_SHEET_ID`; the user reports a full raw JSON credential and hardcoded sheet ID, which require a code/config mapping audit. Supabase is the sole hosted CRM database; do not provision a second Render database. See `CRM_DATABASE_MIGRATION_GATE.md`. Do not import live customer data until connectivity, access and migration gates pass.
+
+
+### Runtime audit — 2026-09-26 18:55 UTC
+- Render configuration flags: DATABASE_URL present, DB read opt-in present, Basic Auth configured/integrity complete, Ollama endpoint/model present, Sheets credential absent, Housing Sheet ID present, live customer data disabled.
+- DB endpoint classified as the Supabase IPv4 session pooler on port 5432; DATABASE_SSL_CA present; startup SELECT 1 succeeded.
+- GitHub Actions run #81 passed npm install, build, all 45 unit/integration tests, Chromium install and browser journey 1/1.
+- Hardening applied: strict Basic Auth parsing, timing-safe credential comparison, security response headers, fail-closed API surface, parameterized SQL, numeric input validation, read-only Sheets scope, A:AT sheet boundary, and secret-safe startup diagnostics.
+- Remaining gates are product/data-governance work: final session auth, durable audited CRUD/event model, backup/restore proof, authorized SQLite reconciliation, read-only Sheets credential setup, Ollama synthetic request, D06–D08 approval and live-data migration.

@@ -1,6 +1,6 @@
 # CRM PostgreSQL deployment gate
 
-**Status (2026-09-26):** Supabase Free project `easyfind-crm` provisioned in Efps, Mumbai (`ap-south-1`), project ref `qttcutwzehtskfcwxkwj`. Schema applied and verified; no customer records imported. Render remains a synthetic-only preview. At 17:41 UTC the Render startup diagnostic confirmed DATABASE_URL and Basic Auth are present, but its database probe failed. Supabase itself was independently queried successfully.
+**Status (2026-09-26):** Supabase Free project `easyfind-crm` provisioned in Efps, Mumbai (`ap-south-1`), project ref `qttcutwzehtskfcwxkwj`. Schema applied and verified; no customer records imported. Render remains a synthetic/empty-database preview. At 18:55 UTC the Render startup diagnostic confirmed the Supabase session-pooler endpoint, server-only CA, Basic Auth and the DB `SELECT 1` probe successfully.
 
 ## Completed
 - Nine PostgreSQL tables exist with RLS enabled. No anon/authenticated policies or table grants; database access is intended only through the protected server.
@@ -10,8 +10,8 @@
 - Source Mac SQLite remains untouched. The original 735 leads/23,454 conversation rows and separately curated 308 leads/6,064 message subset still require reconciliation.
 
 ## Remaining gates
-1. Repair the existing server-only connection from Render to the **already-provisioned Supabase** project; do not create or provision PostgreSQL on Render. The CRM repository now recognizes malformed-but-recoverable Supabase URIs and URL-encodes passwords before using the IPv4-compatible session pooler (port 5432). The remaining proof is the next Render startup: endpoint class must resolve to `supabase_session_pooler_ipv4` and `SELECT 1` must succeed. Keep existing Ollama variables intact. Never commit, print or expose the connection string to the browser.
-2. Confirm the Render deploy and GitHub CI test results; test the disabled and authenticated database routes with fictional data.
+1. [x] Repair and verify the existing server-only Render→Supabase connection; endpoint class is `supabase_session_pooler_ipv4`, the Supabase CA is configured server-side, and `SELECT 1` succeeds. Keep the connection string out of source, browser and logs.
+2. [x] Confirm the Render deploy and GitHub CI test results. [ ] Test the authenticated database routes against the empty schema with operator credentials.
 3. Implement durable audited CRUD, provider-event inbox and deduplication, incremental AI cursors, human-override evidence and recovery. D06–D08 remain unapproved.
 4. Verify independent encrypted backup and **restore** procedures; Supabase Free must not be treated as the only durable copy of customer conversations.
 5. Obtain explicit authorized access to the original SQLite for read-only reconciliation and an import dry-run. Do not use Desktop Commander without authorization.
@@ -31,5 +31,12 @@ Slack automation remains the sole writer of `Housing_Listings`; CRM inventory is
 ### Historical startup checkpoint — superseded (17:26 UTC)
 The 17:26 UTC absence observations are retained only as history. They are not current configuration guidance.
 
-### Latest verified runtime checkpoint — 2026-09-26 17:41 UTC
-Render startup reported databaseUrlPresent=true, databaseReadOptIn=true, authConfigured=true, authIncomplete=false, ollamaEndpointPresent=true, ollamaModelPresent=true, sheetsCredentialPresent=false, sheetsIdPresent=false and liveDataEnabled=false. The Supabase project qttcutwzehtskfcwxkwj was independently confirmed ACTIVE_HEALTHY and SELECT succeeded; nine public tables exist. Render's database connectivity probe failed with details withheld, so the cause is **not yet proven**. No Render-hosted PostgreSQL is required. The Sheets flags inspect only the adapter's expected environment variable names, not every possible user-provided raw JSON variable or a hardcoded sheet ID; do not conclude the user has not supplied credentials. Do not expose secret values or enable live customer data.
+### Latest verified runtime checkpoint — 2026-09-26 18:55 UTC
+Render startup reports databaseUrlPresent=true, databaseReadOptIn=true, databaseTlsCaPresent=true, authConfigured=true, authIncomplete=false, ollamaEndpointPresent=true, ollamaModelPresent=true, sheetsCredentialPresent=false, sheetsIdPresent=true and liveDataEnabled=false. The Supabase project qttcutwzehtskfcwxkwj was independently confirmed ACTIVE_HEALTHY and SQL succeeded; nine public CRM tables exist. Render classifies the endpoint as `supabase_session_pooler_ipv4` and the startup DB probe reports `connected`. The database remains empty of customer rows. Do not expose secret values or enable live customer data.
+
+
+## 2026-09-26 18:55 UTC connection verification
+- [x] Render uses the IPv4-compatible Supabase session pooler on port 5432.
+- [x] Server-side Supabase CA is configured through DATABASE_SSL_CA with certificate verification enabled; TLS failure SELF_SIGNED_CERT_IN_CHAIN is resolved without disabling verification.
+- [x] Startup SELECT 1 succeeds and diagnostics remain secret-safe.
+- [ ] Authenticated application-level DB route verification remains to be exercised with operator credentials; this is separate from startup connectivity.
