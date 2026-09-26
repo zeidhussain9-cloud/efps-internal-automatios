@@ -18,10 +18,10 @@ export async function listMigrationFiles({dir=resolve(dirname(fileURLToPath(impo
  return names;
 }
 
-export async function runMigration({env=process.env,read=readFile,connect,dir}={}){
+export async function runMigration({env=process.env,read=readFile,connect,dir,list=readdir}={}){
  migrationGuard(env);
  if(typeof connect!=='function')throw Error('Database connector required');
- const files=await listMigrationFiles({dir});
+ const files=await listMigrationFiles({dir,list});
  const sqlByFile=new Map();
  for(const file of files){
   const sql=await read(resolve(dir||resolve(dirname(fileURLToPath(import.meta.url)),'../db/migrations'),file),'utf8');
