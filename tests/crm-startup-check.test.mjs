@@ -19,5 +19,5 @@ test('failed database probe hides error detail but exposes safe classification',
 });
 test('connection shape excludes secret material',()=>{
  const shape=connectionStringShape('postgresql://postgres:fictional@db.qttcutwzehtskfcwxkwj.supabase.co:5432/postgres');
- assert.deepEqual(shape,{present:true,length:81,outerQuotes:false,postgresScheme:true,hasUserInfoAt:true,parsed:true,hostClass:'supabase_direct',port:'5432',usernamePresent:true,passwordPresent:true,databasePathPresent:true});
+ assert.deepEqual(shape,{present:true,length:81,outerQuotes:false,postgresScheme:true,hasUserInfoAt:true,parsed:true,hostClass:'supabase_direct',port:'5432',usernamePresent:true,passwordPresent:true,databasePathPresent:true,sslCaConfigured:false});
 });
