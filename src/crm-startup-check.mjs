@@ -24,8 +24,10 @@ export async function startupDatabaseCheck(env,{createRepository=createCrmReposi
   const ok=await repo.health();
   log('CRM database connectivity:',ok?'connected':'failed');
   return ok?'connected':'failed';
- }catch{
-  log('CRM database connectivity: failed (details withheld)');
+ }catch(error){
+  const code=error?.code;
+  const category=code==='ENETUNREACH'||code==='EHOSTUNREACH'?'network':code==='ENOTFOUND'||code==='EAI_AGAIN'?'dns':code==='ETIMEDOUT'?'timeout':code==='ECONNREFUSED'?'refused':code==='28P01'?'authentication':code==='3D000'?'database':code==='42501'?'permission':'unknown';
+  log('CRM database connectivity: failed (category: '+category+')');
   return 'failed';
  }finally{if(repo)try{await repo.close()}catch{}}
 }
