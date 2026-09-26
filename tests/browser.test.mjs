@@ -81,7 +81,7 @@ test('synthetic CRM browser journey',async()=>{
     assert.equal(await page.getByText(/Ollama is disabled or unavailable/i).count()>0,true);
 
     const draft='Synthetic reply draft — not sent.';
-    await page.getByRole('textbox').filter({has:undefined}).last().fill(draft);
+    await page.locator('textarea').last().fill(draft);
     await page.reload();
     await page.getByRole('button',{name:'Leads Inbox',exact:true}).click();
     await page.getByRole('button',{name:/Aarav Rao/}).click();
