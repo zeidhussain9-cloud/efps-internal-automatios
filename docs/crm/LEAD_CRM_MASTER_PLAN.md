@@ -152,3 +152,9 @@ See `CRM_DATABASE_MIGRATION_GATE.md`.
 - [x] Reconciled the database migration gate and canonical data model docs with the provisioned Supabase state.
 - [ ] Independently verify new deployment and CI, securely connect Render, and run synthetic authenticated DB integration tests.
 - [ ] Implement full durable CRUD/event/AI-evidence model and restore-tested backups before real customer import. D06–D08 remain unresolved.
+
+
+## 2026-09-26 — Render credential validation checkpoint
+- [x] Added startup-only credential-presence and database-connectivity checks without printing secret values, plus unit tests.
+- [ ] Verify the latest Render deployment and inspect sanitized application logs to establish whether the user-added `DATABASE_URL`, auth, Ollama and Sheets settings are present and PostgreSQL is reachable.
+- [ ] Do not infer correctness from a variable being present alone. Keep `CRM_REAL_DATA_ENABLED` disabled and do not enable database read routes until authentication and connection checks pass.
