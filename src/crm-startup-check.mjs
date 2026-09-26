@@ -1,5 +1,5 @@
 // Startup-only diagnostics: report configuration presence and connection outcome, never secret values.
-import {createCrmRepository,connectionEndpointClass} from './crm-repository.mjs';
+import {createCrmRepository,connectionEndpointClass,connectionStringShape} from './crm-repository.mjs';
 export function configurationStatus(env){
  return {
   databaseUrlPresent:Boolean(env.DATABASE_URL),
@@ -17,6 +17,7 @@ export async function startupDatabaseCheck(env,{createRepository=createCrmReposi
  const flags=configurationStatus(env);
  // Never log the connection string, credentials, or raw exception.
  log('CRM configuration flags:',JSON.stringify(flags));
+ log('CRM database endpoint shape:',JSON.stringify(connectionStringShape(env.DATABASE_URL)));
  log('CRM database endpoint class:',connectionEndpointClass(env.DATABASE_URL));
  if(!flags.databaseUrlPresent){log('CRM database connectivity: not configured');return 'not_configured';}
  let repo;
