@@ -2,7 +2,7 @@
 
 **Canonical repository:** `zeidhussain9-cloud/efps-internal-automatios`  
 **Working branch:** `crm-ui-dashboard`  
-**Current status (2026-09-26):** D01–D05 approved; initial synthetic React prototype live and visually approved. Stabilization and synthetic model pilot active; see `CRM_STABILIZATION_AUDIT.md`.
+**Current status (2026-09-26):** D01–D05 approved; initial synthetic React prototype visually approved. Synthetic follow-ups, requirements, activity, settings and inventory search implemented; domain tests and CI added. Deployment/build and browser QA must be independently verified. See `CRM_STABILIZATION_AUDIT.md`.
 
 ## 1. Product goal
 
@@ -23,7 +23,7 @@ Excluded from current lead truth:
 - live WhAPI webhook
 
 ### Inventory
-Use the verified Housing Listings schema/audit for D05. Live inventory connection comes later.
+The existing Slack automation alone creates and updates the Housing Listings Sheet. The CRM is a read-only consumer of that sheet when the later integration is configured. Preserve the sheet's editor-change audit trail; CRM lead/property interactions have a separate activity history.
 
 ## 3. Current approvals
 
@@ -57,15 +57,15 @@ Use the verified Housing Listings schema/audit for D05. Live inventory connectio
 ### Phase 2 — Prototype implementation
 - [x] Initial synthetic D01–D05 React dashboard deployed (feature-completion pending).
 - [ ] Private dashboard shell.
-- [ ] Deterministic inbox/search/filter behavior.
+- [x] Deterministic synthetic inbox/source/search/queue/priority sorting logic, with unit tests.
 - [x] Initial lead workspace tab navigation.
-- [x] Partial requirements editing simulation; remaining fields pending.
+- [x] Editable synthetic requirements: BHK, locality, budget, furnishing, move-in, pets, parking, occupancy, notes and priority (session-only).
 - [x] Provider-unavailable simulation; real Ollama pilot pending.
-- [x] Basic synthetic inventory browse/match; image and search work pending.
+- [x] Synthetic inventory browse/search/match and explicit no-image fallback; real sheet/photos pending.
 - [x] Basic editable draft preparation; versioning pending.
-- [x] Session-only activity/history simulation; durable history pending.
+- [x] Session-only activity/history, follow-up scheduling/completion and settings visibility; durable history pending.
 - [x] Initial responsive mobile layout; QA pending.
-- [ ] Automated UI tests.
+- [ ] Browser end-to-end UI tests (domain unit tests and CI workflow added; workflow result pending).
 
 ### Phase 3 — Local-data migration
 - [ ] Inspect exact local SQLite file/schema.
@@ -74,7 +74,7 @@ Use the verified Housing Listings schema/audit for D05. Live inventory connectio
 - [ ] Validate counts and sampling against the lead audit.
 
 ### Phase 4 — Live integrations, later
-- [ ] Local/verified inventory synchronization.
+- [ ] Read-only CRM consumption of the existing Slack-maintained Housing Listings Sheet, including edit-audit provenance.
 - [ ] Future WhAPI webhook ingestion.
 - [ ] AI production execution.
 - [ ] Controlled CRM synchronization.
@@ -84,11 +84,12 @@ Use the verified Housing Listings schema/audit for D05. Live inventory connectio
 - [x] Deploy initial synthetic React prototype on Render from `crm-ui-dashboard`.
 - [x] User visually approved initial D01–D05 interface.
 - [x] Record baseline audit and cleanup gates in `CRM_STABILIZATION_AUDIT.md`.
-- [ ] Complete D01–D05 behavior, including Activity, Settings, follow-ups, inventory images and scoped lead history.
-- [ ] Refactor monolithic UI and add automated tests.
+- [x] Implement synthetic Activity, Settings, follow-ups, inventory search/no-image fallback and per-lead pin/exclude state.\n- [ ] Complete production D01–D05: secure auth, durable lead history, real verified inventory media, AI and advanced workflows.
+- [x] Extract reusable tested domain logic for queue filtering, matching, validation and follow-ups; add unit tests and CI.\n- [ ] Finish UI component refactor and browser end-to-end tests.
 - [ ] Identify genuinely stale CRM files before any deletion.
 - [ ] Add synthetic-only persistence, access controls, validation and failure recovery.
-- [x] Add first fictional seed fixtures with known expected extraction outcomes and basic fixture tests (not yet representative of raw-data distributions).\n- [ ] Inspect authorized local raw extraction and generate fictional representative fixtures with expected results.
+- [x] Add first fictional seed fixtures with known expected extraction outcomes and basic fixture tests (not yet representative of raw-data distributions).
+- [ ] Inspect authorized local raw extraction and generate fictional representative fixtures with expected results.
 - [ ] Run Ollama through a secured server-side adapter on synthetic data.
 - [ ] Verify model extraction, incremental updates, matching, draft safety and failure/retry handling.
 - [ ] Review D06–D08 and obtain pilot approval before live data.
