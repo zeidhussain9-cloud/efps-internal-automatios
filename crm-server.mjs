@@ -78,6 +78,11 @@ createServer(async(req,res)=>{
     res.writeHead(200,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify(data));
    }finally{await repo.close();}
   }
+  if(p==='/api/inventory/overview'){
+   if(process.env.CRM_DB_READ_ENABLED!=='true'||!process.env.DATABASE_URL||mode!=='protected'){res.writeHead(404,security);return res.end('Inventory unavailable');}
+   if(req.method!=='GET'){res.writeHead(405,security);return res.end('Method not allowed');}
+   const repo=createCrmRepository();try{const data=await repo.inventoryOverview();res.writeHead(200,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify(data))}finally{await repo.close()}
+  }
   if(p==='/api/inventory/matches'){
    if(process.env.CRM_DB_READ_ENABLED!=='true'||!process.env.DATABASE_URL||mode!=='protected'){res.writeHead(404,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify({error:'Inventory database disabled'}));}
    if(req.method!=='GET'){res.writeHead(405,security);return res.end('Method not allowed');}

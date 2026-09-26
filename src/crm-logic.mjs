@@ -16,4 +16,4 @@ export function evaluateProperty(property,lead,{excluded=[],pinned=[]}={}){
 export function validateRequirement(key,value){if(key==='budget')return value===''||value===null||Number.isFinite(Number(value))&&Number(value)>=0;if(key==='bhk')return Number.isInteger(Number(value))&&Number(value)>=1&&Number(value)<=10;return typeof value==='string'&&value.length<=2000;}
 export function makeFollowup({id,leadId,at,note}){if(!leadId||!at||!Number.isFinite(Date.parse(at)))throw Error('Lead and valid date required');return {id,leadId,at,note:note?.trim()||'',done:false};}
 export function createAudit({leadId,action,details='',at=new Date().toISOString()}){return {lead:leadId,action,details,at};}
-export function imageUrls(property){return Array.isArray(property.photos)?property.photos.filter(url=>typeof url==='string'&&/^https:\/\//.test(url)):[];}
+export function imageUrls(property){const values=Array.isArray(property.photos)?property.photos:Array.isArray(property.cloudinary_image_urls)?property.cloudinary_image_urls:[];return values.filter(url=>typeof url==='string'&&/^https:\/\//.test(url))}
