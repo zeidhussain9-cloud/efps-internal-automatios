@@ -2,7 +2,7 @@
 
 **Canonical repository:** `zeidhussain9-cloud/efps-internal-automatios`  
 **Working branch:** `crm-ui-dashboard`  
-**Current status (2026-09-26):** D01–D05 approved; initial synthetic React prototype visually approved. Synthetic follow-ups, requirements, activity, settings and inventory search implemented; domain tests and CI added. Deployment/build and browser QA must be independently verified. See `CRM_STABILIZATION_AUDIT.md`.
+**Current status (2026-09-26):** D01–D05 approved; initial synthetic React prototype visually approved. Synthetic follow-ups, requirements, activity, settings and inventory search implemented; domain tests and CI added. Deployment/build and browser QA must be independently verified. See `CRM_STABILIZATION_AUDIT.md` and `CRM_RENDER_CONFIGURATION.md`.
 
 ## 1. Product goal
 
@@ -56,7 +56,7 @@ The existing Slack automation alone creates and updates the Housing Listings She
 
 ### Phase 2 — Prototype implementation
 - [x] Initial synthetic D01–D05 React dashboard deployed (feature-completion pending).
-- [ ] Private dashboard shell.
+- [ ] Production-private dashboard shell (optional synthetic-only Basic Auth gate implemented; credentials not configured).
 - [x] Deterministic synthetic inbox/source/search/queue/priority sorting logic, with unit tests.
 - [x] Initial lead workspace tab navigation.
 - [x] Editable synthetic requirements: BHK, locality, budget, furnishing, move-in, pets, parking, occupancy, notes and priority (session-only).
@@ -65,7 +65,7 @@ The existing Slack automation alone creates and updates the Housing Listings She
 - [x] Basic editable draft preparation; versioning pending.
 - [x] Session-only activity/history, follow-up scheduling/completion and settings visibility; durable history pending.
 - [x] Initial responsive mobile layout; QA pending.
-- [ ] Browser end-to-end UI tests (domain unit tests and CI workflow added; workflow result pending).
+- [x] Chromium browser journey test and CI workflow added for synthetic requirements, persistence, follow-ups, inventory and Settings.\n- [ ] Verify successful CI browser run and deployed build; expand coverage for remaining flows.
 
 ### Phase 3 — Local-data migration
 - [ ] Inspect exact local SQLite file/schema.
@@ -74,7 +74,7 @@ The existing Slack automation alone creates and updates the Housing Listings She
 - [ ] Validate counts and sampling against the lead audit.
 
 ### Phase 4 — Live integrations, later
-- [ ] Read-only CRM consumption of the existing Slack-maintained Housing Listings Sheet, including edit-audit provenance.
+- [ ] Configure later read-only CRM consumption of the existing Slack-maintained Housing Listings Sheet, including edit-audit provenance; service-account JSON belongs in Render only.
 - [ ] Future WhAPI webhook ingestion.
 - [ ] AI production execution.
 - [ ] Controlled CRM synchronization.
@@ -87,10 +87,10 @@ The existing Slack automation alone creates and updates the Housing Listings She
 - [x] Implement synthetic Activity, Settings, follow-ups, inventory search/no-image fallback and per-lead pin/exclude state.\n- [ ] Complete production D01–D05: secure auth, durable lead history, real verified inventory media, AI and advanced workflows.
 - [x] Extract reusable tested domain logic for queue filtering, matching, validation and follow-ups; add unit tests and CI.\n- [ ] Finish UI component refactor and browser end-to-end tests.
 - [ ] Identify genuinely stale CRM files before any deletion.
-- [ ] Add synthetic-only persistence, access controls, validation and failure recovery.
+- [x] Synthetic browser persistence, schema-version/corruption recovery, requirements validation and optional server-side Basic Auth gate implemented.\n- [ ] Verify CI and access behavior; production durable database, backups and full session authentication remain pending.
 - [x] Add first fictional seed fixtures with known expected extraction outcomes and basic fixture tests (not yet representative of raw-data distributions).
 - [ ] Inspect authorized local raw extraction and generate fictional representative fixtures with expected results.
-- [ ] Run Ollama through a secured server-side adapter on synthetic data.
+- [ ] Verify existing Ollama Render variable names without disclosing or overwriting secrets; implement and test secured server-side adapter on synthetic data.
 - [ ] Verify model extraction, incremental updates, matching, draft safety and failure/retry handling.
 - [ ] Review D06–D08 and obtain pilot approval before live data.
 
