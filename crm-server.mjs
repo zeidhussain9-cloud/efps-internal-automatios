@@ -108,4 +108,4 @@ createServer(async(req,res)=>{
   const data=await readFile(f);
   res.writeHead(200,{...security,'Content-Type':mime[extname(f)]||'application/octet-stream'});return res.end(req.method==='HEAD'?undefined:data);
  }catch{res.writeHead(500,security);res.end('CRM unavailable');}
-}).listen(Number(process.env.PORT||10000),'0.0.0.0',()=>{void startupDatabaseCheck(process.env);});
+}).listen(Number(process.env.PORT||10000),'0.0.0.0',()=>{void startupDatabaseCheck(process.env);void (async()=>{if(process.env.CRM_SYNTHETIC_AI_ENABLED!=='true')return;try{const result=await analyzeFictionalLead({leadId:'L-1001',env:process.env});console.info('CRM Ollama synthetic smoke test: success',JSON.stringify({model:result.model,fictional:result.fictional,keys:Object.keys(result.proposal||{})}));}catch(error){const status=typeof error?.message==='string'&&/^Ollama request failed \(\d+\)$/.test(error.message)?error.message:'provider_unavailable';console.info('CRM Ollama synthetic smoke test: failed',status);}})();});
