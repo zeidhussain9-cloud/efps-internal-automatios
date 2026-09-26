@@ -30,7 +30,7 @@ The existing Slack integration owns creation and updates of Housing Listings. CR
 | `HOUSING_SHEET_TAB` | Exact verified worksheet name, expected `Housing_Listings` unless source differs |
 | `DATABASE_SSL_CA` | Public Supabase root CA certificate used server-side for strict TLS verification |
 
-A read-only service-account adapter is implemented and disabled by default with `CRM_SYNTHETIC_SHEETS_ENABLED`; it reads only `A:AT` so reserved `AU`/`AV` columns are never consumed. It accepts the repository's legacy raw JSON environment names in addition to the CRM-specific Base64 form, plus a sheet ID and tab name. A hardcoded sheet ID has not been verified in `src/housing-sheet-adapter.mjs`. Do not enable it until the intended real sheet and access policy are approved. Grant the service-account email **Viewer** access to the verified spreadsheet. Do not give it Editor access or share the JSON publicly. The CRM must not write to the sheet or create a competing inventory workflow. Base64 is transport encoding, not encryption; treat it as a secret. Do not configure any real sheet access until the synthetic pilot and access gate are verified.
+A read-only service-account adapter is implemented and disabled by default with `CRM_SYNTHETIC_SHEETS_ENABLED`; it reads only `A:AT` so reserved `AU`/`AV` columns are never consumed. It accepts the repository's legacy raw JSON environment names in addition to the CRM-specific Base64 form, plus a sheet ID and tab name. The canonical Sheet ID is intentionally maintained in `shared/google_sheets/schema.py`; the CRM adapter does not duplicate or hardcode it and instead consumes `HOUSING_SHEET_ID`/`SHEET_ID` from Render. Do not enable it until the intended real sheet and access policy are approved. Grant the service-account email **Viewer** access to the verified spreadsheet. Do not give it Editor access or share the JSON publicly. The CRM must not write to the sheet or create a competing inventory workflow. Base64 is transport encoding, not encryption; treat it as a secret. Do not configure any real sheet access until the synthetic pilot and access gate are verified.
 
 ## Release checks
 
@@ -47,3 +47,10 @@ No live WhAPI ingestion, automatic WhatsApp sending or live customer data is ena
 - Render DATABASE_URL, CRM_DB_READ_ENABLED, Basic Auth, Ollama endpoint/model and `DATABASE_SSL_CA` present; database endpoint classified as the Supabase session pooler and the `SELECT 1` probe succeeds.
 - Google Sheets startup flags check only GOOGLE_SERVICE_ACCOUNT_JSON_BASE64 and HOUSING_SHEET_ID, not alternative raw JSON names or source-level hardcoding. Operator reports providing full JSON and hardcoded ID; verify mapping rather than requesting new secrets.
 - `CRM_REAL_DATA_ENABLED` remains false. Do not provision PostgreSQL on Render or import customer records until the remaining durable-auth, backup, historical-reconciliation and D06–D08 safety gates pass.
+
+
+## 2026-09-26 canonical inventory contract verification
+- [x] Canonical spreadsheet ID verified in `shared/google_sheets/schema.py`.
+- [x] Canonical worksheet verified as `Housing_Listings`.
+- [x] CRM adapter keeps the spreadsheet ID out of application source and reads it from server-side configuration.
+- [ ] Real service-account credential is present in Render (current runtime flag: false) and read-only Sheets access has not yet been exercised.

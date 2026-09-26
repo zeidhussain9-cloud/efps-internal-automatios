@@ -15,7 +15,7 @@
 3. Implement durable audited CRUD, provider-event inbox and deduplication, incremental AI cursors, human-override evidence and recovery. D06–D08 remain unapproved.
 4. Verify independent encrypted backup and **restore** procedures; Supabase Free must not be treated as the only durable copy of customer conversations.
 5. Obtain explicit authorized access to the original SQLite for read-only reconciliation and an import dry-run. Do not use Desktop Commander without authorization.
-6. Reconcile the user's reported full JSON service-account credential and hardcoded sheet ID with the adapter's current expectation of GOOGLE_SERVICE_ACCOUNT_JSON_BASE64, HOUSING_SHEET_ID and HOUSING_SHEET_TAB; verify without printing secrets. Then test read-only Sheets access and existing Ollama settings.
+6. [x] Verify the canonical Sheet ID/tab contract against `shared/google_sheets/schema.py` without printing secrets; the CRM adapter consumes the Sheet ID from Render rather than hardcoding it. [ ] Verify the server-side Sheets credential and test read-only access; existing Ollama endpoint/model presence is confirmed, but a synthetic provider request remains unexecuted.
 7. Only after security, backup, migration and design gates pass, authorize live data and WhAPI.
 
 ## Boundaries

@@ -142,7 +142,7 @@ See `CRM_DATABASE_MIGRATION_GATE.md`.
 - [x] Fix the existing Render-to-Supabase server-only connection. Render now recognizes `supabase_session_pooler_ipv4`; `DATABASE_SSL_CA` is present; startup reports `CRM database connectivity: connected` at 2026-09-26 18:55 UTC. No Render PostgreSQL service is needed.
 - [ ] Implement and test authenticated durable server CRUD, raw webhook event log, per-source AI cursor, append-only requirement evidence, safe retries and restore-tested independent backups before any real data.
 - [ ] Reconcile historical Mac SQLite source with authorized local access, without modifying the source file. Do not use Desktop Commander without explicit permission.
-- [ ] Verify the existing Ollama endpoint/model and the user's reported Google service-account JSON and hardcoded sheet ID. Current adapter only recognizes GOOGLE_SERVICE_ACCOUNT_JSON_BASE64, HOUSING_SHEET_ID and HOUSING_SHEET_TAB; presence flags cannot detect other variable names or hardcoded IDs.
+- [x] Verify the repository's canonical Housing Listings Sheet ID and tab: `shared/google_sheets/schema.py` defines the canonical Spreadsheet ID and `Housing_Listings` worksheet. The CRM adapter does not hardcode the ID; it consumes the Render-side Sheet ID. [ ] Verify the server-side Sheets credential and perform a read-only access test.
 - [ ] Store media only in Cloudinary; PostgreSQL stores external media references, never media bytes.
 
 
