@@ -19,7 +19,7 @@ The operator has stated the Ollama API key and model name have already been plac
 
 ## Read-only Google Sheets — credential-format reconciliation pending
 
-The existing Slack integration owns creation and updates of Housing Listings. CRM must only read the existing sheet and preserve its editor audit trail. The operator reports already adding the **full JSON service account** and hardcoding the sheet ID. The adapter now accepts the existing repository credential names (`GOOGLE_SERVICE_ACCOUNT_JSON`, `GOOGLE_APPLICATION_CREDENTIALS`) as well as the CRM-specific Base64 name. Its latest Render runtime already detected the Sheet ID; credential presence must be rechecked after this adapter change. Do not print or overwrite existing credentials. Current adapter inputs:
+The existing Slack integration owns creation and updates of Housing Listings. CRM must only read the existing sheet and preserve its editor audit trail. The operator reports already adding the **full JSON service account** and hardcoding the sheet ID. The adapter now accepts the existing repository credential names (`GOOGLE_SERVICE_ACCOUNT_JSON`, `GOOGLE_APPLICATION_CREDENTIALS`) as well as the CRM-specific Base64 name. The latest Render runtime detects the Sheet ID but not a Sheets credential. The secret-safe database shape diagnostic also proves the configured `DATABASE_URL` is present but is not a PostgreSQL URI (scheme absent, parser failed); therefore Render configuration, not database schema or DNS routing, is the remaining DB connection blocker. Do not print or overwrite existing credentials. Current adapter inputs:
 
 | Variable | Purpose |
 | --- | --- |
