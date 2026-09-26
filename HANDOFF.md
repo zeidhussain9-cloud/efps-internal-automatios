@@ -114,3 +114,10 @@ These are future live-runtime verification tasks, not unresolved Phase-1 impleme
 - Dedicated root `steering.md` is the only CRM model system instruction, loaded and cached by `src/ollama-adapter.mjs` (2-KiB maximum). It conveys EFPS brokerage purpose, model role, structured extraction, operator control and no invented facts. Repository `CORE_STEERING.md` remains separate.
 - Application tests, build, browser and GitHub Actions must pass on the new steering commit; Render `49b4f30` succeeded with the dedicated steering at 2026-09-26 21:36:16 UTC. Optional `CRM_OLLAMA_STARTUP_SMOKE_ENABLED=false` is deployed: `dep-das3lspa4omc738mqre0` live at 2026-09-26 21:37:57 UTC; no startup inference observed. On-demand fictional pilot remains enabled.
 - No real customer data imported; Supabase still holds three fictional test leads and zero messages at last independent count. The historical source audit found 735 leads, 23,454 conversations and 966 events. D06–D08, backup/restore, source reconciliation, production auth and final credential rotation remain open.
+
+## 2026-09-27 — Main-branch promotion (supersedes earlier branch restrictions)
+
+- `main` is now the canonical dashboard and repository branch. The initial promotion was a fast-forward from `1f90124` to `6ebcc21` with 223 ahead / 0 behind, preserving all historical commits.
+- The existing Render service currently tracks `crm-ui-dashboard`; mirror `main` into that branch until Render is repointed to `main`, then retire the old branch only after a verified live deployment. CI checks both branches during transition.
+- The operator Mac root checkout at `/Users/zeidzakir/Projects/efps-internal-automatios` is a dirty audit worktree; its local files, including `.env.local`, were preserved untouched. A clean linked `main` worktree was added at `leads_automation/crm-ui-dashboard`, tracking `origin/main`. Do not delete or overwrite the historical `leads_automation/leads-ui` application.
+- Real-data migration, backup/restore and D06–D08 gates remain open; this promotion changes no data-access gates.

@@ -1,7 +1,7 @@
 name: CRM synthetic CI
 on:
   push:
-    branches: [crm-ui-dashboard]
+    branches: [main, crm-ui-dashboard]
     paths:
       - 'src/**'
       - 'tests/**'

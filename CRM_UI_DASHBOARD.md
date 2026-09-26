@@ -1,6 +1,6 @@
 # EasyFind CRM UI Dashboard — Single Working Home
 
-This branch is the **only working branch for the EasyFind CRM UI dashboard going forward**.
+**Canonical working branch: `main` (promoted 2026-09-27).** The historical `crm-ui-dashboard` branch is temporarily retained solely for the existing Render deployment, which still auto-deploys from it. Keep both at the same commit until Render is repointed to `main`; then retire the old branch after verifying a live `main` deployment.
 
 ## Canonical location
 

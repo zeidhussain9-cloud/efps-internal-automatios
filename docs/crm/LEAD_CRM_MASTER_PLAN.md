@@ -200,3 +200,7 @@ Supabase `easyfind-crm` (`qttcutwzehtskfcwxkwj`, Mumbai) is ACTIVE_HEALTHY and i
 - [x] Independently verified the steering-bearing Render `49b4f30` hosted request: success at 2026-09-26 21:36:16 UTC, five expected keys. Optional startup smoke disabled in Render; config deployment `dep-das3lspa4omc738mqre0` reached live at 2026-09-26 21:37:57 UTC with Supabase connected and no model startup call.
 - [ ] Finish representative synthetic extraction evaluation, durable audited CRUD, independently restore-tested encrypted backups, 735/23,454/966 source reconciliation and D06–D08 approvals before any real customer import.
 - [ ] Production-grade operator session auth, retention policy and final credential rotation remain gated; `CRM_REAL_DATA_ENABLED` and `CRM_DB_WRITE_ENABLED` stay disabled.
+
+## 2026-09-27 — Canonical main-branch promotion
+
+`main` was fast-forwarded from `1f90124` to `6ebcc21`, importing all 223 CRM UI commits without rewriting history. `main` is now canonical for this UI. `crm-ui-dashboard` remains a temporary deployment mirror while Render still tracks that branch. The clean Mac linked `main` worktree is `/Users/zeidzakir/Projects/efps-internal-automatios/leads_automation/crm-ui-dashboard`; the dirty historical audit checkout and `leads-ui` application remain intact. CI runs on both branches until Render is repointed. This is a repository reconciliation, not completion of production migration gates.

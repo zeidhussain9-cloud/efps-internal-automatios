@@ -158,3 +158,7 @@ The migration itself does not prove live third-party connectivity. Each integrat
 ## CRM dedicated deployment — verified 2026-09-27
 
 The separate CRM UI deploys **only** from `crm-ui-dashboard` to Render service `easyfind-crm-d01-d05` (`srv-darsv560tbcc73cu4ip0`), URL `https://easyfind-crm-d01-d05.onrender.com`. It uses Supabase project `qttcutwzehtskfcwxkwj` through server-side TLS and hosted Ollama Cloud `gpt-oss:20b` through server-only `OLLAMA_BASE_URL`, `OLLAMA_MODEL`, `OLLAMA_API_KEY`. A fictional hosted response was verified in Render logs at 2026-09-26 21:25:38 UTC. Root `steering.md` is bundled in the deployed repository and read server-side. No local model is installed. Repository `main` remains untouched by this UI work.
+
+## 2026-09-27 — Canonical branch transition
+
+`main` was fast-forwarded to the complete CRM dashboard history at `6ebcc21`. The prior statements that `main` is untouched or that only `crm-ui-dashboard` can hold the UI are historical. Render still tracks `crm-ui-dashboard` pending an explicit service branch change to `main`; keep both refs synchronized until that deployment is verified. The operator Mac uses a separate clean linked `main` worktree at `leads_automation/crm-ui-dashboard`, preserving the original audit checkout and local files.

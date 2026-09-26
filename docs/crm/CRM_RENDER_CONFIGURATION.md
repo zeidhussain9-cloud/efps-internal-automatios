@@ -60,3 +60,7 @@ No live WhAPI ingestion, automatic WhatsApp sending or live customer data is ena
 The historical 'later gate' instructions above predate the successful Render fictional request. At 2026-09-26 21:25:38 UTC, Render logged a successful `gpt-oss:20b` fictional analysis returning the five required fields. `OLLAMA_BASE_URL`, `OLLAMA_MODEL` and `OLLAMA_API_KEY` are server-side Render settings; never print or copy credential values into Git, browser bundles or logs. The model is hosted: **do not install it locally**.
 
 The root `steering.md` is the dedicated executable CRM model instruction; the adapter caches it and enforces a 2-KiB maximum. The operator-only `CORE_STEERING.md` and complete `docs/BUSINESS_CONTEXT.md` are not sent to the provider. `CRM_SYNTHETIC_AI_ENABLED=true` allows only the four hardcoded fictional IDs. `CRM_OLLAMA_STARTUP_SMOKE_ENABLED` is optional diagnostic traffic and should be `false` after acceptance to avoid extra inference on restarts. No real lead data, automated send or production writes are authorized.
+
+## 2026-09-27 — Main promotion supersedes old branch rule
+
+The canonical UI code is now on `main`; the earlier prohibition on `main` changes is obsolete. Render `easyfind-crm-d01-d05` still auto-deploys `crm-ui-dashboard` until its service branch is explicitly changed to `main`. During transition, mirror `main` to `crm-ui-dashboard` only after tests pass. Do not delete the legacy branch or assume Render has switched until its service settings confirm `branch=main` and a new live deploy is observed.
