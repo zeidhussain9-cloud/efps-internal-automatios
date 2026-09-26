@@ -44,8 +44,11 @@ function recognizedParts(value){
  ))return whatwg;
  return parseLoosePostgresUrl(value);
 }
-function appendSslmode(pathAndQuery){
- return pathAndQuery.includes('?')?pathAndQuery+'&sslmode=require':pathAndQuery+'?sslmode=require';
+function enforceSslmodeVerifyFull(pathAndQuery){
+ const [path,query='']=pathAndQuery.split('?');
+ const params=new URLSearchParams(query);
+ params.set('sslmode','verify-full');
+ return path+'?'+params.toString();
 }
 export function normalizeConnectionString(value){
  if(!value)return value;
@@ -54,17 +57,16 @@ export function normalizeConnectionString(value){
  const direct=parts.hostname.match(/^db\.([a-z0-9]+)\.supabase\.co$/i);
  const pooler=parts.hostname.match(/^aws-[0-9-]+-([a-z0-9-]+)\.pooler\.supabase\.com$/i);
  if(direct){
-  return 'postgresql://postgres.'+direct[1]+':'+encodePart(parts.password)+'@'+SUPABASE_SESSION_POOLER_HOST+':5432'+appendSslmode('/postgres');
+  return 'postgresql://postgres.'+direct[1]+':'+encodePart(parts.password)+'@'+SUPABASE_SESSION_POOLER_HOST+':5432'+enforceSslmodeVerifyFull('/postgres');
  }
  if(pooler&&parts.port==='5432'){
   const projectRef=parts.username.match(/^postgres\.([a-z0-9]+)$/i)?.[1];
   if(projectRef){
-   return 'postgresql://postgres.'+projectRef+':'+encodePart(parts.password)+'@'+SUPABASE_SESSION_POOLER_HOST+':5432'+appendSslmode('/postgres');
+   return 'postgresql://postgres.'+projectRef+':'+encodePart(parts.password)+'@'+SUPABASE_SESSION_POOLER_HOST+':5432'+enforceSslmodeVerifyFull('/postgres');
   }
  }
  return value;
 }
-
 export function connectionStringShape(value){
  const raw=typeof value==='string'?value.trim():'';
  const unquoted=trimConnectionString(value)||'';
