@@ -56,7 +56,7 @@ The existing Slack automation alone creates and updates the Housing Listings She
 
 ### Phase 2 — Prototype implementation
 - [x] Initial synthetic D01–D05 React dashboard deployed (feature-completion pending).
-- [ ] Production-private dashboard shell (optional synthetic-only Basic Auth gate implemented; credentials not configured).
+- [x] Synthetic preview Basic Auth credentials detected on Render at 17:41 UTC; production session architecture remains pending.
 - [x] Deterministic synthetic inbox/source/search/queue/priority sorting logic, with unit tests.
 - [x] Initial lead workspace tab navigation.
 - [x] Editable synthetic requirements: BHK, locality, budget, furnishing, move-in, pets, parking, occupancy, notes and priority (session-only).
@@ -126,11 +126,11 @@ Real local-data connection comes after the local SQLite migration/reconciliation
 - [x] Added PostgreSQL v1 schema for CRM-owned leads, source numbers, stable-ID-deduplicated conversations, follow-ups, append-only activity, AI proposals, versioned drafts and per-lead property actions. No editable inventory tables.
 - [x] Added explicit opt-in migration command, tests and three-source historical deduplication planning; migration is **not** automatically invoked by deployment.
 - [x] Verified the Render workspace currently has **no PostgreSQL instance**.
-- [ ] Agree on persistent PostgreSQL plan and backup/restore requirements; provision database and connect server-only DATABASE_URL.
+- [x] Supabase `easyfind-crm` provisioned as the sole hosted CRM database; no Render PostgreSQL instance is needed. Render DATABASE_URL is present but its connection probe fails; diagnose Supabase pooler/network/TLS/auth before enabling real data. Backup/restore requirements remain open.
 - [ ] Implement durable authenticated production CRUD, transaction-safe audited edits and import dry-run; run full synthetic database integration tests.
 - [ ] Reconcile 735/23,454 original extraction against curated 308/6,064 subset before importing any real records.
 - [ ] Verify latest CI unit, HTTP and Chromium results separately from user-approved browser appearance.
-- [ ] Then inspect existing Ollama settings by name/presence only and configure Google service-account JSON in Render for read-only Sheets access.
+- [ ] Reconcile the user's reported full service-account JSON and hardcoded sheet ID with the adapter's current Base64/HOUSING_SHEET_ID expectations; verify read-only Sheets access. Ollama endpoint/model are present but not yet exercised.
 See `CRM_DATABASE_MIGRATION_GATE.md`.
 
 
@@ -139,10 +139,10 @@ See `CRM_DATABASE_MIGRATION_GATE.md`.
 - [x] Applied server-only CRM core migration: nine RLS-enabled tables; revoked anon/authenticated grants; no browser-facing policies.
 - [x] Added three missing foreign-key indexes and committed matching schema migrations.
 - [x] Verified schema via SQL: zero customer leads and zero messages; no real data imported.
-- [ ] Connect Render with a private server-only database connection through secure environment configuration; no database credentials have been fetched, printed or modified.
+- [ ] Fix the existing Render-to-Supabase server-only connection (DATABASE_URL is present; startup probe failed at 17:41 UTC). No Render PostgreSQL service is needed; credentials have not been printed or modified.
 - [ ] Implement and test authenticated durable server CRUD, raw webhook event log, per-source AI cursor, append-only requirement evidence, safe retries and restore-tested independent backups before any real data.
 - [ ] Reconcile historical Mac SQLite source with authorized local access, without modifying the source file. Do not use Desktop Commander without explicit permission.
-- [ ] Configure existing Ollama environment variables and read-only Google Sheets service account after synthetic database integration tests and access controls.
+- [ ] Verify the existing Ollama endpoint/model and the user's reported Google service-account JSON and hardcoded sheet ID. Current adapter only recognizes GOOGLE_SERVICE_ACCOUNT_JSON_BASE64, HOUSING_SHEET_ID and HOUSING_SHEET_TAB; presence flags cannot detect other variable names or hardcoded IDs.
 - [ ] Store media only in Cloudinary; PostgreSQL stores external media references, never media bytes.
 
 
@@ -156,9 +156,9 @@ See `CRM_DATABASE_MIGRATION_GATE.md`.
 
 ## 2026-09-26 — Render credential validation checkpoint
 - [x] Added startup-only credential-presence and database-connectivity checks without printing secret values, plus unit tests.
-- [ ] Verify the latest Render deployment and inspect sanitized application logs to establish whether the user-added `DATABASE_URL`, auth, Ollama and Sheets settings are present and PostgreSQL is reachable.
+- [x] Sanitized Render startup at 17:41 UTC: DATABASE_URL, DB read opt-in, Basic Auth and Ollama endpoint/model present; database connection failed. Sheets expected-name flags false, not proof that the user's raw JSON credential or hardcoded ID is absent.
 - [ ] Do not infer correctness from a variable being present alone. Keep `CRM_REAL_DATA_ENABLED` disabled and do not enable database read routes until authentication and connection checks pass.
 
 
-### Verified Render startup flags — 2026-09-26 17:26 UTC
-The live CRM startup diagnostic reported: `DATABASE_URL` absent; `CRM_DB_READ_ENABLED` false; both Basic Auth variables absent; Ollama endpoint and model present; Google Sheets service-account credential and sheet ID absent; `CRM_REAL_DATA_ENABLED` false. Database probe reported `not configured`. These are runtime observations for `easyfind-crm-d01-d05`, not a claim about another service or pending environment edits. Do not enable the DB API or import customer data until the missing server-only settings are configured and a subsequent deployment logs `connected` with authentication configured. Do not copy secret values into documentation or chat.
+### Runtime audit — 2026-09-26 17:41 UTC (supersedes 17:26 checkpoint)
+Supabase `easyfind-crm` (`qttcutwzehtskfcwxkwj`, Mumbai) is ACTIVE_HEALTHY and independently accepts SQL; nine public tables verified. Render startup: `databaseUrlPresent=true`, `databaseReadOptIn=true`, `authConfigured=true`, `authIncomplete=false`, Ollama endpoint/model present, `sheetsCredentialPresent=false`, `sheetsIdPresent=false`, `liveDataEnabled=false`; Render database probe failed with error details withheld. The Google flags check only `GOOGLE_SERVICE_ACCOUNT_JSON_BASE64` and `HOUSING_SHEET_ID`; the user reports a full raw JSON credential and hardcoded sheet ID, which require a code/config mapping audit. Supabase is the sole hosted CRM database; do not provision a second Render database. See `CRM_DATABASE_MIGRATION_GATE.md`. Do not import live customer data until connectivity, access and migration gates pass.
