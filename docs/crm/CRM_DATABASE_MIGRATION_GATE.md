@@ -40,3 +40,13 @@ Render startup reports databaseUrlPresent=true, databaseReadOptIn=true, database
 - [x] Server-side Supabase CA is configured through DATABASE_SSL_CA with certificate verification enabled; TLS failure SELF_SIGNED_CERT_IN_CHAIN is resolved without disabling verification.
 - [x] Startup SELECT 1 succeeds and diagnostics remain secret-safe.
 - [ ] Authenticated application-level DB route verification remains to be exercised with operator credentials; this is separate from startup connectivity.
+
+
+## Durability v2 verification — 2026-09-27
+- [x] Migration 002 applied to Supabase and recorded in crm_schema_migrations (versions 1, 2).
+- [x] Five new tables verified: crm_provider_events, crm_ai_cursors, crm_requirement_evidence, crm_idempotency_keys and crm_property_media.
+- [x] Append-only triggers verified for messages, activity, requirement evidence and property actions; lead updated_at trigger present.
+- [x] Post-migration counts: zero leads, messages, provider events and requirement evidence. No customer data imported.
+- [x] GitHub Actions #116 passed build, unit/integration tests and Chromium browser journey.
+- [ ] Verify authenticated application-level read routes, test transaction-safe writes against an isolated test database, and independently restore an encrypted backup before any production write enablement.
+- [ ] Keep CRM_DB_WRITE_ENABLED and CRM_REAL_DATA_ENABLED disabled pending production auth, historical reconciliation and D06–D08 approval.
