@@ -11,8 +11,8 @@ test('normalizes direct Supabase URL to IPv4 session pooler',()=>{
 test('normalizes a raw special-character password without exposing it',()=>{
  const input='postgresql://postgres:p@ss#word@db.qttcutwzehtskfcwxkwj.supabase.co:5432/postgres';
  const out=normalizeConnectionString(input);
- assert.match(out,/@aws-0-ap-south-1\\.pooler\\.supabase\\.com:5432\\/postgres\\?sslmode=require/);
- assert.match(out,/postgres\\.qttcutwzehtskfcwxkwj:.*@/);
+ assert.equal(out.includes('@aws-0-ap-south-1.pooler.supabase.com:5432/postgres?sslmode=require'),true);
+ assert.equal(out.includes('postgres.qttcutwzehtskfcwxkwj:'),true);
  assert.match(out,/p%40ss%23word/);
 });
 test('reports normalized endpoint class without exposing connection details',()=>{
