@@ -66,9 +66,9 @@ createServer(async(req,res)=>{
     if(p==='/api/db/status')data={connected:await repo.health(),readOnly:true};
     else if(p==='/api/db/leads'){
      const q=new URL(req.url,'http://localhost').searchParams;
-     const raw=q.get('limit')??'50';
-     if(!/^\d{1,3}$/.test(raw)){res.writeHead(400,security);return res.end('Invalid limit');}
-     data={leads:await repo.listLeads(Number(raw))};
+     const raw=q.get('limit')??'50',offset=q.get('offset')??'0';
+     if(!/^\d{1,3}$/.test(raw)||!/^\d{1,7}$/.test(offset)){res.writeHead(400,security);return res.end('Invalid pagination');}
+     data=await repo.listLeadsPage(Number(raw),Number(offset));
     }else{
      const id=decodeURIComponent(p.slice('/api/db/leads/'.length));
      if(!id||id.includes('/')||id.length>128){res.writeHead(400,security);return res.end('Invalid lead ID');}
