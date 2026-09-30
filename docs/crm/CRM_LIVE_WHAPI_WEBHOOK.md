@@ -86,3 +86,7 @@ The CRM webhook only records WhatsApp activity. It never calls a WhAPI send endp
 - Intake tables are absent from the production schema.
 - Render webhook route was removed and its old environment gate remains disabled.
 - UI dependency `@supabase/supabase-js` added for Realtime.
+
+## Operator classification UI — 2026-09-30
+
+Webhook ingestion and operator qualification remain separate stages. Incoming contacts are preserved first. The UI exposes one Contact Classification screen with two sub-tabs: Not pushed to CRM and Qualified leads pushed to CRM. Non-qualified classifications remain outside CRM; Qualified Lead is the only promotion path. The explicit Update action waits for the server transaction to succeed before the UI moves the contact between queues.
