@@ -81,13 +81,13 @@ createServer(async(req,res)=>{
    if(req.method!=='GET'){res.writeHead(405,security);return res.end('Method not allowed');}
    const repo=createCrmRepository();
    try{
+    const q=new URL(req.url,'http://localhost').searchParams;
     let data;
     if(p==='/api/db/status')data={connected:await repo.health(),readOnly:true};
     else if(p==='/api/db/stats'){
-     const q=new URL(req.url,'http://localhost').searchParams;data=await repo.dashboardStats(q.get('source_number')||'+919148338801');
+     data=await repo.dashboardStats(q.get('source_number')||'+919148338801');
     }
     else if(p==='/api/db/leads'){
-     const q=new URL(req.url,'http://localhost').searchParams;
      const raw=q.get('limit')??'50',offset=q.get('offset')??'0',sourceNumber=q.get('source_number')||'+919148338801';
      if(!/^\d{1,3}$/.test(raw)||!/^\d{1,7}$/.test(offset)){res.writeHead(400,security);return res.end('Invalid pagination');}
      data=await repo.listLeadsPage(Number(raw),Number(offset),sourceNumber,q.get('lead_status')||'');
