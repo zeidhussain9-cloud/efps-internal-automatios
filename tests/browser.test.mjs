@@ -5,7 +5,7 @@ import {chromium} from 'playwright';
 
 const port=18763,base='http://127.0.0.1:'+port;
 const startServer=()=>spawn(process.execPath,['crm-server.mjs'],{
- env:{...process.env,PORT:String(port),CRM_BASIC_AUTH_USERNAME:'',CRM_BASIC_AUTH_PASSWORD:''},
+ env:{...process.env,PORT:String(port),CRM_BASIC_AUTH_USERNAME:'pilot',CRM_BASIC_AUTH_PASSWORD:'test-pass',CRM_DB_READ_ENABLED:'true',CRM_DB_WRITE_ENABLED:'true',DATABASE_URL:''},
  stdio:'pipe'
 });
 const waitForServer=async()=>{
@@ -25,13 +25,18 @@ test('production CRM browser journey uses only live-record surfaces',async()=>{
   })}));
   await page.route('**/api/db/stats?*',route=>route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({sourceNumber:'+919148338801',leadCount:228,liveLeadCount:3,pendingClassificationCount:4,webhookErrorCount:0,supportedSourceNumbers:['+919148338801','+917975102130','+919902024973']})}));
   await page.route('**/api/inventory/overview',route=>route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({rows:[],latestSync:null})}));
-  await page.route('**/api/db/leads/*/workspace',route=>route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({
+  await page.route('**/api/db/leads/*/workspace*',route=>route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({
    lead:{id:'LIVE-1',display_name:'Live lead',normalized_phone:'+919000000001',status:'New',lead_type:'New',tenant_type:'Not specified',priority:'Medium',classification:'Qualified Lead',requirements:{bhk:'2 BHK',locality:'Harlur',budget:50000},operator_notes:''},
    sources:[{source_number:'+919148338801'}],messages:[{id:1,source_number:'+919148338801',direction:'Incoming',message_type:'text',body:'Historical conversation message',sender_name:'Customer',message_at:'2026-09-30T00:00:00Z'}],activity:[],followups:[]
   })}));
   await page.route('**/api/db/leads/LIVE-1',route=>route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({id:'LIVE-1',lead_type:'Active Follow-up',tenant_type:'Family'})}));
   await page.route('**/api/inventory/matches?*',route=>route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({rows:[]})}));
   await page.goto(base);
+  await page.getByRole('heading',{name:'Operator sign in'}).waitFor();
+  await page.getByLabel('Username').fill('pilot');
+  await page.getByLabel('Password').fill('test-pass');
+  await page.getByRole('button',{name:'Sign in'}).click();
+  await page.getByText('Production data').waitFor();
   assert.equal(await page.getByText('Production data').count(),1);
   assert.equal(await page.getByText('Synthetic preview').count(),0);
   assert.equal(await page.getByText('Sample leads').count(),0);
@@ -41,6 +46,7 @@ test('production CRM browser journey uses only live-record surfaces',async()=>{
   assert.equal(await page.getByText('228 leads').count(),1);
   await page.getByRole('button',{name:/Live lead/}).click();
   await page.getByRole('button',{name:'Overview',exact:true}).waitFor();
+  await page.getByRole('button',{name:/Privacy: Masked/}).click();
   assert.equal(await page.getByText('Live lead').count()>0,true);
   assert.equal(await page.getByText('Lead Status').count(),1);
   assert.equal(await page.getByText('Tenant Type').count(),1);
