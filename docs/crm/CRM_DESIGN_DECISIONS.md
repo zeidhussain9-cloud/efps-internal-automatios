@@ -87,14 +87,14 @@
 - [x] D05.6 Share preparation selects verified properties and prepares a verified property summary/draft; preparation/open/copy is not a send.
 - [x] D05.7 Per-lead suggested/shared/rejected/visited history is preserved without claiming an unverified send.
 
-## D06 — Live Activity & Webhooks — UNRESOLVED
+## D06 — Live Activity & Webhooks — RESOLVED 2026-09-30
 
-- [ ] D06.1 New-message indicators and Needs Analysis state.
-- [ ] D06.2 Customer number vs EFPS source number distinction for live events.
-- [ ] D06.3 Placement of raw webhook event monitor.
-- [ ] D06.4 Received/deduplicated/processed/failed/retry/replay states.
-- [ ] D06.5 Media edits/deletions/receipts where provider supports them.
-- [ ] D06.6 Provider limitation states.
+- [x] D06.1 New-message indicators and live workspace refresh are implemented through Supabase Realtime.
+- [x] D06.2 Source `+919148338801` and customer phone are distinct persisted fields.
+- [x] D06.3 Raw webhook activity is persisted in `crm_webhook_events`.
+- [x] D06.4 Webhook states and provider-message idempotency are implemented.
+- [x] D06.5 Initial media references and provider message types are persisted; provider-specific edit/delete/receipt events remain unsupported until the provider payload contract requires them.
+- [x] D06.6 Unsupported/invalid webhook payloads are retained or rejected with explicit processing state/error.
 
 ## D07 — Privacy, Safety & Operator Control — UNRESOLVED
 

@@ -1,0 +1,2 @@
+-- No-op compatibility marker: the final crm_record_webhook_event definition in 007
+-- uses explicit aliases so RETURN TABLE output names cannot shadow column names.

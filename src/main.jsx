@@ -1,12 +1,16 @@
 import React,{useEffect,useMemo,useState} from 'react';
 import {createRoot} from 'react-dom/client';
+import {createClient} from '@supabase/supabase-js';
 import {LayoutDashboard,Inbox,Building2,Settings,Search,ChevronLeft,BrainCircuit,CheckCircle2,RefreshCw} from 'lucide-react';
 import InventoryPanel from './inventory-panel.jsx';
 import './style.css';
 
 const SOURCE_NUMBER='+919148338801';
 const TABS=['Overview','Conversation','Requirements','Property Matches','AI & Drafts','Activity & History'];
-const MENU=[['Dashboard',LayoutDashboard],['Intake',Inbox],['Leads Inbox',Inbox],['Inventory',Building2],['Settings',Settings]];
+const MENU=[['Dashboard',LayoutDashboard],['Leads Inbox',Inbox],['Inventory',Building2],['Settings',Settings]];
+const SUPABASE_URL=import.meta.env.VITE_SUPABASE_URL||'';
+const SUPABASE_PUBLISHABLE_KEY=import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY||'';
+const supabase=SUPABASE_URL&&SUPABASE_PUBLISHABLE_KEY?createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY):null;
 const money=n=>n!==null&&n!==undefined&&n!==''?'₹'+Number(n).toLocaleString('en-IN'):'Not specified';
 const leadTitle=lead=>lead?.display_name||lead?.normalized_phone||'Lead';
 const classificationLabel=value=>({
@@ -47,17 +51,9 @@ function App(){
  const[matches,setMatches]=useState([]);
  const[matchState,setMatchState]=useState('idle');
  const[refreshToken,setRefreshToken]=useState(0);
- const[intakeRows,setIntakeRows]=useState([]); const[intakeState,setIntakeState]=useState('idle'); const[promoting,setPromoting]=useState(null);
+ const[realtimeState,setRealtimeState]=useState('connecting');
 
  useEffect(()=>{try{window.sessionStorage.setItem('efps-crm-active-page',page)}catch{}},[page]);
- useEffect(()=>{
-  if(page!=='Intake')return;
-  let active=true;setIntakeState('loading');
-  fetch('/api/intake',{cache:'no-store'}).then(async r=>{if(!r.ok)throw Error('Lead intake unavailable');const d=await r.json();if(active){setIntakeRows(Array.isArray(d.rows)?d.rows:[]);setIntakeState('ready')}}).catch(()=>{if(active)setIntakeState('unavailable')});
-  return()=>{active=false};
- },[page,refreshToken]);
-
-
 
  useEffect(()=>{
   let active=true;
@@ -125,26 +121,18 @@ function App(){
  },[selectedId,refreshToken]);
 
  useEffect(()=>{
-  if(!selectedId)return;
+  if(!supabase){setRealtimeState('unconfigured');return()=>{}}
   let active=true;
-  const poll=async()=>{
-   try{
-    const r=await fetch('/api/db/leads/'+encodeURIComponent(selectedId)+'/workspace',{cache:'no-store'});
-    if(!r.ok)return;
-    const data=await r.json();
-    if(active)setWorkspace(data);
-   }catch{}
-  };
-  const timer=setInterval(poll,5000);
-  return()=>{active=false;clearInterval(timer)};
- },[selectedId]);
+  const channel=supabase.channel('crm:live')
+   .on('broadcast',{event:'message_inserted'},()=>{if(active)setRefreshToken(v=>v+1)})
+   .subscribe(status=>{if(!active)return;setRealtimeState(status==='SUBSCRIBED'?'live':status==='CHANNEL_ERROR'?'error':'connecting')});
+  return()=>{active=false;supabase.removeChannel(channel)};
+ },[]);
 
  const visibleLeads=useMemo(()=>{
   const q=query.trim().toLowerCase();
   return leads.filter(l=>!q||[l.display_name,l.normalized_phone,l.status,l.priority,l.classification].some(v=>String(v||'').toLowerCase().includes(q)));
  },[leads,query]);
-
- async function promoteIntake(id){setPromoting(id);try{const r=await fetch('/api/intake/'+encodeURIComponent(id)+'/promote',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({classification:'Qualified Lead'})});if(!r.ok){const d=await r.json().catch(()=>({}));throw Error(d.error||'Promotion unavailable')}setIntakeRows(rows=>rows.map(x=>x.id===id?{...x,status:'Promoted',promoted_lead_id:r.leadId}:x));}catch(e){window.alert(e.message)}finally{setPromoting(null)}}
 
  function openLead(id){setSelectedId(id);setTab('Overview');setPage('Leads Inbox')}
  function backToInbox(){setSelectedId(null);setWorkspace(null);setTab('Overview');setPage('Leads Inbox')}
@@ -167,12 +155,12 @@ function App(){
   <main className="main">
    <header className="top">
     <div className="top-title">{selectedId&&<button className="header-back" onClick={backToInbox} type="button"><ChevronLeft size={17}/> Leads Inbox</button>}<div><strong>{selectedId?'Lead Workspace':page}</strong><small>EasyFind Property Solutions / CRM</small></div></div>
-    <div className="topright"><span className="chip green">● Production data</span><span className="chip source">{SOURCE_NUMBER}</span><span className="avatar">ZH</span></div>
+    <div className="topright"><span className="chip green">● Production data</span><span className={"chip "+(realtimeState==='live'?'green':'')}>Realtime: {realtimeState}</span><span className="chip source">{SOURCE_NUMBER}</span><span className="avatar">ZH</span></div>
    </header>
    <div className="content">
-    {page==='Intake'&&<section><div className="heading"><div><h1>Lead Intake</h1><p>Segregation gate for new WhatsApp contacts</p></div><div className="headcontrols"><span className="chip">Only qualified leads enter CRM</span><button className="primary" onClick={refresh}><RefreshCw size={14}/> Refresh</button></div></div><div className="notice">New live WhatsApp contacts are staged here first. Existing CRM leads continue to receive messages directly in their chronological conversation. Promotion is restricted to <b>Actual lead</b>.</div><div className="panel intake-list">{intakeState==='loading'&&<div className="empty">Loading intake…</div>}{intakeState==='unavailable'&&<div className="empty">Lead intake is unavailable.</div>}{intakeState==='ready'&&!intakeRows.length&&<div className="empty">No contacts are waiting for qualification.</div>}{intakeRows.map(x=><article className="intake-card" key={x.id}><div><b>{x.display_name||x.phone}</b><span>{x.display_name?x.phone:''}</span><small>{x.status} · {classificationLabel(x.classification)} · {x.message_count} message(s) · {x.last_message_at?new Date(x.last_message_at).toLocaleString():''}</small><p>{x.last_message_preview||'No text preview stored.'}</p></div><button className="primary" disabled={promoting===x.id||x.status==='Promoted'} onClick={()=>promoteIntake(x.id)}>{x.status==='Promoted'?'Promoted':promoting===x.id?'Promoting…':'Qualify as lead'}</button></article>)}</div></section>}
+
     {page==='Inventory'&&<InventoryPanel data={inventoryData} state={inventoryState} refresh={refresh} query={inventoryQuery} setQuery={setInventoryQuery}/>}
-    {page==='Settings'&&<><div className="heading"><div><h1>Settings</h1><p>Production CRM configuration</p></div></div><div className="panel standalone"><h3>Live data scope</h3><p>This dashboard is connected only to the imported lead source <b>{SOURCE_NUMBER}</b>. Production data modes are enforced.</p><p>Customer writes remain disabled from the browser. WhatsApp opens the operator's composer; the CRM does not send messages automatically.</p></div></>}
+    {page==='Settings'&&<><div className="heading"><div><h1>Settings</h1><p>Production CRM configuration</p></div></div><div className="panel standalone"><h3>Live data scope</h3><p>This dashboard is connected only to the lead source <b>{SOURCE_NUMBER}</b>. Production data modes are enforced.</p><p>New WhatsApp activity creates or updates a lead directly. The browser does not send WhatsApp messages automatically.</p></div></>}
     {(page==='Dashboard'||page==='Leads Inbox')&&selectedId&&workspaceState==='ready'&&<section className="panel live-detail">
       <div className="detailhead">
        <button className="back" onClick={backToInbox}><ChevronLeft size={18}/> Leads Inbox</button>
@@ -181,7 +169,7 @@ function App(){
       </div>
       <div className="tabs">{TABS.map(t=><button className={tab===t?'active':''} key={t} onClick={()=>setTab(t)}>{t}</button>)}</div>
       <div className="tabbody">
-       {tab==='Overview'&&<><div className="two"><div className="inner"><h3>Lead classification</h3><div className="classification-large">{classificationLabel(workspace.lead.classification||workspace.lead.requirements?.fields?.classification||workspace.lead.requirements?.classification)}</div><p className="muted">Source classification from the historical extraction. New live contacts remain unclassified until classified.</p></div><div className="inner"><h3>Stored requirements</h3><pre className="jsonview">{JSON.stringify(workspace.lead.requirements||{},null,2)}</pre></div><div className="inner"><h3>Operator action</h3><p>{workspace.lead.operator_notes||'No operator note stored.'}</p><a className="primary inlinebutton" href={'https://wa.me/'+String(workspace.lead.normalized_phone||'').replace(/\D/g,'')} target="_blank" rel="noopener noreferrer">Open WhatsApp</a></div></div><div className="inner"><h3>Imported data</h3><p>Messages: <b>{workspace.messages.length}</b> · Activity: <b>{workspace.activity.length}</b> · Follow-ups: <b>{workspace.followups.length}</b></p><div className="notice">{workspace.messages.length?'Historical messages are available.':'No historical messages are imported yet. The production UI does not fabricate conversation history.'}</div></div></>}
+       {tab==='Overview'&&<><div className="two"><div className="inner"><h3>Lead classification</h3><div className="classification-large">{classificationLabel(workspace.lead.classification||workspace.lead.requirements?.fields?.classification||workspace.lead.requirements?.classification)}</div><p className="muted">Historical classification is retained. New live leads may remain unclassified until an operator classifies them.</p></div><div className="inner"><h3>Stored requirements</h3><pre className="jsonview">{JSON.stringify(workspace.lead.requirements||{},null,2)}</pre></div><div className="inner"><h3>Operator action</h3><p>{workspace.lead.operator_notes||'No operator note stored.'}</p><a className="primary inlinebutton" href={'https://wa.me/'+String(workspace.lead.normalized_phone||'').replace(/\D/g,'')} target="_blank" rel="noopener noreferrer">Open WhatsApp</a></div></div><div className="inner"><h3>Imported data</h3><p>Messages: <b>{workspace.messages.length}</b> · Activity: <b>{workspace.activity.length}</b> · Follow-ups: <b>{workspace.followups.length}</b></p><div className="notice">{workspace.messages.length?'Historical messages are available.':'No historical messages are imported yet. The production UI does not fabricate conversation history.'}</div></div></>}
        {tab==='Conversation'&&(workspace.messages.length?<div className="conversation">{workspace.messages.map(m=><div className={'bubble '+(m.direction==='Outgoing'?'out':'')} key={m.id}><small>{m.direction} · {new Date(m.message_at).toLocaleString()} · {m.sender_name||m.source_number}</small><p>{m.body||'['+m.message_type+']'}</p>{(m.media_urls||m.media_filenames)?.length>0&&<small>Media attached</small>}</div>)}</div>:<div className="empty">No imported conversation for this lead. Historical message import is separate from the 228-lead import.</div>)}
        {tab==='Requirements'&&<><div className="notice">Read-only production view. Browser writes are disabled.</div><pre className="jsonview">{JSON.stringify(workspace.lead.requirements||{},null,2)}</pre></>}
        {tab==='Property Matches'&&<>{matchState==='loading'&&<div className="empty">Matching against current Supabase inventory…</div>}{matchState==='insufficient'&&<div className="empty">No structured BHK, budget or locality is stored for this lead, so no inventory match is inferred.</div>}{matchState==='unavailable'&&<div className="empty">Live inventory matching is unavailable.</div>}{matchState==='ready'&&(filteredMatches.length?<div className="properties">{filteredMatches.map(p=><article className="property" key={p.listing_id}><div className="photo-fallback">{(p.cloudinary_image_urls||[]).length?<img src={p.cloudinary_image_urls[0]} alt={'Property '+p.listing_id}/>:<span>No property images available</span>}</div><div className="rowtop"><b>{p.bhk} · {p.locality}</b><span className="chip green">{p.listing_state}</span></div><p className="price">{money(p.monthly_rent)} <small>/ month</small></p><p>{p.furnishing||'Furnishing not recorded'} · Pets: {p.pet_friendly||'Not recorded'}</p><small>{p.listing_id} · {p.society_name||'Society not recorded'}</small></article>)}</div>:<div className="empty">No live inventory matches were returned.</div>)}</>}

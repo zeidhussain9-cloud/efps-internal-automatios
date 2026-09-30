@@ -1,4 +1,4 @@
-"""Stage-1 inventory intake: dedicated listener + explicit NEW-to-NEW sessions."""
+"""Stage-1 inventory intake helper for the legacy inventory source numbers."""
 from __future__ import annotations
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
@@ -68,15 +68,15 @@ def is_new_marker(text: str) -> bool:
 
 def is_inventory_message(message: IncomingMessage | dict) -> bool:
     if isinstance(message, IncomingMessage):
-        return message.is_inventory_listener
+        return config.normalise_phone(message.sender or message.chat_id) in set(config.INVENTORY_SOURCE_NUMBERS)
     return (
-        str(message.get("sender", "")).strip() in config.INVENTORY_SENDER_NUMBERS
+        str(message.get("sender", "")).strip() in config.INVENTORY_SOURCE_NUMBERS
         and not bool(message.get("from_me"))
         and not str(message.get("chat_id", "")).endswith("@g.us")
     )
 
 def ingest(message: IncomingMessage | dict, store: SessionStore):
-    """Accept only the two configured inventory listeners and use NEW as the session delimiter."""
+    """Accept only the two configured legacy inventory source numbers and use NEW as the session delimiter."""
     if not is_inventory_message(message):
         return "ignored", None
 

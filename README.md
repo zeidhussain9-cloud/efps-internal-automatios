@@ -51,7 +51,7 @@ For every implementation, the agent must review all maintained root and `docs/` 
 
 Inventory uses three top-level stages:
 
-1. **Stage 1 — Initial / Webhook**: dedicated inventory listener, `NEW` property-session boundary, raw capture, and initial row.
+1. **Stage 1 — Initial / Webhook**: legacy inventory source handling, `NEW` property-session boundary, raw capture, and initial row.
 2. **Phase-1 deterministic boundary**: canonical source segmentation, deterministic candidate extraction/resolution, normalization/dependencies, deterministic Google Maps URL extraction, and deterministic validation. This boundary is implemented by `src.phase1.run_phase1()` and is AI-independent and network-free for Maps.
 3. **Later property verification / downstream processing**: runtime Google Maps resolution, optional AI verification, wording-only AI beautification, media handling, and downstream publishing. These do not provide source evidence to the deterministic boundary.
 
@@ -69,7 +69,7 @@ The deterministic repository work is complete for the current Phase-1 Inventory 
 
 ## Live-system migration reconciliation — 2026-09-16
 
-The repository now carries the approved live-system operational boundary on top of the latest canonical `main` without importing legacy Inventory processing. Lead Management and its current Slack/runtime surfaces remain under their existing new-repository ownership. The live WhAPI boundary routes the configured inventory listeners into the Stage-1 adapter and ordinary inbound traffic into Lead Management.
+The CRM UI branch now uses a lead-only live WhatsApp path. WhAPI messages for the connected CRM source `+919148338801` enter the Supabase Edge Function and are written directly to CRM leads/messages. The legacy inventory runtime remains isolated from this CRM webhook and is not a CRM routing destination.
 
 `modules/efps-inventory-mgmnt/src/inventory_runtime.py` is the only migrated Inventory runtime adapter: it captures the live Stage-1 session boundary, durable session state, deduplication, and raw intake, then delegates closed sessions to the existing canonical Inventory pipeline. `handler.py` provides the scheduled Raw-row worker using the same canonical package.
 

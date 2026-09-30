@@ -24,4 +24,4 @@ test('write gate does not shadow GET lead routes',async()=>{
 });
 
 
-test('WhatsApp ingestion is fail-closed by default',async()=>{const{proc,base}=await start({CRM_BASIC_AUTH_USERNAME:'pilot',CRM_BASIC_AUTH_PASSWORD:'fictional-secret',CRM_DB_WRITE_ENABLED:'false',CRM_WHATSAPP_INGEST_ENABLED:'false'});try{const auth='Basic '+Buffer.from('pilot:fictional-secret').toString('base64');const response=await fetch(base+'/api/webhooks/whatsapp',{method:'POST',headers:{Authorization:auth,'Content-Type':'application/json','x-crm-webhook-token':'not-configured'},body:'{}'});assert.equal(response.status,403)}finally{proc.kill()}});
+test('Render no longer accepts WhatsApp webhook writes',async()=>{const{proc,base}=await start({CRM_BASIC_AUTH_USERNAME:'pilot',CRM_BASIC_AUTH_PASSWORD:'fictional-secret'});try{const auth='Basic '+Buffer.from('pilot:fictional-secret').toString('base64');const response=await fetch(base+'/api/webhooks/whatsapp',{method:'POST',headers:{Authorization:auth,'Content-Type':'application/json'},body:'{}'});assert.equal(response.status,405)}finally{proc.kill()}});

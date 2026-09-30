@@ -208,3 +208,17 @@ Supabase `easyfind-crm` (`qttcutwzehtskfcwxkwj`, Mumbai) is ACTIVE_HEALTHY and i
 ## 2026-09-27 — Canonical main-branch promotion
 
 `main` was fast-forwarded from `1f90124` to `6ebcc21`, importing all 223 CRM UI commits without rewriting history. `main` is now canonical for this UI. `crm-ui-dashboard` remains a temporary deployment mirror while Render still tracks that branch. The clean Mac linked `main` worktree is `/Users/zeidzakir/Projects/efps-internal-automatios/leads_automation/crm-ui-dashboard`; the dirty historical audit checkout and `leads-ui` application remain intact. CI runs on both branches until Render is repointed. This is a repository reconciliation, not completion of production migration gates.
+
+## 2026-09-30 — Live lead-only webhook completion checkpoint
+
+- [x] Replaced the proposed listener model with a single lead path for the CRM live flow. No inventory listener, lead listener, CRM listener, staged-contact intake or qualification gate exists in the CRM path.
+- [x] Deployed Supabase Edge Function `whapi-crm-webhook` as the live WhAPI ingress for source `+919148338801`; Render is not the webhook receiver and AWS is not a CRM runtime dependency.
+- [x] Added durable `crm_webhook_events` activity/audit storage with provider-message idempotency and received/processing/processed/failed states.
+- [x] New source-phone activity creates a lead directly; existing source-phone activity appends to the existing lead. Contact names are retained when supplied and the phone is the truthful fallback.
+- [x] Removed CRM intake tables and Render intake routes. There is no separate new-contact staging model.
+- [x] Historical CRM population is reconciled at 228 leads and 5,286 messages for source `+919148338801`.
+- [x] Workspace message ordering is chronological by provider `message_at`, with source/provider identity preserved separately.
+- [x] Added sanitized Supabase Realtime broadcast after message insertion so the UI refreshes live without polling WhAPI or polling the CRM workspace.
+- [x] Removed the Render-side WhatsApp ingestion route; the old CRM WhatsApp environment gate remains disabled.
+- [x] Verified the Edge Function with correct authentication (HTTP 200) and incorrect authentication (HTTP 401). Transactional lead/message processing was exercised and rolled back; persisted counts remained 228/5,286.
+- [ ] Final provider cutover: update the connected WhAPI channel's `messages` webhook URL/header to the deployed Supabase function. The available local provider credential did not resolve to an active usable WhAPI channel during this checkpoint, so no provider setting was guessed or changed.

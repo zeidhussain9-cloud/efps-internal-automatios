@@ -11,15 +11,17 @@
     "db:migrate": "node scripts/migrate-crm.mjs",
     "db:backup": "node scripts/backup-crm.mjs",
     "db:restore": "node scripts/restore-crm.mjs",
-    "inventory:sync": "node scripts/sync-housing-inventory.mjs"
+    "inventory:sync": "node scripts/sync-housing-inventory.mjs",
+    "pretest": "npm run build"
   },
   "dependencies": {
+    "@supabase/supabase-js": "2.117.2",
     "@vitejs/plugin-react": "4.3.4",
-    "vite": "6.4.3",
+    "lucide-react": "0.468.0",
+    "pg": "8.13.1",
     "react": "18.3.1",
     "react-dom": "18.3.1",
-    "lucide-react": "0.468.0",
-    "pg": "8.13.1"
+    "vite": "6.4.3"
   },
   "devDependencies": {
     "playwright": "1.63.0"
