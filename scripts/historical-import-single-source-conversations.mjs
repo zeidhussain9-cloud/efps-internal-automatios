@@ -4,7 +4,7 @@ import {resolve,dirname} from 'node:path';
 import pg from 'pg';
 import {normalizeConnectionString} from '../src/crm-repository.mjs';
 
-const ROOT=resolve(dirname(new URL(import.meta.url).pathname),'../..');
+const ROOT=resolve(dirname(new URL(import.meta.url).pathname),'..');
 const SOURCE='+919148338801';
 const EXPORT=resolve(ROOT,'.private-import/9148338801-conversations.json');
 const BACKUP=resolve(ROOT,'.private-import/crm-preconversation-2026-09-30.enc');
