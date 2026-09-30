@@ -131,7 +131,7 @@ function App(){
 
  const visibleLeads=useMemo(()=>{
   const q=query.trim().toLowerCase();
-  return leads.filter(l=>!q||[l.display_name,l.normalized_phone,l.status,l.priority].some(v=>String(v||'').toLowerCase().includes(q)));
+  return leads.filter(l=>!q||[l.display_name,l.normalized_phone,l.status,l.priority,l.classification].some(v=>String(v||'').toLowerCase().includes(q)));
  },[leads,query]);
 
  function openLead(id){setSelectedId(id);setTab('Overview');setPage('Leads Inbox')}
