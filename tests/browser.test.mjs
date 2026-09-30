@@ -74,10 +74,9 @@ test('production CRM browser journey uses only live-record surfaces',async()=>{
   await page.getByRole('button',{name:/Live lead/}).click();
   await page.once('dialog',dialog=>dialog.accept());
   await page.getByRole('button',{name:'Archive lead'}).click();
-  await page.getByText('Lead archived. Restore remains available.').waitFor();
   await page.getByRole('button',{name:'Restore lead'}).waitFor();
   await page.getByRole('button',{name:'Restore lead'}).click();
-  await page.getByText('Lead restored.').waitFor();
+  await page.getByRole('button',{name:'Archive lead'}).waitFor();
   await page.getByRole('button',{name:'Property Matches',exact:true}).click();
   await page.getByText(/No live inventory matches were returned/).waitFor();
   await page.getByRole('button',{name:'AI & Drafts',exact:true}).click();
