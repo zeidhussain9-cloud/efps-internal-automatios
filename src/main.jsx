@@ -110,10 +110,11 @@ function App(){
 
  useEffect(()=>{
   let active=true;
+  if(!authenticated)return()=>{active=false};
   async function load(){
    setLoading(true);setError('');
    try{
-    const r=await fetch('/api/db/leads?limit=100&offset='+offset+'&source_number='+encodeURIComponent(sourceFilter)+'&lead_status='+encodeURIComponent(leadStatusFilter),{cache:'no-store',credentials:'include'});
+    const r=await apiFetch('/api/db/leads?limit=100&offset='+offset+'&source_number='+encodeURIComponent(sourceFilter)+'&lead_status='+encodeURIComponent(leadStatusFilter),{cache:'no-store',credentials:'include'});
     if(!r.ok)throw Error('Live CRM records unavailable');
     const d=await r.json();
     if(!active)return;
@@ -128,24 +129,26 @@ function App(){
 
  useEffect(()=>{
   let active=true;
-  if(page!=='Contact Classification')return()=>{active=false};
+  if(!authenticated||page!=='Contact Classification')return()=>{active=false};
   setClassificationState('loading');
   const qs=new URLSearchParams({limit:'100'});if(['not_pushed','promoted','unqualified'].includes(classificationFilter))qs.set('status',classificationFilter);if(sourceFilter)qs.set('source_number',sourceFilter);
-  fetch('/api/db/classifications?'+qs.toString(),{cache:'no-store',credentials:'include'}).then(async r=>{const d=await r.json().catch(()=>({}));if(!r.ok)throw Error(d.error||('Classification records unavailable (HTTP '+r.status+')'));return d}).then(d=>{if(active){const rows=Array.isArray(d.classifications)?d.classifications:[];setClassifications(rows);setClassificationTotal(Number(d.total)||0);setClassificationDrafts(prev=>{const next={...prev};for(const row of rows)next[row.id]=row.classification_code;return next});setClassificationError('');setClassificationState('ready')}}).catch(e=>{if(active){setClassifications([]);setClassificationError(e.message||'Classification records unavailable');setClassificationState('unavailable')}});
+  apiFetch('/api/db/classifications?'+qs.toString(),{cache:'no-store',credentials:'include'}).then(async r=>{const d=await r.json().catch(()=>({}));if(!r.ok)throw Error(d.error||('Classification records unavailable (HTTP '+r.status+')'));return d}).then(d=>{if(active){const rows=Array.isArray(d.classifications)?d.classifications:[];setClassifications(rows);setClassificationTotal(Number(d.total)||0);setClassificationDrafts(prev=>{const next={...prev};for(const row of rows)next[row.id]=row.classification_code;return next});setClassificationError('');setClassificationState('ready')}}).catch(e=>{if(active){setClassifications([]);setClassificationError(e.message||'Classification records unavailable');setClassificationState('unavailable')}});
   return()=>{active=false};
  },[page,classificationFilter,sourceFilter,refreshToken]);
 
  useEffect(()=>{
   let active=true;
-  fetch('/api/db/stats?source_number='+encodeURIComponent(sourceFilter),{cache:'no-store',credentials:'include'}).then(async r=>{if(!r.ok)throw Error('Dashboard stats unavailable');return r.json()}).then(d=>{if(active)setDashboardStats(d)}).catch(()=>{if(active)setDashboardStats(null)});
+  if(!authenticated)return()=>{active=false};
+  apiFetch('/api/db/stats?source_number='+encodeURIComponent(sourceFilter),{cache:'no-store',credentials:'include'}).then(async r=>{if(!r.ok)throw Error('Dashboard stats unavailable');return r.json()}).then(d=>{if(active)setDashboardStats(d)}).catch(()=>{if(active)setDashboardStats(null)});
   return()=>{active=false};
  },[sourceFilter,refreshToken]);
 
  useEffect(()=>{
   let active=true;
+  if(!authenticated)return()=>{active=false};
   async function load(){
    try{
-    const r=await fetch('/api/inventory/overview',{cache:'no-store',credentials:'include'});
+    const r=await apiFetch('/api/inventory/overview',{cache:'no-store',credentials:'include'});
     if(!r.ok)throw Error('Inventory unavailable');
     const data=await r.json();
     if(active)setInventoryData(data),setInventoryState('live');
@@ -157,11 +160,12 @@ function App(){
 
  useEffect(()=>{
   let active=true;
+  if(!authenticated)return()=>{active=false};
   if(!selectedId){setWorkspace(null);setWorkspaceState('idle');setMatches([]);setMatchState('idle');return()=>{active=false}};
   setWorkspaceState('loading');setAi(null);setAiState('idle');setMatches([]);setMatchState('loading');
   async function load(){
    try{
-    const r=await fetch('/api/db/leads/'+encodeURIComponent(selectedId)+'/workspace?source_number='+encodeURIComponent(sourceFilter),{cache:'no-store',credentials:'include'});
+    const r=await apiFetch('/api/db/leads/'+encodeURIComponent(selectedId)+'/workspace?source_number='+encodeURIComponent(sourceFilter),{cache:'no-store',credentials:'include'});
     if(!r.ok)throw Error('Lead workspace unavailable');
     const data=await r.json();
     if(!active)return;
@@ -179,7 +183,7 @@ function App(){
     if(locality)qs.set('locality',locality);
     if(req.furnishing)qs.set('furnishing',String(req.furnishing));
     if(req.pet_friendly)qs.set('pet_friendly',String(req.pet_friendly));
-    const mr=await fetch('/api/inventory/matches?'+qs.toString(),{cache:'no-store',credentials:'include'});
+    const mr=await apiFetch('/api/inventory/matches?'+qs.toString(),{cache:'no-store',credentials:'include'});
     if(!mr.ok)throw Error('Inventory match lookup unavailable');
     const md=await mr.json();
     if(active){setMatches(Array.isArray(md.rows)?md.rows:[]);setMatchState('ready')}
@@ -190,6 +194,7 @@ function App(){
  },[selectedId,sourceFilter,refreshToken]);
 
  useEffect(()=>{
+  if(!authenticated){setRealtimeState('unconfigured');return()=>{}}
   if(!supabase){setRealtimeState('unconfigured');return()=>{}}
   let active=true;
   const channel=supabase.channel('crm:live')
@@ -207,12 +212,12 @@ function App(){
  function backToInbox(){setSelectedId(null);setWorkspace(null);setTab('Overview');setPage('Leads Inbox')}
  function refresh(){setRefreshToken(v=>v+1)}
  function classifyContact(id,classification){setClassificationDrafts(prev=>({...prev,[id]:classification}));setClassificationErrors(prev=>{const next={...prev};delete next[id];return next})}
- async function saveClassification(row){const classification=classificationDrafts[row.id];if(!classification||classification==='pending'||classification===row.classification_code)return;setClassificationSaving(prev=>({...prev,[row.id]:true}));setClassificationErrors(prev=>{const next={...prev};delete next[row.id];return next});try{const r=await fetch('/api/db/classifications/'+row.id,{method:'POST',credentials:'include',headers:{'Content-Type':'application/json'},body:JSON.stringify({classification,source:'operator'})});const d=await r.json().catch(()=>({}));if(!r.ok)throw Error(d.error||('Classification update failed (HTTP '+r.status+')'));refresh()}catch(e){setClassificationErrors(prev=>({...prev,[row.id]:e.message||'Classification update failed'}))}finally{setClassificationSaving(prev=>{const next={...prev};delete next[row.id];return next})}}
- function updateLead(id,patch){return fetch('/api/db/leads/'+encodeURIComponent(id),{method:'PATCH',credentials:'include',headers:{'Content-Type':'application/json'},body:JSON.stringify(patch)}).then(async r=>{const d=await r.json().catch(()=>({}));if(!r.ok)throw Error(d.error||'Lead update failed');return d}).then(()=>refresh())}
+ async function saveClassification(row){const classification=classificationDrafts[row.id];if(!classification||classification==='pending'||classification===row.classification_code)return;setClassificationSaving(prev=>({...prev,[row.id]:true}));setClassificationErrors(prev=>{const next={...prev};delete next[row.id];return next});try{const r=await apiFetch('/api/db/classifications/'+row.id,{method:'POST',credentials:'include',headers:{'Content-Type':'application/json'},body:JSON.stringify({classification,source:'operator'})});const d=await r.json().catch(()=>({}));if(!r.ok)throw Error(d.error||('Classification update failed (HTTP '+r.status+')'));refresh()}catch(e){setClassificationErrors(prev=>({...prev,[row.id]:e.message||'Classification update failed'}))}finally{setClassificationSaving(prev=>{const next={...prev};delete next[row.id];return next})}}
+ function updateLead(id,patch){return apiFetch('/api/db/leads/'+encodeURIComponent(id),{method:'PATCH',credentials:'include',headers:{'Content-Type':'application/json'},body:JSON.stringify(patch)}).then(async r=>{const d=await r.json().catch(()=>({}));if(!r.ok)throw Error(d.error||'Lead update failed');return d}).then(()=>refresh())}
  function runAi(){
   if(!workspace?.lead?.id)return;
   setAiState('running');setAi(null);
-  fetch('/api/ai/analyze-real',{method:'POST',credentials:'include',headers:{'Content-Type':'application/json'},body:JSON.stringify({leadId:workspace.lead.id})})
+  apiFetch('/api/ai/analyze-real',{method:'POST',credentials:'include',headers:{'Content-Type':'application/json'},body:JSON.stringify({leadId:workspace.lead.id})})
    .then(async r=>{const d=await r.json().catch(()=>({}));if(!r.ok)throw Error(d.error||'Real AI unavailable');setAi(d);setAiState('ready')})
    .catch(()=>setAiState('unavailable'));
  }
