@@ -25,6 +25,7 @@ CREATE TABLE IF NOT EXISTS public.crm_contact_classifications (
 
 CREATE INDEX IF NOT EXISTS crm_contact_classifications_status_idx ON public.crm_contact_classifications(status,last_seen_at DESC);
 CREATE INDEX IF NOT EXISTS crm_contact_classifications_code_idx ON public.crm_contact_classifications(classification_code,last_seen_at DESC);
+CREATE INDEX IF NOT EXISTS crm_contact_classifications_lead_id_idx ON public.crm_contact_classifications(lead_id);
 
 ALTER TABLE public.crm_contact_classifications ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON public.crm_contact_classifications FROM anon,authenticated;
@@ -39,6 +40,7 @@ ALTER TABLE public.crm_leads ADD COLUMN IF NOT EXISTS lead_type text NOT NULL DE
 ALTER TABLE public.crm_leads DROP CONSTRAINT IF EXISTS crm_leads_lead_type_check;
 ALTER TABLE public.crm_leads ADD CONSTRAINT crm_leads_lead_type_check CHECK (lead_type IN ('New','Active Follow-up','Waiting on Customer','Waiting on Us','Nurture','Dormant','Converted','Lost','On Hold'));
 CREATE INDEX IF NOT EXISTS crm_leads_lead_type_idx ON public.crm_leads(lead_type,updated_at DESC);
+CREATE INDEX IF NOT EXISTS crm_leads_classification_id_idx ON public.crm_leads(classification_id);
 
 ALTER TABLE public.crm_webhook_events ALTER COLUMN provider_event_id DROP NOT NULL;
 ALTER TABLE public.crm_webhook_events ALTER COLUMN phone DROP NOT NULL;
