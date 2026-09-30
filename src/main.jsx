@@ -91,6 +91,20 @@ function App(){
  const[classificationErrors,setClassificationErrors]=useState({});
  const[classificationError,setClassificationError]=useState('');
  const[dashboardStats,setDashboardStats]=useState(null);
+ const[auditRows,setAuditRows]=useState([]);
+ const[auditState,setAuditState]=useState('idle');
+ const[archiveState,setArchiveState]=useState('');
+
+ useEffect(()=>{let active=true;fetch('/api/auth/session',{cache:'no-store',credentials:'include'}).then(async r=>{const d=await r.json().catch(()=>({}));if(!r.ok)throw Error('Authentication unavailable');return d}).then(d=>{if(active){setAuthenticated(Boolean(d.authenticated));setOperator(d.user||'');setAuthReady(true)}}).catch(e=>{if(active){setAuthError(e.message||'Authentication unavailable');setAuthReady(true)}});return()=>{active=false}},[]);
+ useEffect(()=>{try{window.sessionStorage.setItem('efps-crm-active-page',page);window.sessionStorage.setItem('efps-crm-privacy-mode',privacyMode?'masked':'revealed')}catch{}},[page,privacyMode]);
+ useEffect(()=>{const on=()=>setOnline(true),off=()=>setOnline(false);window.addEventListener('online',on);window.addEventListener('offline',off);return()=>{window.removeEventListener('online',on);window.removeEventListener('offline',off)}},[]);
+ const apiFetch=(url,options={})=>fetch(url,{...options,credentials:'include'}).then(r=>{if(r.status===401){setAuthenticated(false);setAuthReady(true)}return r});
+ const signIn=async e=>{e.preventDefault();setAuthBusy(true);setAuthError('');try{const r=await fetch('/api/auth/login',{method:'POST',credentials:'include',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:e.currentTarget.username.value,password:e.currentTarget.password.value})});const d=await r.json().catch(()=>({}));if(!r.ok)throw Error(d.error||'Sign-in failed');setAuthenticated(true);setOperator(d.user||'');setPage('Dashboard')}catch(err){setAuthError(err.message)}finally{setAuthBusy(false)}};
+ const signOut=async()=>{try{await fetch('/api/auth/logout',{method:'POST',credentials:'include'})}finally{setAuthenticated(false);setOperator('');setSelectedId(null);setWorkspace(null)}};
+ const togglePrivacy=()=>setPrivacyMode(v=>!v);
+ const exportCurrentSource=async()=>{if(!online)return;const r=await apiFetch('/api/db/export?source_number='+encodeURIComponent(sourceFilter));if(!r.ok){setAuthError('Export unavailable');return}const blob=await r.blob();const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='easyfind-crm-export.csv';a.click();URL.revokeObjectURL(url)};
+ const loadAudit=async()=>{setAuditState('loading');try{const r=await apiFetch('/api/audit/recent?limit=100');if(!r.ok)throw Error('Audit unavailable');const d=await r.json();setAuditRows(d.rows||[]);setAuditState('ready')}catch{setAuditRows([]);setAuditState('unavailable')}};
+ useEffect(()=>{if(authenticated&&page==='Activity')loadAudit()},[authenticated,page,refreshToken]);
 
  useEffect(()=>{try{window.sessionStorage.setItem('efps-crm-active-page',page)}catch{}},[page]);
 
