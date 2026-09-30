@@ -1,13 +1,13 @@
 # EasyFind CRM UI Dashboard — Single Working Home
 
-**Canonical working branch: `main` (promoted 2026-09-27).** The historical `crm-ui-dashboard` branch is temporarily retained solely for the existing Render deployment, which still auto-deploys from it. Keep both at the same commit until Render is repointed to `main`; then retire the old branch after verifying a live `main` deployment.
+**Canonical working branch: `crm-ui-dashboard`.** Render, GitHub, and the local CRM UI checkout are aligned to this branch for the current production dashboard.
 
 ## Canonical location
 
 **Repository:** https://github.com/zeidhussain9-cloud/efps-internal-automatios  
 **Branch:** `crm-ui-dashboard`
 
-The `main` branch is the production baseline and is not used for CRM UI work.
+`main` remains outside the CRM UI deployment path. CRM UI production work is maintained on `crm-ui-dashboard`.
 
 ## Source of truth
 

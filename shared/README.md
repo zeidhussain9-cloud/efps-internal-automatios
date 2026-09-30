@@ -12,7 +12,7 @@ Shared services provide technical capabilities only. They do not own inventory, 
 - `google_maps/` — Google Maps URL extraction and Geocoding resolution, including normalized `MapsResolution` results and fail-closed verification states.
 - `credentials/` — canonical local macOS Keychain credential provider used by shared adapters.
 - `cloudinary/` — authenticated media upload, deterministic public IDs, stable secure URLs, and media fingerprints.
-- `whatsapp_whapi/` — authenticated WhAPI transport, live-traffic gate, neutral channel/settings/message primitives, and webhook normalization/configuration helpers.
+- `whatsapp_whapi/` — authenticated WhAPI transport, live-traffic gate, neutral channel/settings/message primitives, and webhook normalization helpers; business routing is outside this transport layer.
 - `slack/` — reusable Slack transport, security, routing, and authorized Inventory Phase-1 operational capability.
 
 ## Inventory Phase-1 verified boundaries

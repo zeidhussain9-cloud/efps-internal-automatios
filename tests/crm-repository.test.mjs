@@ -77,3 +77,16 @@ test('provider event completion records processed timestamp or failure',async()=
  const row=await repo.completeProviderEvent({id:7,status:'processed'});assert.equal(row.status,'processed');assert.match(calls[0][0],/processed_at/);
  await assert.rejects(()=>repo.completeProviderEvent({id:0}),/Invalid provider event completion/);
 });
+
+test('property matching expands historical BHK and locality requirements without guessing', async()=>{
+ const calls=[];
+ const {createCrmRepository}=await import('../src/crm-repository.mjs');
+ const repo=createCrmRepository({pool:{query:async(sql,params)=>{calls.push({sql,params});return{rows:[]}}}});
+ await repo.matchInventory({bhk:'1BHK/2BHK',budget:40000,locality:'Kasavanahalli, Harlur, HSR Layout',furnishing:'Semi Furnished',petFriendly:'Yes',limit:10});
+ assert.equal(calls.length,1);
+ const {sql,params}=calls[0];
+ assert.match(sql,/bhk = ANY/);
+ assert.deepEqual(params[2],['1 BHK','2 BHK']);
+ assert.match(sql,/locality ILIKE/);
+ assert.deepEqual(params.at(-1),10);
+});

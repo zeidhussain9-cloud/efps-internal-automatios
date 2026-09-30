@@ -2,13 +2,13 @@
 
 **Canonical repository:** `zeidhussain9-cloud/efps-internal-automatios`  
 **Branch:** `crm-ui-dashboard`  
-**Status (2026-09-26):** Reconciled design contract; Supabase v1 schema provisioned. Live data import and UI integration pending.
+**Status (2026-09-30):** Production CRM UI is live on `crm-ui-dashboard` / Render `easyfind-crm-d01-d05`. Current production source is `+919148338801`; historical and live data are reconciled in Supabase.
 
 ## 1. Lead data source
 
 The lead source for this CRM is the **local extracted dataset described in `docs/audits/LEADS_EXTRACTION_SOURCE_OF_TRUTH_AUDIT.md`** and the local SQLite database produced by that extraction.
 
-The Leads Tracker Google Sheet, Slack lead workflow, DynamoDB lead workflow and future WhAPI webhook are outside the current CRM lead data path.
+The Leads Tracker Google Sheet, Slack lead workflow and DynamoDB lead workflow are outside the current CRM lead data path. WhAPI is now the live ingress for `+919148338801`, with `crm_webhook_events` as the durable first-write boundary.
 
 ## 2. Local SQLite source model
 
@@ -102,7 +102,7 @@ Every CRM UI value is conceptually one of:
 - System state
 - Synthetic/illustrative
 
-The prototype uses synthetic records only.
+The production UI uses reconciled source-backed records for `+919148338801`; synthetic fixtures remain isolated test data.
 
 ## 6. Future local CRM entities
 
@@ -115,4 +115,4 @@ These are application-layer records, not replacements for the historical source 
 
 ## 7. Provisioned operational PostgreSQL schema
 
-Supabase `easyfind-crm` in Mumbai contains nine tables: `crm_schema_migrations`, `crm_leads`, `crm_lead_sources`, `crm_messages`, `crm_followups`, `crm_activity`, `crm_ai_runs`, `crm_drafts`, `crm_property_actions`. The source SQLite is historical migration evidence, not a second live editable database. Stable deduplication is `(source_number,provider_message_id)`. This schema is a **v1 subset** of the broader conceptual entities above; webhook inbox, per-source AI cursor, requirement evidence and backup/restore are not yet implemented. All operational tables have RLS enabled and no browser-facing grants or policies. The server repository currently supports only parameterized reads behind a disabled-by-default API. Media bytes are excluded; future references use Cloudinary URLs.
+Supabase `easyfind-crm` contains the operational CRM tables including the durable `crm_webhook_events` ingress/audit table. The source SQLite is historical migration evidence, not a second live editable database. Stable message deduplication uses `(source_number,provider_message_id)`. Live WhAPI ingress is enabled for `+919148338801`; webhook events are recorded before reconciliation into messages/classifications/leads. Contact classification is operator-gated. Tenant type is stored as a lead requirement, not as a separate header editor. Operational tables use RLS and browser-facing access remains protected through the CRM server. Media bytes are excluded; future references use Cloudinary URLs.

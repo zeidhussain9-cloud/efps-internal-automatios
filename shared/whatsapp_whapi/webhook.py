@@ -1,7 +1,7 @@
-"""Reusable WhAPI webhook primitives.
+"""Reusable WhAPI webhook transport primitives.
 
-This layer normalizes transport payloads and identifies the repository-level
-inventory/lead listener path. It does not perform business actions.
+This layer only normalizes provider payloads. Lead creation, conversation
+append, inventory workflows and other business decisions live outside it.
 """
 
 from __future__ import annotations
@@ -35,22 +35,6 @@ class IncomingMessage:
             "image", "video", "document", "audio"
         }
 
-    @property
-    def listener(self) -> str:
-        return config.classify_listener_source(
-            sender=self.sender or self.chat_id,
-            chat_id=self.chat_id,
-            from_me=self.from_me,
-            path="groups" if self.is_group else None,
-        )
-
-    @property
-    def is_inventory_listener(self) -> bool:
-        return self.listener == config.INVENTORY_LISTENER_NAME
-
-    @property
-    def is_lead_listener(self) -> bool:
-        return self.listener == config.LEAD_LISTENER_NAME
 
 
 def parse_message(raw: Mapping[str, Any]) -> IncomingMessage:

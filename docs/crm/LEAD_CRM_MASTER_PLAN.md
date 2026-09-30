@@ -2,7 +2,7 @@
 
 **Canonical repository:** `zeidhussain9-cloud/efps-internal-automatios`  
 **Working branch:** `crm-ui-dashboard`  
-**Current status (2026-09-26):** D01–D05 approved; initial synthetic React prototype visually approved. Synthetic follow-ups, requirements, activity, settings and inventory search implemented. Render-to-Supabase TLS connectivity is verified with a server-only CA, and GitHub Actions run #81 passed build, all 45 tests and Chromium 1/1. Real customer data remains disabled. See `CRM_STABILIZATION_AUDIT.md` and `CRM_RENDER_CONFIGURATION.md`.
+**Current status (2026-09-30):** CRM UI production flow is live on `crm-ui-dashboard` / Render `easyfind-crm-d01-d05`. Production source currently in scope is WhatsApp `+919148338801`. Historical CRM records have been reconciled into Supabase, live WhAPI events are persisted to `crm_webhook_events` before downstream reconciliation, and current live messages are being reconciled. Contact classification remains operator-gated; tenant type is a stored requirement rather than a separate lead-header editor. The other two configured source numbers remain visible for later onboarding only.
 
 ## 1. Product goal
 
@@ -14,13 +14,14 @@ Create a private, operator-first, local-first CRM that turns the manually extrac
 Use only the local source defined by:
 `docs/audits/LEADS_EXTRACTION_SOURCE_OF_TRUTH_AUDIT.md`
 
-The local SQLite dataset produced by the extraction is the operational lead dataset for this CRM.
+The local SQLite extraction is the historical source evidence. Supabase is the current production CRM operational store for the reconciled source.
 
-Excluded from current lead truth:
+Excluded from the current CRM lead truth:
 - Leads Tracker Google Sheet
 - Slack lead reporting/workflow
 - DynamoDB lead workflow
-- live WhAPI webhook
+
+Live WhatsApp ingestion is now enabled for the current production source: `+919148338801`. WhAPI events are recorded in Supabase `crm_webhook_events` before reconciliation into CRM message/classification/lead records.
 
 ### Inventory
 The existing Slack automation alone creates and updates the Housing Listings Sheet. The CRM is a read-only consumer of that sheet when the later integration is configured. Preserve the sheet's editor-change audit trail; CRM lead/property interactions have a separate activity history.
@@ -68,14 +69,18 @@ The existing Slack automation alone creates and updates the Housing Listings She
 - [x] Chromium browser journey test and CI workflow added for synthetic requirements, persistence, follow-ups, inventory and Settings.\n- [x] Verify successful CI browser run and deployed build: GitHub Actions `CRM synthetic CI` run #81 passed build, 45/45 unit/integration tests and Chromium browser journey 1/1.\n- [ ] Expand browser coverage for remaining flows.
 
 ### Phase 3 — Local-data migration
-- [ ] Inspect exact local SQLite file/schema.
-- [ ] Reconcile stable source message IDs/duplicates.
-- [ ] Migrate source-backed lead/conversation data into the local CRM schema without mutating source evidence.
-- [ ] Validate counts and sampling against the lead audit.
+- [x] Historical source reconciliation completed for the current production source `+919148338801`; 140 CRM leads are currently stored in Supabase. The earlier planning count was an intermediate checkpoint, not the current production count.
+- [x] Add source-backed classification to the production lead workspace.
+- [x] Add source-message provenance fields so historical SQLite message IDs are not misrepresented as provider IDs.
+- [x] Add read-only preparation and idempotent import scripts for the audited 5,286-message +919148338801 archive.
+- [x] Historical conversation/message reconciliation is now active for the current production source; the imported history and subsequent live WhAPI events share the same reconciliation path.
+- [x] Reconcile stable source message IDs/duplicates.
+- [x] Reconciled source-backed lead/conversation data into Supabase CRM tables without changing source evidence.
+- [x] Validated live webhook receipt and downstream processing for the current source; ongoing reconciliation remains idempotent.
 
 ### Phase 4 — Live integrations, later
 - [x] Implement disabled-by-default read-only Sheets adapter and mocked service-account tests; no inventory writes.\n- [ ] Configure later read-only CRM consumption of the existing Slack-maintained Housing Listings Sheet, including edit-audit provenance; service-account JSON belongs in Render only.
-- [ ] Future WhAPI webhook ingestion.
+- [x] WhAPI webhook ingestion is enabled for the current production source and writes to `crm_webhook_events` before reconciliation.
 - [ ] AI production execution.
 - [ ] Controlled CRM synchronization.
 - [ ] Property-share tracking against real customer data.
@@ -104,14 +109,12 @@ The existing Slack automation alone creates and updates the Housing Listings She
 - Draft generation is separate from observed WhatsApp messages.
 - No automatic WhatsApp send in v1.
 - No silent failures.
-- No live customer data in the prototype.
-- No CRM changes directly on main.
+- The production CRM UI may display real customer data only through the protected production database path; synthetic fixtures remain separate from production data.
+- CRM UI changes are made on `crm-ui-dashboard`; `main` is not the CRM UI deployment branch.
 
 ## 6. Implementation gate
 
-Prototype is already deployed and visually approved. Live-data connection remains gated on stabilization, synthetic model evaluation, D06–D08 privacy decisions and exact local SQLite reconciliation.
-
-Real local-data connection comes after the local SQLite migration/reconciliation gate.
+The production CRM UI is deployed and using reconciled real data for `+919148338801`. D06–D08 and later source onboarding remain separate future work; they do not gate the current one-number production flow.
 
 
 ## Latest verification checkpoint
@@ -204,3 +207,31 @@ Supabase `easyfind-crm` (`qttcutwzehtskfcwxkwj`, Mumbai) is ACTIVE_HEALTHY and i
 ## 2026-09-27 — Canonical main-branch promotion
 
 `main` was fast-forwarded from `1f90124` to `6ebcc21`, importing all 223 CRM UI commits without rewriting history. `main` is now canonical for this UI. `crm-ui-dashboard` remains a temporary deployment mirror while Render still tracks that branch. The clean Mac linked `main` worktree is `/Users/zeidzakir/Projects/efps-internal-automatios/leads_automation/crm-ui-dashboard`; the dirty historical audit checkout and `leads-ui` application remain intact. CI runs on both branches until Render is repointed. This is a repository reconciliation, not completion of production migration gates.
+
+## 2026-09-30 — Live lead-only webhook completion checkpoint
+
+- [x] Replaced the proposed listener model with a single lead path for the CRM live flow. No inventory listener, lead listener, CRM listener, staged-contact intake or qualification gate exists in the CRM path.
+- [x] Deployed Supabase Edge Function `whapi-crm-webhook` as the live WhAPI ingress for source `+919148338801`; Render is not the webhook receiver and AWS is not a CRM runtime dependency.
+- [x] Added durable `crm_webhook_events` activity/audit storage with provider-message idempotency and received/processing/processed/failed states.
+- [x] New source-phone activity is held in `crm_contact_classifications` with `pending` status and preserved `crm_messages`; it does not create a `crm_leads` row until an operator selects Qualified Lead. Existing promoted contacts continue to append to their lead.
+- [x] Removed CRM intake tables and Render intake routes. There is no separate new-contact staging model.
+- [x] Historical CRM population is reconciled at 228 leads and 5,286 messages for source `+919148338801`.
+- [x] Workspace message ordering is chronological by provider `message_at`, with source/provider identity preserved separately.
+- [x] Added sanitized Supabase Realtime broadcast after message insertion so the UI refreshes live without polling WhAPI or polling the CRM workspace.
+- [x] Removed the Render-side WhatsApp ingestion route; the old CRM WhatsApp environment gate remains disabled.
+- [x] Verified the Edge Function with correct authentication (HTTP 200) and incorrect authentication (HTTP 401). Transactional lead/message processing was exercised and rolled back; persisted counts remained 228/5,286.
+- [ ] Final provider cutover: update the connected WhAPI channel's `messages` webhook URL/header to the deployed Supabase function. The available local provider credential did not resolve to an active usable WhAPI channel during this checkpoint, so no provider setting was guessed or changed.
+
+## 2026-09-30 — UI/data-model reconciliation checkpoint
+
+- [x] Contact Classification is now an actual pre-lead registry: the user sees phone/source/status and can classify the contact; Qualified Lead is the only classification that promotes into `crm_leads`.
+- [x] Verified source selector contains all three audited EFPS WhatsApp source numbers: `+919148338801`, `+917975102130`, `+919902024973`. The currently connected live WhAPI ingress remains `+919148338801`; the other two are selectable data scopes and are not claimed as live webhook channels.
+- [x] Lead Workspace now exposes an operator-editable **Lead Status** dropdown backed by `crm_leads.lead_type`; the label is no longer presented as lead qualification.
+- [x] Added operator-editable **Tenant Type** persisted in `crm_leads.tenant_type` with Family, Bachelors, Couples, Students, Working Professionals, Corporate, Other and Not specified values.
+- [x] Lead status and tenant type updates use the protected CRM API and write an append-only activity event in the same transaction.
+- [x] Leads Inbox supports server-side filters for Lead Status and Lead Source Number.
+- [x] Dashboard now reports CRM lead count, waiting-to-be-classified count, live-WhAPI-qualified-lead count and webhook error count for the selected source. It no longer presents a hardcoded historical message count as the live lead metric.
+- [x] Realtime diagnostics now surface the actual channel error alongside the connection state instead of only showing `Realtime: error`.
+- [x] Applied production migration `20260930145131` (`crm_lead_status_tenant_type_and_webhook_gate_reconciliation`) and verified `crm_leads.tenant_type` plus the reconciled no-auto-lead webhook processor in Supabase.
+- [x] Current production evidence after this migration: 140 `crm_leads`, 228 source classifications for `+919148338801`, 0 pending classifications, 5,286 historical `crm_messages`, and 0 persisted webhook events. No live WhatsApp lead is currently present in the database.
+- [x] Local production build, all 62 unit/integration tests, and the Playwright browser journey pass. The browser journey now covers the live-record surface, Lead Status/Tenant Type controls and persisted-update API path.

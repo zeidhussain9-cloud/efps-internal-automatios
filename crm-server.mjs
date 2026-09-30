@@ -5,6 +5,7 @@ import {join,extname,resolve} from 'node:path';
 import {authorized,accessMode} from './src/server-auth.mjs';
 import {analyzeRealLead} from './src/ollama-adapter.mjs';
 import {createCrmRepository} from './src/crm-repository.mjs';
+import {createCrmClassificationRepository} from './src/crm-classification-repository.mjs';
 import {startupDatabaseCheck} from './src/crm-startup-check.mjs';
 const root=resolve('dist');
 const mime={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.svg':'image/svg+xml','.png':'image/png','.ico':'image/x-icon'};
@@ -27,6 +28,14 @@ createServer(async(req,res)=>{
   if(mode==='misconfigured'){res.writeHead(503,security);return res.end('CRM access configuration incomplete');}
   if(mode==='protected'&&!authorized(req.headers.authorization,process.env.CRM_BASIC_AUTH_USERNAME,process.env.CRM_BASIC_AUTH_PASSWORD)){res.writeHead(401,{...security,'WWW-Authenticate':'Basic realm="EasyFind CRM"'});return res.end('Authentication required');}
   // Durable database writes: explicit opt-in, protected access and audited in the same transaction.
+  if(process.env.CRM_DB_WRITE_ENABLED==='true'&&mode==='protected'&&req.method==='POST'&&p.startsWith('/api/db/classifications/')){
+   if(!process.env.DATABASE_URL){res.writeHead(404,security);return res.end('Database write pilot disabled');}
+   const id=decodeURIComponent(p.slice('/api/db/classifications/'.length));if(!/^\d+$/.test(id)){res.writeHead(400,security);return res.end('Invalid classification ID');}
+   const body=await readJsonBody(req);const repo=createCrmClassificationRepository();
+   try{const result=await repo.classify({id:Number(id),code:String(body.classification||''),source:String(body.source||'operator'),confidence:body.confidence===null||body.confidence===undefined?null:Number(body.confidence),actor:process.env.CRM_BASIC_AUTH_USERNAME||'operator'});res.writeHead(200,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify(result));}
+   catch(e){const status=e?.statusCode||422;res.writeHead(status,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify({error:e.message==='Invalid classification'?'Invalid classification':status===404?'Classification not found':'Classification update failed'}));}
+   finally{await repo.close();}
+  }
   if(process.env.CRM_DB_WRITE_ENABLED==='true'&&mode==='protected'&&req.method!=='GET'&&(p==='/api/db/leads'||p.startsWith('/api/db/leads/')||p==='/api/db/followups'||p.startsWith('/api/db/followups/'))){
    if(!process.env.DATABASE_URL){res.writeHead(404,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify({error:'Database write pilot disabled'}));}
    const repo=createCrmRepository();const actor=process.env.CRM_BASIC_AUTH_USERNAME;
@@ -36,7 +45,7 @@ createServer(async(req,res)=>{
     }
     if(p.startsWith('/api/db/leads/')&&req.method==='PATCH'){
      const id=decodeURIComponent(p.slice('/api/db/leads/'.length));if(!id||id.includes('/')||id.length>128){res.writeHead(400,security);return res.end('Invalid lead ID')}
-     const body=await readJsonBody(req);const lead=await repo.updateLead({id,displayName:body.displayName,normalizedPhone:body.normalizedPhone,status:body.status,priority:body.priority,requirements:body.requirements,operatorNotes:body.operatorNotes,actor});if(!lead){res.writeHead(404,security);return res.end('Lead not found')}res.writeHead(200,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify(lead));
+     const body=await readJsonBody(req);const lead=await repo.updateLead({id,displayName:body.displayName,normalizedPhone:body.normalizedPhone,status:body.status,leadType:body.leadType,tenantType:body.tenantType,priority:body.priority,requirements:body.requirements,operatorNotes:body.operatorNotes,actor});if(!lead){res.writeHead(404,security);return res.end('Lead not found')}res.writeHead(200,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify(lead));
     }
     if(p.match(/^\/api\/db\/leads\/[^/]+\/activity$/)&&req.method==='POST'){
      const id=decodeURIComponent(p.split('/')[4]);const body=await readJsonBody(req);const row=await repo.appendActivity({leadId:id,actor,action:body.action,details:body.details});res.writeHead(201,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify(row));
@@ -54,25 +63,38 @@ createServer(async(req,res)=>{
    }catch(e){const status=e?.statusCode||((e?.code==='23505')?409:422);res.writeHead(status,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify({error:status===409?'Conflict':e?.message==='Request too large'?'Request too large':'Database write rejected'}));}
    finally{await repo.close()}
   }
+  if(p==='/api/db/classifications'){
+   if(process.env.CRM_DB_READ_ENABLED!=='true'||!process.env.DATABASE_URL||mode!=='protected'){res.writeHead(404,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify({error:'Classification database disabled'}));}
+   if(req.method!=='GET'){res.writeHead(405,security);return res.end('Method not allowed');}
+   const q=new URL(req.url,'http://localhost').searchParams;
+   const limitRaw=q.get('limit')||'100',offsetRaw=q.get('offset')||'0';
+   if(!/^\d{1,3}$/.test(limitRaw)||!/^\d{1,7}$/.test(offsetRaw)){res.writeHead(400,security);return res.end('Invalid pagination');}
+   const repo=createCrmClassificationRepository();
+   try{const data=await repo.list({limit:Number(limitRaw),offset:Number(offsetRaw),status:q.get('status')||'',classification:q.get('classification')||'',sourceNumber:q.get('source_number')||'+919148338801'});res.writeHead(200,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify(data));}
+   finally{await repo.close();}
+  }
   // Read-only database pilot: explicit opt-in, protected access and no customer writes.
-  if(p==='/api/db/status'||p==='/api/db/leads'||p.startsWith('/api/db/leads/')){
+  if(p==='/api/db/status'||p==='/api/db/stats'||p==='/api/db/leads'||p.startsWith('/api/db/leads/')){
    if(process.env.CRM_DB_READ_ENABLED!=='true'||!process.env.DATABASE_URL||mode!=='protected'){
     res.writeHead(404,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify({error:'Database pilot disabled'}));
    }
    if(req.method!=='GET'){res.writeHead(405,security);return res.end('Method not allowed');}
    const repo=createCrmRepository();
    try{
+    const q=new URL(req.url,'http://localhost').searchParams;
     let data;
     if(p==='/api/db/status')data={connected:await repo.health(),readOnly:true};
+    else if(p==='/api/db/stats'){
+     data=await repo.dashboardStats(q.get('source_number')||'+919148338801');
+    }
     else if(p==='/api/db/leads'){
-     const q=new URL(req.url,'http://localhost').searchParams;
-     const raw=q.get('limit')??'50',offset=q.get('offset')??'0';
+     const raw=q.get('limit')??'50',offset=q.get('offset')??'0',sourceNumber=q.get('source_number')||'+919148338801';
      if(!/^\d{1,3}$/.test(raw)||!/^\d{1,7}$/.test(offset)){res.writeHead(400,security);return res.end('Invalid pagination');}
-     data=await repo.listLeadsPage(Number(raw),Number(offset));
+     data=await repo.listLeadsPage(Number(raw),Number(offset),sourceNumber,q.get('lead_status')||'');
     }else if(/^\/api\/db\/leads\/[^/]+\/workspace$/.test(p)){
      const id=decodeURIComponent(p.slice('/api/db/leads/'.length,-'/workspace'.length));
      if(!id||id.includes('/')||id.length>128){res.writeHead(400,security);return res.end('Invalid lead ID');}
-     data=await repo.getLeadWorkspace(id);
+     data=await repo.getLeadWorkspace(id,q.get('source_number')||'+919148338801');
      if(!data.lead){res.writeHead(404,security);return res.end('Lead not found');}
     }else{
      const id=decodeURIComponent(p.slice('/api/db/leads/'.length));
@@ -96,6 +118,7 @@ createServer(async(req,res)=>{
    if(budgetRaw!==null&&!/^\d+(?:\.\d{1,2})?$/.test(budgetRaw)||!/^\d{1,3}$/.test(limitRaw)){res.writeHead(400,security);return res.end('Invalid inventory query');}
    const repo=createCrmRepository();try{const rows=await repo.matchInventory({bhk:q.get('bhk')||'',budget:budgetRaw===null?null:Number(budgetRaw),locality:q.get('locality')||'',furnishing:q.get('furnishing')||'',petFriendly:q.get('pet_friendly')||'',limit:Number(limitRaw)});res.writeHead(200,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify({rows}));}finally{await repo.close()}
   }
+  if(p==='/api/ai/analyze'){res.writeHead(404,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify({error:'Retired API'}));}
   if(p==='/api/ai/analyze-real'&&req.method==='POST'){
    if(mode!=='protected'||process.env.CRM_REAL_AI_ENABLED!=='true'||process.env.CRM_DB_READ_ENABLED!=='true'){res.writeHead(403,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify({error:'Real AI disabled'}));}
    const repo=createCrmRepository();

@@ -33,3 +33,9 @@ gemini_scripts/
 internal_slash_command_reference.txt
 internal_lead_life_cycle_ref.txt
 internal_inventory_life_cycle_ref.txt
+
+# Supabase local function secrets
+supabase/functions/.env
+
+node_modules/
+dist/

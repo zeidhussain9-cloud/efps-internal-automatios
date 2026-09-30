@@ -1,0 +1,4 @@
+project_id = "qttcutwzehtskfcwxkwj"
+
+[functions.whapi-crm-webhook]
+verify_jwt = false

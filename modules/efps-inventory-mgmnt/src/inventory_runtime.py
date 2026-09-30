@@ -7,6 +7,7 @@ import intake,pipeline
 from shared.google_sheets import schema
 from shared.google_sheets.client import GoogleSheetsClient
 from shared.whatsapp_whapi.webhook import IncomingMessage
+from shared.whatsapp_whapi import config
 SESSION_PREFIX="inventory:"
 _IST=timezone(timedelta(hours=5,minutes=30))
 def _fmt_ts(ts):
@@ -46,7 +47,7 @@ def _close(c,s):
  if not found:return {"closed":False,"listing_id":s.listing_id,"reason":"sheet row not found"}
  n,row=found;out,issues=pipeline.process_closed_session(s.raw_text,row=row);pipeline.write_phase1_update(c,n,out);return {"closed":True,"listing_id":s.listing_id,"issues":issues}
 def handle(message:IncomingMessage,*,store=None,client=None):
- if not message.is_inventory_listener or message.is_group or message.from_me:return {"inventory":False,"reason":"not inventory listener"}
+ if config.normalise_phone(message.sender or message.chat_id) not in set(config.INVENTORY_SOURCE_NUMBERS) or message.is_group or message.from_me:return {"inventory":False,"reason":"not an inventory source message"}
  store=store or DynamoSessionStore();client=client or GoogleSheetsClient();sender=str(message.sender or message.chat_id).strip();session=store.get(sender);text=str(message.body or "").strip()
  if intake.is_new_marker(text):
   closed=_close(client,session);store.delete(sender);store.put(StoredSession(sender,started_at=_fmt_ts(message.timestamp)));return {"inventory":True,"recorded":False,"reason":"boundary opened","closed":closed}
