@@ -26,3 +26,13 @@
 .jsonview{white-space:pre-wrap;overflow:auto;background:#f7f9fb;border:1px solid #e8edf2;border-radius:8px;padding:13px;font:12px/1.6 ui-monospace,SFMono-Regular,Menlo,monospace;color:#334d64}
 .inlinebutton{display:inline-block;text-decoration:none}
 @media(max-width:760px){.production-toolbar{align-items:stretch;flex-direction:column;gap:8px}.lead-card-main{align-items:flex-start;flex-direction:column;gap:4px}.live-detail{min-height:0}}
+
+/* Consolidated production lead workspace */
+.top-title{display:flex;align-items:center;gap:12px;min-width:0}
+.top-title>div{display:grid;gap:3px}
+.header-back{display:flex;align-items:center;gap:4px;border:1px solid #dbe5ed;background:#fff;color:#315d7e;border-radius:8px;padding:7px 10px;font-size:11px;font-weight:700;white-space:nowrap}
+.classification-chip{background:#e8f2f8!important;color:#2f6587!important;font-weight:700}
+.classification{background:#e8f2f8;color:#2f6587;font-weight:700}
+.classification-large{display:inline-flex;align-items:center;border-radius:18px;background:#e8f2f8;color:#2f6587;padding:8px 12px;font-size:13px;font-weight:800}
+.muted{color:#8192a2;font-size:11px;line-height:1.5}
+@media(max-width:760px){.top-title{gap:7px}.header-back{font-size:10px;padding:6px 8px}.header-back svg{width:14px}}
