@@ -123,6 +123,7 @@ createServer(async(req,res)=>{
    const id=decodeURIComponent(p.slice('/api/intake/'.length,-'/promote'.length));let raw='';for await(const chunk of req)raw+=chunk;let body={};try{body=JSON.parse(raw||'{}')}catch{}
    const repo=createCrmRepository();try{const result=await repo.promoteIntake(id,{classification:body.classification||'Qualified Lead',actor:'crm-operator'});res.writeHead(200,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify(result));}catch(e){res.writeHead(422,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify({error:e.message}));}finally{await repo.close()}
   }
+  if(p==='/api/ai/analyze'){res.writeHead(404,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify({error:'Retired API'}));}
   if(p==='/api/ai/analyze-real'&&req.method==='POST'){
    if(mode!=='protected'||process.env.CRM_REAL_AI_ENABLED!=='true'||process.env.CRM_DB_READ_ENABLED!=='true'){res.writeHead(403,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify({error:'Real AI disabled'}));}
    const repo=createCrmRepository();
