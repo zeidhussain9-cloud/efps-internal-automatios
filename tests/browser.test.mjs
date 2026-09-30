@@ -35,6 +35,8 @@ test('production CRM browser journey uses only live-record surfaces',async()=>{
   assert.equal(await page.getByText('Sample leads').count(),0);
   assert.equal(await page.getByText('Live lead').count(),1);
   assert.equal(await page.getByText('Actual lead').count(),1);
+  await page.getByText('228 real leads').waitFor();
+  await page.getByText('228 real leads').waitFor();
   assert.equal(await page.getByText('228 real leads').count(),1);
   await page.getByRole('button',{name:/Live lead/}).click();
   await page.getByRole('button',{name:'Overview',exact:true}).waitFor();
