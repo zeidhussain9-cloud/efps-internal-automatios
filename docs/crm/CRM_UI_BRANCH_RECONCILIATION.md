@@ -2,13 +2,13 @@
 
 **Canonical UI branch:** `crm-ui-dashboard`
 **Reference branch:** `main` (reconciled repository branch; not the Render deployment branch)
-**Checkpoint:** 2026-09-30 — commit `184abfe58052b01ebf5be4dd26044f31fc579536`
+**Checkpoint:** 2026-10-01 — commit `45dbab7b1ba92387e5e001f74929ad40c92be6a9`
 
 ## Current contract
 
 - GitHub contains only the intended `crm-ui-dashboard` and `main` branches for the UI workstream.
 - The UI source selector exposes all three audited EFPS WhatsApp source numbers: `+919148338801`, `+917975102130`, `+919902024973`. The connected live WhAPI ingress remains `+919148338801`.
-- Current production evidence is 141 source-linked CRM leads, 287 classifications, 58 pending classifications, and 6,561 CRM messages for `+919148338801`. The 5,286-message historical SQLite archive remains historical source evidence and must not be treated as the complete current CRM message count.
+- Current production evidence is 185 source-linked CRM leads, 288 classifications, 13 pending classifications, and 6,561 CRM messages for `+919148338801`. The 5,286-message historical SQLite archive remains historical source evidence and must not be treated as the complete current CRM message count.
 - Historical message provenance remains source-backed; SQLite message IDs are stored as `source_message_id`, not fabricated provider IDs.
 - The live CRM path is lead-only. There is no listener abstraction, no inventory listener, no lead listener or staged intake queue. `crm_contact_classifications` is the pre-lead registry and operator qualification gate.
 - WhAPI pushes `messages` webhooks to the Supabase Edge Function `whapi-crm-webhook`.
@@ -25,7 +25,7 @@ The current production CRM registry contains 141 source-linked leads and 287 cla
 
 ## Live webhook gate
 
-The Supabase Edge Function is deployed and custom-authenticated. A correct-auth empty webhook returned HTTP 200; an invalid token returned HTTP 401. A transactional webhook processing test was rolled back. Current persisted counts are 141 source-linked leads, 287 classifications, 6,561 messages and 28 webhook events. Thirteen webhook events are processed and fifteen remain in `received`; this is an operational reconciliation backlog, not evidence that another WhAPI historical extraction occurred.
+The Supabase Edge Function is deployed and custom-authenticated. A correct-auth empty webhook returned HTTP 200; an invalid token returned HTTP 401. A transactional webhook processing test was rolled back. Current persisted counts are 141 source-linked leads, 287 classifications, 6,561 messages and 46 webhook events (13 processed, 33 received, 0 failed); this is an operational reconciliation backlog, not evidence that another WhAPI historical extraction occurred.
 
 The WhAPI-to-Supabase live ingress is enabled for the current production source. Do not run another historical WhAPI API extraction as part of ordinary CRM reconciliation. Historical SQLite evidence and live webhook data remain distinct provenance classes.
 
@@ -36,4 +36,4 @@ See `docs/crm/CRM_LIVE_WHAPI_WEBHOOK.md` for the complete live architecture, eve
 
 ## Classification write fix — 2026-09-30
 
-A single operator test on contact `+919216063368` produced the definitive Render diagnostic: PostgreSQL `42P18`, `could not determine data type of parameter $5`, at the `insert lead` stage. The failing parameter was the source number passed into `jsonb_build_object()` during new-lead creation. The consolidated fix explicitly casts that parameter to `text`. Local build and the full 62-test suite passed before deployment. Render deployment `dep-daul3fpsrm7s73b27l00` is live from commit `184abfe58052b01ebf5be4dd26044f31fc579536`. The subsequent operator retry succeeded.
+A single operator test on contact `+919216063368` produced the definitive Render diagnostic: PostgreSQL `42P18`, `could not determine data type of parameter $5`, at the `insert lead` stage. The failing parameter was the source number passed into `jsonb_build_object()` during new-lead creation. The consolidated fix explicitly casts that parameter to `text`. Local build and the full 62-test suite passed before deployment. Render deployment `dep-daum4rtg1s2s73cntsv0` is live from commit `45dbab7b1ba92387e5e001f74929ad40c92be6a9`. The subsequent operator retry succeeded.
