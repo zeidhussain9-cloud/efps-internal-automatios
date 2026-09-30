@@ -25,16 +25,17 @@ test('production CRM browser journey uses only live-record surfaces',async()=>{
   })}));
   await page.route('**/api/db/stats?*',route=>route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({sourceNumber:'+919148338801',leadCount:228,liveLeadCount:3,pendingClassificationCount:4,webhookErrorCount:0,supportedSourceNumbers:['+919148338801','+917975102130','+919902024973']})}));
   await page.route('**/api/inventory/overview',route=>route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({rows:[],latestSync:null})}));
+  let archived=false;
   await page.route('**/api/db/leads/*/workspace*',route=>route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({
-   lead:{id:'LIVE-1',display_name:'Live lead',normalized_phone:'+919000000001',status:'New',lead_type:'New',tenant_type:'Not specified',priority:'Medium',classification:'Qualified Lead',requirements:{bhk:'2 BHK',locality:'Harlur',budget:50000},operator_notes:''},
+   lead:{id:'LIVE-1',display_name:'Live lead',normalized_phone:'+919000000001',status:archived?'Archived':'New',lead_type:'New',tenant_type:'Not specified',priority:'Medium',classification:'Qualified Lead',requirements:{bhk:'2 BHK',locality:'Harlur',budget:50000},operator_notes:''},
    sources:[{source_number:'+919148338801'}],messages:[{id:1,source_number:'+919148338801',direction:'Incoming',message_type:'text',body:'Historical conversation message',sender_name:'Customer',message_at:'2026-09-30T00:00:00Z'}],activity:[],followups:[]
   })}));
   await page.route('**/api/db/leads/LIVE-1',route=>route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({id:'LIVE-1',lead_type:'Active Follow-up',tenant_type:'Family'})}));
   await page.route('**/api/inventory/matches?*',route=>route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({rows:[]})}));
   await page.route('**/api/audit/recent?*',route=>route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({rows:[{id:1,action:'auth.login',actor:'pilot',occurred_at:'2026-09-30T00:00:00Z',details:{via:'password'}}]})}));
   await page.route('**/api/db/export?*',route=>route.fulfill({status:200,contentType:'text/csv',body:'id,display_name\nLIVE-1,Live lead\n'}));
-  await page.route('**/api/db/leads/LIVE-1/archive',route=>route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({id:'LIVE-1',status:'Archived',lead_type:'New',tenant_type:'Not specified'})}));
-  await page.route('**/api/db/leads/LIVE-1/restore',route=>route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({id:'LIVE-1',status:'New',lead_type:'New',tenant_type:'Not specified'})}));
+  await page.route('**/api/db/leads/LIVE-1/archive',route=>{archived=true;return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({id:'LIVE-1',status:'Archived',lead_type:'New',tenant_type:'Not specified'})})});
+  await page.route('**/api/db/leads/LIVE-1/restore',route=>{archived=false;return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({id:'LIVE-1',status:'New',lead_type:'New',tenant_type:'Not specified'})})});
   await page.goto(base);
   await page.getByRole('heading',{name:'Operator sign in'}).waitFor();
   await page.getByLabel('Username').fill('pilot');
