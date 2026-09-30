@@ -1,7 +1,7 @@
 # EasyFind Lead CRM — Master Plan
 
 **Canonical repository:** `zeidhussain9-cloud/efps-internal-automatios`  
-**Working branch:** `crm-ui-dashboard`  
+**Working branch:** `crm-ui-consolidated`  
 **Current status (2026-09-26):** D01–D05 approved; initial synthetic React prototype visually approved. Synthetic follow-ups, requirements, activity, settings and inventory search implemented. Render-to-Supabase TLS connectivity is verified with a server-only CA, and GitHub Actions run #81 passed build, all 45 tests and Chromium 1/1. Real customer data remains disabled. See `CRM_STABILIZATION_AUDIT.md` and `CRM_RENDER_CONFIGURATION.md`.
 
 ## 1. Product goal
@@ -68,14 +68,18 @@ The existing Slack automation alone creates and updates the Housing Listings She
 - [x] Chromium browser journey test and CI workflow added for synthetic requirements, persistence, follow-ups, inventory and Settings.\n- [x] Verify successful CI browser run and deployed build: GitHub Actions `CRM synthetic CI` run #81 passed build, 45/45 unit/integration tests and Chromium browser journey 1/1.\n- [ ] Expand browser coverage for remaining flows.
 
 ### Phase 3 — Local-data migration
-- [ ] Inspect exact local SQLite file/schema.
-- [ ] Reconcile stable source message IDs/duplicates.
+- [x] Inspect exact local SQLite file/schema and reconcile the 228-lead source scope.
+- [x] Add source-backed classification to the production lead workspace.
+- [x] Add source-message provenance fields so historical SQLite message IDs are not misrepresented as provider IDs.
+- [x] Add read-only preparation and idempotent import scripts for the audited 5,286-message +919148338801 archive.
+- [ ] Execute the historical conversation import after the authorized extraction device is online and the explicit import gate is approved.
+- [x] Reconcile stable source message IDs/duplicates.
 - [ ] Migrate source-backed lead/conversation data into the local CRM schema without mutating source evidence.
 - [ ] Validate counts and sampling against the lead audit.
 
 ### Phase 4 — Live integrations, later
 - [x] Implement disabled-by-default read-only Sheets adapter and mocked service-account tests; no inventory writes.\n- [ ] Configure later read-only CRM consumption of the existing Slack-maintained Housing Listings Sheet, including edit-audit provenance; service-account JSON belongs in Render only.
-- [ ] Future WhAPI webhook ingestion.
+- [x] Add a gated normalized WhatsApp webhook ingestion endpoint; provider wiring remains disabled until explicitly enabled.
 - [ ] AI production execution.
 - [ ] Controlled CRM synchronization.
 - [ ] Property-share tracking against real customer data.
