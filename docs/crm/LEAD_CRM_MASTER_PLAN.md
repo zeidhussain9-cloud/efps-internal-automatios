@@ -1,7 +1,7 @@
 # EasyFind Lead CRM — Master Plan
 
 **Canonical repository:** `zeidhussain9-cloud/efps-internal-automatios`  
-**Working branch:** `crm-ui-consolidated`  
+**Working branch:** `crm-ui-dashboard`  
 **Current status (2026-09-26):** D01–D05 approved; initial synthetic React prototype visually approved. Synthetic follow-ups, requirements, activity, settings and inventory search implemented. Render-to-Supabase TLS connectivity is verified with a server-only CA, and GitHub Actions run #81 passed build, all 45 tests and Chromium 1/1. Real customer data remains disabled. See `CRM_STABILIZATION_AUDIT.md` and `CRM_RENDER_CONFIGURATION.md`.
 
 ## 1. Product goal
