@@ -44,7 +44,7 @@ export function createCrmClassificationRepository({connectionString=process.env.
         }
         let lead=(await c.query('SELECT l.* FROM crm_leads l JOIN crm_lead_sources s ON s.lead_id=l.id WHERE s.source_number=$1 AND s.source_contact_id=$2 LIMIT 1 FOR UPDATE OF l',[SOURCE_NUMBER,row.phone])).rows[0];
         if(!lead){
-          const leadId='L-LIVE-'+(await c.query("SELECT substr(encode(extensions.digest($1||chr(0)||$2,'sha256'),'hex'),1,20) AS h",[SOURCE_NUMBER,row.phone])).rows[0].h;
+          const leadId='L-LIVE-'+(await c.query("SELECT substr(encode(digest($1||chr(124)||$2,'sha256'),'hex'),1,20) AS h",[SOURCE_NUMBER,row.phone])).rows[0].h;
           await c.query('INSERT INTO crm_leads(id,display_name,normalized_phone,status,priority,classification,classification_id,lead_type,requirements,operator_notes) VALUES($1,$2,$3,\'New\',\'Medium\',\'Qualified Lead\',$4,\'New\',jsonb_build_object(\'provenance\',\'whatsapp_classification\',\'source_number\',$5),$6) ON CONFLICT(id) DO NOTHING',[leadId,null,row.phone,id,SOURCE_NUMBER,'Classified by '+actor]);
           await c.query('INSERT INTO crm_lead_sources(lead_id,source_number,source_contact_id) VALUES($1,$2,$3) ON CONFLICT DO NOTHING',[leadId,SOURCE_NUMBER,row.phone]);
           lead=(await c.query('SELECT * FROM crm_leads WHERE id=$1 FOR UPDATE',[leadId])).rows[0];
