@@ -197,3 +197,10 @@ The application now uses a private operator session after verification of the co
 Privacy mode masks phone numbers and observed message bodies by default; opening WhatsApp from a lead requires an explicit reveal. Lead archive is a confirmed, reversible soft action with a preserved prior status in the audit record. Global security/operator events are visible in Activity, while lead-specific changes remain in Lead Workspace Activity & History.
 
 CSV export is explicit, source-scoped and audit-recorded. Automatic retention deletion is disabled and permanent deletion is not exposed in v1. Offline status is visible and write/export controls are disabled until connectivity returns.
+
+
+## 2026-10-01 — mobile and browser Realtime closure
+
+The production CRM shell is responsive for narrow mobile and compact/tablet layout viewports. At compact widths the sidebar becomes a horizontal navigation rail, the top operator/status controls become horizontally scrollable, dashboard KPIs use a two-column layout, lead lists become full-width, and lead-workspace sections collapse to one column where appropriate. The CSS includes a 1000px compact-layout breakpoint so mobile browsers exposing a wider desktop-style layout viewport do not retain the desktop two-pane shell.
+
+Browser Realtime is initialized after successful operator authentication rather than only at initial application mount. When the configured Supabase project URL and publishable browser key are present, the crm:live broadcast channel reports connecting then live; the channel is notification-only and refreshes CRM reads after the database trigger broadcasts message_inserted. Missing browser configuration is explicitly reported as unconfigured rather than being treated as a live connection.
