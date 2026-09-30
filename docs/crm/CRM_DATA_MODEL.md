@@ -1,7 +1,7 @@
 # EasyFind CRM — Canonical Data Model
 
 **Canonical repository:** `zeidhussain9-cloud/efps-internal-automatios`  
-**Branch:** `crm-ui-consolidated`  
+**Branch:** `crm-ui-dashboard`  
 **Status (2026-09-26):** Reconciled design contract; Supabase v1 schema provisioned. Live data import and UI integration pending.
 
 ## 1. Lead data source
