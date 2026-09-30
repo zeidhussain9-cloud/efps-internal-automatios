@@ -28,7 +28,7 @@ createServer(async(req,res)=>{
   if(mode==='misconfigured'){res.writeHead(503,security);return res.end('CRM access configuration incomplete');}
   if(mode==='protected'&&!authorized(req.headers.authorization,process.env.CRM_BASIC_AUTH_USERNAME,process.env.CRM_BASIC_AUTH_PASSWORD)){res.writeHead(401,{...security,'WWW-Authenticate':'Basic realm="EasyFind CRM"'});return res.end('Authentication required');}
   // Durable database writes: explicit opt-in, protected access and audited in the same transaction.
-  if(process.env.CRM_DB_WRITE_ENABLED==='true'&&mode==='protected'&&req.method==='POST'&&p.startsWith('/api/db/classifications/')){
+  if(process.env.CRM_CLASSIFICATION_WRITE_ENABLED==='true'&&mode==='protected'&&req.method==='POST'&&p.startsWith('/api/db/classifications/')){
    if(!process.env.DATABASE_URL){res.writeHead(404,security);return res.end('Database write pilot disabled');}
    const id=decodeURIComponent(p.slice('/api/db/classifications/'.length));if(!/^\\d+$/.test(id)){res.writeHead(400,security);return res.end('Invalid classification ID');}
    const body=await readJsonBody(req);const repo=createCrmClassificationRepository();
