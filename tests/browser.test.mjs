@@ -66,16 +66,14 @@ test('production CRM browser journey uses only live-record surfaces',async()=>{
   await page.context().setOffline(false);
   await page.waitForFunction(()=>navigator.onLine===true);
   await page.getByText('Online',{exact:true}).waitFor();
-  await page.getByLabel('Tenant Type').selectOption('Family');
-  const lifecycleButton=page.locator('.live-detail .headcontrols button.secondary.danger');
-  await lifecycleButton.waitFor();
-  if((await lifecycleButton.innerText()).includes('Restore lead')){await lifecycleButton.click();await page.getByRole('button',{name:'Archive lead'}).waitFor();}
-  const archiveButton=page.locator('.live-detail .headcontrols button.secondary.danger');
+  const archiveButton=page.getByRole('button',{name:'Archive lead'});
+  await archiveButton.waitFor();
   await page.once('dialog',dialog=>dialog.accept());
   await archiveButton.click();
   await page.getByRole('button',{name:'Restore lead'}).waitFor();
   await page.getByRole('button',{name:'Restore lead'}).click();
-  await page.locator('.live-detail .headcontrols button.secondary.danger').filter({hasText:'Archive lead'}).waitFor();
+  await page.getByRole('button',{name:'Archive lead'}).waitFor();
+  await page.getByLabel('Tenant Type').selectOption('Family');
   await page.getByRole('button',{name:'Conversation',exact:true}).click();
   await page.getByText('Sensitive message hidden').waitFor();
   await page.getByRole('button',{name:/Privacy: Masked/}).click();
