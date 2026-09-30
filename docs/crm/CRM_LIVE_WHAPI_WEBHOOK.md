@@ -1,10 +1,12 @@
-## Current production checkpoint — 2026-09-30
+## Current production checkpoint — 2026-10-01
 
 - Source in scope: `+919148338801`.
-- Supabase baseline: 141 source-linked leads, 287 classifications, 58 pending classifications, 6,561 messages.
-- `crm_webhook_events`: 28 rows for the source; 13 processed and 15 currently `received`. The latter are a live operational backlog and should be investigated before any claim of complete event reconciliation.
-- The historical 5,286-message SQLite archive remains historical evidence. It is not a second live database and is not interchangeable with the current 6,561-message Supabase count.
-- Do not initiate another WhAPI historical API extraction unless explicitly authorized. Live discovery of new contacts is through the webhook boundary and the `crm_contact_classifications` registry.
+- Supabase current state: 185 source-linked leads, 288 classifications, 13 pending classifications, 6,561 messages.
+- `crm_webhook_events`: 46 rows for the source; 13 processed, 33 received, 0 failed. The 33 received events are a live operational reconciliation backlog, not historical backfill evidence.
+- The historical 5,286-message SQLite archive remains historical source evidence and is not the current CRM message count.
+- Do not initiate another WhAPI historical API extraction as part of ordinary reconciliation. Live discovery of new contacts is through the webhook boundary and `crm_contact_classifications`.
+- Browser Supabase Realtime is only a notification/refresh mechanism; server-side webhook ingestion and the CRM database are independent of it.
+
 
 # CRM live WhAPI webhook — 2026-09-30
 
@@ -65,11 +67,11 @@ Processing states are `received`, `processing`, `processed`, and `failed`. A pro
 
 Current verified source population:
 
-- **141 source-linked CRM leads** currently persisted in production
-- **228 historical classifications** for `+919148338801`, currently all non-pending
-- **6,561 current CRM messages**; the **5,286-message SQLite archive** remains historical evidence
+- **185 source-linked CRM leads** currently persisted in production
+- **288 current classifications** for `+919148338801`, with 13 pending and 185 qualified.
+- **6,561 current CRM messages**; the **5,286-message SQLite archive** remains historical evidence.
 - **0 intake contacts**; the intake tables were removed from the CRM live model
-- **0 persisted live webhook events** at the reconciliation checkpoint
+- **46 persisted webhook events** at the current audit checkpoint (13 processed, 33 received, 0 failed)
 
 ## UI live updates
 
