@@ -51,6 +51,13 @@ function LeadCard({lead,onClick,privacyMode}){
 }
 
 function App(){
+ const[authReady,setAuthReady]=useState(false);
+ const[authenticated,setAuthenticated]=useState(false);
+ const[operator,setOperator]=useState('');
+ const[authError,setAuthError]=useState('');
+ const[authBusy,setAuthBusy]=useState(false);
+ const[privacyMode,setPrivacyMode]=useState(()=>{try{const v=window.sessionStorage.getItem('efps-crm-privacy-mode');return v===null?true:v==='masked'}catch{return true}});
+ const[online,setOnline]=useState(()=>typeof navigator==='undefined'||navigator.onLine!==false);
  const[page,setPage]=useState(()=>{try{return window.sessionStorage.getItem('efps-crm-active-page')||'Dashboard'}catch{return'Dashboard'}});
  const[tab,setTab]=useState('Overview');
  const[query,setQuery]=useState('');
