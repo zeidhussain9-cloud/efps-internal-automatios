@@ -264,3 +264,9 @@ Historical branch-reconciliation note superseded on 2026-09-30: `crm-ui-dashboar
 - [x] Current CRM deployment remains on `crm-ui-dashboard`; the current production source remains `+919148338801`.
 - [ ] D08 final visual system/handoff remains open.
 - [ ] Independent encrypted backup artifact + isolated restore proof remains an external infrastructure hardening item.
+
+## 2026-10-01 — Leads Inbox workflow refinement
+
+Operational usability refinement completed for the production Leads Inbox. The lead display now exposes first-contact time, latest-message sender, and latest-message time directly from crm_messages. These fields are server-computed and retained as read/query results rather than duplicated mutable columns.
+
+The default queue order is latest message first. Operators can switch to Customer replied first, First contacted newest, Last message oldest, or Name A–Z. Sort selection is part of the protected /api/db/leads query contract and applies before pagination.

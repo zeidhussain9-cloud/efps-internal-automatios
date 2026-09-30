@@ -110,3 +110,9 @@ Mobile/compact layout is now covered by a 1000px responsive shell and the browse
 Production Supabase verification confirms the `crm_messages_realtime_broadcast` trigger exists on `public.crm_messages` and invokes `crm_broadcast_message_activity`. Realtime is notification-only; the protected CRM API remains the source of displayed data.
 
 CI run **#284** for this revision is green: build, full test suite, Chromium installation and browser E2E all passed.
+
+## 2026-10-01 — Leads Inbox production data fields
+
+The protected /api/db/leads response now includes contacted_at, last_message_direction, and last_message_at, derived from stored crm_messages with the existing (lead_id,message_at,id) index. The production source currently has 186 source-linked leads; a direct Supabase verification found 186 with at least one Incoming/customer message and 178 with at least one Outgoing message.
+
+Render deployment continues from crm-ui-dashboard. The browser displays the three timeline fields in Asia/Kolkata as DD-Month-YYYY / HH:MM, and the lead_sort request parameter controls server-side ordering.

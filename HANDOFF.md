@@ -148,3 +148,9 @@ Do not add a separate classification filter or a second intake workflow unless t
 ## 2026-10-01 — Browser and D07 handoff
 
 Browser E2E now covers operator sign-in and the query-string-bearing live-record workspace route. D07 is resolved: session authentication, sensitive-data masking, explicit/reversible archive/restore, global audit visibility, export/retention/deletion boundaries, and offline/sync states are implemented. Activity is the global security/operator audit surface; Lead Workspace Activity & History remains lead-specific. D08 remains the final visual-system/handoff stage.
+
+## 2026-10-01 — Leads Inbox usability checkpoint
+
+Leads Inbox and Dashboard lead cards now expose Contacted date (first Incoming/customer message), Last message sent by (Customer or Us), and Last message date (latest stored message). Timestamps are displayed in Asia/Kolkata as DD-Month-YYYY / HH:MM. The protected API computes these values from crm_messages before pagination.
+
+Inbox sorting is server-side: Last message newest, Customer replied newest, First contacted newest, Last message oldest, and Name A–Z. Browser coverage includes the timeline fields, sort request, and 900px compact/mobile layout.

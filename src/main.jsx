@@ -10,6 +10,8 @@ const SOURCE_NUMBERS=['+919148338801','+917975102130','+919902024973'];
 const SOURCE_NUMBER=SOURCE_NUMBERS[0];
 const LEAD_STATUSES=['New','Active Follow-up','Waiting on Customer','Waiting on Us','Nurture','Dormant','Converted','Lost','On Hold'];
 const TENANT_TYPES=['Family','Bachelors','Couples','Students','Working Professionals','Corporate','Other','Not specified'];
+const LEAD_SORT_OPTIONS=[['last_message_desc','Last message — newest'],['customer_waiting','Customer replied — newest'],['first_customer_desc','First contacted — newest'],['last_message_asc','Last message — oldest'],['name_asc','Name — A–Z']];
+const formatLeadDate=value=>{if(!value)return'Not recorded';const d=new Date(value);if(!Number.isFinite(d.valueOf()))return'Not recorded';const parts=new Intl.DateTimeFormat('en-IN',{day:'2-digit',month:'long',year:'numeric',hour:'2-digit',minute:'2-digit',hourCycle:'h23',timeZone:'Asia/Kolkata'}).formatToParts(d);const part=name=>parts.find(p=>p.type===name)?.value||'';return part('day')+'-'+part('month')+'-'+part('year')+' / '+part('hour')+':'+part('minute')};
 const TABS=['Overview','Conversation','Requirements','Property Matches','AI & Drafts','Activity & History'];
 const MENU=[['Dashboard',LayoutDashboard],['Contact Classification',Inbox],['Leads Inbox',Inbox],['Inventory',Building2],['Activity',ActivityIcon],['Settings',Settings]];
 const SUPABASE_URL=import.meta.env.VITE_SUPABASE_URL||'';
@@ -45,9 +47,17 @@ const classificationLabel=value=>({
 }[value]||value||'Unclassified');
 
 function LeadCard({lead,onClick,privacyMode}){
+ const displayPhone=lead.normalized_phone?(privacyMode?maskPhone(lead.normalized_phone):lead.normalized_phone):'No phone stored';
+ const title=lead.display_name||displayPhone||'Lead';
+ const lastMessageBy=lead.last_message_direction==='Incoming'?'Customer':lead.last_message_direction==='Outgoing'?'Us':'Not recorded';
  return <button className="lead-card" onClick={onClick} type="button">
-  <div className="lead-card-main"><b>{leadTitle(lead)}</b><span>{lead.display_name?(privacyMode?maskPhone(lead.normalized_phone):lead.normalized_phone)||'No phone stored':''}</span></div>
+  <div className="lead-card-main"><div><b>{title}</b>{lead.display_name&&<span>{displayPhone}</span>}</div></div>
   <div className="lead-card-meta"><span>{lead.status}</span><span>{lead.priority}</span><span className="classification-chip">{classificationLabel(lead.classification)}</span><span>{lead.source_number||SOURCE_NUMBER}</span></div>
+  <div className="lead-card-activity" aria-label="Lead conversation activity">
+   <div><small>Contacted date</small><strong>{formatLeadDate(lead.contacted_at)}</strong></div>
+   <div><small>Last message sent by</small><strong>{lastMessageBy}</strong></div>
+   <div><small>Last message date</small><strong>{formatLeadDate(lead.last_message_at)}</strong></div>
+  </div>
  </button>;
 }
 
@@ -85,6 +95,7 @@ function App(){
  const[classificationTotal,setClassificationTotal]=useState(0);
  const[sourceFilter,setSourceFilter]=useState(SOURCE_NUMBER);
  const[leadStatusFilter,setLeadStatusFilter]=useState('');
+ const[leadSort,setLeadSort]=useState('last_message_desc');
  const[leadStatus,setLeadStatus]=useState('');
  const[tenantType,setTenantType]=useState('Not specified');
  const[realtimeError,setRealtimeError]=useState('');
@@ -116,7 +127,7 @@ function App(){
   async function load(){
    setLoading(true);setError('');
    try{
-    const r=await apiFetch('/api/db/leads?limit=100&offset='+offset+'&source_number='+encodeURIComponent(sourceFilter)+'&lead_status='+encodeURIComponent(leadStatusFilter),{cache:'no-store',credentials:'include'});
+    const r=await apiFetch('/api/db/leads?limit=100&offset='+offset+'&source_number='+encodeURIComponent(sourceFilter)+'&lead_status='+encodeURIComponent(leadStatusFilter)+'&lead_sort='+encodeURIComponent(leadSort),{cache:'no-store',credentials:'include'});
     if(!r.ok)throw Error('Live CRM records unavailable');
     const d=await r.json();
     if(!active)return;
@@ -127,7 +138,7 @@ function App(){
   }
   load();
   return()=>{active=false};
- },[authenticated,offset,sourceFilter,leadStatusFilter,refreshToken]);
+ },[authenticated,offset,sourceFilter,leadStatusFilter,leadSort,refreshToken]);
 
  useEffect(()=>{
   let active=true;
@@ -274,7 +285,7 @@ function App(){
       {page==='Dashboard'&&realtimeState==='error'&&<div className="notice">Realtime connection error: {realtimeError||'channel subscription failed'}. Live webhook ingestion is independent and continues server-side.</div>}
       {page==='Dashboard'&&<><div className="stats"><button className="stat stat-link" onClick={()=>{setPage('Leads Inbox');setOffset(0)}}><small>CRM leads</small><b>{dashboardStats?.leadCount??total}</b><span>Qualified leads · Open Leads Inbox</span></button><button className="stat stat-link" onClick={()=>{setPage('Contact Classification');setClassificationFilter('not_pushed')}}><small>Not pushed to CRM</small><b>{dashboardStats?.notPushedClassificationCount??dashboardStats?.pendingClassificationCount??0}</b><span>Contacts needing classification</span></button><button className="stat stat-link" onClick={()=>setPage('Contact Classification')}><small>Qualified leads pushed</small><b>{dashboardStats?.qualifiedClassificationCount??0}</b><span>Classification audit queue</span></button><button className="stat stat-link" onClick={()=>{setPage('Leads Inbox');setOffset(0)}}><small>Follow-ups today</small><b>{dashboardStats?.followupTodayCount??0}</b><span>{dashboardStats?.overdueFollowupCount??0} overdue · Open Leads Inbox</span></button></div><div className="panel daily-actions"><div className="daily-actions-head"><div><h3>Today's follow-ups</h3><p>Only the next actions that need your attention.</p></div>{dashboardStats?.webhookErrorCount>0&&<span className="chip red">{dashboardStats.webhookErrorCount} webhook errors</span>}</div>{(dashboardStats?.nextFollowups||[]).length?dashboardStats.nextFollowups.map(f=><button type="button" className="followup-row" key={f.id} onClick={()=>openLead(f.lead_id)}><span className="followup-time">{new Date(f.due_at).toLocaleString([], {day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'})}</span><span><b>{f.display_name||f.normalized_phone||'Lead'}</b><small>{f.note||'Follow-up due'}</small></span><span className="chip">Open</span></button>):<div className="empty">No open follow-ups are scheduled. New activity will appear here when a follow-up is created.</div>}</div></>}
       <div className="panel leadlist-production">
-       <div className="production-toolbar"><label className="search"><Search size={16}/><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Search name or phone" aria-label="Search live leads"/></label><label>Lead status <select value={leadStatusFilter} onChange={e=>{setLeadStatusFilter(e.target.value);setOffset(0)}}><option value="">All statuses</option>{LEAD_STATUSES.map(s=><option key={s} value={s}>{s}</option>)}</select></label><label>Lead source <select value={sourceFilter} onChange={e=>{setSourceFilter(e.target.value);setOffset(0)}}>{SOURCE_NUMBERS.map(n=><option key={n} value={n}>{n}</option>)}</select></label><span>{total} leads</span></div>
+       <div className="production-toolbar"><label className="search"><Search size={16}/><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Search name or phone" aria-label="Search live leads"/></label><label>Lead status <select value={leadStatusFilter} onChange={e=>{setLeadStatusFilter(e.target.value);setOffset(0)}}><option value="">All statuses</option>{LEAD_STATUSES.map(s=><option key={s} value={s}>{s}</option>)}</select></label><label>Lead source <select value={sourceFilter} onChange={e=>{setSourceFilter(e.target.value);setOffset(0)}}>{SOURCE_NUMBERS.map(n=><option key={n} value={n}>{n}</option>)}</select></label><label>Sort leads <select value={leadSort} onChange={e=>{setLeadSort(e.target.value);setOffset(0)}} aria-label="Sort leads">{LEAD_SORT_OPTIONS.map(([value,label])=><option key={value} value={value}>{label}</option>)}</select></label><span>{total} leads</span></div>
        {loading?<div className="empty">Loading live leads…</div>:visibleLeads.length?visibleLeads.map(l=><LeadCard key={l.id} lead={l} privacyMode={privacyMode} onClick={()=>openLead(l.id)}/>):<div className="empty">No live leads match this search.</div>}
       </div>
       <div className="pagination"><button disabled={offset===0} onClick={()=>setOffset(Math.max(0,offset-100))}>Previous</button><span>{total?offset+1:0}–{Math.min(offset+leads.length,total)} of {total}</span><button disabled={offset+100>=total} onClick={()=>setOffset(offset+100)}>Next</button></div>
