@@ -69,7 +69,7 @@ The existing Slack automation alone creates and updates the Housing Listings She
 - [x] Chromium browser journey test and CI workflow added for synthetic requirements, persistence, follow-ups, inventory and Settings.\n- [x] Verify successful CI browser run and deployed build: GitHub Actions `CRM synthetic CI` run #81 passed build, 45/45 unit/integration tests and Chromium browser journey 1/1.\n- [ ] Expand browser coverage for remaining flows.
 
 ### Phase 3 — Local-data migration
-- [x] Historical source reconciliation completed for the current production source `+919148338801`; 140 CRM leads are currently stored in Supabase. The older 228-lead wording was an intermediate planning checkpoint, not the current production count.
+- [x] Historical source reconciliation completed for the current production source `+919148338801`; 140 CRM leads are currently stored in Supabase. The earlier planning count was an intermediate checkpoint, not the current production count.
 - [x] Add source-backed classification to the production lead workspace.
 - [x] Add source-message provenance fields so historical SQLite message IDs are not misrepresented as provider IDs.
 - [x] Add read-only preparation and idempotent import scripts for the audited 5,286-message +919148338801 archive.
