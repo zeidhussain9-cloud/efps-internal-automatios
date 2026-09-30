@@ -62,3 +62,79 @@
 .secondary{display:inline-flex;align-items:center;gap:6px;border:1px solid #d7e2ea;background:#fff;color:#315d7e;border-radius:8px;padding:8px 11px;font-size:11px;cursor:pointer}.secondary:disabled{opacity:.45;cursor:not-allowed}.danger{color:#9b2c2c;border-color:#efcccc}
 .audit-list{display:grid;gap:0}.audit-row{align-items:flex-start}.audit-row .jsonview{margin-top:8px;max-width:100%;max-height:180px}
 @media(max-width:760px){.settings-grid{grid-template-columns:1fr}.auth-shell{padding:14px}.auth-card{padding:20px}.privacy-toggle{font-size:10px;padding:6px 8px}}
+
+
+/* Mobile-first production shell: also covers compact tablet/desktop-site viewport widths. */
+@media (max-width:1000px){
+  .app{display:block;min-height:100vh}
+  .sidebar{width:100%;padding:9px 12px;position:relative}
+  .brand{padding:3px 0 9px;font-size:18px}
+  .brandmark{width:32px;height:32px;font-size:13px}
+  .sidebar nav{display:flex;overflow-x:auto;gap:5px;padding-bottom:2px;scrollbar-width:none}
+  .sidebar nav::-webkit-scrollbar{display:none}
+  .nav{width:auto;flex:0 0 auto;white-space:nowrap;padding:9px 10px;font-size:11px}
+  .nav svg{width:15px;height:15px}
+  .sidebottom{display:none}
+  .top{height:auto;min-height:0;padding:10px 12px;display:flex;align-items:flex-start;flex-direction:column;gap:9px}
+  .top-title{width:100%;min-width:0}
+  .top-title>div{min-width:0}
+  .top strong{font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .top small{font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .topright{width:100%;min-width:0;display:flex;align-items:center;justify-content:flex-start;gap:6px;overflow-x:auto;padding-bottom:1px;scrollbar-width:none}
+  .topright::-webkit-scrollbar{display:none}
+  .topright .chip{display:inline-flex;flex:0 0 auto}
+  .topright .privacy-toggle,.topright .icon-action,.topright .avatar{flex:0 0 auto}
+  .privacy-toggle{white-space:nowrap}
+  .content{padding:14px 12px;max-width:none}
+  .heading{align-items:flex-start;gap:10px;margin-bottom:15px}
+  .heading h1{font-size:22px}
+  .stats{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+  .stat{padding:14px}
+  .stat b{font-size:23px}
+  .workspace{display:block}
+  .leadlist{min-height:0}
+  .leadlist-production{overflow:hidden}
+  .production-toolbar{align-items:stretch;flex-direction:column;gap:8px}
+  .production-toolbar .search{width:100%;margin:0}
+  .lead-card{padding:14px 15px}
+  .lead-card-main{align-items:flex-start;flex-direction:column;gap:4px}
+  .lead-card-main b,.lead-card-main span{overflow-wrap:anywhere}
+  .detail{display:none}
+  .detail.mobileactive{display:block}
+  .live-detail{min-height:0}
+  .tabs{padding:0 7px;gap:3px}
+  .tabs button{padding:13px 8px;font-size:11px}
+  .tabbody{padding:14px;min-height:0}
+  .formgrid,.properties,.properties.global{grid-template-columns:1fr}
+  .two{grid-template-columns:1fr}
+  .identity h2{font-size:16px}
+  .headcontrols{margin:13px 0 0 0;flex-wrap:wrap}
+  .headcontrols select{min-width:0;flex:1}
+  .classification-header{align-items:stretch;flex-direction:column}
+  .classification-tabs{margin:0 -14px;padding:0 14px;overflow-x:auto}
+  .classification-tabs button{white-space:nowrap}
+  .classification-row{align-items:flex-start;flex-direction:column}
+  .classification-row .classification-actions{width:100%;margin-top:8px}
+  .classification-row .classification-actions select,.classification-row .classification-actions button{width:100%}
+  .daily-actions-head{align-items:flex-start;flex-direction:column}
+  .followup-row{grid-template-columns:72px minmax(0,1fr) auto;gap:8px}
+  .settings-grid{grid-template-columns:1fr}
+  .inventory-heading{align-items:flex-start;flex-direction:column}
+  .inventory-kpis{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+  .inventory-reconcile{grid-template-columns:1fr}
+  .inventory-controls{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
+  .inventory-search{grid-column:1/-1;min-width:0}
+  .inventory-controls select{width:100%;min-width:0}
+  .inventory-card-grid{grid-template-columns:1fr}
+  .inventory-detail-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:600px){
+  .topright .chip.source{display:none}
+  .topright .avatar{width:30px;height:30px}
+  .stats{grid-template-columns:1fr 1fr}
+  .stat small{font-size:10px}
+  .stat b{font-size:21px}
+  .stat span{font-size:10px}
+  .inventory-kpis{grid-template-columns:1fr 1fr}
+  .inventory-detail-grid{grid-template-columns:1fr}
+}
