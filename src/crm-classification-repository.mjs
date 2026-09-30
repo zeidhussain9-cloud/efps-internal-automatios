@@ -25,6 +25,7 @@ export function createCrmClassificationRepository({connectionString=process.env.
         const label=(await c.query('SELECT public.crm_contact_classification_label($1) AS label',[code])).rows[0].label;
         if(code!=='qualified_lead'){
           await c.query('UPDATE crm_contact_classifications SET classification_code=$1,classification_label=$2,classification_source=$3,confidence=$4,status=\'excluded\',classified_at=now(),last_seen_at=greatest(last_seen_at,now()) WHERE id=$5',[code,label,source,confidence,id]);
+          await c.query('UPDATE crm_messages SET classification_id=$1 WHERE classification_id=$1',[id]);
           return {status:'excluded',classification:code,lead_id:null};
         }
         let lead=(await c.query('SELECT l.* FROM crm_leads l JOIN crm_lead_sources s ON s.lead_id=l.id WHERE s.source_number=$1 AND s.source_contact_id=$2 LIMIT 1 FOR UPDATE OF l',[SOURCE_NUMBER,row.phone])).rows[0];
@@ -37,6 +38,7 @@ export function createCrmClassificationRepository({connectionString=process.env.
           await c.query('UPDATE crm_leads SET classification=\'Qualified Lead\',classification_id=$1 WHERE id=$2',[id,lead.id]);
         }
         await c.query('UPDATE crm_contact_classifications SET classification_code=$1,classification_label=$2,classification_source=$3,confidence=$4,status=\'promoted\',classified_at=now(),promoted_at=coalesce(promoted_at,now()),lead_id=$5 WHERE id=$6',[code,label,source,confidence,lead.id,id]);
+        await c.query('UPDATE crm_messages SET lead_id=$1,classification_id=$2 WHERE classification_id=$2',[lead.id,id]);
         const events=(await c.query('SELECT id,provider_event_id,direction,message_type,payload,message_at FROM crm_webhook_events WHERE source_number=$1 AND phone=$2 AND provider_event_id IS NOT NULL ORDER BY message_at ASC,id ASC',[SOURCE_NUMBER,row.phone])).rows;
         for(const e of events){
           const m=e.payload||{};let body=null;
