@@ -95,7 +95,7 @@ function App(){
  const[auditState,setAuditState]=useState('idle');
  const[archiveState,setArchiveState]=useState('');
 
- useEffect(()=>{let active=true;fetch('/api/auth/session',{cache:'no-store',credentials:'include'}).then(async r=>{const d=await r.json().catch(()=>({}));if(!r.ok)throw Error('Authentication unavailable');return d}).then(d=>{if(active){setAuthenticated(Boolean(d.authenticated));setOperator(d.user||'');setAuthReady(true)}}).catch(e=>{if(active){setAuthError(e.message||'Authentication unavailable');setAuthReady(true)}});return()=>{active=false}},[]);
+ useEffect(()=>{let active=true;fetch('/api/auth/session',{cache:'no-store',credentials:'include'}).then(async r=>{const d=await r.json().catch(()=>({}));if(!r.ok)throw Error('Authentication unavailable');return d}).then(d=>{if(active){setAuthenticated(Boolean(d.authenticated));setOperator(d.user||'');setAuthReady(true)}}).catch(e=>{if(active){setAuthError(e.message||'Authentication unavailable');setAuthReady(true)}});return()=>{active=false}},[authenticated]);
  useEffect(()=>{try{window.sessionStorage.setItem('efps-crm-active-page',page);window.sessionStorage.setItem('efps-crm-privacy-mode',privacyMode?'masked':'revealed')}catch{}},[page,privacyMode]);
  useEffect(()=>{const on=()=>setOnline(true),off=()=>setOnline(false);window.addEventListener('online',on);window.addEventListener('offline',off);return()=>{window.removeEventListener('online',on);window.removeEventListener('offline',off)}},[]);
  const apiFetch=(url,options={})=>fetch(url,{...options,credentials:'include'}).then(r=>{if(r.status===401){setAuthenticated(false);setAuthReady(true)}return r});
@@ -125,7 +125,7 @@ function App(){
   }
   load();
   return()=>{active=false};
- },[offset,sourceFilter,leadStatusFilter,refreshToken]);
+ },[authenticated,offset,sourceFilter,leadStatusFilter,refreshToken]);
 
  useEffect(()=>{
   let active=true;
@@ -134,14 +134,14 @@ function App(){
   const qs=new URLSearchParams({limit:'100'});if(['not_pushed','promoted','unqualified'].includes(classificationFilter))qs.set('status',classificationFilter);if(sourceFilter)qs.set('source_number',sourceFilter);
   apiFetch('/api/db/classifications?'+qs.toString(),{cache:'no-store',credentials:'include'}).then(async r=>{const d=await r.json().catch(()=>({}));if(!r.ok)throw Error(d.error||('Classification records unavailable (HTTP '+r.status+')'));return d}).then(d=>{if(active){const rows=Array.isArray(d.classifications)?d.classifications:[];setClassifications(rows);setClassificationTotal(Number(d.total)||0);setClassificationDrafts(prev=>{const next={...prev};for(const row of rows)next[row.id]=row.classification_code;return next});setClassificationError('');setClassificationState('ready')}}).catch(e=>{if(active){setClassifications([]);setClassificationError(e.message||'Classification records unavailable');setClassificationState('unavailable')}});
   return()=>{active=false};
- },[page,classificationFilter,sourceFilter,refreshToken]);
+ },[authenticated,page,classificationFilter,sourceFilter,refreshToken]);
 
  useEffect(()=>{
   let active=true;
   if(!authenticated)return()=>{active=false};
   apiFetch('/api/db/stats?source_number='+encodeURIComponent(sourceFilter),{cache:'no-store',credentials:'include'}).then(async r=>{if(!r.ok)throw Error('Dashboard stats unavailable');return r.json()}).then(d=>{if(active)setDashboardStats(d)}).catch(()=>{if(active)setDashboardStats(null)});
   return()=>{active=false};
- },[sourceFilter,refreshToken]);
+ },[authenticated,sourceFilter,refreshToken]);
 
  useEffect(()=>{
   let active=true;
@@ -156,7 +156,7 @@ function App(){
   }
   load();
   return()=>{active=false};
- },[refreshToken]);
+ },[authenticated,refreshToken]);
 
  useEffect(()=>{
   let active=true;
@@ -191,7 +191,7 @@ function App(){
   }
   load();
   return()=>{active=false};
- },[selectedId,sourceFilter,refreshToken]);
+ },[authenticated,selectedId,sourceFilter,refreshToken]);
 
  useEffect(()=>{
   if(!authenticated){setRealtimeState('unconfigured');return()=>{}}
