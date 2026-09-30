@@ -26,19 +26,14 @@ export function createCrmRepository({pool,connectionString=process.env.DATABASE_
    const source=sourceNumber;
    const allowed=['New','Active Follow-up','Waiting on Customer','Waiting on Us','Nurture','Dormant','Converted','Lost','On Hold'];
    if(leadStatus&&!allowed.includes(leadStatus))throw Error('Invalid lead status');
-   const sortOrder={
-    last_message_desc:'last_message.last_message_at DESC NULLS LAST,l.updated_at DESC,l.id',
-    customer_waiting:"(last_message.last_message_direction='Incoming') DESC NULLS LAST,last_message.last_message_at DESC NULLS LAST,l.id",
-    first_customer_desc:'first_customer.contacted_at DESC NULLS LAST,l.updated_at DESC,l.id',
-    last_message_asc:'last_message.last_message_at ASC NULLS LAST,l.updated_at ASC,l.id',
-    name_asc:"lower(coalesce(l.display_name,l.normalized_phone,'')) ASC,l.id"
-   };
+   const dollar=n=>String.fromCharCode(36)+n;
+   const sortOrder={last_message_desc:'last_message.last_message_at DESC NULLS LAST,l.updated_at DESC,l.id',customer_waiting:"(last_message.last_message_direction='Incoming') DESC NULLS LAST,last_message.last_message_at DESC NULLS LAST,l.id",first_customer_desc:'first_customer.contacted_at DESC NULLS LAST,l.updated_at DESC,l.id',last_message_asc:'last_message.last_message_at ASC NULLS LAST,l.updated_at ASC,l.id',name_asc:"lower(coalesce(l.display_name,l.normalized_phone,'')) ASC,l.id"};
    if(!Object.hasOwn(sortOrder,leadSort))throw Error('Invalid lead sort');
    const params=[source];
    let where="EXISTS (SELECT 1 FROM crm_lead_sources s WHERE s.lead_id=l.id AND s.source_number=$1)";
-   if(leadStatus){params.push(leadStatus);where+=' AND l.lead_type=$'+params.length}
+   if(leadStatus){params.push(leadStatus);where+=' AND l.lead_type='+dollar(params.length)}
    const limitPos=params.push(limit),offsetPos=params.push(offset);
-   const leadSql="SELECT l.id,l.display_name,l.normalized_phone,l.status,l.lead_type,l.tenant_type,l.priority,l.classification,l.requirements,l.updated_at,s.source_number,first_customer.contacted_at,last_message.last_message_direction,last_message.last_message_at FROM crm_leads l JOIN LATERAL (SELECT source_number FROM crm_lead_sources WHERE lead_id=l.id AND source_number=$1 ORDER BY source_number LIMIT 1) s ON true LEFT JOIN LATERAL (SELECT m.message_at AS contacted_at FROM crm_messages m WHERE m.lead_id=l.id AND m.direction='Incoming' ORDER BY m.message_at ASC,m.id ASC LIMIT 1) first_customer ON true LEFT JOIN LATERAL (SELECT m.direction AS last_message_direction,m.message_at AS last_message_at FROM crm_messages m WHERE m.lead_id=l.id ORDER BY m.message_at DESC,m.id DESC LIMIT 1) last_message ON true WHERE "+where+" ORDER BY "+sortOrder[leadSort]+" LIMIT $"+limitPos+" OFFSET $"+offsetPos;
+   const leadSql="SELECT l.id,l.display_name,l.normalized_phone,l.status,l.lead_type,l.tenant_type,l.priority,l.classification,l.requirements,l.updated_at,s.source_number,first_customer.contacted_at,last_message.last_message_direction,last_message.last_message_at FROM crm_leads l JOIN LATERAL (SELECT source_number FROM crm_lead_sources WHERE lead_id=l.id AND source_number=$1 ORDER BY source_number LIMIT 1) s ON true LEFT JOIN LATERAL (SELECT m.message_at AS contacted_at FROM crm_messages m WHERE m.lead_id=l.id AND m.direction='Incoming' ORDER BY m.message_at ASC,m.id ASC LIMIT 1) first_customer ON true LEFT JOIN LATERAL (SELECT m.direction AS last_message_direction,m.message_at AS last_message_at FROM crm_messages m WHERE m.lead_id=l.id ORDER BY m.message_at DESC,m.id DESC LIMIT 1) last_message ON true WHERE "+where+" ORDER BY "+sortOrder[leadSort]+" LIMIT "+dollar(limitPos)+" OFFSET "+dollar(offsetPos);
    const [r,n]=await Promise.all([db.query(leadSql,params),db.query("SELECT count(*)::int AS total FROM crm_leads l WHERE "+where,params.slice(0,leadStatus?2:1))]);
    const total=n.rows[0].total;
    return{leads:r.rows,total,sort:leadSort,sourceTotals:Object.fromEntries(SOURCE_NUMBERS.map(item=>[item,item===source?total:0]))}
