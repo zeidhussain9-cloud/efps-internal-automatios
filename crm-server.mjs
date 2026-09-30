@@ -3,7 +3,7 @@ import {randomUUID,createHmac,timingSafeEqual} from 'node:crypto';
 import {readFile,stat} from 'node:fs/promises';
 import {join,extname,resolve} from 'node:path';
 import {authorized,accessMode} from './src/server-auth.mjs';
-import {analyzeFictionalLead} from './src/ollama-adapter.mjs';
+import {analyzeFictionalLead,analyzeRealLead} from './src/ollama-adapter.mjs';
 import {createCrmRepository} from './src/crm-repository.mjs';
 import {startupDatabaseCheck} from './src/crm-startup-check.mjs';
 const root=resolve('dist');
@@ -95,6 +95,18 @@ createServer(async(req,res)=>{
    const budgetRaw=q.get('budget');const limitRaw=q.get('limit')||'50';
    if(budgetRaw!==null&&!/^\d+(?:\.\d{1,2})?$/.test(budgetRaw)||!/^\d{1,3}$/.test(limitRaw)){res.writeHead(400,security);return res.end('Invalid inventory query');}
    const repo=createCrmRepository();try{const rows=await repo.matchInventory({bhk:q.get('bhk')||'',budget:budgetRaw===null?null:Number(budgetRaw),locality:q.get('locality')||'',furnishing:q.get('furnishing')||'',petFriendly:q.get('pet_friendly')||'',limit:Number(limitRaw)});res.writeHead(200,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify({rows}));}finally{await repo.close()}
+  }
+  if(p==='/api/ai/analyze-real'&&req.method==='POST'){
+   if(mode!=='protected'||process.env.CRM_REAL_AI_ENABLED!=='true'||process.env.CRM_DB_READ_ENABLED!=='true'){res.writeHead(403,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify({error:'Real AI disabled'}));}
+   const repo=createCrmRepository();
+   try{
+    let raw='';for await(const chunk of req){raw+=chunk;if(raw.length>4096)throw Error('Request too large');}
+    const body=JSON.parse(raw);const id=String(body.leadId||'');
+    const workspace=await repo.getLeadWorkspace(id);if(!workspace.lead){res.writeHead(404,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify({error:'Lead not found'}));}
+    const result=await analyzeRealLead({lead:workspace.lead,env:process.env});
+    res.writeHead(200,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify(result));
+   }catch(e){res.writeHead(422,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify({error:e.message==='Request too large'?'Request too large':'Real AI request failed'}));}
+   finally{await repo.close()}
   }
   if(p==='/api/ai/analyze'&&req.method==='POST'){
    if(mode!=='protected'||process.env.CRM_SYNTHETIC_AI_ENABLED!=='true'){res.writeHead(403,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify({error:'Synthetic AI disabled'}));}
