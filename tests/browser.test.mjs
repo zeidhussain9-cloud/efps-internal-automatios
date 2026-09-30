@@ -77,5 +77,18 @@ test('production CRM browser journey uses only live-record surfaces',async()=>{
 
   await page.locator('button.header-back').click();
   await page.getByText('Production data').waitFor();
+
+  // Exercise the compact/tablet viewport used by mobile browsers that expose a wider layout viewport.
+  await page.setViewportSize({width:900,height:800});
+  await page.reload();
+  await page.getByText('Production data').waitFor();
+  const sidebarBox=await page.locator('.sidebar').boundingBox();
+  const mainBox=await page.locator('.main').boundingBox();
+  assert.ok(sidebarBox&&sidebarBox.width>=899,'compact viewport uses full-width navigation');
+  assert.ok(mainBox&&mainBox.width>=899,'compact viewport keeps the CRM content full-width');
+  const statBoxes=await page.locator('.stats .stat').evaluateAll(nodes=>nodes.slice(0,2).map(n=>{const r=n.getBoundingClientRect();return{x:r.x,y:r.y,width:r.width}}));
+  assert.equal(statBoxes.length,2);
+  assert.ok(Math.abs(statBoxes[0].y-statBoxes[1].y)<2,'dashboard KPI cards remain in a two-column mobile layout');
+
  }finally{await browser?.close();server.kill()}
 });
