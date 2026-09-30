@@ -25,3 +25,16 @@ test('write gate does not shadow GET lead routes',async()=>{
 
 
 test('Render no longer accepts WhatsApp webhook writes',async()=>{const{proc,base}=await start({CRM_BASIC_AUTH_USERNAME:'pilot',CRM_BASIC_AUTH_PASSWORD:'fictional-secret'});try{const auth='Basic '+Buffer.from('pilot:fictional-secret').toString('base64');const response=await fetch(base+'/api/webhooks/whatsapp',{method:'POST',headers:{Authorization:auth,'Content-Type':'application/json'},body:'{}'});assert.equal(response.status,405)}finally{proc.kill()}});
+
+test('operator session login, logout and cross-origin protection',async()=>{
+ const{proc,base}=await start({CRM_BASIC_AUTH_USERNAME:'pilot',CRM_BASIC_AUTH_PASSWORD:'test-pass'});
+ try{
+  const initial=await fetch(base+'/api/auth/session');assert.equal(initial.status,200);assert.equal((await initial.json()).authenticated,false);
+  const denied=await fetch(base+'/api/db/status');assert.equal(denied.status,401);
+  const bad=await fetch(base+'/api/auth/login',{method:'POST',headers:{'Content-Type':'application/json',Origin:base},body:JSON.stringify({username:'pilot',password:'wrong'})});assert.equal(bad.status,401);
+  const login=await fetch(base+'/api/auth/login',{method:'POST',headers:{'Content-Type':'application/json',Origin:base},body:JSON.stringify({username:'pilot',password:'test-pass'})});assert.equal(login.status,200);const cookie=login.headers.get('set-cookie');assert.ok(cookie.includes('efps_crm_session='));
+  const foreign=await fetch(base+'/api/auth/logout',{method:'POST',headers:{Cookie:cookie,Origin:'https://evil.example'}});assert.equal(foreign.status,403);
+  const local=await fetch(base+'/api/auth/logout',{method:'POST',headers:{Cookie:cookie,Origin:base}});assert.equal(local.status,204);
+  const after=await fetch(base+'/api/auth/session',{headers:{Cookie:cookie}});assert.equal((await after.json()).authenticated,false);
+ }finally{proc.kill()}
+});
