@@ -10,7 +10,7 @@ const SOURCE_NUMBERS=['+919148338801','+917975102130','+919902024973'];
 const SOURCE_NUMBER=SOURCE_NUMBERS[0];
 const LEAD_STATUSES=['New','Active Follow-up','Waiting on Customer','Waiting on Us','Nurture','Dormant','Converted','Lost','On Hold'];
 const TABS=['Overview','Conversation','Requirements','Property Matches','AI & Drafts','Activity & History'];
-const MENU=[['Dashboard',LayoutDashboard],['Contact Classification',Inbox],['Leads Inbox',Inbox],['Inventory',Building2],['Settings',Settings]];
+const MENU=[['Dashboard',LayoutDashboard],['Contact Classification',Inbox],['Leads Inbox',Inbox],['Inventory',Building2],['Activity',ActivityIcon],['Settings',Settings]];
 const SUPABASE_URL=import.meta.env.VITE_SUPABASE_URL||'';
 const SUPABASE_PUBLISHABLE_KEY=import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY||'';
 const supabase=SUPABASE_URL&&SUPABASE_PUBLISHABLE_KEY?createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY):null;
@@ -43,9 +43,9 @@ const classificationLabel=value=>({
  'Cold Inquiry':'Cold inquiry'
 }[value]||value||'Unclassified');
 
-function LeadCard({lead,onClick}){
+function LeadCard({lead,onClick,privacyMode}){
  return <button className="lead-card" onClick={onClick} type="button">
-  <div className="lead-card-main"><b>{leadTitle(lead)}</b><span>{lead.display_name?lead.normalized_phone||'No phone stored':''}</span></div>
+  <div className="lead-card-main"><b>{leadTitle(lead)}</b><span>{lead.display_name?(privacyMode?maskPhone(lead.normalized_phone):lead.normalized_phone)||'No phone stored':''}</span></div>
   <div className="lead-card-meta"><span>{lead.status}</span><span>{lead.priority}</span><span className="classification-chip">{classificationLabel(lead.classification)}</span><span>{lead.source_number||SOURCE_NUMBER}</span></div>
  </button>;
 }
