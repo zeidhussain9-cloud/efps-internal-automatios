@@ -8,7 +8,7 @@ const ROOT=resolve(dirname(new URL(import.meta.url).pathname),'..');
 const SOURCE='+919148338801';
 const EXPORT=resolve(ROOT,'.private-import/9148338801-conversations.json');
 const BACKUP=resolve(ROOT,'.private-import/crm-preconversation-2026-09-30.enc');
-const KEYFILE=resolve(ROOT,'.crm-backup-key');
+const KEYFILE=process.env.CRM_BACKUP_KEY_FILE||resolve(ROOT,'.crm-backup-key');
 
 function parseEnv(text){const out={};for(const raw of text.split(/\r?\n/)){const line=raw.trim();if(!line||line.startsWith('#')||!line.includes('='))continue;const i=line.indexOf('=');let v=line.slice(i+1).trim();if((v.startsWith('"')&&v.endsWith('"'))||(v.startsWith("'")&&v.endsWith("'")))v=v.slice(1,-1);out[line.slice(0,i).trim()]=v.replace(/\\n/g,'\n')}return out}
 function sha256(buf){return crypto.createHash('sha256').update(buf).digest('hex')}
@@ -21,7 +21,7 @@ async function main(){
  const raw=await fs.readFile(EXPORT);const source=JSON.parse(raw.toString());
  if(source.source_number!==SOURCE||source.lead_count!==228||source.message_count!==5286||!Array.isArray(source.messages)||source.messages.length!==5286)throw Error('Source conversation export is not the audited 228-lead/5286-message dataset');
  const key=Buffer.from((await fs.readFile(KEYFILE,'utf8')).trim(),'base64');if(key.length!==32)throw Error('Backup key invalid');
- const env=parseEnv(await fs.readFile(resolve(ROOT,'.env.local'),'utf8'));if(!env.DATABASE_URL||!env.DATABASE_SSL_CA)throw Error('Local database connection configuration missing');
+ const ENVFILE=process.env.CRM_ENV_FILE||resolve(ROOT,'.env.local'); const env=parseEnv(await fs.readFile(ENVFILE,'utf8'));if(!env.DATABASE_URL||!env.DATABASE_SSL_CA)throw Error('Local database connection configuration missing');
  const client=new pg.Client({connectionString:normalizeConnectionString(env.DATABASE_URL),ssl:{rejectUnauthorized:true,ca:env.DATABASE_SSL_CA}});await client.connect();
  try{
   const names=(await client.query("select table_name from information_schema.tables where table_schema='public' and table_name like 'crm_%' order by table_name")).rows.map(r=>r.table_name);
