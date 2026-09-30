@@ -176,3 +176,15 @@ Each row has one classification dropdown and one explicit Update button. Selecti
 - No additional classification filter is shown.
 
 The dashboard then surfaces the next operational work: classification counts and open follow-ups.
+
+
+## Current Contact Classification workflow — 2026-09-30
+
+The production UI intentionally uses one simple Contact Classification screen with two tabs:
+
+1. **Not pushed to CRM** — pending and non-qualified contacts.
+2. **Qualified leads pushed to CRM** — successfully promoted contacts.
+
+Each contact row shows the phone number, a direct **Open WhatsApp** link, a classification selector and an explicit **Update** button. The button is disabled until the selected classification differs from the stored value. A successful non-qualified update keeps the contact outside CRM. A successful Qualified Lead update creates/links the CRM lead and preserved messages transactionally, then the UI moves the contact to the promoted tab. A failed write stays in place and displays the server error instead of silently moving the contact.
+
+The Dashboard surfaces the classification counts and today's follow-ups so the operator can use the CRM as a daily work queue without a separate intake workflow.

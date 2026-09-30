@@ -1,3 +1,9 @@
+## Production checkpoint — 2026-09-30
+
+The approved daily CRM flow is live. Current source: `+919148338801`. Supabase baseline: 141 source-linked leads, 287 classifications, 58 pending classifications, 6,561 messages, 28 webhook events (13 processed, 15 received). The Contact Classification queue uses two tabs, explicit Update actions, and direct WhatsApp links. Qualified Lead is the only promotion path into CRM. Latest production commit: `184abfe58052b01ebf5be4dd26044f31fc579536`; Render deployment is live. The two other configured source numbers remain visible but inactive for production ingestion.
+
+## EasyFind Lead CRM — Master Plan
+
 # EasyFind Lead CRM — Master Plan
 
 **Canonical repository:** `zeidhussain9-cloud/efps-internal-automatios`  
@@ -69,7 +75,7 @@ The existing Slack automation alone creates and updates the Housing Listings She
 - [x] Chromium browser journey test and CI workflow added for synthetic requirements, persistence, follow-ups, inventory and Settings.\n- [x] Verify successful CI browser run and deployed build: GitHub Actions `CRM synthetic CI` run #81 passed build, 45/45 unit/integration tests and Chromium browser journey 1/1.\n- [ ] Expand browser coverage for remaining flows.
 
 ### Phase 3 — Local-data migration
-- [x] Historical source reconciliation completed for the current production source `+919148338801`; 140 CRM leads are currently stored in Supabase. The earlier planning count was an intermediate checkpoint, not the current production count.
+- [x] Historical source reconciliation completed for the current production source `+919148338801`; 141 source-linked CRM leads are currently stored in Supabase. The earlier planning count was an intermediate checkpoint, not the current production count.
 - [x] Add source-backed classification to the production lead workspace.
 - [x] Add source-message provenance fields so historical SQLite message IDs are not misrepresented as provider IDs.
 - [x] Add read-only preparation and idempotent import scripts for the audited 5,286-message +919148338801 archive.
@@ -206,7 +212,7 @@ Supabase `easyfind-crm` (`qttcutwzehtskfcwxkwj`, Mumbai) is ACTIVE_HEALTHY and i
 
 ## 2026-09-27 — Canonical main-branch promotion
 
-Historical branch-reconciliation note superseded on 2026-09-30: `crm-ui-dashboard` remains the Render deployment branch; `main` and `crm-ui-dashboard` are reconciled to the same repository state. The clean Mac linked `main` worktree is `/Users/zeidzakir/Projects/efps-internal-automatios/leads_automation/crm-ui-dashboard`; the dirty historical audit checkout and `leads-ui` application remain intact. CI runs on both branches until Render is repointed. This is a repository reconciliation, not completion of production migration gates.
+Historical branch-reconciliation note superseded on 2026-09-30: `crm-ui-dashboard` remains the Render deployment branch; `main` and `crm-ui-dashboard` are reconciled to the same repository state. The active CRM checkout is `/Users/zeidzakir/Projects/efps-internal-automatios/leads_automation/crm-ui-dashboard`; the separate `main` worktree is `/Users/zeidzakir/Projects/efps-internal-automatios`. Render remains on `crm-ui-dashboard`; repository reconciliation to `main` is separate. This is a repository reconciliation, not completion of production migration gates.
 
 ## 2026-09-30 — Live lead-only webhook completion checkpoint
 
@@ -215,7 +221,7 @@ Historical branch-reconciliation note superseded on 2026-09-30: `crm-ui-dashboar
 - [x] Added durable `crm_webhook_events` activity/audit storage with provider-message idempotency and received/processing/processed/failed states.
 - [x] New source-phone activity is held in `crm_contact_classifications` with `pending` status and preserved `crm_messages`; it does not create a `crm_leads` row until an operator selects Qualified Lead. Existing promoted contacts continue to append to their lead.
 - [x] Removed CRM intake tables and Render intake routes. There is no separate new-contact staging model.
-- [x] Historical CRM population is reconciled at 228 leads and 5,286 messages for source `+919148338801`.
+- [x] Historical SQLite evidence remains 5,286 messages; current Supabase production state is 141 source-linked leads and 6,561 messages for `+919148338801`.
 - [x] Workspace message ordering is chronological by provider `message_at`, with source/provider identity preserved separately.
 - [x] Added sanitized Supabase Realtime broadcast after message insertion so the UI refreshes live without polling WhAPI or polling the CRM workspace.
 - [x] Removed the Render-side WhatsApp ingestion route; the old CRM WhatsApp environment gate remains disabled.
@@ -233,7 +239,7 @@ Historical branch-reconciliation note superseded on 2026-09-30: `crm-ui-dashboar
 - [x] Dashboard now reports CRM lead count, waiting-to-be-classified count, live-WhAPI-qualified-lead count and webhook error count for the selected source. It no longer presents a hardcoded historical message count as the live lead metric.
 - [x] Realtime diagnostics now surface the actual channel error alongside the connection state instead of only showing `Realtime: error`.
 - [x] Applied production migration `20260930145131` (`crm_lead_status_tenant_type_and_webhook_gate_reconciliation`) and verified `crm_leads.tenant_type` plus the reconciled no-auto-lead webhook processor in Supabase.
-- [x] Current production evidence after this migration: 140 `crm_leads`, 228 source classifications for `+919148338801`, 0 pending classifications, 5,286 historical `crm_messages`, and 0 persisted webhook events. No live WhatsApp lead is currently present in the database.
+- [x] Current production evidence after this migration: 141 source-linked `crm_leads`, 287 source classifications for `+919148338801`, 58 pending classifications, 6,561 current `crm_messages`, and 28 persisted webhook events (13 processed, 15 received).
 - [x] Local production build, all 62 unit/integration tests, and the Playwright browser journey pass. The browser journey now covers the live-record surface, Lead Status/Tenant Type controls and persisted-update API path.
 
 ## 2026-09-30 — CRM daily workflow resolved

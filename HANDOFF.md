@@ -1,3 +1,14 @@
+## CRM production checkpoint — 2026-09-30
+
+- `crm-ui-dashboard` is the canonical CRM implementation/deployment branch; Render service `easyfind-crm-d01-d05` deploys it.
+- Repository `main` is separately reconciled to the approved CRM checkpoint; it is not the Render deployment branch.
+- Current source: `+919148338801`. Current Supabase baseline: 141 source-linked leads, 287 classifications, 58 pending classifications, 6,561 messages, 28 webhook events (13 processed, 15 received).
+- Contact Classification uses two tabs: `Not pushed to CRM` and `Qualified leads pushed to CRM`. The operator chooses a classification and clicks `Update`; only a successful server transaction moves a Qualified Lead into CRM.
+- Direct `Open WhatsApp` links are shown beside classification contacts.
+- Latest production fix: commit `184abfe58052b01ebf5be4dd26044f31fc579536`, correcting PostgreSQL parameter type inference in the new-lead insert.
+
+## Current state
+
 ## Current state
 
 The active workstream is the **production CRM UI on `crm-ui-dashboard`**. The current production source is WhatsApp `+919148338801`; historical and live data reconcile through Supabase. The other two configured source numbers remain visible in the UI for later onboarding.
@@ -105,9 +116,9 @@ These are future live-runtime verification tasks, not unresolved Phase-1 impleme
 
 **Removed commands:** `/efps fix` and `/efps verify` removed 2026-09-21. Properties requiring corrections should be edited directly in the Sheet or through future admin tools.
 
-## Active CRM UI handoff — 2026-09-27 (supersedes historical CRM-reconciliation-only heading)
+## Active CRM UI handoff — 2026-09-30 (supersedes historical CRM-reconciliation-only heading)
 
-- The **only** CRM UI development/deployment branch is `crm-ui-dashboard`. `main` is untouched and remains the separate Inventory/legacy branch.
+- CRM UI implementation/deployment is on `crm-ui-dashboard`; repository `main` is reconciled to the approved CRM checkpoint but is not the Render deployment branch.
 - Render `easyfind-crm-d01-d05` successfully called hosted Ollama `gpt-oss:20b` with fictional `L-1001` at 2026-09-26 21:25:38 UTC. The five expected keys were returned. No local model.
 - Dedicated root `steering.md` is the only CRM model system instruction, loaded and cached by `src/ollama-adapter.mjs` (2-KiB maximum). It conveys EFPS brokerage purpose, model role, structured extraction, operator control and no invented facts. Repository `CORE_STEERING.md` remains separate.
 - Application tests, build, browser and GitHub Actions must pass on the new steering commit; Render `49b4f30` succeeded with the dedicated steering at 2026-09-26 21:36:16 UTC. Optional `CRM_OLLAMA_STARTUP_SMOKE_ENABLED=false` is deployed: `dep-das3lspa4omc738mqre0` live at 2026-09-26 21:37:57 UTC; no startup inference observed. On-demand fictional pilot remains enabled.

@@ -1,3 +1,11 @@
+## Current production checkpoint — 2026-09-30
+
+The earlier synthetic-only sections below are historical setup notes. The CRM is now running with real production data for `+919148338801`. Render service `easyfind-crm-d01-d05` deploys `crm-ui-dashboard`; latest live commit is `184abfe58052b01ebf5be4dd26044f31fc579536`. Supabase is the production CRM store and WhAPI webhook ingress is active through the Supabase Edge Function.
+
+The classification write path is protected server-side. The 2026-09-30 failure was traced to PostgreSQL error `42P18` in the new-lead insert because the source-number parameter inside `jsonb_build_object()` lacked an explicit type. The production code now uses `$5::text`; build/tests passed 62/62 before deployment.
+
+# CRM deployment configuration — staged setup
+
 # CRM deployment configuration — staged setup
 
 The CRM Render service is `easyfind-crm-d01-d05`, deployed only from `crm-ui-dashboard`. Do not configure the old leads UI or main branch. Keep secrets out of GitHub, the React bundle, chat transcripts and logs.

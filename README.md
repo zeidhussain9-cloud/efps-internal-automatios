@@ -30,6 +30,18 @@ The repository follows one simple operating model:
 
 For every implementation, the agent must review all maintained root and `docs/` documentation and update every document whose content is affected by the resulting repository reality. Do not create duplicate authoritative documents.
 
+## CRM production checkpoint — 2026-09-30
+
+- Canonical CRM UI branch: `crm-ui-dashboard`; Render service: `easyfind-crm-d01-d05`.
+- Latest CRM code commit: `184abfe58052b01ebf5be4dd26044f31fc579536` (`fix: type classification source parameter`).
+- Production source in scope: `+919148338801`; the other two source numbers remain visible for future onboarding only.
+- Current Supabase counts: 141 source-linked CRM leads, 287 classifications, 58 pending classifications, 6,561 messages, and 28 webhook events for the production source. Of those webhook events, 13 are processed and 15 remain `received`; these are an operational backlog to investigate, not historical backfill evidence.
+- Contact Classification is operator-gated. Selecting a classification does not write until `Update` is clicked. A successful Qualified Lead update atomically creates/links the CRM lead, promotes the classification, and links preserved messages.
+- The 2026-09-30 classification failure was diagnosed from Render logs as PostgreSQL `42P18` (`could not determine data type of parameter $5`) in the new-lead insert. The consolidated fix explicitly casts the source-number parameter to `text`. Local build/tests passed 62/62 before deployment.
+- Render deployment `dep-daul3fpsrm7s73b27l00` is live from the same commit.
+
+## Current modules
+
 ## Current modules
 
 - `modules/efps-inventory-mgmnt/` — property inventory business workflows and rules; current Inventory Phase-1 implementation.

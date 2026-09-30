@@ -1,3 +1,13 @@
+## Current production checkpoint — 2026-09-30
+
+- Source in scope: `+919148338801`.
+- Supabase baseline: 141 source-linked leads, 287 classifications, 58 pending classifications, 6,561 messages.
+- `crm_webhook_events`: 28 rows for the source; 13 processed and 15 currently `received`. The latter are a live operational backlog and should be investigated before any claim of complete event reconciliation.
+- The historical 5,286-message SQLite archive remains historical evidence. It is not a second live database and is not interchangeable with the current 6,561-message Supabase count.
+- Do not initiate another WhAPI historical API extraction unless explicitly authorized. Live discovery of new contacts is through the webhook boundary and the `crm_contact_classifications` registry.
+
+# CRM live WhAPI webhook — 2026-09-30
+
 # CRM live WhAPI webhook — 2026-09-30
 
 ## Canonical flow
@@ -55,9 +65,9 @@ Processing states are `received`, `processing`, `processed`, and `failed`. A pro
 
 Current verified source population:
 
-- **140 CRM leads** currently persisted in production
+- **141 source-linked CRM leads** currently persisted in production
 - **228 historical classifications** for `+919148338801`, currently all non-pending
-- **5,286 historical messages**
+- **6,561 current CRM messages**; the **5,286-message SQLite archive** remains historical evidence
 - **0 intake contacts**; the intake tables were removed from the CRM live model
 - **0 persisted live webhook events** at the reconciliation checkpoint
 
@@ -82,7 +92,7 @@ The CRM webhook only records WhatsApp activity. It never calls a WhAPI send endp
 - Supabase Edge Function deployed and active.
 - Correct webhook secret + empty message payload returned HTTP 200.
 - Incorrect webhook secret returned HTTP 401.
-- Database lead/message processing was exercised inside a transaction and rolled back; the verified persisted counts remained 228 leads and 5,286 messages.
+- Database lead/message processing was exercised inside a transaction and rolled back; the diagnostic transaction was rolled back and did not change persisted production data.
 - Intake tables are absent from the production schema.
 - Render webhook route was removed and its old environment gate remains disabled.
 - UI dependency `@supabase/supabase-js` added for Realtime.
