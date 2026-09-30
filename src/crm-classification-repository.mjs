@@ -1,19 +1,21 @@
 import pg from 'pg';
 import {createCrmRepository,normalizeConnectionString} from './crm-repository.mjs';
 
-const SOURCE_NUMBER='+919148338801';
+const SOURCE_NUMBERS=['+919148338801','+917975102130','+919902024973'];
+const SOURCE_NUMBER=SOURCE_NUMBERS[0];
 
 export function createCrmClassificationRepository({connectionString=process.env.DATABASE_URL,sslCa=process.env.DATABASE_SSL_CA}={}){
   if(!connectionString)throw Error('DATABASE_URL required');
   const db=new pg.Pool({connectionString:normalizeConnectionString(connectionString),max:3,connectionTimeoutMillis:5000,ssl:{rejectUnauthorized:true,...(sslCa?{ca:sslCa}:{})}});
   const withTx=async fn=>{const c=await db.connect();try{await c.query('BEGIN');const v=await fn(c);await c.query('COMMIT');return v}catch(e){try{await c.query('ROLLBACK')}catch{}throw e}finally{c.release()}};
   return {
-    async list({limit=100,offset=0,status='',classification=''}={}){
-      const params=[SOURCE_NUMBER,limit,offset];let where='WHERE source_number=$1';
+    async list({limit=100,offset=0,status='',classification='',sourceNumber=SOURCE_NUMBER}={}){
+      if(!SOURCE_NUMBERS.includes(sourceNumber))throw Error('Invalid source number');
+      const params=[sourceNumber,limit,offset];let where='WHERE source_number=$1';
       if(status){params.push(status);where+=' AND status=$'+params.length}
       if(classification){params.push(classification);where+=' AND classification_code=$'+params.length}
       const r=await db.query('SELECT id,source_number,phone,classification_code,classification_label,classification_source,confidence,status,evidence,first_seen_at,last_seen_at,classified_at,promoted_at,lead_id FROM crm_contact_classifications '+where+' ORDER BY last_seen_at DESC,id DESC LIMIT $2 OFFSET $3',params);
-      const n=await db.query('SELECT count(*)::int AS total FROM crm_contact_classifications WHERE source_number=$1',[SOURCE_NUMBER]);
+      const n=await db.query('SELECT count(*)::int AS total FROM crm_contact_classifications WHERE source_number=$1',[sourceNumber]);
       return {classifications:r.rows,total:n.rows[0].total};
     },
     async classify({id,code,source='operator',confidence=null,actor='operator'}){

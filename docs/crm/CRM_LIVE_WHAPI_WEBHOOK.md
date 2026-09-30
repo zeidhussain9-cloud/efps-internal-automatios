@@ -11,35 +11,35 @@ Supabase Edge Function: whapi-crm-webhook
         +--> crm_webhook_events (durable activity/audit first)
         |
         v
-existing source + customer phone?
-   | yes                    | no
-   v                        v
-existing crm_lead       create crm_lead
-   |                        |
-   +-----------+------------+
-               |
-               v
-        crm_messages
-               |
-               v
-     Supabase Realtime
-               |
-               v
-          CRM UI refresh
+crm_contact_classifications
+   | pending                 | promoted
+   v                         v
+crm_messages            existing crm_lead
+   |                         |
+   +------------+------------+
+                |
+                v
+       Supabase Realtime
+                |
+                v
+           CRM UI refresh
+
+Operator selects Qualified Lead in Contact Classification before promotion.
 ```
 
-There is **no listener abstraction** in this path. There is no inventory listener, lead listener, CRM listener, new-contact intake queue, or qualification gate.
+There is **no listener abstraction** in this path. There is no inventory listener, lead listener, CRM listener, or staged intake queue. `crm_contact_classifications` is the durable pre-lead registry and the operator qualification gate.
 
 ## Lead identity
 
 The CRM source is the connected WhatsApp identity `+919148338801`. A customer is represented by the normalized customer phone stored as `crm_lead_sources.source_contact_id` for that source.
 
-- If the source + customer phone already has a lead, the new provider message is appended to that lead.
-- If the source + customer phone has no lead, a new `crm_leads` row and `crm_lead_sources` row are created immediately.
+- If the source + customer phone already has a promoted lead, the new provider message is appended to that lead.
+- If the source + customer phone has no promoted lead, the contact classification row is created/updated with `pending` status and the message is preserved with `lead_id` null.
+- Only an operator selecting **Qualified Lead** calls the promotion path, which creates the `crm_leads` row and `crm_lead_sources` row and backfills preserved messages.
 - A contact name supplied by WhAPI is stored when the lead has no existing display name.
 - If no name is supplied, the phone remains the truthful fallback. No name is fabricated.
 
-This is direct lead association, not a separate "lead resolution" subsystem.
+This is a two-layer contact-to-lead flow: the classification registry preserves unknown contacts until an operator promotes one into the Lead CRM.
 
 ## Webhook activity table
 
@@ -55,10 +55,11 @@ Processing states are `received`, `processing`, `processed`, and `failed`. A pro
 
 Current verified source population:
 
-- **228 leads**
-- **5,286 historical messages** for `+919148338801`
+- **140 CRM leads** currently persisted in production
+- **228 historical classifications** for `+919148338801`, currently all non-pending
+- **5,286 historical messages**
 - **0 intake contacts**; the intake tables were removed from the CRM live model
-- **0 persisted webhook events** before first live traffic
+- **0 persisted live webhook events** at the reconciliation checkpoint
 
 ## UI live updates
 

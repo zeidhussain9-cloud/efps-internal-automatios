@@ -214,7 +214,7 @@ Supabase `easyfind-crm` (`qttcutwzehtskfcwxkwj`, Mumbai) is ACTIVE_HEALTHY and i
 - [x] Replaced the proposed listener model with a single lead path for the CRM live flow. No inventory listener, lead listener, CRM listener, staged-contact intake or qualification gate exists in the CRM path.
 - [x] Deployed Supabase Edge Function `whapi-crm-webhook` as the live WhAPI ingress for source `+919148338801`; Render is not the webhook receiver and AWS is not a CRM runtime dependency.
 - [x] Added durable `crm_webhook_events` activity/audit storage with provider-message idempotency and received/processing/processed/failed states.
-- [x] New source-phone activity creates a lead directly; existing source-phone activity appends to the existing lead. Contact names are retained when supplied and the phone is the truthful fallback.
+- [x] New source-phone activity is held in `crm_contact_classifications` with `pending` status and preserved `crm_messages`; it does not create a `crm_leads` row until an operator selects Qualified Lead. Existing promoted contacts continue to append to their lead.
 - [x] Removed CRM intake tables and Render intake routes. There is no separate new-contact staging model.
 - [x] Historical CRM population is reconciled at 228 leads and 5,286 messages for source `+919148338801`.
 - [x] Workspace message ordering is chronological by provider `message_at`, with source/provider identity preserved separately.
@@ -222,3 +222,17 @@ Supabase `easyfind-crm` (`qttcutwzehtskfcwxkwj`, Mumbai) is ACTIVE_HEALTHY and i
 - [x] Removed the Render-side WhatsApp ingestion route; the old CRM WhatsApp environment gate remains disabled.
 - [x] Verified the Edge Function with correct authentication (HTTP 200) and incorrect authentication (HTTP 401). Transactional lead/message processing was exercised and rolled back; persisted counts remained 228/5,286.
 - [ ] Final provider cutover: update the connected WhAPI channel's `messages` webhook URL/header to the deployed Supabase function. The available local provider credential did not resolve to an active usable WhAPI channel during this checkpoint, so no provider setting was guessed or changed.
+
+## 2026-09-30 — UI/data-model reconciliation checkpoint
+
+- [x] Contact Classification is now an actual pre-lead registry: the user sees phone/source/status and can classify the contact; Qualified Lead is the only classification that promotes into `crm_leads`.
+- [x] Verified source selector contains all three audited EFPS WhatsApp source numbers: `+919148338801`, `+917975102130`, `+919902024973`. The currently connected live WhAPI ingress remains `+919148338801`; the other two are selectable data scopes and are not claimed as live webhook channels.
+- [x] Lead Workspace now exposes an operator-editable **Lead Status** dropdown backed by `crm_leads.lead_type`; the label is no longer presented as lead qualification.
+- [x] Added operator-editable **Tenant Type** persisted in `crm_leads.tenant_type` with Family, Bachelors, Couples, Students, Working Professionals, Corporate, Other and Not specified values.
+- [x] Lead status and tenant type updates use the protected CRM API and write an append-only activity event in the same transaction.
+- [x] Leads Inbox supports server-side filters for Lead Status and Lead Source Number.
+- [x] Dashboard now reports CRM lead count, waiting-to-be-classified count, live-WhAPI-qualified-lead count and webhook error count for the selected source. It no longer presents a hardcoded historical message count as the live lead metric.
+- [x] Realtime diagnostics now surface the actual channel error alongside the connection state instead of only showing `Realtime: error`.
+- [x] Applied production migration `20260930145131` (`crm_lead_status_tenant_type_and_webhook_gate_reconciliation`) and verified `crm_leads.tenant_type` plus the reconciled no-auto-lead webhook processor in Supabase.
+- [x] Current production evidence after this migration: 140 `crm_leads`, 228 source classifications for `+919148338801`, 0 pending classifications, 5,286 historical `crm_messages`, and 0 persisted webhook events. No live WhatsApp lead is currently present in the database.
+- [x] Local production build, all 62 unit/integration tests, and the Playwright browser journey pass. The browser journey now covers the live-record surface, Lead Status/Tenant Type controls and persisted-update API path.

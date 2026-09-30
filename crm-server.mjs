@@ -45,7 +45,7 @@ createServer(async(req,res)=>{
     }
     if(p.startsWith('/api/db/leads/')&&req.method==='PATCH'){
      const id=decodeURIComponent(p.slice('/api/db/leads/'.length));if(!id||id.includes('/')||id.length>128){res.writeHead(400,security);return res.end('Invalid lead ID')}
-     const body=await readJsonBody(req);const lead=await repo.updateLead({id,displayName:body.displayName,normalizedPhone:body.normalizedPhone,status:body.status,priority:body.priority,requirements:body.requirements,operatorNotes:body.operatorNotes,actor});if(!lead){res.writeHead(404,security);return res.end('Lead not found')}res.writeHead(200,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify(lead));
+     const body=await readJsonBody(req);const lead=await repo.updateLead({id,displayName:body.displayName,normalizedPhone:body.normalizedPhone,status:body.status,leadType:body.leadType,tenantType:body.tenantType,priority:body.priority,requirements:body.requirements,operatorNotes:body.operatorNotes,actor});if(!lead){res.writeHead(404,security);return res.end('Lead not found')}res.writeHead(200,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify(lead));
     }
     if(p.match(/^\/api\/db\/leads\/[^/]+\/activity$/)&&req.method==='POST'){
      const id=decodeURIComponent(p.split('/')[4]);const body=await readJsonBody(req);const row=await repo.appendActivity({leadId:id,actor,action:body.action,details:body.details});res.writeHead(201,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify(row));
@@ -70,11 +70,11 @@ createServer(async(req,res)=>{
    const limitRaw=q.get('limit')||'100',offsetRaw=q.get('offset')||'0';
    if(!/^\\d{1,3}$/.test(limitRaw)||!/^\\d{1,7}$/.test(offsetRaw)){res.writeHead(400,security);return res.end('Invalid pagination');}
    const repo=createCrmClassificationRepository();
-   try{const data=await repo.list({limit:Number(limitRaw),offset:Number(offsetRaw),status:q.get('status')||'',classification:q.get('classification')||''});res.writeHead(200,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify(data));}
+   try{const data=await repo.list({limit:Number(limitRaw),offset:Number(offsetRaw),status:q.get('status')||'',classification:q.get('classification')||'',sourceNumber:q.get('source_number')||'+919148338801'});res.writeHead(200,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify(data));}
    finally{await repo.close();}
   }
   // Read-only database pilot: explicit opt-in, protected access and no customer writes.
-  if(p==='/api/db/status'||p==='/api/db/leads'||p.startsWith('/api/db/leads/')){
+  if(p==='/api/db/status'||p==='/api/db/stats'||p==='/api/db/leads'||p.startsWith('/api/db/leads/')){
    if(process.env.CRM_DB_READ_ENABLED!=='true'||!process.env.DATABASE_URL||mode!=='protected'){
     res.writeHead(404,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify({error:'Database pilot disabled'}));
    }
@@ -83,15 +83,18 @@ createServer(async(req,res)=>{
    try{
     let data;
     if(p==='/api/db/status')data={connected:await repo.health(),readOnly:true};
+    else if(p==='/api/db/stats'){
+     const q=new URL(req.url,'http://localhost').searchParams;data=await repo.dashboardStats(q.get('source_number')||'+919148338801');
+    }
     else if(p==='/api/db/leads'){
      const q=new URL(req.url,'http://localhost').searchParams;
-     const raw=q.get('limit')??'50',offset=q.get('offset')??'0';
+     const raw=q.get('limit')??'50',offset=q.get('offset')??'0',sourceNumber=q.get('source_number')||'+919148338801';
      if(!/^\d{1,3}$/.test(raw)||!/^\d{1,7}$/.test(offset)){res.writeHead(400,security);return res.end('Invalid pagination');}
-     data=await repo.listLeadsPage(Number(raw),Number(offset));
+     data=await repo.listLeadsPage(Number(raw),Number(offset),sourceNumber,q.get('lead_status')||'');
     }else if(/^\/api\/db\/leads\/[^/]+\/workspace$/.test(p)){
      const id=decodeURIComponent(p.slice('/api/db/leads/'.length,-'/workspace'.length));
      if(!id||id.includes('/')||id.length>128){res.writeHead(400,security);return res.end('Invalid lead ID');}
-     data=await repo.getLeadWorkspace(id);
+     data=await repo.getLeadWorkspace(id,q.get('source_number')||'+919148338801');
      if(!data.lead){res.writeHead(404,security);return res.end('Lead not found');}
     }else{
      const id=decodeURIComponent(p.slice('/api/db/leads/'.length));

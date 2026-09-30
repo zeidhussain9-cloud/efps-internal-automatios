@@ -5,7 +5,10 @@ import {LayoutDashboard,Inbox,Building2,Settings,Search,ChevronLeft,BrainCircuit
 import InventoryPanel from './inventory-panel.jsx';
 import './style.css';
 
-const SOURCE_NUMBER='+919148338801';
+const SOURCE_NUMBERS=['+919148338801','+917975102130','+919902024973'];
+const SOURCE_NUMBER=SOURCE_NUMBERS[0];
+const LEAD_STATUSES=['New','Active Follow-up','Waiting on Customer','Waiting on Us','Nurture','Dormant','Converted','Lost','On Hold'];
+const TENANT_TYPES=['Family','Bachelors','Couples','Students','Working Professionals','Corporate','Other','Not specified'];
 const TABS=['Overview','Conversation','Requirements','Property Matches','AI & Drafts','Activity & History'];
 const MENU=[['Dashboard',LayoutDashboard],['Contact Classification',Inbox],['Leads Inbox',Inbox],['Inventory',Building2],['Settings',Settings]];
 const SUPABASE_URL=import.meta.env.VITE_SUPABASE_URL||'';
@@ -71,6 +74,12 @@ function App(){
  const[classifications,setClassifications]=useState([]);
  const[classificationState,setClassificationState]=useState('idle');
  const[classificationFilter,setClassificationFilter]=useState('');
+ const[sourceFilter,setSourceFilter]=useState(SOURCE_NUMBER);
+ const[leadStatusFilter,setLeadStatusFilter]=useState('');
+ const[leadStatus,setLeadStatus]=useState('');
+ const[tenantType,setTenantType]=useState('Not specified');
+ const[realtimeError,setRealtimeError]=useState('');
+ const[dashboardStats,setDashboardStats]=useState(null);
 
  useEffect(()=>{try{window.sessionStorage.setItem('efps-crm-active-page',page)}catch{}},[page]);
 
@@ -79,7 +88,7 @@ function App(){
   async function load(){
    setLoading(true);setError('');
    try{
-    const r=await fetch('/api/db/leads?limit=100&offset='+offset,{cache:'no-store'});
+    const r=await fetch('/api/db/leads?limit=100&offset='+offset+'&source_number='+encodeURIComponent(sourceFilter)+'&lead_status='+encodeURIComponent(leadStatusFilter),{cache:'no-store'});
     if(!r.ok)throw Error('Live CRM records unavailable');
     const d=await r.json();
     if(!active)return;
@@ -90,16 +99,22 @@ function App(){
   }
   load();
   return()=>{active=false};
- },[offset,refreshToken]);
+ },[offset,sourceFilter,leadStatusFilter,refreshToken]);
 
  useEffect(()=>{
   let active=true;
   if(page!=='Contact Classification')return()=>{active=false};
   setClassificationState('loading');
-  const qs=new URLSearchParams({limit:'100'});if(classificationFilter)qs.set('classification',classificationFilter);
+  const qs=new URLSearchParams({limit:'100'});if(classificationFilter)qs.set('classification',classificationFilter);if(sourceFilter)qs.set('source_number',sourceFilter);
   fetch('/api/db/classifications?'+qs.toString(),{cache:'no-store'}).then(async r=>{if(!r.ok)throw Error('Classification records unavailable');return r.json()}).then(d=>{if(active){setClassifications(Array.isArray(d.classifications)?d.classifications:[]);setClassificationState('ready')}}).catch(()=>{if(active){setClassifications([]);setClassificationState('unavailable')}});
   return()=>{active=false};
- },[page,classificationFilter,refreshToken]);
+ },[page,classificationFilter,sourceFilter,refreshToken]);
+
+ useEffect(()=>{
+  let active=true;
+  fetch('/api/db/stats?source_number='+encodeURIComponent(sourceFilter),{cache:'no-store'}).then(async r=>{if(!r.ok)throw Error('Dashboard stats unavailable');return r.json()}).then(d=>{if(active)setDashboardStats(d)}).catch(()=>{if(active)setDashboardStats(null)});
+  return()=>{active=false};
+ },[sourceFilter,refreshToken]);
 
  useEffect(()=>{
   let active=true;
@@ -121,11 +136,11 @@ function App(){
   setWorkspaceState('loading');setAi(null);setAiState('idle');setMatches([]);setMatchState('loading');
   async function load(){
    try{
-    const r=await fetch('/api/db/leads/'+encodeURIComponent(selectedId)+'/workspace',{cache:'no-store'});
+    const r=await fetch('/api/db/leads/'+encodeURIComponent(selectedId)+'/workspace?source_number='+encodeURIComponent(sourceFilter),{cache:'no-store'});
     if(!r.ok)throw Error('Lead workspace unavailable');
     const data=await r.json();
     if(!active)return;
-    setWorkspace(data);setWorkspaceState('ready');
+    setWorkspace(data);setLeadStatus(data.lead?.lead_type||'New');setTenantType(data.lead?.tenant_type||'Not specified');setWorkspaceState('ready');
     const req=normalizeRequirements(data.lead?.requirements);
     const bhkMatch=String(req.bhk||'').match(/\d+/);
     const bhk=bhkMatch?bhkMatch[0]:'';
@@ -147,14 +162,14 @@ function App(){
   }
   load();
   return()=>{active=false};
- },[selectedId,refreshToken]);
+ },[selectedId,sourceFilter,refreshToken]);
 
  useEffect(()=>{
   if(!supabase){setRealtimeState('unconfigured');return()=>{}}
   let active=true;
   const channel=supabase.channel('crm:live')
    .on('broadcast',{event:'message_inserted'},()=>{if(active)setRefreshToken(v=>v+1)})
-   .subscribe(status=>{if(!active)return;setRealtimeState(status==='SUBSCRIBED'?'live':status==='CHANNEL_ERROR'?'error':'connecting')});
+   .subscribe((status,err)=>{if(!active)return;setRealtimeState(status==='SUBSCRIBED'?'live':status==='CHANNEL_ERROR'?'error':'connecting');setRealtimeError(status==='SUBSCRIBED'?'':(err?.message||String(err||status)))})
   return()=>{active=false;supabase.removeChannel(channel)};
  },[]);
 
@@ -167,6 +182,7 @@ function App(){
  function backToInbox(){setSelectedId(null);setWorkspace(null);setTab('Overview');setPage('Leads Inbox')}
  function refresh(){setRefreshToken(v=>v+1)}
  function classifyContact(id,classification){fetch('/api/db/classifications/'+id,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({classification,source:'operator'})}).then(async r=>{if(!r.ok)throw Error('Classification update failed');return r.json()}).then(()=>refresh()).catch(()=>setClassificationState('unavailable'))}
+ function updateLead(id,patch){return fetch('/api/db/leads/'+encodeURIComponent(id),{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(patch)}).then(async r=>{const d=await r.json().catch(()=>({}));if(!r.ok)throw Error(d.error||'Lead update failed');return d}).then(()=>refresh())}
  function runAi(){
   if(!workspace?.lead?.id)return;
   setAiState('running');setAi(null);
@@ -189,14 +205,14 @@ function App(){
    </header>
    <div className="content">
 
-    {page==='Contact Classification'&&<section><div className="heading"><div><h1>Lead Classification</h1><p>Manual gate: every new WhatsApp number waits here before it can become a CRM lead.</p></div><button className="primary" onClick={refresh}><RefreshCw size={14}/> Refresh</button></div><div className="panel standalone"><div className="production-toolbar"><label>View <select value={classificationFilter} onChange={e=>setClassificationFilter(e.target.value)}><option value="">All contacts</option><option value="pending">Awaiting classification</option><option value="qualified_lead">Qualified Lead</option><option value="promotion">Promotion / Marketing</option><option value="cold_inquiry">Cold Inquiry</option><option value="property_listing_sent">Property Listing Sent</option><option value="vendor_supplier">Vendor / Supplier</option><option value="agent_partner">Agent / Partner</option><option value="personal_family">Personal / Family</option><option value="internal">Internal</option><option value="unknown">Unknown</option></select></label><span>Historical classifications are imported as evidence. Live contacts never become leads automatically.</span></div>{classificationState==='loading'&&<div className="empty">Loading classifications…</div>}{classificationState==='unavailable'&&<div className="notice">Classification records are unavailable. No fallback data is shown.</div>}{classificationState==='ready'&&(classifications.length?classifications.map(c=><article className="event" key={c.id}><div><b>{c.phone}</b><small>{c.classification_label} · {c.status} · {c.classification_source}</small></div><select value={c.classification_code==='pending'?'pending':c.classification_code} onChange={e=>e.target.value!=='pending'&&classifyContact(c.id,e.target.value)}><option value="pending" disabled>Choose classification</option><option value="qualified_lead">Qualified Lead</option><option value="promotion">Promotion / Marketing</option><option value="cold_inquiry">Cold Inquiry</option><option value="property_listing_sent">Property Listing Sent</option><option value="vendor_supplier">Vendor / Supplier</option><option value="agent_partner">Agent / Partner</option><option value="personal_family">Personal / Family</option><option value="internal">Internal</option><option value="business">Business</option><option value="unknown">Unknown</option></select></article>):<div className="empty">No contacts match this classification.</div>)}</div><div className="notice">Selecting Qualified Lead creates the CRM record and synchronizes all preserved messages for that number. Other classifications remain outside the Lead CRM.</div></section>}
+    {page==='Contact Classification'&&<section><div className="heading"><div><h1>Contact Classification</h1><p>Every new WhatsApp number is preserved here until an operator qualifies it as a CRM lead.</p></div><button className="primary" onClick={refresh}><RefreshCw size={14}/> Refresh</button></div><div className="panel standalone"><div className="production-toolbar"><label>Lead source <select value={sourceFilter} onChange={e=>setSourceFilter(e.target.value)}>{SOURCE_NUMBERS.map(n=><option key={n} value={n}>{n}</option>)}</select></label><label>View <select value={classificationFilter} onChange={e=>setClassificationFilter(e.target.value)}><option value="">All contacts</option><option value="pending">Awaiting classification</option><option value="qualified_lead">Qualified Lead</option><option value="promotion">Promotion / Marketing</option><option value="cold_inquiry">Cold Inquiry</option><option value="property_listing_sent">Property Listing Sent</option><option value="vendor_supplier">Vendor / Supplier</option><option value="agent_partner">Agent / Partner</option><option value="personal_family">Personal / Family</option><option value="internal">Internal</option><option value="unknown">Unknown</option></select></label><span>Historical classifications are imported as evidence. Live contacts never become leads automatically.</span></div>{classificationState==='loading'&&<div className="empty">Loading classifications…</div>}{classificationState==='unavailable'&&<div className="notice">Classification records are unavailable. No fallback data is shown.</div>}{classificationState==='ready'&&(classifications.length?classifications.map(c=><article className="event" key={c.id}><div><b>{c.phone}</b><small>{c.classification_label} · {c.status} · {c.classification_source} · {c.source_number}</small></div><select value={c.classification_code==='pending'?'pending':c.classification_code} onChange={e=>e.target.value!=='pending'&&classifyContact(c.id,e.target.value)}><option value="pending" disabled>Choose classification</option><option value="qualified_lead">Qualified Lead</option><option value="promotion">Promotion / Marketing</option><option value="cold_inquiry">Cold Inquiry</option><option value="property_listing_sent">Property Listing Sent</option><option value="vendor_supplier">Vendor / Supplier</option><option value="agent_partner">Agent / Partner</option><option value="personal_family">Personal / Family</option><option value="internal">Internal</option><option value="business">Business</option><option value="unknown">Unknown</option></select></article>):<div className="empty">No contacts match this classification.</div>)}</div><div className="notice">These are contacts, not leads. Selecting <b>Qualified Lead</b> creates the CRM record and links all preserved messages for that number. Other classifications remain outside the Lead CRM.</div></section>}
     {page==='Inventory'&&<InventoryPanel data={inventoryData} state={inventoryState} refresh={refresh} query={inventoryQuery} setQuery={setInventoryQuery}/>}
-    {page==='Settings'&&<><div className="heading"><div><h1>Settings</h1><p>Production CRM configuration</p></div></div><div className="panel standalone"><h3>Live data scope</h3><p>This dashboard is connected only to the lead source <b>{SOURCE_NUMBER}</b>. Production data modes are enforced.</p><p>New WhatsApp activity is held in Contact Classification until an operator promotes it. The browser does not send WhatsApp messages automatically.</p></div></>}
+    {page==='Settings'&&<><div className="heading"><div><h1>Settings</h1><p>Production CRM configuration</p></div></div><div className="panel standalone"><h3>WhatsApp sources</h3><p>Verified EFPS source numbers:</p><div className="source-list">{SOURCE_NUMBERS.map(n=><span className="chip source" key={n}>{n}</span>)}</div><p>New WhatsApp activity is held in Contact Classification until an operator promotes it. The browser does not send WhatsApp messages automatically.</p></div></>}
     {(page==='Dashboard'||page==='Leads Inbox')&&selectedId&&workspaceState==='ready'&&<section className="panel live-detail">
       <div className="detailhead">
        <button className="back" onClick={backToInbox}><ChevronLeft size={18}/> Leads Inbox</button>
        <div className="identity"><span className="initial">{leadTitle(workspace.lead).split(/\s+/).map(x=>x[0]).join('').slice(0,3)}</span><div><h2>{leadTitle(workspace.lead)}</h2><span>{workspace.lead.normalized_phone||'No phone stored'} · {SOURCE_NUMBER}</span></div></div>
-       <div className="headcontrols"><span className="chip blue">{workspace.lead.status}</span><span className="chip">{workspace.lead.priority}</span><span className="chip classification">{classificationLabel(workspace.lead.classification||workspace.lead.requirements?.fields?.classification||workspace.lead.requirements?.classification)}</span></div>
+       <div className="headcontrols"><label className="inline-field">Lead Status <select value={leadStatus||workspace.lead.lead_type||'New'} onChange={e=>{setLeadStatus(e.target.value);updateLead(workspace.lead.id,{leadType:e.target.value}).catch(()=>{})}}>{LEAD_STATUSES.map(s=><option key={s} value={s}>{s}</option>)}</select></label><label className="inline-field">Tenant Type <select value={tenantType} onChange={e=>{setTenantType(e.target.value);updateLead(workspace.lead.id,{tenantType:e.target.value}).catch(()=>{})}}>{TENANT_TYPES.map(t=><option key={t} value={t}>{t}</option>)}</select></label><span className="chip">{workspace.lead.priority}</span><span className="chip classification">{classificationLabel(workspace.lead.classification||workspace.lead.requirements?.fields?.classification||workspace.lead.requirements?.classification)}</span></div>
       </div>
       <div className="tabs">{TABS.map(t=><button className={tab===t?'active':''} key={t} onClick={()=>setTab(t)}>{t}</button>)}</div>
       <div className="tabbody">
@@ -209,11 +225,12 @@ function App(){
       </div>
      </section>}
     {(page==='Dashboard'||page==='Leads Inbox')&&!selectedId&&<section>
-      <div className="heading"><div><h1>{page==='Dashboard'?'CRM Dashboard':'Leads Inbox'}</h1><p>Live production records from {SOURCE_NUMBER}</p></div><div className="headcontrols"><span className="chip green">228-source scope</span><button className="primary" onClick={refresh}><RefreshCw size={14}/> Refresh</button></div></div>
+      <div className="heading"><div><h1>{page==='Dashboard'?'CRM Dashboard':'Leads Inbox'}</h1><p>Live production records across the verified WhatsApp source numbers.</p></div><div className="headcontrols"><label className="inline-field">Lead source <select value={sourceFilter} onChange={e=>{setSourceFilter(e.target.value);setOffset(0)}}>{SOURCE_NUMBERS.map(n=><option key={n} value={n}>{n}</option>)}</select></label><button className="primary" onClick={refresh}><RefreshCw size={14}/> Refresh</button></div></div>
       {error&&<div className="notice">Live CRM unavailable. {error}</div>}
-      {page==='Dashboard'&&<div className="stats"><div className="stat"><small>Real leads</small><b>{total}</b><span>Imported from {SOURCE_NUMBER}</span></div><div className="stat"><small>Lead records on page</small><b>{leads.length}</b><span>Current live page</span></div><div className="stat"><small>Historical messages</small><b>5,286</b><span>Source-backed conversation records</span></div><div className="stat"><small>Inventory records</small><b>{inventoryData?.rows?.length??'—'}</b><span>Supabase inventory mirror</span></div></div>}
+      {page==='Dashboard'&&realtimeState==='error'&&<div className="notice">Realtime connection error: {realtimeError||'channel subscription failed'}. Live webhook ingestion is independent and continues server-side.</div>}
+      {page==='Dashboard'&&<div className="stats"><div className="stat"><small>CRM leads</small><b>{dashboardStats?.leadCount??total}</b><span>Qualified leads for {sourceFilter}</span></div><div className="stat"><small>Waiting to be classified</small><b>{dashboardStats?.pendingClassificationCount??0}</b><span>Contacts held outside Lead CRM</span></div><div className="stat"><small>Live WhatsApp leads</small><b>{dashboardStats?.liveLeadCount??0}</b><span>Created only after manual qualification</span></div><div className="stat"><small>Webhook errors</small><b>{dashboardStats?.webhookErrorCount??0}</b><span>Failed events for {sourceFilter}</span></div></div>}
       <div className="panel leadlist-production">
-       <div className="production-toolbar"><label className="search"><Search size={16}/><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Search name or phone" aria-label="Search live leads"/></label><span>{total} real leads</span></div>
+       <div className="production-toolbar"><label className="search"><Search size={16}/><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Search name or phone" aria-label="Search live leads"/></label><label>Lead status <select value={leadStatusFilter} onChange={e=>{setLeadStatusFilter(e.target.value);setOffset(0)}}><option value="">All statuses</option>{LEAD_STATUSES.map(s=><option key={s} value={s}>{s}</option>)}</select></label><label>Lead source <select value={sourceFilter} onChange={e=>{setSourceFilter(e.target.value);setOffset(0)}}>{SOURCE_NUMBERS.map(n=><option key={n} value={n}>{n}</option>)}</select></label><span>{total} leads</span></div>
        {loading?<div className="empty">Loading live leads…</div>:visibleLeads.length?visibleLeads.map(l=><LeadCard key={l.id} lead={l} onClick={()=>openLead(l.id)}/>):<div className="empty">No live leads match this search.</div>}
       </div>
       <div className="pagination"><button disabled={offset===0} onClick={()=>setOffset(Math.max(0,offset-100))}>Previous</button><span>{total?offset+1:0}–{Math.min(offset+leads.length,total)} of {total}</span><button disabled={offset+100>=total} onClick={()=>setOffset(offset+100)}>Next</button></div>

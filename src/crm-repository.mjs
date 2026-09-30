@@ -1,7 +1,8 @@
 import crypto from 'node:crypto';
 import pg from 'pg';
 const SUPABASE_SESSION_POOLER_HOST='aws-0-ap-south-1.pooler.supabase.com';
-const SOURCE_NUMBER='+919148338801';
+const SOURCE_NUMBERS=['+919148338801','+917975102130','+919902024973'];
+const SOURCE_NUMBER=SOURCE_NUMBERS[0];
 const trimConnectionString=value=>{if(typeof value!=='string')return value;const trimmed=value.trim();if((trimmed.startsWith('"')&&trimmed.endsWith('"'))||(trimmed.startsWith("'")&&trimmed.endsWith("'")))return trimmed.slice(1,-1).trim();return trimmed};
 const decodePart=value=>{try{return decodeURIComponent(value)}catch{return value}};
 const encodePart=value=>encodeURIComponent(decodePart(value));
@@ -20,7 +21,8 @@ export function createCrmRepository({pool,connectionString=process.env.DATABASE_
  return{
   async health(){const r=await db.query('SELECT 1 AS ok');return r.rows[0]?.ok===1},
   async listLeads(limit=50){if(!Number.isInteger(limit)||limit<1||limit>100)throw Error('Invalid limit');const r=await db.query('SELECT id,display_name,status,priority,requirements,updated_at FROM crm_leads ORDER BY updated_at DESC,id LIMIT $1',[limit]);return r.rows},
-  async listLeadsPage(limit=50,offset=0){if(!Number.isInteger(limit)||limit<1||limit>100||!Number.isInteger(offset)||offset<0)throw Error('Invalid pagination');const source=SOURCE_NUMBER;const [r,n]=await Promise.all([db.query("SELECT l.id,l.display_name,l.normalized_phone,l.status,l.priority,l.classification,l.requirements,l.updated_at,s.source_number FROM crm_leads l JOIN LATERAL (SELECT source_number FROM crm_lead_sources WHERE lead_id=l.id AND source_number=$1 ORDER BY source_number LIMIT 1) s ON true ORDER BY l.updated_at DESC,l.id LIMIT $2 OFFSET $3",[source,limit,offset]),db.query("SELECT count(*)::int AS total FROM crm_leads l WHERE EXISTS (SELECT 1 FROM crm_lead_sources s WHERE s.lead_id=l.id AND s.source_number=$1)",[source])]);return{leads:r.rows,total:n.rows[0].total,sourceTotals:{[source]:n.rows[0].total}}},
+  async listLeadsPage(limit=50,offset=0,sourceNumber=SOURCE_NUMBER,leadStatus=''){if(!Number.isInteger(limit)||limit<1||limit>100||!Number.isInteger(offset)||offset<0||!SOURCE_NUMBERS.includes(sourceNumber))throw Error('Invalid pagination/source');const source=sourceNumber;const allowed=['New','Active Follow-up','Waiting on Customer','Waiting on Us','Nurture','Dormant','Converted','Lost','On Hold'];if(leadStatus&&!allowed.includes(leadStatus))throw Error('Invalid lead status');const params=[source];let where="EXISTS (SELECT 1 FROM crm_lead_sources s WHERE s.lead_id=l.id AND s.source_number=$1)";if(leadStatus){params.push(leadStatus);where+=' AND l.lead_type=$'+params.length}const limitPos=params.push(limit),offsetPos=params.push(offset);const [r,n]=await Promise.all([db.query("SELECT l.id,l.display_name,l.normalized_phone,l.status,l.lead_type,l.tenant_type,l.priority,l.classification,l.requirements,l.updated_at,s.source_number FROM crm_leads l JOIN LATERAL (SELECT source_number FROM crm_lead_sources WHERE lead_id=l.id AND source_number=$1 ORDER BY source_number LIMIT 1) s ON true WHERE "+where+" ORDER BY l.updated_at DESC,l.id LIMIT $"+limitPos+" OFFSET $"+offsetPos,params),db.query("SELECT count(*)::int AS total FROM crm_leads l WHERE "+where,params.slice(0,leadStatus?2:1))]);const total=n.rows[0].total;return{leads:r.rows,total,sourceTotals:Object.fromEntries(SOURCE_NUMBERS.map(item=>[item,item===source?total:0]))}},
+  async dashboardStats(sourceNumber=SOURCE_NUMBER){if(!SOURCE_NUMBERS.includes(sourceNumber))throw Error('Invalid source');const [leadCount,liveCount,pendingCount,failedCount]=await Promise.all([db.query("SELECT count(*)::int AS n FROM crm_leads l WHERE EXISTS (SELECT 1 FROM crm_lead_sources s WHERE s.lead_id=l.id AND s.source_number=$1)",[sourceNumber]),db.query("SELECT count(*)::int AS n FROM crm_contact_classifications c JOIN crm_leads l ON l.id=c.lead_id JOIN crm_lead_sources s ON s.lead_id=l.id AND s.source_number=$1 WHERE c.status='promoted' AND c.evidence->>'provenance'='live_whapi_webhook'",[sourceNumber]),db.query("SELECT count(*)::int AS n FROM crm_contact_classifications WHERE source_number=$1 AND status='pending'",[sourceNumber]),db.query("SELECT count(*)::int AS n FROM crm_webhook_events WHERE source_number=$1 AND processing_status='failed'",[sourceNumber])]);return{sourceNumber,leadCount:leadCount.rows[0].n,liveLeadCount:liveCount.rows[0].n,pendingClassificationCount:pendingCount.rows[0].n,webhookErrorCount:failedCount.rows[0].n,supportedSourceNumbers:SOURCE_NUMBERS};},
   async inventoryOverview(){const [items,latest]=await Promise.all([db.query("SELECT listing_id,locality,society_name,bhk,monthly_rent,furnishing,listing_state,pet_friendly,cloudinary_image_urls,(source_record - ARRAY[\'raw_message_text\',\'whatsapp_contact_link\',\'whatsapp_group_link\',\'error_notes\',\'source_group\',\'inventory_locked\']::text[]) AS source_record,last_synced_at,source_snapshot_at,source_hash FROM crm_inventory_snapshot WHERE source_kind='housing_sheet' AND deleted_at IS NULL ORDER BY CASE WHEN listing_state='Available' THEN 0 ELSE 1 END,monthly_rent NULLS LAST,listing_id"),db.query('SELECT run_id,row_count,changed_count,removed_count,created_at FROM crm_inventory_sync_runs ORDER BY created_at DESC LIMIT 1')]);return{rows:items.rows,latestSync:latest.rows[0]||null}},
   async matchInventory({bhk='',budget=null,locality='',furnishing='',petFriendly='',limit=50}={}){
    if(typeof bhk!=='string'||bhk.length>64)throw Error('Invalid BHK');if(budget!==null&&(!Number.isFinite(Number(budget))||Number(budget)<0))throw Error('Invalid budget');if(typeof locality!=='string'||locality.length>240)throw Error('Invalid locality');if(typeof furnishing!=='string'||furnishing.length>64)throw Error('Invalid furnishing');if(typeof petFriendly!=='string'||petFriendly.length>32)throw Error('Invalid pet preference');if(!Number.isInteger(limit)||limit<1||limit>100)throw Error('Invalid limit');
@@ -49,11 +51,11 @@ export function createCrmRepository({pool,connectionString=process.env.DATABASE_
    return{inserted:false,message:null};
   },
   async getLead(id){if(typeof id!=='string'||!id||id.length>128)throw Error('Invalid lead ID');const r=await db.query('SELECT * FROM crm_leads WHERE id=$1',[id]);return r.rows[0]||null},
-  async getLeadWorkspace(id){
-   if(typeof id!=='string'||!id||id.length>128)throw Error('Invalid lead ID');
+  async getLeadWorkspace(id,sourceNumber=SOURCE_NUMBER){
+   if(typeof id!=='string'||!id||id.length>128||!SOURCE_NUMBERS.includes(sourceNumber))throw Error('Invalid lead ID/source');
    const [lead,source,messages,activity,followups]=await Promise.all([
-    db.query('SELECT l.* FROM crm_leads l WHERE l.id=$1 AND EXISTS (SELECT 1 FROM crm_lead_sources s WHERE s.lead_id=l.id AND s.source_number=$2)',[id,SOURCE_NUMBER]),
-    db.query('SELECT source_number,source_contact_id FROM crm_lead_sources WHERE lead_id=$1 AND source_number=$2 ORDER BY source_number',[id,SOURCE_NUMBER]),
+    db.query('SELECT l.* FROM crm_leads l WHERE l.id=$1 AND EXISTS (SELECT 1 FROM crm_lead_sources s WHERE s.lead_id=l.id AND s.source_number=$2)',[id,sourceNumber]),
+    db.query('SELECT source_number,source_contact_id FROM crm_lead_sources WHERE lead_id=$1 AND source_number=$2 ORDER BY source_number',[id,sourceNumber]),
     db.query('SELECT id,source_number,provider_message_id,source_message_id,direction,message_type,body,sender_name,media_urls,media_filenames,extracted_intent,extracted_entities,sentiment,requires_followup,replied_to_source_message_id,message_at,imported_at FROM crm_messages WHERE lead_id=$1 ORDER BY message_at ASC,id ASC',[id]),
     db.query('SELECT * FROM crm_activity WHERE lead_id=$1 ORDER BY occurred_at DESC,id DESC LIMIT 200',[id]),
     db.query('SELECT * FROM crm_followups WHERE lead_id=$1 ORDER BY due_at ASC,id ASC',[id])
@@ -63,14 +65,18 @@ export function createCrmRepository({pool,connectionString=process.env.DATABASE_
   async createLead({id,displayName=null,normalizedPhone=null,status='Review',priority='Medium',classification=null,requirements={},operatorNotes='',actor}){
    if(typeof id!=='string'||!/^L-[A-Za-z0-9_-]{1,120}$/.test(id))throw Error('Invalid lead ID');if(!actor||typeof actor!=='string'||actor.length>128)throw Error('Invalid actor');
    const req=jsonObject(requirements);return withTx(async client=>{const r=await client.query('INSERT INTO crm_leads(id,display_name,normalized_phone,status,priority,classification,requirements,operator_notes) VALUES($1,$2,$3,$4,$5,$6,$7::jsonb,$8) RETURNING *',[id,nullableString(displayName,'display name',200),nullableString(normalizedPhone,'normalized phone',64),status,priority,classification,JSON.stringify(req),operatorNotes]);await client.query('INSERT INTO crm_activity(lead_id,actor,action,details) VALUES($1,$2,$3,$4::jsonb)',[id,actor,'lead.created',JSON.stringify({status,priority,classification})]);return r.rows[0]})},
-  async updateLead({id,displayName,normalizedPhone,status,priority,requirements,operatorNotes,actor}){
+  async updateLead({id,displayName,normalizedPhone,status,leadType,tenantType,priority,requirements,operatorNotes,actor}){
    if(typeof id!=='string'||!id||id.length>128)throw Error('Invalid lead ID');if(!actor||typeof actor!=='string'||actor.length>128)throw Error('Invalid actor');
    if(status!==undefined&&!['New','Qualified','Contacted','Follow-up','Review','Archived'].includes(status))throw Error('Invalid status');
+   if(leadType!==undefined&&!['New','Active Follow-up','Waiting on Customer','Waiting on Us','Nurture','Dormant','Converted','Lost','On Hold'].includes(leadType))throw Error('Invalid lead status');
+   if(tenantType!==undefined&&!['Family','Bachelors','Couples','Students','Working Professionals','Corporate','Other','Not specified'].includes(tenantType))throw Error('Invalid tenant type');
    if(priority!==undefined&&!['High','Medium','Low'].includes(priority))throw Error('Invalid priority');
    const fields=[],args=[];const add=(sql,v)=>{fields.push(sql);args.push(v)};
    if(displayName!==undefined)add('display_name=$'+(args.length+1),nullableString(displayName,'display name',200));
    if(normalizedPhone!==undefined)add('normalized_phone=$'+(args.length+1),nullableString(normalizedPhone,'normalized phone',64));
    if(status!==undefined)add('status=$'+(args.length+1),status);
+   if(leadType!==undefined)add('lead_type=$'+(args.length+1),leadType);
+   if(tenantType!==undefined)add('tenant_type=$'+(args.length+1),tenantType);
    if(priority!==undefined)add('priority=$'+(args.length+1),priority);
    if(requirements!==undefined)add('requirements=$'+(args.length+1)+'::jsonb',JSON.stringify(jsonObject(requirements)));
    if(operatorNotes!==undefined)add('operator_notes=$'+(args.length+1),nullableString(operatorNotes,'operator notes',5000)??'');
