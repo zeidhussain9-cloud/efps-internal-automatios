@@ -8,11 +8,21 @@ const SOURCE_NUMBER='+919148338801';
 const TABS=['Overview','Conversation','Requirements','Property Matches','AI & Drafts','Activity & History'];
 const MENU=[['Dashboard',LayoutDashboard],['Leads Inbox',Inbox],['Inventory',Building2],['Settings',Settings]];
 const money=n=>n!==null&&n!==undefined&&n!==''?'₹'+Number(n).toLocaleString('en-IN'):'Not specified';
+const classificationLabel=value=>({
+ 'Qualified Lead':'Actual lead',
+ 'Agent/Partner':'Agent / broker',
+ 'Personal/Family':'Family / personal',
+ 'Vendor/Supplier':'Vendor / supplier',
+ 'Internal':'Internal / team',
+ 'Spam/Marketing':'Marketing / spam',
+ 'Property Listing Sent':'Property listing sent',
+ 'Cold Inquiry':'Cold inquiry'
+}[value]||value||'Unclassified');
 
 function LeadCard({lead,onClick}){
  return <button className="lead-card" onClick={onClick} type="button">
   <div className="lead-card-main"><b>{lead.display_name||'Unnamed lead'}</b><span>{lead.normalized_phone||'No phone stored'}</span></div>
-  <div className="lead-card-meta"><span>{lead.status}</span><span>{lead.priority}</span><span>{lead.source_number||SOURCE_NUMBER}</span></div>
+  <div className="lead-card-meta"><span>{lead.status}</span><span>{lead.priority}</span><span className="classification-chip">{classificationLabel(lead.classification)}</span><span>{lead.source_number||SOURCE_NUMBER}</span></div>
  </button>;
 }
 
@@ -104,6 +114,21 @@ function App(){
   return()=>{active=false};
  },[selectedId,refreshToken]);
 
+ useEffect(()=>{
+  if(!selectedId)return;
+  let active=true;
+  const poll=async()=>{
+   try{
+    const r=await fetch('/api/db/leads/'+encodeURIComponent(selectedId)+'/workspace',{cache:'no-store'});
+    if(!r.ok)return;
+    const data=await r.json();
+    if(active)setWorkspace(data);
+   }catch{}
+  };
+  const timer=setInterval(poll,5000);
+  return()=>{active=false;clearInterval(timer)};
+ },[selectedId]);
+
  const visibleLeads=useMemo(()=>{
   const q=query.trim().toLowerCase();
   return leads.filter(l=>!q||[l.display_name,l.normalized_phone,l.status,l.priority].some(v=>String(v||'').toLowerCase().includes(q)));
@@ -129,7 +154,7 @@ function App(){
   </aside>
   <main className="main">
    <header className="top">
-    <div><strong>{selectedId?'Lead Workspace':page}</strong><small>EasyFind Property Solutions / CRM</small></div>
+    <div className="top-title">{selectedId&&<button className="header-back" onClick={backToInbox} type="button"><ChevronLeft size={17}/> Leads Inbox</button>}<div><strong>{selectedId?'Lead Workspace':page}</strong><small>EasyFind Property Solutions / CRM</small></div></div>
     <div className="topright"><span className="chip green">● Production data</span><span className="chip source">{SOURCE_NUMBER}</span><span className="avatar">ZH</span></div>
    </header>
    <div className="content">
@@ -139,12 +164,12 @@ function App(){
       <div className="detailhead">
        <button className="back" onClick={backToInbox}><ChevronLeft size={18}/> Leads Inbox</button>
        <div className="identity"><span className="initial">{(workspace.lead.display_name||'Lead').split(' ').map(x=>x[0]).join('').slice(0,3)}</span><div><h2>{workspace.lead.display_name||'Unnamed lead'}</h2><span>{workspace.lead.normalized_phone||'No phone stored'} · {SOURCE_NUMBER}</span></div></div>
-       <div className="headcontrols"><span className="chip blue">{workspace.lead.status}</span><span className="chip">{workspace.lead.priority}</span></div>
+       <div className="headcontrols"><span className="chip blue">{workspace.lead.status}</span><span className="chip">{workspace.lead.priority}</span><span className="chip classification">{classificationLabel(workspace.lead.classification||workspace.lead.requirements?.fields?.classification||workspace.lead.requirements?.classification)}</span></div>
       </div>
       <div className="tabs">{TABS.map(t=><button className={tab===t?'active':''} key={t} onClick={()=>setTab(t)}>{t}</button>)}</div>
       <div className="tabbody">
-       {tab==='Overview'&&<><div className="two"><div className="inner"><h3>Stored requirements</h3><pre className="jsonview">{JSON.stringify(workspace.lead.requirements||{},null,2)}</pre></div><div className="inner"><h3>Operator action</h3><p>{workspace.lead.operator_notes||'No operator note stored.'}</p><a className="primary inlinebutton" href={'https://wa.me/'+String(workspace.lead.normalized_phone||'').replace(/\D/g,'')} target="_blank" rel="noopener noreferrer">Open WhatsApp</a></div></div><div className="inner"><h3>Imported data</h3><p>Messages: <b>{workspace.messages.length}</b> · Activity: <b>{workspace.activity.length}</b> · Follow-ups: <b>{workspace.followups.length}</b></p><div className="notice">{workspace.messages.length?'Historical messages are available.':'No historical messages are imported yet. The production UI does not fabricate conversation history.'}</div></div></>}
-       {tab==='Conversation'&&(workspace.messages.length?<div className="conversation">{workspace.messages.map(m=><div className={'bubble '+(m.direction==='Outgoing'?'out':'')} key={m.id}><small>{m.direction} · {new Date(m.message_at).toLocaleString()} · {m.source_number}</small><p>{m.body||'['+m.message_type+']'}</p></div>)}</div>:<div className="empty">No imported conversation for this lead. Historical message import is separate from the 228-lead import.</div>)}
+       {tab==='Overview'&&<><div className="two"><div className="inner"><h3>Lead classification</h3><div className="classification-large">{classificationLabel(workspace.lead.classification||workspace.lead.requirements?.fields?.classification||workspace.lead.requirements?.classification)}</div><p className="muted">Source classification from the historical extraction. New live contacts remain unclassified until classified.</p></div><div className="inner"><h3>Stored requirements</h3><pre className="jsonview">{JSON.stringify(workspace.lead.requirements||{},null,2)}</pre></div><div className="inner"><h3>Operator action</h3><p>{workspace.lead.operator_notes||'No operator note stored.'}</p><a className="primary inlinebutton" href={'https://wa.me/'+String(workspace.lead.normalized_phone||'').replace(/\D/g,'')} target="_blank" rel="noopener noreferrer">Open WhatsApp</a></div></div><div className="inner"><h3>Imported data</h3><p>Messages: <b>{workspace.messages.length}</b> · Activity: <b>{workspace.activity.length}</b> · Follow-ups: <b>{workspace.followups.length}</b></p><div className="notice">{workspace.messages.length?'Historical messages are available.':'No historical messages are imported yet. The production UI does not fabricate conversation history.'}</div></div></>}
+       {tab==='Conversation'&&(workspace.messages.length?<div className="conversation">{workspace.messages.map(m=><div className={'bubble '+(m.direction==='Outgoing'?'out':'')} key={m.id}><small>{m.direction} · {new Date(m.message_at).toLocaleString()} · {m.sender_name||m.source_number}</small><p>{m.body||'['+m.message_type+']'}</p>{(m.media_urls||m.media_filenames)?.length>0&&<small>Media attached</small>}</div>)}</div>:<div className="empty">No imported conversation for this lead. Historical message import is separate from the 228-lead import.</div>)}
        {tab==='Requirements'&&<><div className="notice">Read-only production view. Browser writes are disabled.</div><pre className="jsonview">{JSON.stringify(workspace.lead.requirements||{},null,2)}</pre></>}
        {tab==='Property Matches'&&<>{matchState==='loading'&&<div className="empty">Matching against current Supabase inventory…</div>}{matchState==='insufficient'&&<div className="empty">No structured BHK, budget or locality is stored for this lead, so no inventory match is inferred.</div>}{matchState==='unavailable'&&<div className="empty">Live inventory matching is unavailable.</div>}{matchState==='ready'&&(filteredMatches.length?<div className="properties">{filteredMatches.map(p=><article className="property" key={p.listing_id}><div className="photo-fallback">{(p.cloudinary_image_urls||[]).length?<img src={p.cloudinary_image_urls[0]} alt={'Property '+p.listing_id}/>:<span>No property images available</span>}</div><div className="rowtop"><b>{p.bhk} · {p.locality}</b><span className="chip green">{p.listing_state}</span></div><p className="price">{money(p.monthly_rent)} <small>/ month</small></p><p>{p.furnishing||'Furnishing not recorded'} · Pets: {p.pet_friendly||'Not recorded'}</p><small>{p.listing_id} · {p.society_name||'Society not recorded'}</small></article>)}</div>:<div className="empty">No live inventory matches were returned.</div>)}</>}
        {tab==='AI & Drafts'&&<><div className="notice">Real AI is on-demand and grounded only in this stored lead record. It does not send WhatsApp messages.</div><div className="inner"><h3><BrainCircuit size={18}/> AI review</h3><p>Run a server-side review using the configured production Ollama provider.</p><button className="primary" disabled={aiState==='running'} onClick={runAi}>{aiState==='running'?'Running…':'Run AI review'}</button>{aiState==='unavailable'&&<p className="error">Real AI is unavailable or disabled. No generated result is shown.</p>}{ai&&<pre className="jsonview">{JSON.stringify(ai.proposal,null,2)}</pre>}</div></>}
