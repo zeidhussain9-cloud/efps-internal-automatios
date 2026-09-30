@@ -1,8 +1,13 @@
-## Current production checkpoint — 2026-09-30
+## Current production checkpoint — 2026-10-01
 
-The earlier synthetic-only sections below are historical setup notes. The CRM is now running with real production data for `+919148338801`. Render service `easyfind-crm-d01-d05` deploys `crm-ui-dashboard`; latest live commit is `184abfe58052b01ebf5be4dd26044f31fc579536`. Supabase is the production CRM store and WhAPI webhook ingress is active through the Supabase Edge Function.
+Render service `easyfind-crm-d01-d05` (`srv-darsv560tbcc73cu4ip0`) deploys `crm-ui-dashboard`. Current deployed commit is `45dbab7b1ba92387e5e001f74929ad40c92be6a9` and the corresponding Render deploy is live. Supabase project `qttcutwzehtskfcwxkwj` is the CRM operational database.
 
-The classification write path is protected server-side. The 2026-09-30 failure was traced to PostgreSQL error `42P18` in the new-lead insert because the source-number parameter inside `jsonb_build_object()` lacked an explicit type. The production code now uses `$5::text`; build/tests passed 62/62 before deployment.
+Current source: `+919148338801`. The other configured source numbers `+917975102130` and `+919902024973` are visible/selectable in the UI only and are not active production ingestion sources.
+
+Current production database state: 185 source-linked leads, 288 classifications, 13 pending classifications, 185 qualified classifications, 6,561 messages, and 46 webhook events (13 processed, 33 received, 0 failed). The 33 received events are an operational reconciliation backlog.
+
+The browser Realtime channel is a UI refresh signal, not the webhook source of truth. The latest hardening change explicitly allows the exact Supabase HTTPS/WSS origin in the server CSP so the browser Realtime client is not blocked by the previous `connect-src 'self'` restriction.
+
 
 # CRM deployment configuration — staged setup
 
