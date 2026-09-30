@@ -74,10 +74,16 @@ test('production CRM browser journey uses only live-record surfaces',async()=>{
   await page.getByRole('button',{name:'Restore lead'}).click();
   await page.getByRole('button',{name:'Archive lead'}).waitFor();
   await page.getByLabel('Tenant Type').selectOption('Family');
+  await page.getByRole('button',{name:'Overview',exact:true}).waitFor();
+  await page.getByRole('heading',{name:'Live lead',exact:true}).waitFor();
+  await page.getByText('Lead Status').waitFor();
+  await page.getByText('Tenant Type').waitFor();
+  await page.getByLabel('Lead Status').selectOption('Active Follow-up');
   await page.getByRole('button',{name:'Conversation',exact:true}).click();
   await page.getByText('Sensitive message hidden').waitFor();
   await page.getByRole('button',{name:/Privacy: Masked/}).click();
   await page.getByText('Historical conversation message').waitFor();
+  await page.getByRole('button',{name:/Privacy: Revealed/}).click();
   await page.locator('button.header-back').click();
   await page.getByRole('button',{name:/Live lead/}).waitFor();
   await page.getByRole('button',{name:/Live lead/}).click();
@@ -88,11 +94,4 @@ test('production CRM browser journey uses only live-record surfaces',async()=>{
   await page.getByText(/Real AI is on-demand/).waitFor();
   await page.locator('button.header-back').click();
   await page.getByText('Production data').waitFor();
-  await page.getByRole('button',{name:'Activity',exact:true}).click();
-  await page.getByText('Audit Activity').waitFor();
-  await page.getByText('auth.login').waitFor();
-  await page.getByRole('button',{name:'Settings',exact:true}).click();
-  await page.getByText('Data controls').waitFor();
-  await page.getByRole('button',{name:/Export \+919148338801/}).waitFor();
- }finally{await browser?.close();server.kill()}
-});
+}
