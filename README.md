@@ -33,14 +33,13 @@ For every implementation, the agent must review all maintained root and `docs/` 
 ## CRM production checkpoint — 2026-10-01
 
 - Canonical CRM UI branch: `crm-ui-dashboard`; Render service: `easyfind-crm-d01-d05` (`srv-darsv560tbcc73cu4ip0`).
-- Current production commit: `45dbab7b1ba92387e5e001f74929ad40c92be6a9` (`fix: allow Supabase realtime connection`); Render deployment `dep-daum4rtg1s2s73cntsv0` is live.
-- Production source in scope: `+919148338801`. `+917975102130` and `+919902024973` remain visible/selectable in the UI only and are not active production ingestion sources.
-- Supabase current state: 185 source-linked CRM leads, 288 classifications, 13 pending classifications, 185 qualified classifications, 6,561 CRM messages.
-- Webhook audit: 46 persisted events — 13 processed, 33 received, 0 failed. The 33 received events are an operational reconciliation backlog, not historical backfill evidence.
-- Historical SQLite archive remains 5,286 messages and is historical source evidence, not the live CRM total.
-- The latest operator pass promoted 44 contacts; contact 507 remains pending as an owner record and contact 508 is promoted.
-- Browser Supabase Realtime is notification/refresh only. The server-side webhook/database path is independent.
-- The current hardening deployment allowlists the exact Supabase HTTPS/WSS origin in the server CSP so the browser Realtime client is not blocked by `connect-src 'self'`.
+- Current live commit: `866dd78b594032eadff9f2a771cb170e7b41aded`; deploy: `dep-daum9vi1a91c739kcfhg`.
+- Production source: `+919148338801`; `+917975102130` and `+919902024973` remain UI-visible but inactive.
+- Supabase: 185 leads, 288 classifications, 13 pending, 2 explicitly unqualified, 185 promoted, 6,594 messages.
+- Webhook audit: 46/46 processed, 0 received, 0 failed.
+- Contact Classification now has three queues: Not pushed to CRM, Qualified lead pushed to CRM, and Unqualified leads. Not pushed includes pending + explicitly unqualified; Unqualified is the explicit excluded subset.
+- RLS is enabled on all CRM tables; anon/authenticated have no SELECT privilege. Render reports Basic Auth configured and database connectivity connected.
+- Browser Realtime is notification-only; the server webhook/database path is independent.
 
 ## Current modules
 ## Current modules
