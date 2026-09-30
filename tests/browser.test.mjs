@@ -79,6 +79,7 @@ test('production CRM browser journey uses only live-record surfaces',async()=>{
   await page.getByText('Production data').waitFor();
 
   // Exercise the compact/tablet viewport used by mobile browsers that expose a wider layout viewport.
+  await page.getByRole('button',{name:'Dashboard',exact:true}).click();
   await page.setViewportSize({width:900,height:800});
   await page.reload();
   await page.getByText('Production data').waitFor();
