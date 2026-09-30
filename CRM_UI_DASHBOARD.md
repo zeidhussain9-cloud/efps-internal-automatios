@@ -63,3 +63,11 @@ D07 is implemented on `crm-ui-dashboard`: protected operator session UX, default
 The live CRM UI now has an explicit compact/mobile shell through the 1000px breakpoint, including full-width navigation, stacked header/status controls, two-column KPI cards, full-width lead rows and single-column lead workspace content. A browser regression assertion covers a 900px compact viewport so the desktop layout cannot silently regress into the mobile browser experience.
 
 The Supabase browser Realtime client is configured from server-side Render build variables VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY and is initialized after operator sign-in. The channel is notification-only; CRM data remains read from the protected server API. Realtime: live therefore means the browser subscription is active, not that the webhook itself is the source of truth.
+
+## 2026-10-01 — Leads Inbox operational columns
+
+Lead rows/cards now show Contacted date, Last message sent by, and Last message date using the stored CRM conversation timeline. Contacted date is the first Incoming message timestamp; Last message date is the latest message timestamp; Last message sent by is derived from the latest message direction.
+
+The Inbox provides server-side sorting for Last message newest, Customer replied newest, First contacted newest, Last message oldest, and Name A–Z. Sorting occurs before pagination so the operator is not limited to the currently loaded page.
+
+All current source-linked production leads have at least one stored customer message at the 2026-10-01 verification checkpoint; no fixture/default timestamp is used for the new fields.
