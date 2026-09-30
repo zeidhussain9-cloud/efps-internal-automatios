@@ -69,6 +69,11 @@ createServer(async(req,res)=>{
      const raw=q.get('limit')??'50',offset=q.get('offset')??'0';
      if(!/^\d{1,3}$/.test(raw)||!/^\d{1,7}$/.test(offset)){res.writeHead(400,security);return res.end('Invalid pagination');}
      data=await repo.listLeadsPage(Number(raw),Number(offset));
+    }else if(/^\/api\/db\/leads\/[^/]+\/workspace$/.test(p)){
+     const id=decodeURIComponent(p.slice('/api/db/leads/'.length,-'/workspace'.length));
+     if(!id||id.includes('/')||id.length>128){res.writeHead(400,security);return res.end('Invalid lead ID');}
+     data=await repo.getLeadWorkspace(id);
+     if(!data.lead){res.writeHead(404,security);return res.end('Lead not found');}
     }else{
      const id=decodeURIComponent(p.slice('/api/db/leads/'.length));
      if(!id||id.includes('/')||id.length>128){res.writeHead(400,security);return res.end('Invalid lead ID');}
