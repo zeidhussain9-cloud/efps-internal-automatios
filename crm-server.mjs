@@ -97,7 +97,7 @@ createServer(async(req,res)=>{
    const repo=createCrmRepository();try{const rows=await repo.matchInventory({bhk:q.get('bhk')||'',budget:budgetRaw===null?null:Number(budgetRaw),locality:q.get('locality')||'',furnishing:q.get('furnishing')||'',petFriendly:q.get('pet_friendly')||'',limit:Number(limitRaw)});res.writeHead(200,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify({rows}));}finally{await repo.close()}
   }
   if(p==='/api/webhooks/whatsapp'&&req.method==='POST'){
-   if(mode!=='protected'||process.env.CRM_WHATSAPP_INGEST_ENABLED!=='true'||!process.env.CRM_DB_WRITE_ENABLED){res.writeHead(403,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify({error:'WhatsApp ingestion disabled'}));}
+   if(mode!=='protected'||process.env.CRM_WHATSAPP_INGEST_ENABLED!=='true'||process.env.CRM_DB_WRITE_ENABLED!=='true'){res.writeHead(403,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify({error:'WhatsApp ingestion disabled'}));}
    const token=process.env.CRM_WHATSAPP_WEBHOOK_TOKEN||'';
    const provided=req.headers.get?req.headers.get('x-crm-webhook-token'):req.headers['x-crm-webhook-token'];
    if(!token||provided!==token){res.writeHead(401,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify({error:'Unauthorized'}));}
