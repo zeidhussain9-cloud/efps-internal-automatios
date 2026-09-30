@@ -77,21 +77,20 @@ Legacy Inventory extraction, normalization, deterministic business rules, field 
 
 ## Private CRM workstream
 
-The private EasyFind CRM is being reconciled and will be implemented in this repository on isolated branches. Canonical CRM documentation lives under `docs/crm/`.
+The private EasyFind CRM is now running as a production UI from `crm-ui-dashboard`. Canonical CRM documentation lives under `docs/crm/`.
 
-Current design status:
-- D01–D04 approved.
-- D05 proposed and informed by the verified Housing Listings audit.
-- Figma is the working design environment; Canva remains the visual reference.
-- Prototype work is synthetic-data only.
-- Live customer/inventory integrations and production writes remain a later gate.
+Current production status:
+- D01–D05 approved for the current UI baseline.
+- Render `easyfind-crm-d01-d05` deploys `crm-ui-dashboard`.
+- Historical and live WhatsApp data for `+919148338801` reconcile through Supabase.
+- The other configured source numbers remain visible for later onboarding.
 
-The CRM reconciliation documents explicitly distinguish the historical WhatsApp/SQLite/Leads Tracker layers from the current master DynamoDB lead runtime. Until those relationships are reconciled, no single legacy dataset is treated as the universal live CRM source.
+The CRM reconciliation documents distinguish historical WhatsApp/SQLite evidence from the current Supabase operational store. The production source boundary for this deployment is explicitly +919148338801.
 
 ## Production status
 
-The repository-level migration reconciliation is complete on its dedicated migration branch. Production acceptance is not claimed by this commit: AWS deployment, Slack registration, WhAPI cutover, secret injection, synthetic live Inventory traffic, and old-runtime zero-traffic confirmation remain runtime gates.
+The current CRM UI deployment is live. WhAPI events for +919148338801 are recorded in crm_webhook_events before downstream reconciliation; historical and live records use the same source-aware CRM path. Render health and deployment state are independently verified.
 
 ## CRM UI branch and dedicated model steering
 
-**Since 2026-09-27, `main` is the canonical CRM UI branch** (fast-forwarded from `crm-ui-dashboard`). The old branch remains temporarily mirrored only because the existing Render service still tracks it. The hosted CRM Ollama adapter reads compact root `steering.md` as its dedicated system instruction. This file is **not** a replacement for repository-agent `CORE_STEERING.md`, and the full business-context document is not sent to the hosted model. The pilot is fictional-only and the provider key stays in Render. See `docs/crm/LEAD_CRM_MASTER_PLAN.md`.
+**Current CRM UI branch: `crm-ui-dashboard`.** Render service `easyfind-crm-d01-d05` deploys this branch. The hosted CRM Ollama adapter reads compact root `steering.md` as its dedicated system instruction; it is separate from `CORE_STEERING.md`. Current production CRM data is real and source-scoped to WhatsApp `+919148338801`; the other configured source numbers remain visible for later onboarding. See `docs/crm/LEAD_CRM_MASTER_PLAN.md`.
