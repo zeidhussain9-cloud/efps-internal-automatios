@@ -30,16 +30,19 @@ The repository follows one simple operating model:
 
 For every implementation, the agent must review all maintained root and `docs/` documentation and update every document whose content is affected by the resulting repository reality. Do not create duplicate authoritative documents.
 
-## CRM production checkpoint — 2026-09-30
+## CRM production checkpoint — 2026-10-01
 
-- Canonical CRM UI branch: `crm-ui-dashboard`; Render service: `easyfind-crm-d01-d05`.
-- Latest CRM code commit: `184abfe58052b01ebf5be4dd26044f31fc579536` (`fix: type classification source parameter`).
-- Production source in scope: `+919148338801`; the other two source numbers remain visible for future onboarding only.
-- Current Supabase counts: 141 source-linked CRM leads, 287 classifications, 58 pending classifications, 6,561 messages, and 28 webhook events for the production source. Of those webhook events, 13 are processed and 15 remain `received`; these are an operational backlog to investigate, not historical backfill evidence.
-- Contact Classification is operator-gated. Selecting a classification does not write until `Update` is clicked. A successful Qualified Lead update atomically creates/links the CRM lead, promotes the classification, and links preserved messages.
-- The 2026-09-30 classification failure was diagnosed from Render logs as PostgreSQL `42P18` (`could not determine data type of parameter $5`) in the new-lead insert. The consolidated fix explicitly casts the source-number parameter to `text`. Local build/tests passed 62/62 before deployment.
-- Render deployment `dep-daul3fpsrm7s73b27l00` is live from the same commit.
+- Canonical CRM UI branch: `crm-ui-dashboard`; Render service: `easyfind-crm-d01-d05` (`srv-darsv560tbcc73cu4ip0`).
+- Current production commit: `45dbab7b1ba92387e5e001f74929ad40c92be6a9` (`fix: allow Supabase realtime connection`); Render deployment `dep-daum4rtg1s2s73cntsv0` is live.
+- Production source in scope: `+919148338801`. `+917975102130` and `+919902024973` remain visible/selectable in the UI only and are not active production ingestion sources.
+- Supabase current state: 185 source-linked CRM leads, 288 classifications, 13 pending classifications, 185 qualified classifications, 6,561 CRM messages.
+- Webhook audit: 46 persisted events — 13 processed, 33 received, 0 failed. The 33 received events are an operational reconciliation backlog, not historical backfill evidence.
+- Historical SQLite archive remains 5,286 messages and is historical source evidence, not the live CRM total.
+- The latest operator pass promoted 44 contacts; contact 507 remains pending as an owner record and contact 508 is promoted.
+- Browser Supabase Realtime is notification/refresh only. The server-side webhook/database path is independent.
+- The current hardening deployment allowlists the exact Supabase HTTPS/WSS origin in the server CSP so the browser Realtime client is not blocked by `connect-src 'self'`.
 
+## Current modules
 ## Current modules
 
 ## Current modules
