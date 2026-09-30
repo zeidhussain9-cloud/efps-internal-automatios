@@ -4,6 +4,16 @@ Verified live state: Render `easyfind-crm-d01-d05` / `srv-darsv560tbcc73cu4ip0`,
 
 # Open Pointers
 
+## CRM production closure audit — 2026-10-01
+
+- **Webhook reconciliation:** closed for the current backlog. The 33 previously `received` events were processed through the existing idempotent `crm_process_webhook_event` path. Current source audit is 46 total / 46 processed / 0 received / 0 failed.
+- **Three classification queues:** implemented on `crm-ui-dashboard`. `Not pushed to CRM` contains pending + explicitly unqualified contacts; `Qualified lead pushed to CRM` contains promoted contacts; `Unqualified leads` is the explicit excluded subset. A non-qualified Update remains outside CRM and appears in the first and third queues; a Qualified Lead Update promotes it into CRM.
+- **Privacy/authentication:** verified. Render reports Basic Auth configured, database connectivity connected, and live data enabled. All CRM public tables have RLS enabled and neither `anon` nor `authenticated` has SELECT privilege.
+- **Independent backup/restore:** **not closed**. The repository already contains encrypted `db:backup` and approval-gated `db:restore` tooling, but an independent production backup artifact and restore target have not been executed. Supabase's current documentation states downloadable database backups are not available on Free projects; completing a real restore drill therefore requires an available backup artifact/eligible backup plan and a separate restore target. This is the only remaining item from the prior backup/restore gate that cannot be completed without additional external provisioning/approval.
+- **Additional sources:** intentionally unchanged; `+917975102130` and `+919902024973` remain UI-visible but inactive.
+- **AI / WhatsApp:** no automatic WhatsApp send was enabled. AI remains operator-controlled.
+
+
 This is the canonical list of unresolved decisions and verified unknowns for the current Inventory Management Phase 1 and live-system migration scope. Deterministic Phase-1 contract work is complete. Unknowns are never guessed. Future Meta Catalogue and Housing Portal additions are outside the current Phase-1 scope.
 
 ## Deferred external/runtime verification
