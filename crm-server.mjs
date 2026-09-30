@@ -30,7 +30,7 @@ createServer(async(req,res)=>{
   // Durable database writes: explicit opt-in, protected access and audited in the same transaction.
   if(process.env.CRM_CLASSIFICATION_WRITE_ENABLED==='true'&&mode==='protected'&&req.method==='POST'&&p.startsWith('/api/db/classifications/')){
    if(!process.env.DATABASE_URL){res.writeHead(404,security);return res.end('Database write pilot disabled');}
-   const id=decodeURIComponent(p.slice('/api/db/classifications/'.length));if(!/^\\d+$/.test(id)){res.writeHead(400,security);return res.end('Invalid classification ID');}
+   const id=decodeURIComponent(p.slice('/api/db/classifications/'.length));if(!/^\d+$/.test(id)){res.writeHead(400,security);return res.end('Invalid classification ID');}
    const body=await readJsonBody(req);const repo=createCrmClassificationRepository();
    try{const result=await repo.classify({id:Number(id),code:String(body.classification||''),source:String(body.source||'operator'),confidence:body.confidence===null||body.confidence===undefined?null:Number(body.confidence),actor:process.env.CRM_BASIC_AUTH_USERNAME||'operator'});res.writeHead(200,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify(result));}
    catch(e){const status=e?.statusCode||422;res.writeHead(status,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify({error:e.message==='Invalid classification'?'Invalid classification':status===404?'Classification not found':'Classification update failed'}));}
@@ -68,7 +68,7 @@ createServer(async(req,res)=>{
    if(req.method!=='GET'){res.writeHead(405,security);return res.end('Method not allowed');}
    const q=new URL(req.url,'http://localhost').searchParams;
    const limitRaw=q.get('limit')||'100',offsetRaw=q.get('offset')||'0';
-   if(!/^\\d{1,3}$/.test(limitRaw)||!/^\\d{1,7}$/.test(offsetRaw)){res.writeHead(400,security);return res.end('Invalid pagination');}
+   if(!/^\d{1,3}$/.test(limitRaw)||!/^\d{1,7}$/.test(offsetRaw)){res.writeHead(400,security);return res.end('Invalid pagination');}
    const repo=createCrmClassificationRepository();
    try{const data=await repo.list({limit:Number(limitRaw),offset:Number(offsetRaw),status:q.get('status')||'',classification:q.get('classification')||'',sourceNumber:q.get('source_number')||'+919148338801'});res.writeHead(200,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify(data));}
    finally{await repo.close();}

@@ -1,6 +1,6 @@
 # EFPS SAM Deployment Contract
 
-This document is the repository-side deployment contract for the canonical `main` branch. It does not claim that AWS deployment, third-party integrations, or production cutover have been completed.
+This document retains the historical SAM deployment contract. It is not the production deployment contract for the current CRM UI. Current CRM UI production deploys from `crm-ui-dashboard` to Render service `easyfind-crm-d01-d05`.
 
 ## Source of truth
 

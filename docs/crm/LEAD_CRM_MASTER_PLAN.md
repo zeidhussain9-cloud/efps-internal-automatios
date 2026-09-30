@@ -2,7 +2,7 @@
 
 **Canonical repository:** `zeidhussain9-cloud/efps-internal-automatios`  
 **Working branch:** `crm-ui-dashboard`  
-**Current status (2026-09-26):** D01–D05 approved; initial synthetic React prototype visually approved. Synthetic follow-ups, requirements, activity, settings and inventory search implemented. Render-to-Supabase TLS connectivity is verified with a server-only CA, and GitHub Actions run #81 passed build, all 45 tests and Chromium 1/1. Real customer data remains disabled. See `CRM_STABILIZATION_AUDIT.md` and `CRM_RENDER_CONFIGURATION.md`.
+**Current status (2026-09-30):** CRM UI production flow is live on `crm-ui-dashboard` / Render `easyfind-crm-d01-d05`. Production source currently in scope is WhatsApp `+919148338801`. Historical CRM records have been reconciled into Supabase, live WhAPI events are persisted to `crm_webhook_events` before downstream reconciliation, and current live messages are being reconciled. Contact classification remains operator-gated; tenant type is a stored requirement rather than a separate lead-header editor. The other two configured source numbers remain visible for later onboarding only.
 
 ## 1. Product goal
 
@@ -14,13 +14,14 @@ Create a private, operator-first, local-first CRM that turns the manually extrac
 Use only the local source defined by:
 `docs/audits/LEADS_EXTRACTION_SOURCE_OF_TRUTH_AUDIT.md`
 
-The local SQLite dataset produced by the extraction is the operational lead dataset for this CRM.
+The local SQLite extraction is the historical source evidence. Supabase is the current production CRM operational store for the reconciled source.
 
-Excluded from current lead truth:
+Excluded from the current CRM lead truth:
 - Leads Tracker Google Sheet
 - Slack lead reporting/workflow
 - DynamoDB lead workflow
-- live WhAPI webhook
+
+Live WhatsApp ingestion is now enabled for the current production source: `+919148338801`. WhAPI events are recorded in Supabase `crm_webhook_events` before reconciliation into CRM message/classification/lead records.
 
 ### Inventory
 The existing Slack automation alone creates and updates the Housing Listings Sheet. The CRM is a read-only consumer of that sheet when the later integration is configured. Preserve the sheet's editor-change audit trail; CRM lead/property interactions have a separate activity history.
@@ -68,18 +69,18 @@ The existing Slack automation alone creates and updates the Housing Listings She
 - [x] Chromium browser journey test and CI workflow added for synthetic requirements, persistence, follow-ups, inventory and Settings.\n- [x] Verify successful CI browser run and deployed build: GitHub Actions `CRM synthetic CI` run #81 passed build, 45/45 unit/integration tests and Chromium browser journey 1/1.\n- [ ] Expand browser coverage for remaining flows.
 
 ### Phase 3 — Local-data migration
-- [x] Inspect exact local SQLite file/schema and reconcile the 228-lead source scope.
+- [x] Historical source reconciliation completed for the current production source `+919148338801`; 140 CRM leads are currently stored in Supabase. The older 228-lead wording was an intermediate planning checkpoint, not the current production count.
 - [x] Add source-backed classification to the production lead workspace.
 - [x] Add source-message provenance fields so historical SQLite message IDs are not misrepresented as provider IDs.
 - [x] Add read-only preparation and idempotent import scripts for the audited 5,286-message +919148338801 archive.
-- [ ] Execute the historical conversation import after the authorized extraction device is online and the explicit import gate is approved.
+- [x] Historical conversation/message reconciliation is now active for the current production source; the imported history and subsequent live WhAPI events share the same reconciliation path.
 - [x] Reconcile stable source message IDs/duplicates.
-- [ ] Migrate source-backed lead/conversation data into the local CRM schema without mutating source evidence.
-- [ ] Validate counts and sampling against the lead audit.
+- [x] Reconciled source-backed lead/conversation data into Supabase CRM tables without changing source evidence.
+- [x] Validated live webhook receipt and downstream processing for the current source; ongoing reconciliation remains idempotent.
 
 ### Phase 4 — Live integrations, later
 - [x] Implement disabled-by-default read-only Sheets adapter and mocked service-account tests; no inventory writes.\n- [ ] Configure later read-only CRM consumption of the existing Slack-maintained Housing Listings Sheet, including edit-audit provenance; service-account JSON belongs in Render only.
-- [x] Add a gated normalized WhatsApp webhook ingestion endpoint; provider wiring remains disabled until explicitly enabled.
+- [x] WhAPI webhook ingestion is enabled for the current production source and writes to `crm_webhook_events` before reconciliation.
 - [ ] AI production execution.
 - [ ] Controlled CRM synchronization.
 - [ ] Property-share tracking against real customer data.
@@ -108,14 +109,12 @@ The existing Slack automation alone creates and updates the Housing Listings She
 - Draft generation is separate from observed WhatsApp messages.
 - No automatic WhatsApp send in v1.
 - No silent failures.
-- No live customer data in the prototype.
-- No CRM changes directly on main.
+- The production CRM UI may display real customer data only through the protected production database path; synthetic fixtures remain separate from production data.
+- CRM UI changes are made on `crm-ui-dashboard`; `main` is not the CRM UI deployment branch.
 
 ## 6. Implementation gate
 
-Prototype is already deployed and visually approved. Live-data connection remains gated on stabilization, synthetic model evaluation, D06–D08 privacy decisions and exact local SQLite reconciliation.
-
-Real local-data connection comes after the local SQLite migration/reconciliation gate.
+The production CRM UI is deployed and using reconciled real data for `+919148338801`. D06–D08 and later source onboarding remain separate future work; they do not gate the current one-number production flow.
 
 
 ## Latest verification checkpoint

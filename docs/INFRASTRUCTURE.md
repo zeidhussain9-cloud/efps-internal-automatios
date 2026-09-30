@@ -5,8 +5,10 @@ This is the canonical registry for external systems and verified resource identi
 ## Current repository
 
 - GitHub repository: `zeidhussain9-cloud/efps-internal-automatios`
-- Default branch: `main`
-- Repository code and production deployment contract are maintained on `main`. CRM reconciliation and prototype work uses isolated branches and does not modify `main`.
+- CRM UI production branch: `crm-ui-dashboard`
+- CRM UI Render service: `easyfind-crm-d01-d05` (`https://easyfind-crm-d01-d05.onrender.com`)
+- Local CRM UI checkout: `leads_automation/crm-ui-dashboard`
+- Current CRM UI deployment is sourced from `crm-ui-dashboard`; the older SAM/main deployment notes below are historical infrastructure records and are not the CRM UI production path.
 
 ## CRM prototype deployment target
 
