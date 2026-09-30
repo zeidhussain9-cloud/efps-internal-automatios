@@ -66,6 +66,8 @@ test('production CRM browser journey uses only live-record surfaces',async()=>{
   await page.getByLabel('Tenant Type').selectOption('Family');
   assert.equal(await page.getByText('No imported conversation for this lead.').count(),0);
   await page.getByRole('button',{name:'Conversation',exact:true}).click();
+  await page.getByText('Sensitive message hidden').waitFor();
+  await page.getByRole('button',{name:/Privacy: Masked/}).click();
   await page.getByText('Historical conversation message').waitFor();
   await page.locator('button.header-back').click();
   await page.getByRole('button',{name:/Live lead/}).waitFor();
