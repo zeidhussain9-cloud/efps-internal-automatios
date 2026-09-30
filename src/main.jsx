@@ -1,7 +1,8 @@
 import React,{useEffect,useMemo,useState} from 'react';
 import {createRoot} from 'react-dom/client';
 import {createClient} from '@supabase/supabase-js';
-import {LayoutDashboard,Inbox,Building2,Settings,Search,ChevronLeft,BrainCircuit,CheckCircle2,RefreshCw} from 'lucide-react';
+import {LayoutDashboard,Inbox,Building2,Settings,Search,ChevronLeft,BrainCircuit,CheckCircle2,RefreshCw,ShieldCheck,LogOut,Download,Archive,RotateCcw,Activity as ActivityIcon,WifiOff} from 'lucide-react';
+import {maskPhone,maskMessage} from './privacy.mjs';
 import InventoryPanel from './inventory-panel.jsx';
 import './style.css';
 
