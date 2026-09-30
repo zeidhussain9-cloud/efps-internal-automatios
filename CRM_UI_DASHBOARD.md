@@ -56,3 +56,10 @@ Classification errors are rendered inline with the server response instead of si
 ## 2026-10-01 — Production security/operator-control closure
 
 D07 is implemented on `crm-ui-dashboard`: protected operator session UX, default sensitive-data masking, explicit/reversible lead archive, global audit visibility, explicit audit-recorded CSV export, retention/deletion boundaries, and visible offline/sync states. The browser E2E regression is corrected on the same branch.
+
+
+## 2026-10-01 — mobile responsiveness and Realtime
+
+The live CRM UI now has an explicit compact/mobile shell through the 1000px breakpoint, including full-width navigation, stacked header/status controls, two-column KPI cards, full-width lead rows and single-column lead workspace content. A browser regression assertion covers a 900px compact viewport so the desktop layout cannot silently regress into the mobile browser experience.
+
+The Supabase browser Realtime client is configured from server-side Render build variables VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY and is initialized after operator sign-in. The channel is notification-only; CRM data remains read from the protected server API. Realtime: live therefore means the browser subscription is active, not that the webhook itself is the source of truth.
