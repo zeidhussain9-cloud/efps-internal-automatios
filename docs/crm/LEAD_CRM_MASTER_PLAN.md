@@ -1,8 +1,7 @@
 
-## Production checkpoint — 2026-09-30
+## Production checkpoint — 2026-10-01
 
-Historical checkpoint retained below.
-
+The approved daily CRM flow is live. Current source: `+919148338801`. Current Supabase evidence: 185 source-linked leads, 288 classifications, 13 pending classifications, 6,620 messages, and 72 persisted webhook events. All 185 promoted classifications are linked to CRM leads; the 88 classified and 2 excluded non-promoted contacts have no lead link, and the 13 pending contacts have no lead link. The latest security hardening migration revoked Data API execution for the two server-only SECURITY DEFINER RPCs and pinned trigger-function search paths. The Housing Listings scheduler is active every five minutes; the latest five sync runs each recorded 81 rows with zero changes/removals. Render remains on `crm-ui-dashboard`; the latest reconciliation deployment is in progress.
 
 ## EasyFind Lead CRM — Master Plan
 
@@ -87,7 +86,7 @@ The existing Slack automation alone creates and updates the Housing Listings She
 - [x] Validated live webhook receipt and downstream processing for the current source; ongoing reconciliation remains idempotent.
 
 ### Phase 4 — Live integrations, later
-- [x] Implement disabled-by-default read-only Sheets adapter and mocked service-account tests; no inventory writes.\n- [ ] Configure later read-only CRM consumption of the existing Slack-maintained Housing Listings Sheet, including edit-audit provenance; service-account JSON belongs in Render only.
+- [x] Implement disabled-by-default read-only Sheets adapter and mocked service-account tests; no inventory writes.\n- [x] Configure read-only CRM consumption of the existing Slack-maintained Housing Listings Sheet, including edit-audit provenance; service-account JSON remains server-only in Render.
 - [x] WhAPI webhook ingestion is enabled for the current production source and writes to `crm_webhook_events` before reconciliation.
 - [ ] AI production execution.
 - [ ] Controlled CRM synchronization.
@@ -100,7 +99,7 @@ The existing Slack automation alone creates and updates the Housing Listings She
 - [x] Implement synthetic Activity, Settings, follow-ups, inventory search/no-image fallback and per-lead pin/exclude state.\n- [ ] Complete production D01–D05: secure auth, durable lead history, real verified inventory media, AI and advanced workflows.
 - [x] Extract reusable tested domain logic for queue filtering, matching, validation and follow-ups; add unit tests and CI.\n- [ ] Finish UI component refactor and browser end-to-end tests.
 - [ ] Identify genuinely stale CRM files before any deletion.
-- [x] Synthetic browser persistence, schema-version/corruption recovery, requirements validation and optional server-side Basic Auth gate implemented.\n- [x] Verify CI and access behavior: protected routes, fail-closed auth, hardened headers and Render health behavior covered by tests.\n- [ ] Replace pilot Basic Auth with reviewed production session authentication; durable database and backup controls remain pending. Render preview uses browser-only fictional persistence.
+- [x] Synthetic browser persistence, schema-version/corruption recovery, requirements validation and optional server-side Basic Auth gate implemented.\n- [x] Verify CI and access behavior: protected routes, fail-closed auth, hardened headers and Render health behavior covered by tests.\n- [ ] Replace pilot Basic Auth with reviewed production session authentication; backup/restore proof remains pending. Render preview uses browser-only fictional persistence.
 - [x] Add first fictional seed fixtures with known expected extraction outcomes and basic fixture tests (not yet representative of raw-data distributions).
 - [ ] Inspect authorized local raw extraction and generate fictional representative fixtures with expected results.
 - [x] Implement gated server-side Ollama adapter and mocked unit tests using only fictional fixture IDs; human Accept/Reject UI added.\n- [x] Verify Ollama endpoint/model presence without disclosing or overwriting secrets; Render startup confirms both variables are present.\n- [ ] Enable and run a real synthetic model request after the pilot access controls are approved.
@@ -151,10 +150,10 @@ See `CRM_DATABASE_MIGRATION_GATE.md`.
 - [x] Added three missing foreign-key indexes and committed matching schema migrations.
 - [x] Verified schema via SQL: zero customer leads and zero messages; no real data imported.
 - [x] Fix the existing Render-to-Supabase server-only connection. Render now recognizes `supabase_session_pooler_ipv4`; `DATABASE_SSL_CA` is present; startup reports `CRM database connectivity: connected` at 2026-09-26 18:55 UTC. No Render PostgreSQL service is needed.
-- [ ] Implement and test authenticated durable server CRUD, raw webhook event log, per-source AI cursor, append-only requirement evidence, safe retries and restore-tested independent backups before any real data.
-- [ ] Reconcile historical Mac SQLite source with authorized local access, without modifying the source file. Do not use Desktop Commander without explicit permission.
+- [x] Implement and test the durable server CRUD/event/retry path used by the current production lead workflow; raw webhook event logging, safe retries and append-only activity are live. Independent backup/restore proof remains pending.
+- [ ] Reconcile any remaining historical source discrepancies against the authorized local SQLite evidence without modifying the source file. Do not use Desktop Commander without explicit permission.
 - [x] Verify the repository's canonical Housing Listings Sheet ID and tab: `shared/google_sheets/schema.py` defines the canonical Spreadsheet ID and `Housing_Listings` worksheet. The CRM adapter does not hardcode the ID; it consumes the Render-side Sheet ID. [ ] Verify the server-side Sheets credential and perform a read-only access test.
-- [ ] Store media only in Cloudinary; PostgreSQL stores external media references, never media bytes.
+- [x] Store inventory media as Cloudinary references only; PostgreSQL stores external media references, never media bytes.
 
 
 ## 2026-09-26 — Read-only database integration checkpoint
@@ -228,7 +227,7 @@ Historical branch-reconciliation note superseded on 2026-09-30: `crm-ui-dashboar
 - [x] Added sanitized Supabase Realtime broadcast after message insertion so the UI refreshes live without polling WhAPI or polling the CRM workspace.
 - [x] Removed the Render-side WhatsApp ingestion route; the old CRM WhatsApp environment gate remains disabled.
 - [x] Verified the Edge Function with correct authentication (HTTP 200) and incorrect authentication (HTTP 401). Transactional lead/message processing was exercised and rolled back; persisted counts remained 228/5,286.
-- [ ] Final provider cutover: update the connected WhAPI channel's `messages` webhook URL/header to the deployed Supabase function. The available local provider credential did not resolve to an active usable WhAPI channel during this checkpoint, so no provider setting was guessed or changed.
+- [ ] Final provider cutover: update the connected WhAPI channel's `messages` webhook URL/header to the deployed Supabase function. The available provider credential still does not resolve to an active usable WhAPI channel, so no provider setting is guessed or changed. This remains the only external provider-side step.
 
 ## 2026-09-30 — UI/data-model reconciliation checkpoint
 
