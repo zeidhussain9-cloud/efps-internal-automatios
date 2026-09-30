@@ -96,6 +96,24 @@ createServer(async(req,res)=>{
    if(budgetRaw!==null&&!/^\d+(?:\.\d{1,2})?$/.test(budgetRaw)||!/^\d{1,3}$/.test(limitRaw)){res.writeHead(400,security);return res.end('Invalid inventory query');}
    const repo=createCrmRepository();try{const rows=await repo.matchInventory({bhk:q.get('bhk')||'',budget:budgetRaw===null?null:Number(budgetRaw),locality:q.get('locality')||'',furnishing:q.get('furnishing')||'',petFriendly:q.get('pet_friendly')||'',limit:Number(limitRaw)});res.writeHead(200,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify({rows}));}finally{await repo.close()}
   }
+  if(p==='/api/webhooks/whatsapp'&&req.method==='POST'){
+   if(mode!=='protected'||process.env.CRM_WHATSAPP_INGEST_ENABLED!=='true'||!process.env.CRM_DB_WRITE_ENABLED){res.writeHead(403,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify({error:'WhatsApp ingestion disabled'}));}
+   const token=process.env.CRM_WHATSAPP_WEBHOOK_TOKEN||'';
+   const provided=req.headers.get?req.headers.get('x-crm-webhook-token'):req.headers['x-crm-webhook-token'];
+   if(!token||provided!==token){res.writeHead(401,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify({error:'Unauthorized'}));}
+   let raw='';for await(const chunk of req)raw+=chunk;
+   let body;try{body=JSON.parse(raw||'{}')}catch{res.writeHead(400,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify({error:'Invalid JSON'}));}
+   if(!body||typeof body!=='object'){res.writeHead(400,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify({error:'Invalid payload'}));}
+   const source=String(body.source_number||'').trim();
+   const direction=body.direction==='Outgoing'?'Outgoing':'Incoming';
+   if(source!=='+919148338801'||!body.phone_number||!body.provider_message_id||!body.message_at){res.writeHead(400,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify({error:'source_number, phone_number, provider_message_id and message_at are required'}));}
+   const repo=createCrmRepository();
+   try{
+    const result=await repo.ingestLiveMessage({sourceNumber:source,phone:String(body.phone_number),providerMessageId:String(body.provider_message_id),direction,messageType:String(body.message_type||'text'),body:body.body==null?null:String(body.body),senderName:body.sender_name==null?null:String(body.sender_name),mediaUrls:Array.isArray(body.media_urls)?body.media_urls:null,mediaFilenames:Array.isArray(body.media_filenames)?body.media_filenames:null,messageAt:body.message_at});
+    res.writeHead(200,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify({ok:true,...result}));
+   }catch(e){res.writeHead(422,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify({error:e.message}));}
+   finally{await repo.close()}
+  }
   if(p==='/api/ai/analyze-real'&&req.method==='POST'){
    if(mode!=='protected'||process.env.CRM_REAL_AI_ENABLED!=='true'||process.env.CRM_DB_READ_ENABLED!=='true'){res.writeHead(403,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify({error:'Real AI disabled'}));}
    const repo=createCrmRepository();
