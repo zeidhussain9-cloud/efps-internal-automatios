@@ -36,6 +36,26 @@ test('repository validates limits and uses parameterized SQL',async()=>{
  await assert.rejects(()=>repo.getLead(''),/Invalid lead ID/);
 });
 
+
+test('lead inbox returns conversation timeline fields and validates server-side sorting',async()=>{
+ const calls=[];
+ const pool={query:async(sql,args)=>{
+  calls.push({sql,args});
+  if(sql.startsWith('SELECT count(*)::int AS total'))return{rows:[{total:186}]};
+  return{rows:[{id:'L-LIVE-1',contacted_at:'2026-08-26T07:30:00.000Z',last_message_direction:'Incoming',last_message_at:'2026-09-30T16:26:15.000Z'}]};
+ }};
+ const cr= createCrmRepository({pool});
+ const data=await cr.listLeadsPage(100,0,'+919148338801','', 'customer_waiting');
+ assert.equal(data.sort,'customer_waiting');
+ assert.equal(data.total,186);
+ assert.equal(data.leads[0].last_message_direction,'Incoming');
+ assert.match(calls[0].sql,/contacted_at/);
+ assert.match(calls[0].sql,/last_message_at/);
+ assert.match(calls[0].sql,/ORDER BY \(last_message\.last_message_direction='Incoming'\) DESC/);
+ assert.deepEqual(calls[0].args,['+919148338801',100,0]);
+ await assert.rejects(()=>cr.listLeadsPage(100,0,'+919148338801','', 'unsupported_sort'),/Invalid lead sort/);
+});
+
 test('durable lead mutation is transactional and writes an audit event',async()=>{
  const calls=[];
  const client={query:async(sql,args)=>{calls.push(['client',sql,args]);if(sql.startsWith('INSERT INTO crm_leads'))return{rows:[{id:'L-1001',display_name:'A'}]};if(sql.startsWith('INSERT INTO crm_activity'))return{rows:[{id:1}]};return{rows:[]}},release:()=>calls.push(['release'])};
