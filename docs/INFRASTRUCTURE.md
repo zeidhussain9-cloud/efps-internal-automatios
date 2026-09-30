@@ -1,3 +1,7 @@
+## Current production audit — 2026-10-01
+
+Verified live baseline: Render `easyfind-crm-d01-d05` (`srv-darsv560tbcc73cu4ip0`) on `crm-ui-dashboard`, commit `45dbab7b1ba92387e5e001f74929ad40c92be6a9`; Supabase source `+919148338801`; 185 source-linked leads, 288 classifications, 13 pending, 6,561 messages, 46 webhook events (13 processed, 33 received, 0 failed). Other UI-visible sources `+917975102130`, `+919902024973` remain inactive. Browser Realtime is notification-only; the exact Supabase HTTPS/WSS origin is allowlisted in CSP. No WhAPI historical API extraction was run.
+
 # Infrastructure Registry
 
 This is the canonical registry for external systems and verified resource identifiers used by EFPS Internal Automations. Never store secrets, tokens, passwords, or private keys here.
