@@ -26,3 +26,25 @@ export async function analyzeFictionalLead({leadId,env,fetcher=fetch}){
   return {leadId,provider:'ollama',model:config.model,proposal:parsed,fictional:true};
  }finally{clearTimeout(timeout)}
 }
+
+export async function analyzeRealLead({lead,env,fetcher=fetch}){
+ if(env.CRM_REAL_AI_ENABLED!=='true')throw Error('Real AI disabled');
+ if(!lead||typeof lead!=='object'||typeof lead.id!=='string')throw Error('Invalid lead');
+ const config=ollamaSettings(env);if(!config.ready)throw Error('Ollama provider configuration incomplete');
+ const requirements=lead.requirements&&typeof lead.requirements==='object'&&!Array.isArray(lead.requirements)?lead.requirements:{};
+ const steering=await modelSteering();
+ const userPayload={
+  task:'Review the stored CRM lead requirements and return only evidence-grounded operator suggestions. Do not invent customer facts, availability, pricing, dates, preferences, or conversation history.',
+  lead:{status:lead.status,priority:lead.priority,requirements,operator_notes:lead.operator_notes||''},
+  known_message_count:0
+ };
+ const endpoint=new URL('/api/chat',config.base);if(endpoint.protocol!=='https:'&&endpoint.hostname!=='localhost'&&endpoint.hostname!=='127.0.0.1')throw Error('Insecure Ollama endpoint');
+ const controller=new AbortController();const timeout=setTimeout(()=>controller.abort(),20000);
+ try{
+  const response=await fetcher(endpoint,{method:'POST',headers:{'Content-Type':'application/json',...(env.OLLAMA_API_KEY?{Authorization:'Bearer '+env.OLLAMA_API_KEY}:{})},body:JSON.stringify({model:config.model,stream:false,format:'json',messages:[{role:'system',content:steering},{role:'user',content:JSON.stringify(userPayload)}]}),signal:controller.signal});
+  if(!response.ok)throw Error('Ollama request failed ('+response.status+')');
+  let body;try{body=await response.json()}catch{throw Error('Provider returned non-JSON HTTP body')}if(typeof body?.message?.content!=='string'){const shape=body?.message?'message_without_content':'no_message';throw Error('Provider response shape: '+shape)}let parsed;const raw=body.message.content.trim();const fenced=raw.match(/^\`\`\`(?:json)?\\s*([\\s\\S]*?)\\s*\`\`\`$/i);const candidate=fenced?fenced[1].trim():raw;try{parsed=JSON.parse(candidate)}catch{throw Error(candidate?'Provider message is not JSON':'Provider message is empty')}
+  if(!parsed||typeof parsed!=='object'||Array.isArray(parsed))throw Error('Invalid model JSON');
+  return {leadId:lead.id,provider:'ollama',model:config.model,proposal:parsed,fictional:false,groundedIn:'stored lead requirements only',messageCount:0};
+ }finally{clearTimeout(timeout)}
+}
