@@ -37,15 +37,18 @@ async function main(){
    if(sourceLeads.length!==228)throw Error('Expected 228 imported source leads before conversation import');
    const leadByPhone=new Map(sourceLeads.map(r=>[r.normalized_phone,r.id]));
    let inserted=0,duplicates=0;
-   for(const m of source.messages){
-    const phone=String(m.phone_number||'');const leadId=leadByPhone.get(phone);if(!leadId)throw Error('Conversation phone has no imported CRM lead: '+phone);
+   const rows=source.messages.map(m=>{
+    const phone=String(m.phone_number||'');const leadId=leadByPhone.get(phone);if(!leadId)throw Error('Conversation phone has no imported CRM lead');
     const direction=m.direction==='Outgoing'?'Outgoing':m.direction==='Incoming'?'Incoming':null;if(!direction)throw Error('Invalid message direction');
     const at=new Date(m.timestamp);if(!Number.isFinite(at.valueOf()))throw Error('Invalid message timestamp');
-    const result=await client.query(
-      'insert into public.crm_messages(lead_id,source_number,provider_message_id,source_message_id,direction,message_type,body,sender_name,media_urls,media_filenames,extracted_intent,extracted_entities,sentiment,requires_followup,replied_to_source_message_id,message_at) values($1,$2,$3,$4,$5,$6,$7,$8,$9::jsonb,$10::jsonb,$11,$12::jsonb,$13,$14,$15,$16) on conflict do nothing returning id',
-      [leadId,SOURCE,null,String(m.message_id),direction,String(m.message_type||'text'),m.message_body??null,m.sender_name??null,parseJsonMaybe(m.media_urls)?JSON.stringify(parseJsonMaybe(m.media_urls)):null,parseJsonMaybe(m.media_filenames)?JSON.stringify(parseJsonMaybe(m.media_filenames)):null,m.extracted_intent??null,parseJsonMaybe(m.extracted_entities)?JSON.stringify(parseJsonMaybe(m.extracted_entities)):null,m.sentiment??null,Boolean(m.requires_followup),m.replied_to_id==null?null:String(m.replied_to_id),at.toISOString()]
-    );
-    if(result.rows[0])inserted++;else duplicates++;
+    const parseJson=v=>{if(v==null||v==='')return null;try{return JSON.parse(v)}catch{return null}};
+    return [leadId,SOURCE,null,String(m.message_id),direction,String(m.message_type||'text'),m.message_body??null,m.sender_name??null,parseJson(m.media_urls),parseJson(m.media_filenames),m.extracted_intent??null,parseJson(m.extracted_entities),m.sentiment??null,Boolean(m.requires_followup),m.replied_to_id==null?null:String(m.replied_to_id),at.toISOString()];
+   });
+   for(let offset=0;offset<rows.length;offset+=250){
+    const batch=rows.slice(offset,offset+250);const values=[];const params=[];
+    for(const row of batch){const base=params.length;params.push(...row);values.push('('+row.map((_,i)=>'$'+(base+i+1)+(i===8||i===9||i===11?'::jsonb':'')).join(',')+')')}
+    const result=await client.query('insert into public.crm_messages(lead_id,source_number,provider_message_id,source_message_id,direction,message_type,body,sender_name,media_urls,media_filenames,extracted_intent,extracted_entities,sentiment,requires_followup,replied_to_source_message_id,message_at) values '+values.join(',')+' on conflict do nothing returning id',params);
+    inserted+=result.rowCount||0;duplicates+=batch.length-(result.rowCount||0);
    }
    const count=(await client.query('select count(*)::int n from public.crm_messages where source_number=$1 and source_message_id is not null',[SOURCE])).rows[0].n;
    if(count!==5286)throw Error('Post-import source conversation count reconciliation failed: '+count);
