@@ -67,7 +67,7 @@ The root `steering.md` is the dedicated executable CRM model instruction; the ad
 
 ## Classification write gate — 2026-09-30
 
-Production classification updates require all of the following:
+Production classification updates require protected CRM access, DATABASE_URL, and an enabled classification/database write gate. The preferred dedicated gate is CRM_CLASSIFICATION_WRITE_ENABLED=true; CRM_DB_WRITE_ENABLED=true remains accepted as the compatibility gate until the Render environment is explicitly migrated.
 
 - protected CRM authentication;
 - DATABASE_URL;

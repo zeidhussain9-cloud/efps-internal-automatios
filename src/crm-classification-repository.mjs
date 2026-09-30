@@ -24,7 +24,19 @@ export function createCrmClassificationRepository({connectionString=process.env.
       return withTx(async c=>{
         const row=(await c.query('SELECT * FROM crm_contact_classifications WHERE id=$1 AND source_number=$2 FOR UPDATE',[id,SOURCE_NUMBER])).rows[0];
         if(!row)throw Object.assign(Error('Classification not found'),{statusCode:404});
-        const label=(await c.query('SELECT public.crm_contact_classification_label($1) AS label',[code])).rows[0].label;
+        const labels={
+          qualified_lead:'Qualified Lead',
+          personal_family:'Family / personal',
+          agent_partner:'Agent / Partner',
+          business:'Business',
+          promotion:'Promotion / Marketing',
+          vendor_supplier:'Vendor / Supplier',
+          internal:'Internal',
+          cold_inquiry:'Cold Inquiry',
+          property_listing_sent:'Property Listing Sent',
+          unknown:'Unknown'
+        };
+        const label=labels[code];
         if(code!=='qualified_lead'){
           await c.query('UPDATE crm_contact_classifications SET classification_code=$1,classification_label=$2,classification_source=$3,confidence=$4,status=\'excluded\',classified_at=now(),last_seen_at=greatest(last_seen_at,now()) WHERE id=$5',[code,label,source,confidence,id]);
           await c.query('UPDATE crm_messages SET classification_id=$1 WHERE classification_id=$1',[id]);
