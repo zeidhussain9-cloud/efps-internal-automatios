@@ -21,7 +21,7 @@ test('production CRM browser journey uses only live-record surfaces',async()=>{
   const page=await browser.newPage();
 
   await page.route('**/api/db/leads*',route=>route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({
-   leads:[{id:'LIVE-1',display_name:'Live lead',normalized_phone:'+919000000001',status:'New',lead_type:'New',tenant_type:'Not specified',priority:'Medium',classification:'Qualified Lead',requirements:{bhk:'2 BHK',locality:'Harlur',budget:50000},updated_at:'2026-09-30T00:00:00Z',source_number:'+919148338801'}],
+   leads:[{id:'LIVE-1',display_name:'Live lead',normalized_phone:'+919000000001',status:'New',lead_type:'New',tenant_type:'Not specified',priority:'Medium',classification:'Qualified Lead',requirements:{bhk:'2 BHK',locality:'Harlur',budget:50000},updated_at:'2026-09-30T00:00:00Z',contacted_at:'2026-08-26T07:30:00.000Z',last_message_direction:'Incoming',last_message_at:'2026-09-30T16:26:15.000Z',source_number:'+919148338801'}],
    total:228,sourceTotals:{'+919148338801':228}
   })}));
 
@@ -49,6 +49,19 @@ test('production CRM browser journey uses only live-record surfaces',async()=>{
 
   await page.getByText('Production data').waitFor();
   await page.getByText('228 leads').waitFor();
+  await page.getByLabel('Sort leads').waitFor();
+  assert.equal(await page.getByText('Contacted date',{exact:true}).count(),1);
+  assert.equal(await page.getByText('Last message sent by',{exact:true}).count(),1);
+  assert.equal(await page.getByText('Last message date',{exact:true}).count(),1);
+  assert.equal(await page.locator('.lead-card-activity strong').nth(0).textContent(),'26-August-2026 / 13:00');
+  assert.equal(await page.locator('.lead-card-activity strong').nth(1).textContent(),'Customer');
+  assert.equal(await page.locator('.lead-card-activity strong').nth(2).textContent(),'30-September-2026 / 21:56');
+
+  const sortRequest=page.waitForRequest(request=>{
+   try{return request.url().includes('/api/db/leads')&&new URL(request.url()).searchParams.get('lead_sort')==='customer_waiting'}catch{return false}
+  });
+  await page.getByLabel('Sort leads').selectOption('customer_waiting');
+  await sortRequest;
 
   const phoneText=await page.locator('.lead-card-main span').first().textContent();
   assert.match(phoneText||'',/\*\*\*\*\*\*0001$/);
