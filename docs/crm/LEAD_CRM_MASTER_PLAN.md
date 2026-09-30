@@ -41,7 +41,9 @@ The existing Slack automation alone creates and updates the Housing Listings She
 - D03: approved
 - D04: approved
 - D05: approved
-- D06–D08: unresolved
+- D06: resolved
+- D07: resolved
+- D08: unresolved
 
 ## 4. Delivery sequence
 
@@ -252,3 +254,13 @@ Historical branch-reconciliation note superseded on 2026-09-30: `crm-ui-dashboar
 - [x] Qualified Lead promotion is transactional and links preserved messages before queue movement.
 - [x] Added Dashboard daily counters and next open follow-ups.
 - [x] Classification writes are protected by CRM_CLASSIFICATION_WRITE_ENABLED=true.
+
+
+## 2026-10-01 — Browser E2E + D07 closure
+
+- [x] Fixed the browser E2E regression by matching the live-record workspace fixture to the query-string-bearing workspace URL and adding operator sign-in to the browser journey.
+- [x] Completed D07 Privacy, Safety & Operator Control across authentication, sensitive-data masking, reversible archive/restore, global audit visibility, explicit export controls, retention/deletion boundaries and offline/sync behavior.
+- [x] Added session/origin/browser regression coverage.
+- [x] Current CRM deployment remains on `crm-ui-dashboard`; the current production source remains `+919148338801`.
+- [ ] D08 final visual system/handoff remains open.
+- [ ] Independent encrypted backup artifact + isolated restore proof remains an external infrastructure hardening item.

@@ -143,3 +143,8 @@ The approved CRM interaction model is deliberately simple:
 7. Follow-up history remains visible under the lead's Activity & History tab.
 
 Do not add a separate classification filter or a second intake workflow unless this decision is explicitly revisited.
+
+
+## 2026-10-01 — Browser and D07 handoff
+
+Browser E2E now covers operator sign-in and the query-string-bearing live-record workspace route. D07 is resolved: session authentication, sensitive-data masking, explicit/reversible archive/restore, global audit visibility, export/retention/deletion boundaries, and offline/sync states are implemented. Activity is the global security/operator audit surface; Lead Workspace Activity & History remains lead-specific. D08 remains the final visual-system/handoff stage.

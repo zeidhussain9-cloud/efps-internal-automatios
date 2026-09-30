@@ -1,6 +1,6 @@
 # EasyFind CRM — UI Design Specification
 
-**Status:** D01–D05 approved; D06–D08 unresolved  
+**Status:** D01–D07 approved/resolved; D08 unresolved  
 **Canonical repository:** `zeidhussain9-cloud/efps-internal-automatios`  
 **Working branch:** `crm-ui-dashboard`  
 **Figma:** https://www.figma.com/design/PBiMGsVQ0fVpSf39WwNmKb  
@@ -188,3 +188,12 @@ The production UI intentionally uses one simple Contact Classification screen wi
 Each contact row shows the phone number, a direct **Open WhatsApp** link, a classification selector and an explicit **Update** button. The button is disabled until the selected classification differs from the stored value. A successful non-qualified update keeps the contact outside CRM. A successful Qualified Lead update creates/links the CRM lead and preserved messages transactionally, then the UI moves the contact to the promoted tab. A failed write stays in place and displays the server error instead of silently moving the contact.
 
 The Dashboard surfaces the classification counts and today's follow-ups so the operator can use the CRM as a daily work queue without a separate intake workflow.
+
+
+## 2026-10-01 — D07 production operator-control specification
+
+The application now uses a private operator session after verification of the configured CRM credential. The session token is opaque, HttpOnly and SameSite=Lax; sessions expire after 8 hours of inactivity or 12 hours maximum, and explicit logout revokes the session. Non-GET/HEAD cross-origin requests are rejected, and sign-in/sign-out use same-origin checks.
+
+Privacy mode masks phone numbers and observed message bodies by default; opening WhatsApp from a lead requires an explicit reveal. Lead archive is a confirmed, reversible soft action with a preserved prior status in the audit record. Global security/operator events are visible in Activity, while lead-specific changes remain in Lead Workspace Activity & History.
+
+CSV export is explicit, source-scoped and audit-recorded. Automatic retention deletion is disabled and permanent deletion is not exposed in v1. Offline status is visible and write/export controls are disabled until connectivity returns.

@@ -23,7 +23,7 @@
 
 **D01–D05: APPROVED**
 
-D06–D08 remain unresolved and are not to be implemented by assumption.
+D06 and D07 are resolved in the production CRM path. D08 remains the final unresolved design/handoff stage and requires an explicit design update before implementation.
 
 ## Current rule
 
@@ -51,3 +51,8 @@ The dashboard presents only the daily operational counters and next actions: CRM
 ### Reliability
 
 Classification errors are rendered inline with the server response instead of silently changing the queue. The write endpoint is protected and gated by CRM_CLASSIFICATION_WRITE_ENABLED=true.
+
+
+## 2026-10-01 — Production security/operator-control closure
+
+D07 is implemented on `crm-ui-dashboard`: protected operator session UX, default sensitive-data masking, explicit/reversible lead archive, global audit visibility, explicit audit-recorded CSV export, retention/deletion boundaries, and visible offline/sync states. The browser E2E regression is corrected on the same branch.
