@@ -64,6 +64,8 @@ test('production CRM browser journey uses only live-record surfaces',async()=>{
   assert.equal(await page.getByLabel('Lead Status').isDisabled(),true);
   assert.equal(await page.getByRole('button',{name:'Archive lead'}).isDisabled(),true);
   await page.context().setOffline(false);
+  await page.waitForFunction(()=>navigator.onLine===true);
+  await page.getByText('Online',{exact:true}).waitFor();
   await page.getByLabel('Tenant Type').selectOption('Family');
   assert.equal(await page.getByText('No imported conversation for this lead.').count(),0);
   await page.getByRole('button',{name:'Conversation',exact:true}).click();
