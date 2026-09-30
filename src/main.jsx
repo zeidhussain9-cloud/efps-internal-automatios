@@ -78,6 +78,15 @@ function App(){
 
  useEffect(()=>{
   let active=true;
+  if(page!=='Contact Classification')return()=>{active=false};
+  setClassificationState('loading');
+  const qs=new URLSearchParams({limit:'100'});if(classificationFilter)qs.set('classification',classificationFilter);
+  fetch('/api/db/classifications?'+qs.toString(),{cache:'no-store'}).then(async r=>{if(!r.ok)throw Error('Classification records unavailable');return r.json()}).then(d=>{if(active){setClassifications(Array.isArray(d.classifications)?d.classifications:[]);setClassificationState('ready')}}).catch(()=>{if(active){setClassifications([]);setClassificationState('unavailable')}});
+  return()=>{active=false};
+ },[page,classificationFilter,refreshToken]);
+
+ useEffect(()=>{
+  let active=true;
   async function load(){
    try{
     const r=await fetch('/api/inventory/overview',{cache:'no-store'});
