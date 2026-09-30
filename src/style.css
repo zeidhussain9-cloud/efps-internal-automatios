@@ -46,3 +46,5 @@
 .raw-details{margin-top:12px;color:#58718b;font-size:12px}
 .raw-details summary{cursor:pointer;font-weight:600}
 @media (max-width:900px){.requirements-grid.full{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+.classification-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.classification-actions select{min-width:210px}.event .error{color:#b42318}.classification-actions .primary:disabled{opacity:.5;cursor:not-allowed}
