@@ -2,7 +2,6 @@ import 'jsr:@supabase/functions-js/edge-runtime.d.ts'
 import { createClient } from 'npm:@supabase/supabase-js@2'
 
 const SOURCE_NUMBER = '+919148338801'
-const SECRET_NAME = 'crm_whapi_webhook_token'
 const MAX_MESSAGES = 100
 
 const secretKeys = JSON.parse(Deno.env.get('SUPABASE_SECRET_KEYS') ?? '{}')
