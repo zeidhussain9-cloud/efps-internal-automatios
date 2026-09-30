@@ -1,3 +1,7 @@
+## Current production audit — 2026-10-01 (post-reconciliation)
+
+Verified live state: Render `easyfind-crm-d01-d05` / `srv-darsv560tbcc73cu4ip0`, branch `crm-ui-dashboard`, deploy `dep-daum9vi1a91c739kcfhg`, commit `866dd78b594032eadff9f2a771cb170e7b41aded`. Supabase source `+919148338801`: 185 source-linked leads, 288 classifications, 13 pending, 2 explicitly unqualified/excluded, 185 promoted, and 6,594 CRM messages. All 46 webhook events are now processed; 0 remain `received`; 0 failed. The 33-event operational backlog has therefore been reconciled. Browser Realtime is notification-only and CSP allows the exact Supabase HTTPS/WSS origin. RLS is enabled on all CRM tables and `anon`/`authenticated` have no SELECT privilege. Render reports Basic Auth configured and database connectivity connected.
+
 ## Current production truth — 2026-09-30
 
 This document contains historical source-of-truth decisions below. The current operational CRM truth is now split by provenance: the audited local SQLite extraction remains the historical evidence set, while Supabase is the production operational store for the connected source `+919148338801`. Live WhAPI messages enter through the Supabase webhook boundary and are persisted in `crm_webhook_events` before downstream reconciliation.
