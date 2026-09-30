@@ -134,9 +134,9 @@ createServer(async(req,res)=>{
      data=await repo.dashboardStats(q.get('source_number')||'+919148338801');
     }
     else if(p==='/api/db/leads'){
-     const raw=q.get('limit')??'50',offset=q.get('offset')??'0',sourceNumber=q.get('source_number')||'+919148338801';
+     const raw=q.get('limit')??'50',offset=q.get('offset')??'0',sourceNumber=q.get('source_number')||'+919148338801',leadSort=q.get('lead_sort')||'last_message_desc';
      if(!/^\d{1,3}$/.test(raw)||!/^\d{1,7}$/.test(offset)){res.writeHead(400,security);return res.end('Invalid pagination');}
-     data=await repo.listLeadsPage(Number(raw),Number(offset),sourceNumber,q.get('lead_status')||'');
+     data=await repo.listLeadsPage(Number(raw),Number(offset),sourceNumber,q.get('lead_status')||'',leadSort);
     }else if(/^\/api\/db\/leads\/[^/]+\/workspace$/.test(p)){
      const id=decodeURIComponent(p.slice('/api/db/leads/'.length,-'/workspace'.length));
      if(!id||id.includes('/')||id.length>128){res.writeHead(400,security);return res.end('Invalid lead ID');}
