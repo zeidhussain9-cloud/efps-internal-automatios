@@ -134,7 +134,7 @@ function App(){
    </header>
    <div className="content">
     {page==='Inventory'&&<InventoryPanel data={inventoryData} state={inventoryState} refresh={refresh} query={inventoryQuery} setQuery={setInventoryQuery}/>}
-    {page==='Settings'&&<><div className="heading"><div><h1>Settings</h1><p>Production CRM configuration</p></div></div><div className="panel standalone"><h3>Live data scope</h3><p>This dashboard is connected only to the imported lead source <b>{SOURCE_NUMBER}</b>. Preview fixtures and preview AI modes are disabled.</p><p>Customer writes remain disabled from the browser. WhatsApp opens the operator's composer; the CRM does not send messages automatically.</p></div></>}
+    {page==='Settings'&&<><div className="heading"><div><h1>Settings</h1><p>Production CRM configuration</p></div></div><div className="panel standalone"><h3>Live data scope</h3><p>This dashboard is connected only to the imported lead source <b>{SOURCE_NUMBER}</b>. Production data modes are enforced.</p><p>Customer writes remain disabled from the browser. WhatsApp opens the operator's composer; the CRM does not send messages automatically.</p></div></>}
     {(page==='Dashboard'||page==='Leads Inbox')&&selectedId&&workspaceState==='ready'&&<section className="panel live-detail">
       <div className="detailhead">
        <button className="back" onClick={backToInbox}><ChevronLeft size={18}/> Leads Inbox</button>
