@@ -8,6 +8,7 @@ const SOURCE_NUMBER='+919148338801';
 const TABS=['Overview','Conversation','Requirements','Property Matches','AI & Drafts','Activity & History'];
 const MENU=[['Dashboard',LayoutDashboard],['Leads Inbox',Inbox],['Inventory',Building2],['Settings',Settings]];
 const money=n=>n!==null&&n!==undefined&&n!==''?'₹'+Number(n).toLocaleString('en-IN'):'Not specified';
+const leadTitle=lead=>lead?.display_name||lead?.normalized_phone||'Lead';
 const classificationLabel=value=>({
  'Qualified Lead':'Actual lead',
  'Agent/Partner':'Agent / broker',
@@ -21,7 +22,7 @@ const classificationLabel=value=>({
 
 function LeadCard({lead,onClick}){
  return <button className="lead-card" onClick={onClick} type="button">
-  <div className="lead-card-main"><b>{lead.display_name||'Unnamed lead'}</b><span>{lead.normalized_phone||'No phone stored'}</span></div>
+  <div className="lead-card-main"><b>{leadTitle(lead)}</b><span>{lead.display_name?lead.normalized_phone||'No phone stored':''}</span></div>
   <div className="lead-card-meta"><span>{lead.status}</span><span>{lead.priority}</span><span className="classification-chip">{classificationLabel(lead.classification)}</span><span>{lead.source_number||SOURCE_NUMBER}</span></div>
  </button>;
 }
@@ -163,7 +164,7 @@ function App(){
     {(page==='Dashboard'||page==='Leads Inbox')&&selectedId&&workspaceState==='ready'&&<section className="panel live-detail">
       <div className="detailhead">
        <button className="back" onClick={backToInbox}><ChevronLeft size={18}/> Leads Inbox</button>
-       <div className="identity"><span className="initial">{(workspace.lead.display_name||'Lead').split(' ').map(x=>x[0]).join('').slice(0,3)}</span><div><h2>{workspace.lead.display_name||'Unnamed lead'}</h2><span>{workspace.lead.normalized_phone||'No phone stored'} · {SOURCE_NUMBER}</span></div></div>
+       <div className="identity"><span className="initial">{leadTitle(workspace.lead).split(/\s+/).map(x=>x[0]).join('').slice(0,3)}</span><div><h2>{leadTitle(workspace.lead)}</h2><span>{workspace.lead.normalized_phone||'No phone stored'} · {SOURCE_NUMBER}</span></div></div>
        <div className="headcontrols"><span className="chip blue">{workspace.lead.status}</span><span className="chip">{workspace.lead.priority}</span><span className="chip classification">{classificationLabel(workspace.lead.classification||workspace.lead.requirements?.fields?.classification||workspace.lead.requirements?.classification)}</span></div>
       </div>
       <div className="tabs">{TABS.map(t=><button className={tab===t?'active':''} key={t} onClick={()=>setTab(t)}>{t}</button>)}</div>
