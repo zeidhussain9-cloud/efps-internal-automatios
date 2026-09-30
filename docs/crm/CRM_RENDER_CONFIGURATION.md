@@ -64,3 +64,16 @@ The root `steering.md` is the dedicated executable CRM model instruction; the ad
 ## 2026-09-30 — Current production CRM UI deployment
 
 `crm-ui-dashboard` is the canonical CRM UI development/deployment branch. Render `easyfind-crm-d01-d05` auto-deploys this branch. Local checkout and GitHub `origin/crm-ui-dashboard` are reconciled to the same commit. The production source currently in scope is `+919148338801`; historical and live WhatsApp records reconcile through Supabase. The other configured source numbers remain visible in the UI but are not imported into the current production flow.
+
+## Classification write gate — 2026-09-30
+
+Production classification updates require all of the following:
+
+- protected CRM authentication;
+- DATABASE_URL;
+- CRM_CLASSIFICATION_WRITE_ENABLED=true;
+- server-side transactional classification repository.
+
+The browser cannot write directly to Supabase. A successful Qualified Lead update creates/links the CRM lead and links preserved messages in the same server-side transaction before the UI moves the contact to the promoted queue.
+
+Render environment-variable changes require a redeploy before the running service uses the new value.

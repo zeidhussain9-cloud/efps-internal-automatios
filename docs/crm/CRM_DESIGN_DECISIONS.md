@@ -127,3 +127,13 @@ Approval is a design state only. No live customer/inventory connection or produc
 ## Implementation checkpoint — 2026-09-26 (not additional design approval)
 
 Supabase Free `easyfind-crm` has been provisioned in Mumbai with nine server-only, RLS-enabled tables. The backend now contains a disabled-by-default, authenticated, read-only PostgreSQL pilot API. This does **not** resolve or approve D06–D08, enable live webhook ingestion, authorize customer-data import, or constitute production authentication approval. Historical SQLite reconciliation, verified backups/restoration and synthetic integration tests remain prerequisites.
+
+## D09 — Simple contact qualification workflow — APPROVED 2026-09-30
+
+- [x] D09.1 One Contact Classification screen; no separate classification filter.
+- [x] D09.2 Two sub-tabs: Not pushed to CRM; Qualified leads pushed to CRM.
+- [x] D09.3 One dropdown + explicit Update action per contact.
+- [x] D09.4 Non-qualified classifications remain outside CRM.
+- [x] D09.5 Qualified Lead is the only promotion path into crm_leads.
+- [x] D09.6 Dashboard prioritizes CRM leads, classification queues and follow-ups due today.
+- [x] D09.7 Classification failures are visible inline; no silent failure.

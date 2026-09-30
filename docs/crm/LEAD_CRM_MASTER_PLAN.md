@@ -202,11 +202,11 @@ Supabase `easyfind-crm` (`qttcutwzehtskfcwxkwj`, Mumbai) is ACTIVE_HEALTHY and i
 - [x] Add steering-specific tests; verify complete application, build, browser and CI results separately.
 - [x] Independently verified the steering-bearing Render `49b4f30` hosted request: success at 2026-09-26 21:36:16 UTC, five expected keys. Optional startup smoke disabled in Render; config deployment `dep-das3lspa4omc738mqre0` reached live at 2026-09-26 21:37:57 UTC with Supabase connected and no model startup call.
 - [ ] Finish representative synthetic extraction evaluation, durable audited CRUD, independently restore-tested encrypted backups, 735/23,454/966 source reconciliation and D06–D08 approvals before any real customer import.
-- [ ] Production-grade operator session auth, retention policy and final credential rotation remain gated; `CRM_REAL_DATA_ENABLED` and `CRM_DB_WRITE_ENABLED` stay disabled.
+- [ ] Production-grade operator session auth, retention policy and final credential rotation remain gated. `CRM_REAL_DATA_ENABLED` remains a separate gate; production contact classification writes use `CRM_CLASSIFICATION_WRITE_ENABLED`.
 
 ## 2026-09-27 — Canonical main-branch promotion
 
-`main` was fast-forwarded from `1f90124` to `6ebcc21`, importing all 223 CRM UI commits without rewriting history. `main` is now canonical for this UI. `crm-ui-dashboard` remains a temporary deployment mirror while Render still tracks that branch. The clean Mac linked `main` worktree is `/Users/zeidzakir/Projects/efps-internal-automatios/leads_automation/crm-ui-dashboard`; the dirty historical audit checkout and `leads-ui` application remain intact. CI runs on both branches until Render is repointed. This is a repository reconciliation, not completion of production migration gates.
+Historical branch-reconciliation note superseded on 2026-09-30: `crm-ui-dashboard` remains the Render deployment branch; `main` and `crm-ui-dashboard` are reconciled to the same repository state. The clean Mac linked `main` worktree is `/Users/zeidzakir/Projects/efps-internal-automatios/leads_automation/crm-ui-dashboard`; the dirty historical audit checkout and `leads-ui` application remain intact. CI runs on both branches until Render is repointed. This is a repository reconciliation, not completion of production migration gates.
 
 ## 2026-09-30 — Live lead-only webhook completion checkpoint
 
@@ -235,3 +235,13 @@ Supabase `easyfind-crm` (`qttcutwzehtskfcwxkwj`, Mumbai) is ACTIVE_HEALTHY and i
 - [x] Applied production migration `20260930145131` (`crm_lead_status_tenant_type_and_webhook_gate_reconciliation`) and verified `crm_leads.tenant_type` plus the reconciled no-auto-lead webhook processor in Supabase.
 - [x] Current production evidence after this migration: 140 `crm_leads`, 228 source classifications for `+919148338801`, 0 pending classifications, 5,286 historical `crm_messages`, and 0 persisted webhook events. No live WhatsApp lead is currently present in the database.
 - [x] Local production build, all 62 unit/integration tests, and the Playwright browser journey pass. The browser journey now covers the live-record surface, Lead Status/Tenant Type controls and persisted-update API path.
+
+## 2026-09-30 — CRM daily workflow resolved
+
+- [x] Replaced the separate classification filter with one two-tab Contact Classification queue.
+- [x] Not pushed to CRM contains pending and non-qualified contacts.
+- [x] Qualified leads pushed to CRM contains promoted contacts.
+- [x] Added explicit dropdown → Update workflow with visible saving/error state.
+- [x] Qualified Lead promotion is transactional and links preserved messages before queue movement.
+- [x] Added Dashboard daily counters and next open follow-ups.
+- [x] Classification writes are protected by CRM_CLASSIFICATION_WRITE_ENABLED=true.
