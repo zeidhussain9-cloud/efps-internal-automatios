@@ -52,6 +52,9 @@ function App(){
  const[matchState,setMatchState]=useState('idle');
  const[refreshToken,setRefreshToken]=useState(0);
  const[realtimeState,setRealtimeState]=useState('connecting');
+ const[classifications,setClassifications]=useState([]);
+ const[classificationState,setClassificationState]=useState('idle');
+ const[classificationFilter,setClassificationFilter]=useState('');
 
  useEffect(()=>{try{window.sessionStorage.setItem('efps-crm-active-page',page)}catch{}},[page]);
 
