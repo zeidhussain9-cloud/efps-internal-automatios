@@ -54,7 +54,7 @@ test('production CRM browser journey uses only live-record surfaces',async()=>{
   await page.getByRole('button',{name:/Privacy: Masked/}).click();
   await page.getByRole('button',{name:/Privacy: Revealed/}).waitFor();
   await page.getByRole('button',{name:/Privacy: Revealed/}).click();
-  await page.getByText('Live lead').waitFor();
+  await page.getByRole('heading',{name:'Live lead',exact:true}).waitFor();
   await page.getByText('Lead Status').waitFor();
   await page.getByText('Tenant Type').waitFor();
   await page.getByLabel('Lead Status').selectOption('Active Follow-up');
