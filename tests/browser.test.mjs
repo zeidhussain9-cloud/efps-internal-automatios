@@ -51,7 +51,7 @@ test('production CRM browser journey uses only live-record surfaces',async()=>{
   assert.equal(await page.getByText(/No live inventory matches were returned/).count(),1);
   await page.getByRole('button',{name:'AI & Drafts',exact:true}).click();
   assert.equal(await page.getByText(/Real AI is on-demand/).count(),1);
-  await page.getByRole('button',{name:'Leads Inbox',exact:true}).click();
+  await page.locator('button.header-back').click();
   assert.equal(await page.getByText('Production data').count(),1);
  }finally{await browser?.close();server.kill()}
 });
