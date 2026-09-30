@@ -27,7 +27,7 @@ async function main(){
   const names=(await client.query("select table_name from information_schema.tables where table_schema='public' and table_name like 'crm_%' order by table_name")).rows.map(r=>r.table_name);
   const snap={format:'EFPS_CRM_BACKUP_PRECONVERSATION_V1',captured_at:new Date().toISOString(),tables:{}};
   for(const n of names)snap.tables[n]=(await client.query('select * from public.'+n)).rows;
-  const backup=enc(Buffer.from(JSON.stringify(snap)),key);await fs.writeFile(BACKUP,backup,{flag:'wx',mode:0o600});
+  const backup=enc(Buffer.from(JSON.stringify(snap)),key); let backupBytes; try{backupBytes=await fs.readFile(BACKUP)}catch{await fs.writeFile(BACKUP,backup,{flag:'wx',mode:0o600});backupBytes=backup} 
   const digest=sha256(raw);await client.query('BEGIN');
   try{
    await client.query('select pg_advisory_xact_lock(hashtext($1))',[SOURCE]);
@@ -53,7 +53,7 @@ async function main(){
    const count=(await client.query('select count(*)::int n from public.crm_messages where source_number=$1 and source_message_id is not null',[SOURCE])).rows[0].n;
    if(count!==5286)throw Error('Post-import source conversation count reconciliation failed: '+count);
    await client.query('insert into public.crm_idempotency_keys(key,scope,request_hash,response) values($1,$2,$3,$4::jsonb)',[
-    'historical-conversations:'+SOURCE+':'+digest,'historical-conversation-import',digest,JSON.stringify({source_number:SOURCE,message_count:5286,inserted,duplicates,backup_sha256:sha256(backup)})
+    'historical-conversations:'+SOURCE+':'+digest,'historical-conversation-import',digest,JSON.stringify({source_number:SOURCE,message_count:5286,inserted,duplicates,backup_sha256:sha256(backupBytes)})
    ]);
    await client.query('COMMIT');
    console.log(JSON.stringify({status:'imported',source:SOURCE,messages:5286,inserted,duplicates,export_sha256:digest,backup_sha256:sha256(backup)}));
