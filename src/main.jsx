@@ -88,7 +88,7 @@ function App(){
   async function load(){
    setLoading(true);setError('');
    try{
-    const r=await fetch('/api/db/leads?limit=100&offset='+offset+'&source_number='+encodeURIComponent(sourceFilter)+'&lead_status='+encodeURIComponent(leadStatusFilter),{cache:'no-store'});
+    const r=await fetch('/api/db/leads?limit=100&offset='+offset+'&source_number='+encodeURIComponent(sourceFilter)+'&lead_status='+encodeURIComponent(leadStatusFilter),{cache:'no-store',credentials:'include'});
     if(!r.ok)throw Error('Live CRM records unavailable');
     const d=await r.json();
     if(!active)return;
@@ -106,13 +106,13 @@ function App(){
   if(page!=='Contact Classification')return()=>{active=false};
   setClassificationState('loading');
   const qs=new URLSearchParams({limit:'100'});if(classificationFilter)qs.set('classification',classificationFilter);if(sourceFilter)qs.set('source_number',sourceFilter);
-  fetch('/api/db/classifications?'+qs.toString(),{cache:'no-store'}).then(async r=>{if(!r.ok)throw Error('Classification records unavailable');return r.json()}).then(d=>{if(active){setClassifications(Array.isArray(d.classifications)?d.classifications:[]);setClassificationState('ready')}}).catch(()=>{if(active){setClassifications([]);setClassificationState('unavailable')}});
+  fetch('/api/db/classifications?'+qs.toString(),{cache:'no-store',credentials:'include'}).then(async r=>{if(!r.ok)throw Error('Classification records unavailable');return r.json()}).then(d=>{if(active){setClassifications(Array.isArray(d.classifications)?d.classifications:[]);setClassificationState('ready')}}).catch(()=>{if(active){setClassifications([]);setClassificationState('unavailable')}});
   return()=>{active=false};
  },[page,classificationFilter,sourceFilter,refreshToken]);
 
  useEffect(()=>{
   let active=true;
-  fetch('/api/db/stats?source_number='+encodeURIComponent(sourceFilter),{cache:'no-store'}).then(async r=>{if(!r.ok)throw Error('Dashboard stats unavailable');return r.json()}).then(d=>{if(active)setDashboardStats(d)}).catch(()=>{if(active)setDashboardStats(null)});
+  fetch('/api/db/stats?source_number='+encodeURIComponent(sourceFilter),{cache:'no-store',credentials:'include'}).then(async r=>{if(!r.ok)throw Error('Dashboard stats unavailable');return r.json()}).then(d=>{if(active)setDashboardStats(d)}).catch(()=>{if(active)setDashboardStats(null)});
   return()=>{active=false};
  },[sourceFilter,refreshToken]);
 
@@ -120,7 +120,7 @@ function App(){
   let active=true;
   async function load(){
    try{
-    const r=await fetch('/api/inventory/overview',{cache:'no-store'});
+    const r=await fetch('/api/inventory/overview',{cache:'no-store',credentials:'include'});
     if(!r.ok)throw Error('Inventory unavailable');
     const data=await r.json();
     if(active)setInventoryData(data),setInventoryState('live');
@@ -136,7 +136,7 @@ function App(){
   setWorkspaceState('loading');setAi(null);setAiState('idle');setMatches([]);setMatchState('loading');
   async function load(){
    try{
-    const r=await fetch('/api/db/leads/'+encodeURIComponent(selectedId)+'/workspace?source_number='+encodeURIComponent(sourceFilter),{cache:'no-store'});
+    const r=await fetch('/api/db/leads/'+encodeURIComponent(selectedId)+'/workspace?source_number='+encodeURIComponent(sourceFilter),{cache:'no-store',credentials:'include'});
     if(!r.ok)throw Error('Lead workspace unavailable');
     const data=await r.json();
     if(!active)return;
@@ -154,7 +154,7 @@ function App(){
     if(locality)qs.set('locality',locality);
     if(req.furnishing)qs.set('furnishing',String(req.furnishing));
     if(req.pet_friendly)qs.set('pet_friendly',String(req.pet_friendly));
-    const mr=await fetch('/api/inventory/matches?'+qs.toString(),{cache:'no-store'});
+    const mr=await fetch('/api/inventory/matches?'+qs.toString(),{cache:'no-store',credentials:'include'});
     if(!mr.ok)throw Error('Inventory match lookup unavailable');
     const md=await mr.json();
     if(active){setMatches(Array.isArray(md.rows)?md.rows:[]);setMatchState('ready')}
@@ -181,12 +181,12 @@ function App(){
  function openLead(id){setSelectedId(id);setTab('Overview');setPage('Leads Inbox')}
  function backToInbox(){setSelectedId(null);setWorkspace(null);setTab('Overview');setPage('Leads Inbox')}
  function refresh(){setRefreshToken(v=>v+1)}
- function classifyContact(id,classification){fetch('/api/db/classifications/'+id,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({classification,source:'operator'})}).then(async r=>{if(!r.ok)throw Error('Classification update failed');return r.json()}).then(()=>refresh()).catch(()=>setClassificationState('unavailable'))}
- function updateLead(id,patch){return fetch('/api/db/leads/'+encodeURIComponent(id),{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(patch)}).then(async r=>{const d=await r.json().catch(()=>({}));if(!r.ok)throw Error(d.error||'Lead update failed');return d}).then(()=>refresh())}
+ function classifyContact(id,classification){fetch('/api/db/classifications/'+id,{method:'POST',credentials:'include',headers:{'Content-Type':'application/json'},body:JSON.stringify({classification,source:'operator'})}).then(async r=>{if(!r.ok)throw Error('Classification update failed');return r.json()}).then(()=>refresh()).catch(()=>setClassificationState('unavailable'))}
+ function updateLead(id,patch){return fetch('/api/db/leads/'+encodeURIComponent(id),{method:'PATCH',credentials:'include',headers:{'Content-Type':'application/json'},body:JSON.stringify(patch)}).then(async r=>{const d=await r.json().catch(()=>({}));if(!r.ok)throw Error(d.error||'Lead update failed');return d}).then(()=>refresh())}
  function runAi(){
   if(!workspace?.lead?.id)return;
   setAiState('running');setAi(null);
-  fetch('/api/ai/analyze-real',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({leadId:workspace.lead.id})})
+  fetch('/api/ai/analyze-real',{method:'POST',credentials:'include',headers:{'Content-Type':'application/json'},body:JSON.stringify({leadId:workspace.lead.id})})
    .then(async r=>{const d=await r.json().catch(()=>({}));if(!r.ok)throw Error(d.error||'Real AI unavailable');setAi(d);setAiState('ready')})
    .catch(()=>setAiState('unavailable'));
  }
