@@ -1,8 +1,6 @@
-# EFPS Internal Automations — Current Handoff
-
 ## Current state
 
-The active workstream is **CRM source-of-truth reconciliation only**. Branch `crm/source-of-truth-reconciliation` is based on the canonical `main`. No CRM UI implementation, Figma editing, live customer/inventory connection, or Render repointing is part of this step.
+The active workstream is the **production CRM UI on `crm-ui-dashboard`**. The current production source is WhatsApp `+919148338801`; historical and live data reconcile through Supabase. The other two configured source numbers remain visible in the UI for later onboarding.
 
 The authorized implementation target is **Inventory Management Phase 1**. The workflow has three top-level stages: Stage 1 Initial/Webhook, Stage 2 Deterministic Extraction/Property Processing, and Stage 3 downstream boundary reserved for later consumers.
 
@@ -115,7 +113,7 @@ These are future live-runtime verification tasks, not unresolved Phase-1 impleme
 - Application tests, build, browser and GitHub Actions must pass on the new steering commit; Render `49b4f30` succeeded with the dedicated steering at 2026-09-26 21:36:16 UTC. Optional `CRM_OLLAMA_STARTUP_SMOKE_ENABLED=false` is deployed: `dep-das3lspa4omc738mqre0` live at 2026-09-26 21:37:57 UTC; no startup inference observed. On-demand fictional pilot remains enabled.
 - Current production Supabase state contains reconciled real CRM data for `+919148338801`; historical records and live webhook events use the same source-aware reconciliation path. D06–D08 and later source onboarding remain future scope. Credential rotation remains a final production hardening step.
 
-## 2026-09-27 — Main-branch promotion (supersedes earlier branch restrictions)
+## 2026-09-27 — CRM UI branch reconciliation
 
 - `crm-ui-dashboard` is the canonical CRM UI dashboard and deployment branch. Render currently deploys this branch; local and GitHub state are reconciled to the same commit.
 - Current production source for this CRM deployment is WhatsApp `+919148338801`. Historical records and live webhook events are reconciled through Supabase before appearing as CRM data.

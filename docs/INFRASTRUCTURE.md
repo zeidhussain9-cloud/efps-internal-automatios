@@ -10,7 +10,7 @@ This is the canonical registry for external systems and verified resource identi
 - Local CRM UI checkout: `leads_automation/crm-ui-dashboard`
 - Current CRM UI deployment is sourced from `crm-ui-dashboard`; the older SAM/main deployment notes below are historical infrastructure records and are not the CRM UI production path.
 
-## CRM prototype deployment target
+## Historical CRM prototype deployment target
 
 The existing dedicated Render service reserved for the future CRM prototype is:
 
