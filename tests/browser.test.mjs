@@ -20,13 +20,13 @@ test('production CRM browser journey uses only live-record surfaces',async()=>{
   browser=await chromium.launch({headless:true});
   const page=await browser.newPage();
   await page.route('**/api/db/leads?*',route=>route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({
-   leads:[{id:'LIVE-1',display_name:'Live lead',normalized_phone:'+919000000001',status:'New',priority:'Medium',requirements:{bhk:'2 BHK',locality:'Harlur',budget:50000},updated_at:'2026-09-30T00:00:00Z',source_number:'+919148338801'}],
+   leads:[{id:'LIVE-1',display_name:'Live lead',normalized_phone:'+919000000001',status:'New',priority:'Medium',classification:'Qualified Lead',requirements:{bhk:'2 BHK',locality:'Harlur',budget:50000},updated_at:'2026-09-30T00:00:00Z',source_number:'+919148338801'}],
    total:228,sourceTotals:{'+919148338801':228}
   })}));
   await page.route('**/api/inventory/overview',route=>route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({rows:[],latestSync:null})}));
   await page.route('**/api/db/leads/*/workspace',route=>route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({
-   lead:{id:'LIVE-1',display_name:'Live lead',normalized_phone:'+919000000001',status:'New',priority:'Medium',requirements:{bhk:'2 BHK',locality:'Harlur',budget:50000},operator_notes:''},
-   sources:[{source_number:'+919148338801'}],messages:[],activity:[],followups:[]
+   lead:{id:'LIVE-1',display_name:'Live lead',normalized_phone:'+919000000001',status:'New',priority:'Medium',classification:'Qualified Lead',requirements:{bhk:'2 BHK',locality:'Harlur',budget:50000},operator_notes:''},
+   sources:[{source_number:'+919148338801'}],messages:[{id:1,source_number:'+919148338801',direction:'Incoming',message_type:'text',body:'Historical conversation message',sender_name:'Customer',message_at:'2026-09-30T00:00:00Z'}],activity:[],followups:[]
   })}));
   await page.route('**/api/inventory/matches?*',route=>route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({rows:[]})}));
   await page.goto(base);
@@ -34,13 +34,17 @@ test('production CRM browser journey uses only live-record surfaces',async()=>{
   assert.equal(await page.getByText('Synthetic preview').count(),0);
   assert.equal(await page.getByText('Sample leads').count(),0);
   assert.equal(await page.getByText('Live lead').count(),1);
+  assert.equal(await page.getByText('Actual lead').count(),1);
   assert.equal(await page.getByText('228 real leads').count(),1);
   await page.getByRole('button',{name:/Live lead/}).click();
   await page.getByRole('button',{name:'Overview',exact:true}).waitFor();
   assert.equal(await page.getByText('Live lead').count()>0,true);
   assert.equal(await page.getByText('No imported conversation for this lead.').count(),0);
   await page.getByRole('button',{name:'Conversation',exact:true}).click();
-  assert.equal(await page.getByText(/No imported conversation for this lead/).count(),1);
+  assert.equal(await page.getByText('Historical conversation message').count(),1);
+  await page.getByRole('button',{name:'Leads Inbox',exact:true}).first().click();
+  assert.equal(await page.getByText('228 real leads').count(),1);
+  await page.getByRole('button',{name:/Live lead/}).click();
   await page.getByRole('button',{name:'Property Matches',exact:true}).click();
   assert.equal(await page.getByText(/No live inventory matches were returned/).count(),1);
   await page.getByRole('button',{name:'AI & Drafts',exact:true}).click();
