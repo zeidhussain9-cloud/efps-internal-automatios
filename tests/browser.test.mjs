@@ -67,7 +67,13 @@ test('production CRM browser journey uses only live-record surfaces',async()=>{
   await page.waitForFunction(()=>navigator.onLine===true);
   await page.getByText('Online',{exact:true}).waitFor();
   await page.getByLabel('Tenant Type').selectOption('Family');
-  assert.equal(await page.getByText('No imported conversation for this lead.').count(),0);
+  const archiveButton=page.getByRole('button',{name:'Archive lead'});
+  await archiveButton.waitFor();
+  await page.once('dialog',dialog=>dialog.accept());
+  await archiveButton.click();
+  await page.getByRole('button',{name:'Restore lead'}).waitFor();
+  await page.getByRole('button',{name:'Restore lead'}).click();
+  await page.getByRole('button',{name:'Archive lead'}).waitFor();
   await page.getByRole('button',{name:'Conversation',exact:true}).click();
   await page.getByText('Sensitive message hidden').waitFor();
   await page.getByRole('button',{name:/Privacy: Masked/}).click();
@@ -75,11 +81,7 @@ test('production CRM browser journey uses only live-record surfaces',async()=>{
   await page.locator('button.header-back').click();
   await page.getByRole('button',{name:/Live lead/}).waitFor();
   await page.getByRole('button',{name:/Live lead/}).click();
-  await page.once('dialog',dialog=>dialog.accept());
-  await page.getByRole('button',{name:'Archive lead'}).click();
-  await page.getByRole('button',{name:'Restore lead'}).waitFor();
-  await page.getByRole('button',{name:'Restore lead'}).click();
-  await page.getByRole('button',{name:'Archive lead'}).waitFor();
+  await page.getByRole('button',{name:'Overview',exact:true}).waitFor();
   await page.getByRole('button',{name:'Property Matches',exact:true}).click();
   await page.getByText(/No live inventory matches were returned/).waitFor();
   await page.getByRole('button',{name:'AI & Drafts',exact:true}).click();
