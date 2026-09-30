@@ -91,7 +91,7 @@ async function main(){
    for(const r of source.leads){
     const id=idFor(r.phone_number);
     await client.query(
-     'insert into public.crm_leads(id,display_name,normalized_phone,status,priority,requirements,operator_notes,created_at,updated_at) values($1,$2,$3,$4,$5,$6::jsonb,$7,$8,$9)',
+     'insert into public.crm_leads(id,display_name,normalized_phone,status,priority,classification,requirements,operator_notes,created_at,updated_at) values($1,$2,$3,$4,$5,$6,$7::jsonb,$8,$9,$10)',
      [id,nullable(r.customer_name),r.phone_number,'New',r.priority||'Medium',nullable(r.classification),JSON.stringify(requirements(r)),
       nullable(r.notes)?'[Historical source note] '+r.notes:'Historical import; source +919148338801; source-backed fields preserved as historical data.',
       r.created_at||new Date().toISOString(),r.updated_at||r.created_at||new Date().toISOString()]
