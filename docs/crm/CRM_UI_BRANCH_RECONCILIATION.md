@@ -1,6 +1,6 @@
 # CRM UI branch reconciliation
 
-**Canonical UI development branch:** `crm-ui-consolidated`  
+**Canonical UI development branch:** `crm-ui-dashboard`  
 **Protected reference branch:** `main` (not used for ongoing UI changes)  
 **Reconciliation checkpoint:** 2026-09-30
 
@@ -8,7 +8,7 @@
 
 This branch is the single working line for the EFPS CRM UI dashboard and its production lead-workspace data path.
 
-The branch starts from the verified current `main` production snapshot so that the already-merged UI, inventory, Render hardening, and production-data cleanup are retained without rewriting `main`.
+The branch was fast-forwarded from the older `crm-ui-dashboard` line onto the verified current `main` production snapshot so that the already-merged UI, inventory, Render hardening, and production-data cleanup are retained without rewriting `main`.
 
 ## Branch reconciliation
 
