@@ -99,3 +99,14 @@ Render environment-variable changes require a redeploy before the running servic
 ## 2026-10-01 — D07 runtime configuration closure
 
 The Render CRM service continues to deploy `crm-ui-dashboard`. The existing configured CRM operator credential is verified through the application sign-in endpoint; successful sign-in creates an opaque HttpOnly `efps_crm_session` cookie. Session policy is 8 hours of inactivity and 12 hours maximum. No credential values are stored in source or emitted in logs. UI privacy masking, reversible archive/restore, audit visibility, explicit CSV export and offline/write gating are application controls and do not require new secret values.
+
+
+## 2026-10-01 — mobile/Reatime production checkpoint
+
+Latest verified deployment: Render `easyfind-crm-d01-d05`, deploy `dep-daupehaj7g8c73a5rgl0`, commit `78ab084cf3470d4b04d304a312ec09d40fcbe0f6`, status **live**.
+
+Mobile/compact layout is now covered by a 1000px responsive shell and the browser regression includes a 900px compact-viewport assertion. The Supabase browser client is configured from Render build variables `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY`. The Realtime subscription is initialized after operator sign-in; the previous mount-only effect caused the UI to remain `unconfigured` after authentication even when browser configuration existed.
+
+Production Supabase verification confirms the `crm_messages_realtime_broadcast` trigger exists on `public.crm_messages` and invokes `crm_broadcast_message_activity`. Realtime is notification-only; the protected CRM API remains the source of displayed data.
+
+CI run **#284** for this revision is green: build, full test suite, Chromium installation and browser E2E all passed.
