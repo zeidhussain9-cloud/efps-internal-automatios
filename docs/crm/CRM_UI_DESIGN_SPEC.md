@@ -204,3 +204,21 @@ CSV export is explicit, source-scoped and audit-recorded. Automatic retention de
 The production CRM shell is responsive for narrow mobile and compact/tablet layout viewports. At compact widths the sidebar becomes a horizontal navigation rail, the top operator/status controls become horizontally scrollable, dashboard KPIs use a two-column layout, lead lists become full-width, and lead-workspace sections collapse to one column where appropriate. The CSS includes a 1000px compact-layout breakpoint so mobile browsers exposing a wider desktop-style layout viewport do not retain the desktop two-pane shell.
 
 Browser Realtime is initialized after successful operator authentication rather than only at initial application mount. When the configured Supabase project URL and publishable browser key are present, the crm:live broadcast channel reports connecting then live; the channel is notification-only and refreshes CRM reads after the database trigger broadcasts message_inserted. Missing browser configuration is explicitly reported as unconfigured rather than being treated as a live connection.
+
+## 2026-10-01 — Leads Inbox usability: conversation timeline and sorting
+
+The Leads Inbox now exposes conversation-derived operational fields for every returned lead:
+- Contacted date — timestamp of the first stored Incoming/customer message.
+- Last message sent by — Customer or Us, based on the direction of the latest stored CRM message.
+- Last message date — timestamp of the latest stored CRM message.
+
+Date/time display uses DD-Month-YYYY / HH:MM in the Asia/Kolkata timezone. Values are computed from crm_messages server-side; no placeholder values are generated.
+
+Inbox sorting is server-side so sorting remains correct across pagination. Available views are:
+1. Last message — newest (default)
+2. Customer replied — newest
+3. First contacted — newest
+4. Last message — oldest
+5. Name — A–Z
+
+The same lead card is used by Dashboard and Leads Inbox, so these conversation fields remain visible in both surfaces.
