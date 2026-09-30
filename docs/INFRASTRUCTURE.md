@@ -10,6 +10,17 @@ This is the canonical registry for external systems and verified resource identi
 - Local CRM UI checkout: `leads_automation/crm-ui-dashboard`
 - Current CRM UI deployment is sourced from `crm-ui-dashboard`; the older SAM/main deployment notes below are historical infrastructure records and are not the CRM UI production path.
 
+## CRM production checkpoint — 2026-09-30
+
+- Render service: `easyfind-crm-d01-d05` (`srv-darsv560tbcc73cu4ip0`)
+- Deployment branch: `crm-ui-dashboard`
+- Latest live commit: `184abfe58052b01ebf5be4dd26044f31fc579536`
+- Production source: `+919148338801`
+- Supabase baseline: 141 source-linked leads, 287 classifications, 58 pending classifications, 6,561 messages, 28 webhook events (13 processed, 15 received).
+- `main` is repository-reconciled but Render is not switched to it.
+
+## Historical CRM prototype deployment target
+
 ## Historical CRM prototype deployment target
 
 The existing dedicated Render service reserved for the future CRM prototype is:
@@ -159,8 +170,8 @@ The migration itself does not prove live third-party connectivity. Each integrat
 
 ## CRM dedicated deployment — verified 2026-09-27
 
-The separate CRM UI deploys **only** from `crm-ui-dashboard` to Render service `easyfind-crm-d01-d05` (`srv-darsv560tbcc73cu4ip0`), URL `https://easyfind-crm-d01-d05.onrender.com`. It uses Supabase project `qttcutwzehtskfcwxkwj` through server-side TLS and hosted Ollama Cloud `gpt-oss:20b` through server-only `OLLAMA_BASE_URL`, `OLLAMA_MODEL`, `OLLAMA_API_KEY`. A fictional hosted response was verified in Render logs at 2026-09-26 21:25:38 UTC. Root `steering.md` is bundled in the deployed repository and read server-side. No local model is installed. Repository `main` remains untouched by this UI work.
+The separate CRM UI deploys **only** from `crm-ui-dashboard` to Render service `easyfind-crm-d01-d05` (`srv-darsv560tbcc73cu4ip0`), URL `https://easyfind-crm-d01-d05.onrender.com`. It uses Supabase project `qttcutwzehtskfcwxkwj` through server-side TLS and hosted Ollama Cloud `gpt-oss:20b` through server-only `OLLAMA_BASE_URL`, `OLLAMA_MODEL`, `OLLAMA_API_KEY`. A fictional hosted response was verified in Render logs at 2026-09-26 21:25:38 UTC. Root `steering.md` is bundled in the deployed repository and read server-side. No local model is installed. Repository `main` is a reconciled repository branch; Render production remains on `crm-ui-dashboard`.
 
 ## 2026-09-27 — Canonical branch transition
 
-`main` was fast-forwarded to the complete CRM dashboard history at `6ebcc21`. The prior statements that `main` is untouched or that only `crm-ui-dashboard` can hold the UI are historical. Render remains on `crm-ui-dashboard` for the CRM UI deployment; `main` is reconciled with the CRM branch for repository source-of-truth purposes, but the Render service branch is not changed as part of this workflow. The operator Mac uses a separate clean linked `main` worktree at `leads_automation/crm-ui-dashboard`, preserving the original audit checkout and local files.
+Repository reconciliation is maintained separately from the Render deployment path. `crm-ui-dashboard` is the Render branch; `main` is kept reconciled to the approved CRM repository checkpoint. The active CRM checkout is `/Users/zeidzakir/Projects/efps-internal-automatios/leads_automation/crm-ui-dashboard`; the separate `main` worktree is `/Users/zeidzakir/Projects/efps-internal-automatios`.

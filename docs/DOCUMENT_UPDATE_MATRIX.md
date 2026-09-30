@@ -47,3 +47,8 @@ If the matrix does not clearly cover a change, do not guess. Establish the corre
 ## Maintenance
 
 This matrix is the canonical routing baseline. It must be refined when actual implementation reveals a new durable document owner or recurring update pattern.
+
+
+## CRM production checkpoint 2026-09-30
+
+The current CRM production truth is maintained in `docs/crm/LEAD_CRM_MASTER_PLAN.md`, `docs/crm/CRM_UI_BRANCH_RECONCILIATION.md`, `docs/crm/CRM_LIVE_WHAPI_WEBHOOK.md`, `docs/crm/CRM_DATA_MODEL.md`, and `HANDOFF.md`. These documents supersede older synthetic-only or pre-WhAPI gate statements while retaining those dated documents as historical evidence.

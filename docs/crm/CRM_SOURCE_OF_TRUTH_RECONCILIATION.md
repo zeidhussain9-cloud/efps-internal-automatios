@@ -1,3 +1,13 @@
+## Current production truth — 2026-09-30
+
+This document contains historical source-of-truth decisions below. The current operational CRM truth is now split by provenance: the audited local SQLite extraction remains the historical evidence set, while Supabase is the production operational store for the connected source `+919148338801`. Live WhAPI messages enter through the Supabase webhook boundary and are persisted in `crm_webhook_events` before downstream reconciliation.
+
+Current production baseline: 141 source-linked CRM leads, 287 classifications, 58 pending classifications, 6,561 messages, and 28 webhook events (13 processed, 15 received). The current Contact Classification UI is operator-gated; Qualified Lead is the only path into CRM. The two other source numbers remain visible for future onboarding only.
+
+The older statements in this document that WhAPI was a future integration are historical and are superseded by this section.
+
+# EasyFind CRM — Source-of-Truth Reconciliation
+
 # EasyFind CRM — Source-of-Truth Reconciliation
 
 **Canonical repository:** `zeidhussain9-cloud/efps-internal-automatios`  
@@ -16,7 +26,7 @@ The owner's clarification resolves the previous ambiguity:
 - The resulting local SQLite dataset is the lead dataset we will work from.
 - The historical Leads Tracker Google Sheet is **not** the CRM lead source going forward.
 - The separate live DynamoDB/Slack lead workflow is **out of scope** for this CRM.
-- The future WhatsApp/WhAPI webhook is a later integration and is not a current source for the prototype.
+- Historical note from the 2026-09-26 checkpoint: the future WhatsApp/WhAPI webhook was then treated as a later integration. That statement is superseded; live WhAPI ingress is now active for `+919148338801`.
 
 The audit document remains the dated evidence record. The CRM implementation must follow its extraction/local-dataset model rather than the excluded live lead workflows.
 

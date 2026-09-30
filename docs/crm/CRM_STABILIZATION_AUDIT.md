@@ -1,7 +1,13 @@
+## Superseded by current production checkpoint — 2026-09-30
+
+This 2026-09-26 audit is retained as historical evidence. Its synthetic-only baseline and instruction to leave `main` untouched no longer describe the current CRM state. Current production runs from `crm-ui-dashboard`; `main` is repository-reconciled but is not the Render deployment branch. Real source-scoped CRM data is active for `+919148338801`. Contact classification, webhook ingress, Supabase persistence, and the operator-gated promotion flow are implemented and deployed.
+
+# CRM stabilization audit — 2026-09-26
+
 # CRM stabilization audit — 2026-09-26
 
 ## Scope and verified baseline
-- Canonical branch: `crm-ui-dashboard`; leave `main` untouched.
+- Historical checkpoint statement: canonical branch was `crm-ui-dashboard` and `main` was then treated as untouched. The current repository is reconciled across both branches; Render remains on `crm-ui-dashboard`.
 - Render service: `easyfind-crm-d01-d05`; latest checked deployment `d802eee0f3145ca03621ad6a8e98477fb59623c8` was live.
 - User approved the visual prototype and requested the next cleanup, hardening and synthetic Ollama pilot.
 - Current React entry point `src/main.jsx` contains UI, synthetic records, matching and action handlers in one component. Styles are concentrated in `src/style.css`.

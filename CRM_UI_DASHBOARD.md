@@ -7,7 +7,7 @@
 **Repository:** https://github.com/zeidhussain9-cloud/efps-internal-automatios  
 **Branch:** `crm-ui-dashboard`
 
-`main` remains outside the CRM UI deployment path. CRM UI production work is maintained on `crm-ui-dashboard`.
+`main` is the repository reconciliation branch; Render production remains deployed from `crm-ui-dashboard`. CRM UI implementation work is maintained on `crm-ui-dashboard`, and `main` is reconciled to the same production code/docs checkpoint after each approved release.
 
 ## Source of truth
 

@@ -1,3 +1,7 @@
+## Scope note — CRM UI production
+
+This guide is the historical AWS/SAM deployment guide. It does not govern the production CRM UI. The CRM UI deploys from `crm-ui-dashboard` to Render service `easyfind-crm-d01-d05`; repository `main` is a reconciled source branch but is not the Render deployment branch.
+
 # EFPS Deployment Guide
 
 **Last Updated:** 2026-09-19 16:30 IST  
@@ -120,7 +124,7 @@ python3 --version
 # Pull latest from GitHub
 git pull origin main
 
-# Verify you're on main branch
+# Verify you're on the AWS/SAM deployment branch
 git branch --show-current
 # Output: main
 
@@ -405,7 +409,7 @@ Next: Can immediately create Meta Catalogue via /efps catalogue start
 
 ## Deployment Best Practices
 
-1. **Always deploy from main branch**
+1. **For AWS/SAM deployments, use the approved AWS deployment branch (`main` in the legacy contract). This does not apply to the CRM UI, which deploys from `crm-ui-dashboard`.**
    - Never deploy from feature branches
    - Ensure main is synced with GitHub
 

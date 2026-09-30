@@ -80,4 +80,6 @@ When a deterministic pointer is resolved, update this document and the affected 
 ## CRM gates — updated 2026-09-27
 
 Hosted Ollama authentication and one fictional response are **verified**; these are no longer connectivity blockers. Remaining: representative fictional model-evaluation coverage, durable authenticated operator sessions, independent encrypted Supabase backup and isolated restore, stable-ID reconciliation of 735 leads / 23,454 conversations / 966 events against the curated subset, D06–D08 approvals, final credential rotation and controlled real-data import. Keep `CRM_REAL_DATA_ENABLED` and `CRM_DB_WRITE_ENABLED` disabled. Optional startup model smoke should be disabled after acceptance to avoid repeat inference costs. These CRM gates do not change Inventory Phase-1 business rules.
-\n\n## Current CRM override — 2026-09-30\nThe older gate wording above is historical. The current production CRM source is +919148338801, reconciled Supabase data is live, and contact classification writes use CRM_CLASSIFICATION_WRITE_ENABLED with protected access. Remaining hardening items do not disable the current classification workflow.\n
+
+
+## Current CRM override — 2026-09-30\nThe older gate wording above is historical. The current production CRM source is +919148338801, reconciled Supabase data is live, and contact classification writes use CRM_CLASSIFICATION_WRITE_ENABLED with protected access. Remaining hardening items do not disable the current classification workflow.\n

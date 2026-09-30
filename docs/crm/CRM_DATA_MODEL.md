@@ -4,6 +4,18 @@
 **Branch:** `crm-ui-dashboard`  
 **Status (2026-09-30):** Production CRM UI is live on `crm-ui-dashboard` / Render `easyfind-crm-d01-d05`. Current production source is `+919148338801`; historical and live data are reconciled in Supabase.
 
+## Current operational baseline — 2026-09-30
+
+- Production source: `+919148338801`
+- Source-linked CRM leads: 141
+- Contact classifications: 287
+- Pending classifications: 58
+- Current CRM messages: 6,561
+- Webhook events: 28 (13 processed, 15 received)
+- Historical SQLite message archive: 5,286; this remains historical evidence and is not the current live message count.
+- The Contact Classification UI is operator-gated and uses explicit Update actions.
+- Qualified Lead is the only path into Lead CRM.
+
 ## 1. Lead data source
 
 The lead source for this CRM is the **local extracted dataset described in `docs/audits/LEADS_EXTRACTION_SOURCE_OF_TRUTH_AUDIT.md`** and the local SQLite database produced by that extraction.
