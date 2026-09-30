@@ -6,7 +6,7 @@ import './style.css';
 
 const SOURCE_NUMBER='+919148338801';
 const TABS=['Overview','Conversation','Requirements','Property Matches','AI & Drafts','Activity & History'];
-const MENU=[['Dashboard',LayoutDashboard],['Leads Inbox',Inbox],['Inventory',Building2],['Settings',Settings]];
+const MENU=[['Dashboard',LayoutDashboard],['Intake',Inbox],['Leads Inbox',Inbox],['Inventory',Building2],['Settings',Settings]];
 const money=n=>n!==null&&n!==undefined&&n!==''?'₹'+Number(n).toLocaleString('en-IN'):'Not specified';
 const leadTitle=lead=>lead?.display_name||lead?.normalized_phone||'Lead';
 const classificationLabel=value=>({
@@ -47,8 +47,17 @@ function App(){
  const[matches,setMatches]=useState([]);
  const[matchState,setMatchState]=useState('idle');
  const[refreshToken,setRefreshToken]=useState(0);
+ const[intakeRows,setIntakeRows]=useState([]); const[intakeState,setIntakeState]=useState('idle'); const[promoting,setPromoting]=useState(null);
 
  useEffect(()=>{try{window.sessionStorage.setItem('efps-crm-active-page',page)}catch{}},[page]);
+ useEffect(()=>{
+  if(page!=='Intake')return;
+  let active=true;setIntakeState('loading');
+  fetch('/api/intake',{cache:'no-store'}).then(async r=>{if(!r.ok)throw Error('Lead intake unavailable');const d=await r.json();if(active){setIntakeRows(Array.isArray(d.rows)?d.rows:[]);setIntakeState('ready')}}).catch(()=>{if(active)setIntakeState('unavailable')});
+  return()=>{active=false};
+ },[page,refreshToken]);
+
+
 
  useEffect(()=>{
   let active=true;
@@ -135,6 +144,8 @@ function App(){
   return leads.filter(l=>!q||[l.display_name,l.normalized_phone,l.status,l.priority,l.classification].some(v=>String(v||'').toLowerCase().includes(q)));
  },[leads,query]);
 
+ async function promoteIntake(id){setPromoting(id);try{const r=await fetch('/api/intake/'+encodeURIComponent(id)+'/promote',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({classification:'Qualified Lead'})});if(!r.ok){const d=await r.json().catch(()=>({}));throw Error(d.error||'Promotion unavailable')}setIntakeRows(rows=>rows.map(x=>x.id===id?{...x,status:'Promoted',promoted_lead_id:r.leadId}:x));}catch(e){window.alert(e.message)}finally{setPromoting(null)}}
+
  function openLead(id){setSelectedId(id);setTab('Overview');setPage('Leads Inbox')}
  function backToInbox(){setSelectedId(null);setWorkspace(null);setTab('Overview');setPage('Leads Inbox')}
  function refresh(){setRefreshToken(v=>v+1)}
@@ -159,6 +170,7 @@ function App(){
     <div className="topright"><span className="chip green">● Production data</span><span className="chip source">{SOURCE_NUMBER}</span><span className="avatar">ZH</span></div>
    </header>
    <div className="content">
+    {page==='Intake'&&<section><div className="heading"><div><h1>Lead Intake</h1><p>Segregation gate for new WhatsApp contacts</p></div><div className="headcontrols"><span className="chip">Only qualified leads enter CRM</span><button className="primary" onClick={refresh}><RefreshCw size={14}/> Refresh</button></div></div><div className="notice">New live WhatsApp contacts are staged here first. Existing CRM leads continue to receive messages directly in their chronological conversation. Promotion is restricted to <b>Actual lead</b>.</div><div className="panel intake-list">{intakeState==='loading'&&<div className="empty">Loading intake…</div>}{intakeState==='unavailable'&&<div className="empty">Lead intake is unavailable.</div>}{intakeState==='ready'&&!intakeRows.length&&<div className="empty">No contacts are waiting for qualification.</div>}{intakeRows.map(x=><article className="intake-card" key={x.id}><div><b>{x.display_name||x.phone}</b><span>{x.display_name?x.phone:''}</span><small>{x.status} · {classificationLabel(x.classification)} · {x.message_count} message(s) · {x.last_message_at?new Date(x.last_message_at).toLocaleString():''}</small><p>{x.last_message_preview||'No text preview stored.'}</p></div><button className="primary" disabled={promoting===x.id||x.status==='Promoted'} onClick={()=>promoteIntake(x.id)}>{x.status==='Promoted'?'Promoted':promoting===x.id?'Promoting…':'Qualify as lead'}</button></article>)}</div></section>}
     {page==='Inventory'&&<InventoryPanel data={inventoryData} state={inventoryState} refresh={refresh} query={inventoryQuery} setQuery={setInventoryQuery}/>}
     {page==='Settings'&&<><div className="heading"><div><h1>Settings</h1><p>Production CRM configuration</p></div></div><div className="panel standalone"><h3>Live data scope</h3><p>This dashboard is connected only to the imported lead source <b>{SOURCE_NUMBER}</b>. Production data modes are enforced.</p><p>Customer writes remain disabled from the browser. WhatsApp opens the operator's composer; the CRM does not send messages automatically.</p></div></>}
     {(page==='Dashboard'||page==='Leads Inbox')&&selectedId&&workspaceState==='ready'&&<section className="panel live-detail">
@@ -180,7 +192,7 @@ function App(){
     {(page==='Dashboard'||page==='Leads Inbox')&&!selectedId&&<section>
       <div className="heading"><div><h1>{page==='Dashboard'?'CRM Dashboard':'Leads Inbox'}</h1><p>Live production records from {SOURCE_NUMBER}</p></div><div className="headcontrols"><span className="chip green">228-source scope</span><button className="primary" onClick={refresh}><RefreshCw size={14}/> Refresh</button></div></div>
       {error&&<div className="notice">Live CRM unavailable. {error}</div>}
-      {page==='Dashboard'&&<div className="stats"><div className="stat"><small>Real leads</small><b>{total}</b><span>Imported from {SOURCE_NUMBER}</span></div><div className="stat"><small>Lead records on page</small><b>{leads.length}</b><span>Current live page</span></div><div className="stat"><small>Messages imported</small><b>0</b><span>No fabricated conversations</span></div><div className="stat"><small>Inventory records</small><b>{inventoryData?.rows?.length??'—'}</b><span>Supabase inventory mirror</span></div></div>}
+      {page==='Dashboard'&&<div className="stats"><div className="stat"><small>Real leads</small><b>{total}</b><span>Imported from {SOURCE_NUMBER}</span></div><div className="stat"><small>Lead records on page</small><b>{leads.length}</b><span>Current live page</span></div><div className="stat"><small>Historical messages</small><b>5,286</b><span>Source-backed conversation records</span></div><div className="stat"><small>Inventory records</small><b>{inventoryData?.rows?.length??'—'}</b><span>Supabase inventory mirror</span></div></div>}
       <div className="panel leadlist-production">
        <div className="production-toolbar"><label className="search"><Search size={16}/><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Search name or phone" aria-label="Search live leads"/></label><span>{total} real leads</span></div>
        {loading?<div className="empty">Loading live leads…</div>:visibleLeads.length?visibleLeads.map(l=><LeadCard key={l.id} lead={l} onClick={()=>openLead(l.id)}/>):<div className="empty">No live leads match this search.</div>}
