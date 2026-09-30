@@ -9,6 +9,7 @@ import './style.css';
 const SOURCE_NUMBERS=['+919148338801','+917975102130','+919902024973'];
 const SOURCE_NUMBER=SOURCE_NUMBERS[0];
 const LEAD_STATUSES=['New','Active Follow-up','Waiting on Customer','Waiting on Us','Nurture','Dormant','Converted','Lost','On Hold'];
+const TENANT_TYPES=['Family','Bachelors','Couples','Students','Working Professionals','Corporate','Other','Not specified'];
 const TABS=['Overview','Conversation','Requirements','Property Matches','AI & Drafts','Activity & History'];
 const MENU=[['Dashboard',LayoutDashboard],['Contact Classification',Inbox],['Leads Inbox',Inbox],['Inventory',Building2],['Activity',ActivityIcon],['Settings',Settings]];
 const SUPABASE_URL=import.meta.env.VITE_SUPABASE_URL||'';
@@ -85,6 +86,7 @@ function App(){
  const[sourceFilter,setSourceFilter]=useState(SOURCE_NUMBER);
  const[leadStatusFilter,setLeadStatusFilter]=useState('');
  const[leadStatus,setLeadStatus]=useState('');
+ const[tenantType,setTenantType]=useState('Not specified');
  const[realtimeError,setRealtimeError]=useState('');
  const[classificationDrafts,setClassificationDrafts]=useState({});
  const[classificationSaving,setClassificationSaving]=useState({});
@@ -169,7 +171,7 @@ function App(){
     if(!r.ok)throw Error('Lead workspace unavailable');
     const data=await r.json();
     if(!active)return;
-    setWorkspace(data);setLeadStatus(data.lead?.lead_type||'New');setWorkspaceState('ready');
+    setWorkspace(data);setLeadStatus(data.lead?.lead_type||'New');setTenantType(data.lead?.tenant_type||'Not specified');setWorkspaceState('ready');
     const req=normalizeRequirements(data.lead?.requirements);
     const bhkMatch=String(req.bhk||'').match(/\d+/);
     const bhk=bhkMatch?bhkMatch[0]:'';
@@ -253,7 +255,7 @@ function App(){
       <div className="detailhead">
        <button className="back" onClick={backToInbox}><ChevronLeft size={18}/> Leads Inbox</button>
        <div className="identity"><span className="initial">{leadTitle(workspace.lead).split(/\s+/).map(x=>x[0]).join('').slice(0,3)}</span><div><h2>{leadTitle(workspace.lead)}</h2><span>{privacyMode?maskPhone(workspace.lead.normalized_phone)||'No phone stored':workspace.lead.normalized_phone||'No phone stored'} · {SOURCE_NUMBER}</span></div></div>
-       <div className="headcontrols"><label className="inline-field">Lead Status <select disabled={!online} value={leadStatus||workspace.lead.lead_type||'New'} onChange={e=>{setLeadStatus(e.target.value);updateLead(workspace.lead.id,{leadType:e.target.value}).catch(()=>{})}}>{LEAD_STATUSES.map(s=><option key={s} value={s}>{s}</option>)}</select></label><span className="chip">{workspace.lead.priority}</span><span className="chip classification">{classificationLabel(workspace.lead.classification||workspace.lead.requirements?.fields?.classification||workspace.lead.requirements?.classification)}</span><button className="secondary danger" type="button" disabled={!online} onClick={toggleArchive}>{workspace.lead.status==='Archived'?<><RotateCcw size={14}/> Restore lead</>:<><Archive size={14}/> Archive lead</>}</button></div>
+       <div className="headcontrols"><label className="inline-field">Lead Status <select disabled={!online} value={leadStatus||workspace.lead.lead_type||'New'} onChange={e=>{setLeadStatus(e.target.value);updateLead(workspace.lead.id,{leadType:e.target.value}).catch(()=>{})}}>{LEAD_STATUSES.map(s=><option key={s} value={s}>{s}</option>)}</select></label><label className="inline-field">Tenant Type <select disabled={!online} value={tenantType||'Not specified'} onChange={e=>{setTenantType(e.target.value);updateLead(workspace.lead.id,{tenantType:e.target.value}).catch(()=>{})}}>{TENANT_TYPES.map(s=><option key={s} value={s}>{s}</option>)}</select></label><span className="chip">{workspace.lead.priority}</span><span className="chip classification">{classificationLabel(workspace.lead.classification||workspace.lead.requirements?.fields?.classification||workspace.lead.requirements?.classification)}</span><button className="secondary danger" type="button" disabled={!online} onClick={toggleArchive}>{workspace.lead.status==='Archived'?<><RotateCcw size={14}/> Restore lead</>:<><Archive size={14}/> Archive lead</>}</button></div>
       </div>
       <div className="tabs">{TABS.map(t=><button className={tab===t?'active':''} key={t} onClick={()=>setTab(t)}>{t}</button>)}</div>
       <div className="tabbody">
