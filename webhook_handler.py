@@ -4,6 +4,8 @@ import json
 import os
 import sys
 import traceback
+from datetime import datetime, timezone
+from urllib.request import Request, urlopen
 
 sys.path.insert(0, str(__file__).rsplit("/",1)[0] + "/modules/efpd-lead-mgmnt/src")
 sys.path.insert(0, str(__file__).rsplit("/",1)[0] + "/modules/efps-inventory-mgmnt/src")
@@ -21,6 +23,42 @@ def _ok(body: dict | None = None) -> dict:
 
 def _authorised(event: dict) -> bool:
     return authorize_query_token(event.get("queryStringParameters"), os.getenv("EFPS_WEBHOOK_TOKEN", ""))
+
+
+def _phone_from_chat(message) -> str:
+    raw = str(message.chat_id or message.sender or "")
+    return "".join(ch for ch in raw.split("@")[0] if ch.isdigit())
+
+def forward_to_crm(message) -> dict:
+    url = os.getenv("CRM_WEBHOOK_URL", "").strip()
+    token = os.getenv("CRM_WEBHOOK_TOKEN", "").strip()
+    phone = _phone_from_chat(message)
+    if not url or not token or not phone:
+        return {"forwarded": False, "reason": "CRM webhook configuration incomplete"}
+    try:
+        ts = message.timestamp
+        if isinstance(ts, (int, float)):
+            message_at = datetime.fromtimestamp(ts, tz=timezone.utc).isoformat()
+        else:
+            message_at = str(ts or "")
+        payload = {
+            "source_number": "919148338801",
+            "phone_number": phone,
+            "provider_message_id": message.message_id,
+            "direction": "Outgoing" if message.from_me else "Incoming",
+            "message_type": message.message_type,
+            "body": message.body,
+            "sender_name": message.sender_name or None,
+            "media_urls": [message.media_reference] if message.media_reference else [],
+            "message_at": message_at,
+        }
+        request = Request(url, data=json.dumps(payload).encode("utf-8"), headers={"Content-Type":"application/json","x-crm-webhook-token":token}, method="POST")
+        with urlopen(request, timeout=3) as response:
+            data = json.loads(response.read().decode("utf-8") or "{}")
+        return {"forwarded": True, **data}
+    except Exception as exc:
+        print(f"CRM webhook forwarding failed for {message.message_id}: {exc!r}")
+        return {"forwarded": False, "reason": "CRM webhook request failed"}
 
 def handle_lead(message) -> dict:
     if message.is_group:
@@ -48,7 +86,9 @@ def process(payload: dict) -> dict:
                 from inventory_runtime import handle as inventory_handle
                 results.append(inventory_handle(message, client=sheets_client))
             else:
-                results.append(handle_lead(message))
+                lead_result = handle_lead(message)
+                crm_result = forward_to_crm(message)
+                results.append({**lead_result, "crm": crm_result})
         except Exception as exc:  # noqa: BLE001
             traceback.print_exc()
             print(f"webhook message {message.message_id} failed: {exc!r}")
