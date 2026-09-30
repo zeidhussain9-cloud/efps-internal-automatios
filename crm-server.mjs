@@ -3,7 +3,7 @@ import {randomUUID,createHmac,timingSafeEqual} from 'node:crypto';
 import {readFile,stat} from 'node:fs/promises';
 import {join,extname,resolve} from 'node:path';
 import {authorized,accessMode} from './src/server-auth.mjs';
-import {analyzeFictionalLead,analyzeRealLead} from './src/ollama-adapter.mjs';
+import {analyzeRealLead} from './src/ollama-adapter.mjs';
 import {createCrmRepository} from './src/crm-repository.mjs';
 import {startupDatabaseCheck} from './src/crm-startup-check.mjs';
 const root=resolve('dist');
@@ -108,14 +108,6 @@ createServer(async(req,res)=>{
    }catch(e){res.writeHead(422,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify({error:e.message==='Request too large'?'Request too large':'Real AI request failed'}));}
    finally{await repo.close()}
   }
-  if(p==='/api/ai/analyze'&&req.method==='POST'){
-   if(mode!=='protected'||process.env.CRM_SYNTHETIC_AI_ENABLED!=='true'){res.writeHead(403,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify({error:'Synthetic AI disabled'}));}
-   try{
-    let raw='';for await(const chunk of req){raw+=chunk;if(raw.length>1024)throw Error('Request too large');}
-    const body=JSON.parse(raw);const result=await analyzeFictionalLead({leadId:body.leadId,env:process.env});
-    res.writeHead(200,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify(result));
-   }catch(e){res.writeHead(422,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify({error:e.message==='Unknown fictional lead'?e.message:'Synthetic AI request failed'}));}
-  }
   if(!['GET','HEAD'].includes(req.method)){res.writeHead(405,security);return res.end('Method not allowed');}
   if(p.startsWith('/api/')){res.writeHead(404,security);return res.end('API not enabled');}
   let f=resolve(join(root,p));
@@ -125,4 +117,4 @@ createServer(async(req,res)=>{
   const data=await readFile(f);
   res.writeHead(200,{...security,'Content-Type':mime[extname(f)]||'application/octet-stream'});return res.end(req.method==='HEAD'?undefined:data);
  }catch{res.writeHead(500,security);res.end('CRM unavailable');}
-}).listen(Number(process.env.PORT||10000),'0.0.0.0',()=>{void startupDatabaseCheck(process.env);void (async()=>{if(process.env.CRM_SYNTHETIC_AI_ENABLED!=='true'||process.env.CRM_OLLAMA_STARTUP_SMOKE_ENABLED!=='true')return;try{const result=await analyzeFictionalLead({leadId:'L-1001',env:process.env});console.info('CRM Ollama synthetic smoke test: success',JSON.stringify({model:result.model,fictional:result.fictional,keys:Object.keys(result.proposal||{})}));}catch(error){const status=typeof error?.message==='string'&&/^Ollama request failed \(\d+\)$/.test(error.message)?error.message:error?.name==='SyntaxError'?'invalid_provider_json':error?.name==='AbortError'?'provider_timeout':error?.message==='Invalid model JSON'?'invalid_model_json':error?.message==='Provider returned non-JSON HTTP body'?'non_json_http_body':error?.message==='Provider message is not JSON'?'model_content_non_json':error?.message==='Provider message is empty'?'model_content_empty':/^Provider response shape: (no_message|message_without_content)$/.test(error?.message||'')?error.message:error?.name==='TypeError'?'provider_network_or_protocol':'provider_unavailable';console.info('CRM Ollama synthetic smoke test: failed',status);}})();});
+}).listen(Number(process.env.PORT||10000),'0.0.0.0',()=>{void startupDatabaseCheck(process.env);});
