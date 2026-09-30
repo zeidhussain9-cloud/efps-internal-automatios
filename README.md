@@ -94,3 +94,12 @@ The current CRM UI deployment is live. WhAPI events for +919148338801 are record
 ## CRM UI branch and dedicated model steering
 
 **Current CRM UI branch: `crm-ui-dashboard`.** Render service `easyfind-crm-d01-d05` deploys this branch. The hosted CRM Ollama adapter reads compact root `steering.md` as its dedicated system instruction; it is separate from `CORE_STEERING.md`. Current production CRM data is real and source-scoped to WhatsApp `+919148338801`; the other configured source numbers remain visible for later onboarding. See `docs/crm/LEAD_CRM_MASTER_PLAN.md`.
+
+## CRM daily operating flow — 2026-09-30
+
+- Contact Classification is a single qualification queue with two sub-tabs: Not pushed to CRM, and Qualified leads pushed to CRM.
+- There is no separate classification filter. Each contact has one classification dropdown and an explicit Update action.
+- Selecting a non-qualified classification saves the classification and keeps the contact in Not pushed to CRM.
+- Selecting Qualified Lead and clicking Update performs the audited Supabase promotion transaction; only after success does the contact move to Qualified leads pushed to CRM and appear in Leads Inbox with preserved messages linked.
+- The Dashboard is intentionally action-oriented: CRM leads, contacts not pushed, qualified contacts pushed, and follow-ups due today, followed by the next open follow-ups.
+- Classification writes are explicitly gated by CRM_CLASSIFICATION_WRITE_ENABLED=true, protected CRM access, DATABASE_URL, and the server-side repository transaction.

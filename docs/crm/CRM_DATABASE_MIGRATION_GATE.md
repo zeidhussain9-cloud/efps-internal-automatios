@@ -6,7 +6,7 @@
 - Nine PostgreSQL tables exist with RLS enabled. No anon/authenticated policies or table grants; database access is intended only through the protected server.
 - Three missing foreign-key indexes applied. The performance advisor's remaining unused-index notices are expected on empty tables.
 - Core schema and index migrations committed on `crm-ui-dashboard`.
-- Parameterized server-side read repository and gated `GET /api/db/status`, `GET /api/db/leads?limit=50` and `GET /api/db/leads/:id` implemented. All require `CRM_DB_READ_ENABLED=true`, `DATABASE_URL` and both Basic Auth credentials; they return 404 while disabled. These endpoints do not write data and the React UI does not yet call them.
+- Parameterized server-side read repository and gated `GET /api/db/status`, `GET /api/db/leads?limit=50` and `GET /api/db/leads/:id` implemented. All require `CRM_DB_READ_ENABLED=true`, `DATABASE_URL` and both Basic Auth credentials; they return 404 while disabled. Read endpoints remain server-only and protected. The production React UI now calls the classification and lead read routes; classification writes use the separate CRM_CLASSIFICATION_WRITE_ENABLED gate.
 - Source Mac SQLite remains untouched. The original 735 leads/23,454 conversation rows and separately curated 308 leads/6,064 message subset still require reconciliation.
 
 ## Remaining gates
@@ -49,4 +49,4 @@ Render startup reports databaseUrlPresent=true, databaseReadOptIn=true, database
 - [x] Post-migration counts: zero leads, messages, provider events and requirement evidence. No customer data imported.
 - [x] GitHub Actions #116 passed build, unit/integration tests and Chromium browser journey.
 - [ ] Verify authenticated application-level read routes, test transaction-safe writes against an isolated test database, and independently restore an encrypted backup before any production write enablement.
-- [ ] Keep CRM_DB_WRITE_ENABLED and CRM_REAL_DATA_ENABLED disabled pending production auth, historical reconciliation and D06–D08 approval.
+- [ ] Keep the broad CRM_DB_WRITE_ENABLED gate separate; production contact classification writes use the narrower CRM_CLASSIFICATION_WRITE_ENABLED gate after the historical reconciliation and protected-auth gates are satisfied.

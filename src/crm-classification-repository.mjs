@@ -12,7 +12,7 @@ export function createCrmClassificationRepository({connectionString=process.env.
     async list({limit=100,offset=0,status='',classification='',sourceNumber=SOURCE_NUMBER}={}){
       if(!SOURCE_NUMBERS.includes(sourceNumber))throw Error('Invalid source number');
       const params=[sourceNumber,limit,offset];let where='WHERE source_number=$1';
-      if(status){params.push(status);where+=' AND status=$'+params.length}
+      if(status==='not_pushed'){where+=" AND status IN ('pending','excluded')"} else if(status==='promoted'){where+=" AND status='promoted'"} else if(status){params.push(status);where+=' AND status=$'+params.length}
       if(classification){params.push(classification);where+=' AND classification_code=$'+params.length}
       const r=await db.query('SELECT id,source_number,phone,classification_code,classification_label,classification_source,confidence,status,evidence,first_seen_at,last_seen_at,classified_at,promoted_at,lead_id FROM crm_contact_classifications '+where+' ORDER BY last_seen_at DESC,id DESC LIMIT $2 OFFSET $3',params);
       const n=await db.query('SELECT count(*)::int AS total FROM crm_contact_classifications WHERE source_number=$1',[sourceNumber]);

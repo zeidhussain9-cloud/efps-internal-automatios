@@ -121,3 +121,17 @@ These are future live-runtime verification tasks, not unresolved Phase-1 impleme
 - Render currently tracks `crm-ui-dashboard`; do not repoint this CRM UI deployment to `main` as part of the current production flow.
 - The CRM UI working checkout is `/Users/zeidzakir/Projects/efps-internal-automatios/leads_automation/crm-ui-dashboard`, tracking `origin/crm-ui-dashboard`. Keep the historical `leads_automation/leads-ui` application separate.
 - Real-data migration for the current source is complete. Backup/restore and D06–D08 are separate hardening/future-scope items and do not disable the current `+919148338801` production flow.
+
+## CRM daily workflow — 2026-09-30
+
+The approved CRM interaction model is deliberately simple:
+
+1. Open Dashboard and review the four daily counters.
+2. Open Contact Classification for contacts not yet promoted.
+3. Select one classification and click Update.
+4. Non-qualified contacts remain in Not pushed to CRM.
+5. Qualified Lead moves the contact to Qualified leads pushed to CRM only after the Supabase transaction succeeds.
+6. Open the next item from Today's follow-ups and continue work from the lead workspace.
+7. Follow-up history remains visible under the lead's Activity & History tab.
+
+Do not add a separate classification filter or a second intake workflow unless this decision is explicitly revisited.

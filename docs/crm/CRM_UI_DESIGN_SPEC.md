@@ -158,3 +158,21 @@ Figma defines editable visual composition. This specification defines behavior/d
 ## AI pilot implementation checkpoint — 2026-09-27
 
 The deployed on-demand `AI & Drafts` control currently analyzes **only a fixed fictional fixture** by lead ID. It does not yet send the lead workspace's displayed message history or human-edited requirements. The hosted provider has been verified, and its server-side dedicated `steering.md` supplies compact EFPS role and JSON extraction instructions. Human Accept/Reject remains required; full D04 source-backed delta analysis, versioned durable evidence and real-data access are future gates.
+
+## 8. Contact Classification — production simplification — 2026-09-30
+
+Contact Classification is a pre-lead queue, not another lead-management dashboard.
+
+The screen has exactly two sub-tabs:
+
+1. Not pushed to CRM — pending and non-qualified contacts.
+2. Qualified leads pushed to CRM — promoted contacts.
+
+Each row has one classification dropdown and one explicit Update button. Selecting a value does not persist it until Update is pressed and the server confirms the transaction.
+
+- Non-qualified classifications remain in Not pushed to CRM.
+- Qualified Lead creates/links the CRM lead, links preserved messages, and moves the contact to the qualified tab after the transaction commits.
+- Failed writes stay on the same row and display the returned error.
+- No additional classification filter is shown.
+
+The dashboard then surfaces the next operational work: classification counts and open follow-ups.
