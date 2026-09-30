@@ -94,3 +94,8 @@ Production classification updates require protected CRM access, DATABASE_URL, an
 The browser cannot write directly to Supabase. A successful Qualified Lead update creates/links the CRM lead and links preserved messages in the same server-side transaction before the UI moves the contact to the promoted queue.
 
 Render environment-variable changes require a redeploy before the running service uses the new value.
+
+
+## 2026-10-01 — D07 runtime configuration closure
+
+The Render CRM service continues to deploy `crm-ui-dashboard`. The existing configured CRM operator credential is verified through the application sign-in endpoint; successful sign-in creates an opaque HttpOnly `efps_crm_session` cookie. Session policy is 8 hours of inactivity and 12 hours maximum. No credential values are stored in source or emitted in logs. UI privacy masking, reversible archive/restore, audit visibility, explicit CSV export and offline/write gating are application controls and do not require new secret values.

@@ -3,6 +3,7 @@ import {randomUUID,createHmac,timingSafeEqual} from 'node:crypto';
 import {readFile,stat} from 'node:fs/promises';
 import {join,extname,resolve} from 'node:path';
 import {authorized,accessMode} from './src/server-auth.mjs';
+import {getRequestPrincipal,loginWithPassword,revokeRequestSession,sessionCookie,clearSessionCookie,sameOrigin,sessionPolicy} from './src/server-session.mjs';
 import {analyzeRealLead} from './src/ollama-adapter.mjs';
 import {createCrmRepository} from './src/crm-repository.mjs';
 import {createCrmClassificationRepository} from './src/crm-classification-repository.mjs';
@@ -26,19 +27,64 @@ createServer(async(req,res)=>{
   }
   const mode=accessMode(process.env);
   if(mode==='misconfigured'){res.writeHead(503,security);return res.end('CRM access configuration incomplete');}
-  if(mode==='protected'&&!authorized(req.headers.authorization,process.env.CRM_BASIC_AUTH_USERNAME,process.env.CRM_BASIC_AUTH_PASSWORD)){res.writeHead(401,{...security,'WWW-Authenticate':'Basic realm="EasyFind CRM"'});return res.end('Authentication required');}
+  if(p==='/api/auth/session'&&req.method==='GET'){
+   const principal=getRequestPrincipal(req,process.env);res.writeHead(200,{...security,'Content-Type':'application/json'});
+   return res.end(JSON.stringify({authenticated:Boolean(principal),user:principal?.user||null,policy:sessionPolicy()}));
+  }
+  if(p==='/api/auth/login'&&req.method==='POST'){
+   if(mode!=='protected'){res.writeHead(200,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify({authenticated:true,user:'local-operator',policy:sessionPolicy()}))}
+   if(!sameOrigin(req)){res.writeHead(403,security);return res.end('Cross-origin sign-in rejected')}
+   let body={};try{body=await readJsonBody(req,8192)}catch(e){res.writeHead(e.statusCode||400,security);return res.end(e.message)}
+   const result=loginWithPassword(req,{username:body.username,password:body.password,env:process.env});
+   if(!result.ok){res.writeHead(result.status,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify({error:result.error}))}
+   if(process.env.DATABASE_URL){const auditRepo=createCrmRepository();try{await auditRepo.appendActivity({leadId:null,actor:result.user,action:'auth.login',details:{via:'password'}})}catch{}finally{await auditRepo.close()}}
+   res.writeHead(200,{...security,'Content-Type':'application/json','Set-Cookie':sessionCookie(result.token,req)});
+   return res.end(JSON.stringify({authenticated:true,user:result.user,policy:sessionPolicy()}));
+  }
+  if(p==='/api/auth/logout'&&req.method==='POST'){
+   if(!sameOrigin(req)){res.writeHead(403,security);return res.end('Cross-origin logout rejected')}
+   const principal=getRequestPrincipal(req,process.env);revokeRequestSession(req);
+   if(principal&&process.env.DATABASE_URL){const auditRepo=createCrmRepository();try{await auditRepo.appendActivity({leadId:null,actor:principal.user,action:'auth.logout',details:{via:principal.via}})}catch{}finally{await auditRepo.close()}}
+   res.writeHead(204,{...security,'Set-Cookie':clearSessionCookie(req)});return res.end();
+  }
+  const principal=mode==='protected'?getRequestPrincipal(req,process.env):{user:'local-operator',via:'development'};
+  if(mode==='protected'&&!principal&&p.startsWith('/api/')){
+   res.writeHead(401,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify({error:'Authentication required'}));
+  }
+  if(!sameOrigin(req)&&!['GET','HEAD'].includes(req.method)&&p!=='/api/internal/inventory/sync'){res.writeHead(403,security);return res.end('Cross-origin request rejected')}
+  if(p==='/api/audit/recent'){
+   if(req.method!=='GET'){res.writeHead(405,security);return res.end('Method not allowed')}
+   const q=new URL(req.url,'http://localhost').searchParams;const limitRaw=q.get('limit')||'50';
+   if(!/^\d{1,3}$/.test(limitRaw)){res.writeHead(400,security);return res.end('Invalid limit')}
+   const repo=createCrmRepository();try{const rows=await repo.listGlobalActivity(Number(limitRaw));res.writeHead(200,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify({rows}))}finally{await repo.close()}
+  }
+  if(p==='/api/db/export'&&req.method==='GET'){
+   if(process.env.CRM_DB_READ_ENABLED!=='true'||!process.env.DATABASE_URL){res.writeHead(404,security);return res.end('Export unavailable')}
+   const source=new URL(req.url,'http://localhost').searchParams.get('source_number')||'+919148338801';const repo=createCrmRepository();
+   try{
+    const rows=await repo.exportLeads(source);
+    if(principal){try{await repo.appendActivity({leadId:null,actor:principal.user,action:'data.export',details:{source_number:source,row_count:rows.length,format:'csv'}})}catch{}}
+    const esc=v=>'"'+String(v??'').replace(/"/g,'""')+'"';const head=['id','display_name','phone','lead_status','tenant_type','priority','classification','source_number','updated_at'];
+    const csv=[head.join(','),...rows.map(r=>[r.id,r.display_name,r.normalized_phone,r.lead_type,r.tenant_type,r.priority,r.classification,r.source_number,r.updated_at].map(esc).join(','))].join('\n')+'\n';
+    res.writeHead(200,{...security,'Content-Type':'text/csv; charset=utf-8','Content-Disposition':'attachment; filename="easyfind-crm-export.csv"'});return res.end(csv);
+   }finally{await repo.close()}
+  }
+  if(process.env.CRM_DB_WRITE_ENABLED==='true'&&mode==='protected'&&principal&&req.method==='POST'&&/^\/api\/db\/leads\/[^/]+\/(archive|restore)$/.test(p)){
+   const id=decodeURIComponent(p.split('/')[4]);const action=p.split('/')[5];if(!id||id.length>128){res.writeHead(400,security);return res.end('Invalid lead ID')}
+   const repo=createCrmRepository();try{const row=action==='archive'?await repo.archiveLead({id,actor:principal.user}):await repo.restoreLead({id,actor:principal.user});if(!row){res.writeHead(404,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify({error:'Lead not found'}))}res.writeHead(200,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify(row))}catch(e){res.writeHead(e.statusCode||422,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify({error:'Lead '+action+' failed'}))}finally{await repo.close()}
+  }
   // Durable database writes: explicit opt-in, protected access and audited in the same transaction.
   if((process.env.CRM_CLASSIFICATION_WRITE_ENABLED==='true'||process.env.CRM_DB_WRITE_ENABLED==='true')&&mode==='protected'&&req.method==='POST'&&p.startsWith('/api/db/classifications/')){
    if(!process.env.DATABASE_URL){res.writeHead(404,security);return res.end('Database write pilot disabled');}
    const id=decodeURIComponent(p.slice('/api/db/classifications/'.length));if(!/^\d+$/.test(id)){res.writeHead(400,security);return res.end('Invalid classification ID');}
    const body=await readJsonBody(req);const repo=createCrmClassificationRepository();
-   try{const result=await repo.classify({id:Number(id),code:String(body.classification||''),source:String(body.source||'operator'),confidence:body.confidence===null||body.confidence===undefined?null:Number(body.confidence),actor:process.env.CRM_BASIC_AUTH_USERNAME||'operator'});res.writeHead(200,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify(result));}
+   try{const result=await repo.classify({id:Number(id),code:String(body.classification||''),source:String(body.source||'operator'),confidence:body.confidence===null||body.confidence===undefined?null:Number(body.confidence),actor:principal?.user||process.env.CRM_BASIC_AUTH_USERNAME||'operator'});res.writeHead(200,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify(result));}
    catch(e){const status=e?.statusCode||422;res.writeHead(status,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify({error:e.message==='Invalid classification'?'Invalid classification':status===404?'Classification not found':'Classification update failed'}));}
    finally{await repo.close();}
   }
   if(process.env.CRM_DB_WRITE_ENABLED==='true'&&mode==='protected'&&req.method!=='GET'&&(p==='/api/db/leads'||p.startsWith('/api/db/leads/')||p==='/api/db/followups'||p.startsWith('/api/db/followups/'))){
    if(!process.env.DATABASE_URL){res.writeHead(404,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify({error:'Database write pilot disabled'}));}
-   const repo=createCrmRepository();const actor=process.env.CRM_BASIC_AUTH_USERNAME;
+   const repo=createCrmRepository();const actor=principal?.user||process.env.CRM_BASIC_AUTH_USERNAME;
    try{
     if(p==='/api/db/leads'&&req.method==='POST'){
      const body=await readJsonBody(req);const lead=await repo.createLead({id:body.id,displayName:body.displayName,normalizedPhone:body.normalizedPhone,status:body.status,priority:body.priority,requirements:body.requirements,operatorNotes:body.operatorNotes,actor});res.writeHead(201,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify(lead));

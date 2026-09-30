@@ -100,3 +100,11 @@ Hosted Ollama authentication and one fictional response are **verified**; these 
 
 
 ## Current CRM override — 2026-09-30\nThe older gate wording above is historical. The current production CRM source is +919148338801, reconciled Supabase data is live, and contact classification writes use CRM_CLASSIFICATION_WRITE_ENABLED with protected access. Remaining hardening items do not disable the current classification workflow.\n
+
+## Current CRM closure — 2026-10-01
+
+- Browser E2E regression fixed: the workspace request fixture now matches the query-string-bearing production route and the browser test signs in through the operator session flow.
+- D07 Privacy, Safety & Operator Control is resolved in the application and design register.
+- Current controls include protected sessions, default phone/message masking, reversible archive, global audit visibility, explicit export, retention/deletion boundaries, and offline/write gating.
+- D08 remains the outstanding product/design handoff stage. Independent encrypted backup + isolated restore remains an infrastructure hardening item.
+- Current CRM deployment branch remains `crm-ui-dashboard`.

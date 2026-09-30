@@ -96,14 +96,14 @@
 - [x] D06.5 Initial media references and provider message types are persisted; provider-specific edit/delete/receipt events remain unsupported until the provider payload contract requires them.
 - [x] D06.6 Unsupported/invalid webhook payloads are retained or rejected with explicit processing state/error.
 
-## D07 — Privacy, Safety & Operator Control — UNRESOLVED
+## D07 — Privacy, Safety & Operator Control — RESOLVED 2026-10-01
 
-- [ ] D07.1 Authentication UX.
-- [ ] D07.2 Sensitive-content display/masking.
-- [ ] D07.3 Confirmation/reversal/destructive-action patterns.
-- [ ] D07.4 Audit visibility.
-- [ ] D07.5 Export/retention/deletion UX.
-- [ ] D07.6 Failure recovery and offline/sync states.
+- [x] D07.1 Authentication UX — protected operator sign-in with an opaque HttpOnly session cookie, 8-hour inactivity timeout, 12-hour maximum lifetime, explicit logout and failed-sign-in rate limiting.
+- [x] D07.2 Sensitive-content display/masking — phone numbers and observed message bodies default to masked presentation; explicit reveal is required for sensitive WhatsApp actions.
+- [x] D07.3 Confirmation/reversal/destructive-action patterns — lead archiving requires explicit confirmation, is soft/reversible, and records the previous status plus the restore action.
+- [x] D07.4 Audit visibility — global security/operator events are stored in CRM activity and exposed through Activity; lead-specific edits remain in Lead Workspace Activity & History.
+- [x] D07.5 Export/retention/deletion UX — CSV export is explicit and audit-recorded; automatic deletion is disabled; permanent deletion is not exposed in v1.
+- [x] D07.6 Failure recovery and offline/sync states — offline state is explicit and disables writes/exports; authentication failures return to sign-in; realtime failures remain visible.
 
 ## D08 — Visual System & Final Handoff — UNRESOLVED
 
@@ -119,7 +119,7 @@
 
 ## Current design gate
 
-**D01–D05 are approved. D06–D08 remain unresolved.**
+**D01–D07 are approved/resolved. D08 remains unresolved.**
 
 Approval is a design state only. No live customer/inventory connection or production write is implied.
 
@@ -137,3 +137,8 @@ Supabase Free `easyfind-crm` has been provisioned in Mumbai with nine server-onl
 - [x] D09.5 Qualified Lead is the only promotion path into crm_leads.
 - [x] D09.6 Dashboard prioritizes CRM leads, classification queues and follow-ups due today.
 - [x] D09.7 Classification failures are visible inline; no silent failure.
+
+
+## 2026-10-01 — D07 implementation verification
+
+D07 is implemented in the production CRM UI/server path and covered by server/browser tests. The browser E2E regression was traced to the workspace fixture not matching the query-string-bearing production route; the fixture now matches the request and the browser journey performs operator sign-in before reading production surfaces.
