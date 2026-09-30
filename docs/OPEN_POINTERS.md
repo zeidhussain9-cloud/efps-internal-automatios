@@ -1,6 +1,23 @@
+## Current production closure — 2026-10-01
+
+Verified after the automatic webhook reconciliation hardening:
+
+- Render service: `easyfind-crm-d01-d05` (`srv-darsv560tbcc73cu4ip0`), branch `crm-ui-dashboard`.
+- Current deploy: `dep-daumf68473hc739qdkd0`, commit `56e8f17216102fadc801a6f84470783160ca38dc`.
+- Production source: `+919148338801`; `+917975102130` and `+919902024973` remain UI-visible but inactive.
+- Current CRM state: 185 leads, 288 classifications, 13 pending, 2 explicitly unqualified, 185 promoted, 6,620 messages.
+- Webhook state: 72 persisted events, 72 processed, 0 received, 0 failed.
+- Automatic reconciliation is now a production database job: `crm_webhook_reconcile_1m`, every minute, calling `crm_reconcile_received_webhooks()`. A live cron execution succeeded and processed an event.
+- Manual webhook reconciliation is no longer an operating requirement.
+- The three Contact Classification queues are implemented: Not pushed to CRM, Qualified lead pushed to CRM, and Unqualified leads.
+- Independent backup/restore remains the only item requiring external provisioning/approval; the repository's encrypted backup and approval-gated restore tooling is already implemented.
+
+
 # Open Pointers
 
-This is the canonical list of unresolved decisions and verified unknowns for the current Inventory Management Phase 1 and live-system migration scope. Deterministic Phase-1 contract work is complete. Unknowns are never guessed. Future Meta Catalogue and Housing Portal additions are outside the current Phase-1 scope.
+## CRM production closure audit — 2026-10-01
+
+Webhook reconciliation is now automatic via the production cron job. The 72-event current source audit is 72 processed / 0 received / 0 failed. The three classification queues are live. Privacy/authentication/RLS checks remain closed. Independent backup/restore remains blocked only by the need for an independently provisioned backup artifact and isolated restore target.
 
 ## Deferred external/runtime verification
 

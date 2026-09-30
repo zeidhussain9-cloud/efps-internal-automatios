@@ -1,11 +1,8 @@
+
 ## CRM production checkpoint — 2026-09-30
 
-- `crm-ui-dashboard` is the canonical CRM implementation/deployment branch; Render service `easyfind-crm-d01-d05` deploys it.
-- Repository `main` is separately reconciled to the approved CRM checkpoint; it is not the Render deployment branch.
-- Current source: `+919148338801`. Current Supabase baseline: 141 source-linked leads, 287 classifications, 58 pending classifications, 6,561 messages, 28 webhook events (13 processed, 15 received).
-- Contact Classification uses two tabs: `Not pushed to CRM` and `Qualified leads pushed to CRM`. The operator chooses a classification and clicks `Update`; only a successful server transaction moves a Qualified Lead into CRM.
-- Direct `Open WhatsApp` links are shown beside classification contacts.
-- Latest production fix: commit `184abfe58052b01ebf5be4dd26044f31fc579536`, correcting PostgreSQL parameter type inference in the new-lead insert.
+Historical checkpoint retained below.
+
 
 ## Current state
 
