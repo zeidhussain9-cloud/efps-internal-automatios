@@ -7,7 +7,7 @@ import './style.css';
 
 const SOURCE_NUMBER='+919148338801';
 const TABS=['Overview','Conversation','Requirements','Property Matches','AI & Drafts','Activity & History'];
-const MENU=[['Dashboard',LayoutDashboard],['Leads Inbox',Inbox],['Inventory',Building2],['Settings',Settings]];
+const MENU=[['Dashboard',LayoutDashboard],['Contact Classification',Inbox],['Leads Inbox',Inbox],['Inventory',Building2],['Settings',Settings]];
 const SUPABASE_URL=import.meta.env.VITE_SUPABASE_URL||'';
 const SUPABASE_PUBLISHABLE_KEY=import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY||'';
 const supabase=SUPABASE_URL&&SUPABASE_PUBLISHABLE_KEY?createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY):null;
