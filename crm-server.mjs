@@ -114,6 +114,15 @@ createServer(async(req,res)=>{
    }catch(e){res.writeHead(422,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify({error:e.message}));}
    finally{await repo.close()}
   }
+  if(p==='/api/intake'&&req.method==='GET'){
+   if(mode!=='protected'||process.env.CRM_DB_READ_ENABLED!=='true'){res.writeHead(403,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify({error:'Intake read disabled'}));}
+   const repo=createCrmRepository();try{const rows=await repo.listIntake(100,0);res.writeHead(200,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify({rows}));}finally{await repo.close()}
+  }
+  if(p.startsWith('/api/intake/')&&p.endsWith('/promote')&&req.method==='POST'){
+   if(mode!=='protected'||process.env.CRM_DB_WRITE_ENABLED!=='true'){res.writeHead(403,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify({error:'CRM writes disabled'}));}
+   const id=decodeURIComponent(p.slice('/api/intake/'.length,-'/promote'.length));let raw='';for await(const chunk of req)raw+=chunk;let body={};try{body=JSON.parse(raw||'{}')}catch{}
+   const repo=createCrmRepository();try{const result=await repo.promoteIntake(id,{classification:body.classification||'Qualified Lead',actor:'crm-operator'});res.writeHead(200,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify(result));}catch(e){res.writeHead(422,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify({error:e.message}));}finally{await repo.close()}
+  }
   if(p==='/api/ai/analyze-real'&&req.method==='POST'){
    if(mode!=='protected'||process.env.CRM_REAL_AI_ENABLED!=='true'||process.env.CRM_DB_READ_ENABLED!=='true'){res.writeHead(403,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify({error:'Real AI disabled'}));}
    const repo=createCrmRepository();
