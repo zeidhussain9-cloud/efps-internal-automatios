@@ -196,14 +196,15 @@ function App(){
  },[authenticated,selectedId,sourceFilter,refreshToken]);
 
  useEffect(()=>{
-  if(!authenticated){setRealtimeState('unconfigured');return()=>{}}
-  if(!supabase){setRealtimeState('unconfigured');return()=>{}}
+  if(!authenticated){setRealtimeState('unconfigured');setRealtimeError('');return()=>{}}
+  if(!supabase){setRealtimeState('unconfigured');setRealtimeError('Supabase browser Realtime is not configured');return()=>{}}
   let active=true;
+  setRealtimeState('connecting');setRealtimeError('');
   const channel=supabase.channel('crm:live')
    .on('broadcast',{event:'message_inserted'},()=>{if(active)setRefreshToken(v=>v+1)})
    .subscribe((status,err)=>{if(!active)return;setRealtimeState(status==='SUBSCRIBED'?'live':status==='CHANNEL_ERROR'?'error':'connecting');setRealtimeError(status==='SUBSCRIBED'?'':(err?.message||String(err||status)))})
   return()=>{active=false;supabase.removeChannel(channel)};
- },[]);
+ },[authenticated]);
 
  const visibleLeads=useMemo(()=>{
   const q=query.trim().toLowerCase();
