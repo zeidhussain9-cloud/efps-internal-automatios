@@ -42,15 +42,17 @@ test('lead inbox returns conversation timeline fields and validates server-side 
  const pool={query:async(sql,args)=>{
   calls.push({sql,args});
   if(sql.startsWith('SELECT count(*)::int AS total'))return{rows:[{total:186}]};
-  return{rows:[{id:'L-LIVE-1',contacted_at:'2026-08-26T07:30:00.000Z',last_message_direction:'Incoming',last_message_at:'2026-09-30T16:26:15.000Z'}]};
+  return{rows:[{id:'L-LIVE-1',contacted_at:'2026-08-26T07:30:00.000Z',last_message_direction:'Incoming',last_message_at:'2026-09-30T16:26:15.000Z',overdue_followup_count:2}]};
  }};
  const cr= createCrmRepository({pool});
  const data=await cr.listLeadsPage(100,0,'+919148338801','', 'customer_waiting','shiv');
  assert.equal(data.sort,'customer_waiting');
  assert.equal(data.total,186);
  assert.equal(data.leads[0].last_message_direction,'Incoming');
+ assert.equal(data.leads[0].overdue_followup_count,2);
  assert.match(calls[0].sql,/contacted_at/);
  assert.match(calls[0].sql,/last_message_at/);
+ assert.match(calls[0].sql,/crm_followups f WHERE f\.lead_id=l\.id AND f\.completed_at IS NULL AND f\.due_at<CURRENT_TIMESTAMP/);
  assert.match(calls[0].sql,/ORDER BY \(last_message\.last_message_direction='Incoming'\) DESC/);
  assert.deepEqual(calls[0].args,['+919148338801','%shiv%',100,0]);
  assert.match(calls[0].sql,/lower\(coalesce\(l\.display_name,l\.normalized_phone,''\)\) LIKE/);

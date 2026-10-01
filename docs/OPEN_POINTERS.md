@@ -1,3 +1,30 @@
+## 2026-10-02 — Replit feedback branch recovery and line-by-line audit checkpoint
+
+The isolated branch `crm-ui-feedback-polish-2026-10-02` was recovered after the Replit workspace exhausted its credits. The branch is based directly on production checkpoint `97b43a7d158eb8b3cd773ed3febb45c4f8a52540` and contains the recovered UI/inventory implementation plus regression coverage.
+
+### Audited implementation extracted for verification
+
+- Lead cards now expose persisted `crm_leads.classification` separately from operational `crm_leads.lead_type`; missing classification is rendered as `Not recorded` and is not inferred from age, message history, budget, or AI output.
+- Lead cards expose a persisted overdue-follow-up count derived from incomplete follow-ups whose due time has passed. No financial-risk label is inferred from budget.
+- Lead status tones are secondary, low-contrast semantic styling and remain text-labelled; color is not the only meaning.
+- Lead-card classification spacing and mobile hierarchy were hardened with explicit identity-to-classification separation and narrow-screen overflow coverage.
+- Inventory KPI cards remain clickable and use full-inventory summaries/facets rather than page counts.
+- Inventory search, status/BHK/locality/photo filters, sorting, and 24-row pagination now compose through the protected inventory overview response. Filter/sort changes reset to page zero; the browser ignores stale inventory/audit responses.
+- Inventory pagination has explicit query validation and deterministic filter/sort/page regression coverage.
+- Global and lead Activity requests use cancellation guards so stale responses cannot overwrite current state.
+- Contact Classification filter/source changes reset pagination without issuing a stale page response.
+- Browser regression coverage now exercises inventory page 2, filter reset, classification visibility, overdue attention, mobile classification spacing, and horizontal-overflow safety.
+
+### Audit exclusions / corrections
+
+- Replit-only `.replit` and startup-instruction asset were removed from the promotion candidate.
+- Replit-mutated dependency ranges and package-firewall lockfile URLs were removed; the production `package.json` and `package-lock.json` were restored to the verified `97b43a7` baseline.
+- No production database write, webhook/integration change, schema migration, or Render deployment is included in this checkpoint.
+
+### Verification state
+
+Implementation review is complete at the repository diff level. Build, full automated tests, browser regression, production deployment, and branch reconciliation remain evidence-gated until the recovered candidate is executed and verified. This section must not be interpreted as a production-live claim.
+
 ## Authoritative current CRM UI verification — 2026-10-02
 
 This is the current production checkpoint after the audited CRM UI polish, routing hardening, verification, deployment, and repository reconciliation. Older dated sections remain historical evidence.
@@ -238,3 +265,16 @@ The earlier Cloudinary/idempotency/deployment/tree reconciliation pointers are s
 - Tests: build PASS; 78/78 tests PASS; browser 1/1 PASS.
 - Trees: origin/main tree == origin/crm-ui-dashboard tree == 375a701d907830a04ddd5f6d517f982ea729ed68.
 - 24/24 CRM audit items: GREEN.
+
+## 2026-10-02 — Final recovered-candidate audit record
+
+- Candidate branch: `crm-ui-feedback-polish-2026-10-02`
+- Candidate HEAD: `1241b062dfbc7a96b139ec0a7f68d68f43baab51e`
+- Production/dashboard baseline: `97b43a7d158eb8b3cd773ed3febb45c4f8a52540`
+- Pull request: #60 — CRM UI feedback polish
+- Replit-only workspace artifacts removed before promotion.
+- Production dependency manifest and lockfile restored to the verified baseline.
+- Recovered implementation includes classification visibility/tone, overdue follow-up attention, inventory filtering/sorting/pagination, stale-response guards, classification pagination reset, and browser/server regression coverage.
+- No production merge, Render deployment, database mutation, schema migration, or webhook/integration change has been performed from this candidate.
+- Automated build/test evidence for this exact candidate is still pending; do not mark the candidate production-verified until `npm run build`, `npm test`, and `npm run test:browser` are observed passing.
+- `main` and `crm-ui-dashboard` remain unchanged from the verified production baseline until that evidence gate is satisfied.
