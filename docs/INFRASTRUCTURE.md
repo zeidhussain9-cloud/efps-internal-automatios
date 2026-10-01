@@ -190,7 +190,7 @@ Render production Bedrock settings now include `AWS_BEDROCK_FALLBACK_MODEL_ID=au
 
 ## Final verified checkpoint — 2026-10-01
 
-Production Render service `srv-darsv560tbcc73cu4ip0` is live on `crm-ui-dashboard` commit `c19e36c74a06eb7a5204e2f201a99916545b52b0`. Health endpoint returns `{"ok":true}`. `main` has the identical repository tree (`2dbd2258f655e7de599917c9e339f07d74c0e0b0`).
+Production Render service `srv-darsv560tbcc73cu4ip0` is live on `crm-ui-dashboard` commit `c8c0b3b458e1d71bf4a81f7efea749aaf1ef4bde`. Health endpoint returns `{"ok":true}`. `main` has the identical repository tree (`7bce9e42ccd4efa9d14d85bbba8767961943aab0`).
 
 ## 2026-10-01 — Dependency security checkpoint
 

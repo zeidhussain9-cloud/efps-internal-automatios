@@ -215,11 +215,11 @@ The approved six AI improvements are implemented: stale-draft detection; provena
 
 ## 2026-10-01 — Final verified checkpoint after AI hardening
 
-- `crm-ui-dashboard` final verified commit: `c19e36c74a06eb7a5204e2f201a99916545b52b0`.
-- `crm-ui-dashboard` final tree: `2dbd2258f655e7de599917c9e339f07d74c0e0b0`.
-- Render service `srv-darsv560tbcc73cu4ip0` is live from that commit; deployment `dep-dautfd3ncjis73cu6dj0` reached `live` and startup/database connectivity were verified.
+- `crm-ui-dashboard` final verified commit: `c8c0b3b458e1d71bf4a81f7efea749aaf1ef4bde`.
+- `crm-ui-dashboard` final tree: `7bce9e42ccd4efa9d14d85bbba8767961943aab0`.
+- Render service `srv-darsv560tbcc73cu4ip0` is live from that commit; deployment `dep-dautgos9v7es73bnc44g` reached `live` and startup/database connectivity were verified.
 - `main` final reconciliation commit: `562905cfe435ee7ad8851c9c4a42360726a9b317`.
-- `main` tree equals `crm-ui-dashboard` tree: `2dbd2258f655e7de599917c9e339f07d74c0e0b0`.
+- `main` tree equals `crm-ui-dashboard` tree: `7bce9e42ccd4efa9d14d85bbba8767961943aab0`.
 - Local `crm-ui-dashboard` checkout equals `origin/crm-ui-dashboard` at `c19e36c...` and is clean.
 - Production migration 17 is applied. Current database counts: 3 AI runs (2 Ollama, 1 Bedrock), 3 drafts, all 3 with source evidence; no `confirmed_sent` outcomes yet.
 - Automated verification: `npm run build` passes; `npm test` passes 66/66. `npm run test:browser` remains unresolved locally because the runner hangs without producing a result; no browser pass is claimed.
