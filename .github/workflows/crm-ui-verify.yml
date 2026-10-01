@@ -39,3 +39,27 @@ jobs:
 
       - name: Browser regression tests
         run: npm run test:browser
+
+  production-smoke:
+    name: Production health smoke
+    if: github.ref == 'refs/heads/crm-ui-dashboard'
+    needs: verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - name: Wait for Render health
+        run: |
+          set -e
+          for attempt in $(seq 1 60); do
+            status=$(curl -sS -o /tmp/health.json -w '%{http_code}' --max-time 10 https://easyfind-crm-d01-d05.onrender.com/health || true)
+            body=$(cat /tmp/health.json 2>/dev/null || true)
+            if [ "$status" = "200" ] && [ "$body" = '{"ok":true}' ]; then
+              echo "Production /health is HTTP 200 with expected response."
+              exit 0
+            fi
+            echo "Attempt $attempt: /health returned HTTP $status; waiting for Render deployment."
+            sleep 5
+          done
+          echo "Production /health did not reach the expected state."
+          cat /tmp/health.json 2>/dev/null || true
+          exit 1
