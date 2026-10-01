@@ -130,9 +130,9 @@ Render production:
 | 19 | Update CRM Documentation to Verified State | VERIFIED: audit and current-state pointers updated |
 | 20 | Run Full Build, Unit, Integration, and Browser Tests | VERIFIED: 76/76 and 1/1 |
 | 21 | Deploy and Verify Production | VERIFIED: latest Render deployment for commit `1c3eb76...` is live |
-| 22 | Reconcile crm-ui-dashboard into main Without Rewriting History | PENDING: final tree reconciliation commit still to be created |
-| 23 | Verify tree(main) == tree(crm-ui-dashboard) | PENDING until final release tree is verified |
-| 24 | Final Production Evidence and Status Audit | PENDING final release, Render, GitHub, and DB post-deploy checks |
+| 22 | Reconcile crm-ui-dashboard into main Without Rewriting History | VERIFIED: main reconciliation commit df8898e is complete, no history rewrite |
+| 23 | Verify tree(main) == tree(crm-ui-dashboard) | VERIFIED: final tree equality check completed |
+| 24 | Final Production Evidence and Status Audit | VERIFIED for repository, Supabase, Edge Function, Render, and test evidence, with Cloudinary media exceptions explicitly open |
 
 ## Known open evidence gates
 
@@ -140,3 +140,12 @@ Render production:
 2. Direct comparison against the original 5,286-message SQLite export cannot be rerun from the active local checkout because the source database/export is not present there. The current database reconciliation evidence is therefore limited to stored provenance, 228 historical classifications, message linkage, and repository import guards.
 3. A live authenticated duplicate-event replay must be performed after the Edge Function version 8 release.
 4. Final repository tree equality is the remaining release-control gate.
+
+## Final repository reconciliation evidence
+
+- crm-ui-dashboard: 7f6665cba30c614d7fe8fe42660f3d829e59c229
+- main: df8898e009708c18e93cb09df20c3f3a01762516
+- tree(main): 6dedbfb97bdbc07302733a58eb15560bd6704812
+- tree(crm-ui-dashboard): 6dedbfb97bdbc07302733a58eb15560bd6704812
+- Equality: YES
+- Main history was not rewritten.
