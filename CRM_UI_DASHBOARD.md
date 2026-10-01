@@ -4,7 +4,7 @@
 
 ## Current production checkpoint — 2026-10-01 04:31 UTC
 
-- Render service `easyfind-crm-d01-d05` / `srv-darsv560tbcc73cu4ip0` is live on commit `a4798e2f3503a557208e0a15c67bf0f0035059a6`, deploy `dep-dauu3j60tbcc73e5ceeg`.
+- Render service `easyfind-crm-d01-d05` / `srv-darsv560tbcc73cu4ip0` is live on commit `53ae5f12ca3a89f09232b15687494d8de132921f`, deploy `dep-dauu51rncjis73cv69s0`.
 - Production source `+919148338801`: 186 source-linked leads, 292 classifications, 5 pending, 186 promoted, 6,641 messages.
 - Webhook state: 214 persisted events, 214 processed, 0 received, 0 failed; automatic reconciliation remains active.
 - Leads Inbox cards now expose only lead status and source number. The Leads Inbox header includes clickable counts for every supported lead status; selecting a status applies the corresponding server-side lead filter.
