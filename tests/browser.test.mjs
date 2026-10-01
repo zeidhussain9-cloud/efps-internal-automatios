@@ -107,5 +107,16 @@ test('production CRM browser journey uses only live-record surfaces',async()=>{
   assert.equal(statBoxes.length,2);
   assert.ok(Math.abs(statBoxes[0].y-statBoxes[1].y)<2,'dashboard KPI cards remain in a two-column mobile layout');
 
+  await page.setViewportSize({width:390,height:844});
+  await page.reload();
+  await page.getByText('Production data').waitFor();
+  const toolbarBox=await page.locator('.production-toolbar').boundingBox();
+  assert.ok(toolbarBox&&toolbarBox.width<=390,'lead controls fit the mobile viewport');
+  const sortBox=await page.getByLabel('Sort leads').boundingBox();
+  assert.ok(sortBox&&sortBox.width>0&&sortBox.width<=195,'sort control stays within its mobile column');
+  const activityBox=await page.locator('.lead-card-activity').boundingBox();
+  assert.ok(activityBox&&activityBox.width<=390,'lead activity columns fit the mobile card');
+  assert.equal(await page.getByLabel('Sort leads').locator('option').count(),5,'all lead sort modes remain available on mobile');
+
  }finally{await browser?.close();server.kill()}
 });
