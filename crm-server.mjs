@@ -56,9 +56,17 @@ createServer(async(req,res)=>{
   if(!sameOrigin(req)&&!['GET','HEAD'].includes(req.method)&&p!=='/api/internal/inventory/sync'){res.writeHead(403,security);return res.end('Cross-origin request rejected')}
   if(p==='/api/audit/recent'){
    if(req.method!=='GET'){res.writeHead(405,security);return res.end('Method not allowed')}
-   const q=new URL(req.url,'http://localhost').searchParams;const limitRaw=q.get('limit')||'50';
-   if(!/^\d{1,3}$/.test(limitRaw)){res.writeHead(400,security);return res.end('Invalid limit')}
-   const repo=createCrmRepository();try{const rows=await repo.listGlobalActivity(Number(limitRaw));res.writeHead(200,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify({rows}))}finally{await repo.close()}
+   const q=new URL(req.url,'http://localhost').searchParams;const limitRaw=q.get('limit')||'50',offsetRaw=q.get('offset')||'0',from=q.get('from')||null,to=q.get('to')||null;
+   if(!/^\d{1,3}$/.test(limitRaw)||Number(limitRaw)>500||!/^\d{1,7}$/.test(offsetRaw)){res.writeHead(400,security);return res.end('Invalid audit pagination')}
+   if((from&&Number.isNaN(Date.parse(from)))||(to&&Number.isNaN(Date.parse(to)))){res.writeHead(400,security);return res.end('Invalid audit date range')}
+   const repo=createCrmRepository();try{const rows=await repo.listGlobalActivity(Number(limitRaw),from,to,Number(offsetRaw));res.writeHead(200,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify({rows,hasMore:rows.length===Number(limitRaw)}))}finally{await repo.close()}
+  }
+  if(/^\/api\/audit\/lead\/[^/]+$/.test(p)){
+   if(req.method!=='GET'){res.writeHead(405,security);return res.end('Method not allowed')}
+   const id=decodeURIComponent(p.slice('/api/audit/lead/'.length));const q=new URL(req.url,'http://localhost').searchParams;const limitRaw=q.get('limit')||'100',offsetRaw=q.get('offset')||'0',from=q.get('from')||null,to=q.get('to')||null;
+   if(!id||id.length>128||!/^[0-9]{1,3}$/.test(limitRaw)||Number(limitRaw)>500||!/^[0-9]{1,7}$/.test(offsetRaw)){res.writeHead(400,security);return res.end('Invalid lead audit query')}
+   if((from&&Number.isNaN(Date.parse(from)))||(to&&Number.isNaN(Date.parse(to)))){res.writeHead(400,security);return res.end('Invalid audit date range')}
+   const repo=createCrmRepository();try{const rows=await repo.listActivity(id,Number(limitRaw),from,to,Number(offsetRaw));res.writeHead(200,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify({rows,hasMore:rows.length===Number(limitRaw)}))}finally{await repo.close()}
   }
   if(p==='/api/db/export'&&req.method==='GET'){
    if(process.env.CRM_DB_READ_ENABLED!=='true'||!process.env.DATABASE_URL){res.writeHead(404,security);return res.end('Export unavailable')}

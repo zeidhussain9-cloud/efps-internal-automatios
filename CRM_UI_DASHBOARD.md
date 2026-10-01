@@ -163,7 +163,7 @@ Do not use the historical CRM branches as the working location. All future UI da
 
 ## Current production workflow — 2026-10-01
 
-Verified current source: +919148338801; Supabase has 186 leads, 310 classifications, 23 pending classifications, 186 promoted classifications, 6,870 messages and 465 webhook events, all processed.
+Verified current source: +919148338801; current Supabase snapshot has 186 leads, 313 classification rows, 6,881 messages and 476 webhook events. The current dashboard inventory state is 71 Available and 17 Rented Out (88 active snapshot rows).
 
 
 ### Contact Classification
@@ -181,7 +181,7 @@ Non-qualified classifications remain outside CRM. Qualified Lead is the only cla
 
 ### Dashboard
 
-The dashboard presents only the daily operational counters and next actions: CRM leads, contacts not pushed, qualified contacts pushed, and follow-ups due today. Open follow-ups are listed below the counters and open directly into the relevant lead workspace.
+The dashboard presents daily operational counters and next actions: CRM leads, contacts waiting for classification, **Total available inventory**, and follow-ups due today. The inventory counter uses `crm_inventory_snapshot.listing_state='Available'`, so it excludes Rented Out rows. Open follow-ups are listed below the counters and open directly into the relevant lead workspace.
 
 ### Reliability
 
@@ -190,7 +190,7 @@ Classification errors are rendered inline with the server response instead of si
 
 ## 2026-10-01 — Production security/operator-control closure
 
-D07 is implemented on `crm-ui-dashboard`: protected operator session UX, default sensitive-data masking, explicit/reversible lead archive, global audit visibility, explicit audit-recorded CSV export, retention/deletion boundaries, and visible offline/sync states. The browser E2E regression is corrected on the same branch.
+D07 is implemented on `crm-ui-dashboard`: protected operator session UX, default sensitive-data masking, explicit/reversible lead archive, CRM-wide audit visibility, explicit audit-recorded CSV export, retention/deletion boundaries, and visible offline/sync states. The browser E2E regression covers the live-record journey.
 
 
 ## 2026-10-01 — mobile responsiveness and Realtime
@@ -229,3 +229,16 @@ Historical release metadata is superseded by the authoritative current-state blo
 ## 2026-10-01 — Final evidence-first 24-item closure
 
 Current live checkpoint: 186 leads, 6,870 messages, 310 classifications, 196 AI runs/drafts, 465 processed webhook events, and 88 active inventory rows.
+
+
+## 2026-10-02 — Lead Workspace UI and audit-history closure
+
+The Lead Workspace header no longer exposes the redundant “Actual lead” badge. The visible priority chip is explicitly sourced from `crm_leads.priority`; for example, the verified lead `+918939844866` currently has priority `Medium` in the database.
+
+The Requirements tab is a normalized editable table backed by `crm_lead_requirements`. Enumerated fields use the database-defined allowed values; BHK and preferred-location inputs expose current inventory values as browser datalist suggestions without preventing valid custom requirements. Saves remain protected, transactional and audit-recorded.
+
+Conversation property grouping is evidence-based: explicit property URLs from supported property portals create property-reference sections, and messages explicitly replying to those source-message IDs remain in that property section. Messages without such stored evidence remain in a separate General conversation section and are not guessed into a property.
+
+Audit Activity is now CRM-wide: it reads all `crm_activity` rows rather than only rows with `lead_id IS NULL`, supports date ranges and pagination, and displays the lead ID when an event is lead-scoped. Lead Workspace Activity & History uses the same `crm_activity` table with a `lead_id` filter, so the two views differ by scope rather than by event storage. Date filters support all activity, this month, previous month, last 30 days and custom ranges.
+
+These changes are locally verified on `crm-ui-dashboard` with the repository test suite and browser regression before deployment.

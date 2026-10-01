@@ -153,10 +153,10 @@ test('follow-up create and complete write durable activity entries',async()=>{
 });
 
 
-test('dashboard stats expose qualified CRM count and active inventory count',async()=>{
+test('dashboard stats expose qualified CRM count and available inventory count',async()=>{
  const calls=[];const pool={query:async(sql,args)=>{calls.push([sql,args]);if(sql.includes('crm_inventory_snapshot'))return{rows:[{n:88}]};if(sql.includes("status='promoted'"))return{rows:[{n:186}]};if(sql.includes("status='pending'"))return{rows:[{n:23}]};if(sql.includes("status='excluded'"))return{rows:[{n:13}]};if(sql.includes('crm_webhook_events'))return{rows:[{n:0}]};if(sql.includes('crm_followups'))return{rows:[{n:0}]};if(sql.includes('lead_type AS status'))return{rows:[]};return{rows:[{n:186}]};}};
  const repo=createCrmRepository({pool});const stats=await repo.dashboardStats('+919148338801');
- assert.equal(stats.qualifiedClassificationCount,186);assert.equal(stats.notPushedClassificationCount,23);assert.equal(stats.activeInventoryCount,88);
+ assert.equal(stats.qualifiedClassificationCount,186);assert.equal(stats.notPushedClassificationCount,23);assert.equal(stats.availableInventoryCount,88);
 });
 
 test('AI run save persists usage metrics',async()=>{
@@ -164,4 +164,14 @@ test('AI run save persists usage metrics',async()=>{
  const repo=createCrmRepository({pool});
  const row=await repo.saveAiRun({leadId:'L-1',modelName:'model',provider:'aws-bedrock',proposal:{},usage:{inputTokens:120,outputTokens:30,totalTokens:150}});
  assert.equal(row.input_tokens,120);assert.equal(row.output_tokens,30);assert.equal(row.total_tokens,150);assert.match(calls[0][0],/input_tokens,output_tokens,total_tokens/);
+});
+
+test('audit history supports global and lead-scoped date windows without filtering out lead events',async()=>{
+ const calls=[];const pool={query:async(sql,args)=>{calls.push([sql,args]);return{rows:[{id:1,lead_id:'L-1',action:'lead.updated'}]}}};
+ const repo=createCrmRepository({pool});
+ const globalRows=await repo.listGlobalActivity(100,'2026-10-01T00:00:00Z','2026-11-01T00:00:00Z',100);
+ const leadRows=await repo.listActivity('L-1',100,'2026-10-01T00:00:00Z','2026-11-01T00:00:00Z',0);
+ assert.equal(globalRows.length,1);assert.equal(leadRows.length,1);
+ assert.doesNotMatch(calls[0][0],/lead_id IS NULL/);assert.match(calls[0][0],/occurred_at >= \$1/);assert.match(calls[0][0],/OFFSET \$4/);
+ assert.match(calls[1][0],/WHERE lead_id=\$1/);assert.match(calls[1][0],/OFFSET \$5/);
 });

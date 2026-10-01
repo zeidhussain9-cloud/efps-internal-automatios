@@ -190,3 +190,12 @@
 @media(max-width:700px){.status-summary-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.status-summary-card{padding:10px}.status-summary-card b{font-size:20px}}
 
 .priority-chip{background:#f1f4f7;color:#53697d;font-weight:700}
+
+.conversation-groups{display:grid;gap:16px}
+.conversation-property,.conversation-general{border:1px solid #d9e5ec;border-radius:14px;background:#fff;overflow:hidden;box-shadow:0 3px 12px #17365508}
+.conversation-property{border-left:4px solid #5b91b5}.conversation-general{border-left:4px solid #aab7c2}
+.conversation-property>header,.conversation-general>header{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;padding:15px 17px;background:#f6f9fb;border-bottom:1px solid #e4ebf0}
+.conversation-property h3,.conversation-general h3{margin:7px 0 4px;font-size:14px;color:#23415a}.conversation-property header a{font-size:11px;color:#286b9a;overflow-wrap:anywhere}.conversation-property header small,.conversation-general header small{color:#7c8d9b;font-size:10px}.conversation-property .conversation,.conversation-general .conversation{margin:16px}
+.audit-toolbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:0 0 14px}.audit-toolbar .secondary{margin:0}.audit-date{display:flex;align-items:center;gap:6px;font-size:11px;color:#60758a}.audit-date input{border:1px solid #d6e1e9;border-radius:7px;padding:8px 9px;background:#fff;color:#20354b}
+.audit-list{max-height:none}.audit-row{align-items:flex-start}.audit-row pre{margin:8px 0 0;white-space:pre-wrap;overflow-wrap:anywhere;font:11px/1.45 ui-monospace,SFMono-Regular,Menlo,monospace;color:#53697b;background:#f7f9fb;border:1px solid #e3eaf0;border-radius:7px;padding:9px}
+@media(max-width:600px){.conversation-property>header,.conversation-general>header{display:block}.conversation-property header small,.conversation-general header small{display:block;margin-top:8px}.audit-toolbar{align-items:stretch}.audit-toolbar .secondary,.audit-date{width:100%}.audit-date{justify-content:space-between}.audit-date input{flex:1}.requirements-table-wrap{border-radius:9px}.requirements-table{min-width:680px}}

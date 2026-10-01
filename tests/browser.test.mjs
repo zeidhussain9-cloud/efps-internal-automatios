@@ -25,7 +25,7 @@ test('production CRM browser journey uses only live-record surfaces',async()=>{
   })}));
 
   await page.route('**/api/db/stats*',route=>route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({
-   sourceNumber:'+919148338801',leadCount:228,liveLeadCount:3,pendingClassificationCount:4,notPushedClassificationCount:4,qualifiedClassificationCount:228,activeInventoryCount:3,webhookErrorCount:0,leadStatusCounts:[{status:'New',count:12},{status:'Active Follow-up',count:40},{status:'Waiting on Customer',count:18},{status:'Waiting on Us',count:10},{status:'Nurture',count:30},{status:'Dormant',count:25},{status:'Converted',count:8},{status:'Lost',count:15},{status:'On Hold',count:20},{status:'Out of Coverage Area',count:50}],supportedSourceNumbers:['+919148338801','+917975102130','+919902024973']
+   sourceNumber:'+919148338801',leadCount:228,liveLeadCount:3,pendingClassificationCount:4,notPushedClassificationCount:4,qualifiedClassificationCount:228,availableInventoryCount:2,webhookErrorCount:0,leadStatusCounts:[{status:'New',count:12},{status:'Active Follow-up',count:40},{status:'Waiting on Customer',count:18},{status:'Waiting on Us',count:10},{status:'Nurture',count:30},{status:'Dormant',count:25},{status:'Converted',count:8},{status:'Lost',count:15},{status:'On Hold',count:20},{status:'Out of Coverage Area',count:50}],supportedSourceNumbers:['+919148338801','+917975102130','+919902024973']
   })}));
 
   await page.route('https://res.cloudinary.com/**',route=>route.fulfill({status:200,contentType:'image/svg+xml',body:'<svg xmlns="http://www.w3.org/2000/svg" width="320" height="220"><rect width="320" height="220" fill="#dce8f0"/></svg>'}));
@@ -41,13 +41,15 @@ test('production CRM browser journey uses only live-record surfaces',async()=>{
   await page.route('**/api/db/leads/*/workspace*',route=>route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({
    lead:{id:'LIVE-1',display_name:'Live lead',normalized_phone:'+919000000001',status:'New',lead_type:'New',tenant_type:'Not specified',priority:'Medium',classification:'Qualified Lead',requirements:{bhk:'2 BHK',locality:'Harlur',budget:50000},operator_notes:''},
    sources:[{source_number:'+919148338801'}],
-   messages:[{id:1,source_number:'+919148338801',direction:'Incoming',message_type:'text',body:'Historical conversation message',sender_name:'Customer',message_at:'2026-09-30T00:00:00Z'}],
+   messages:[{id:1,source_number:'+919148338801',source_message_id:'MSG-1',direction:'Incoming',message_type:'text',body:'Property: https://housing.com/rent/12345-2-bhk-harlur',sender_name:'Customer',message_at:'2026-09-30T00:00:00Z'},{id:2,source_number:'+919148338801',source_message_id:'MSG-2',replied_to_source_message_id:'MSG-1',direction:'Outgoing',message_type:'text',body:'Historical conversation message',sender_name:'EasyFind',message_at:'2026-09-30T00:01:00Z'},{id:3,source_number:'+919148338801',direction:'Incoming',message_type:'text',body:'General requirement discussion',sender_name:'Customer',message_at:'2026-09-30T00:02:00Z'}],
    requirement_profile:{bhk:'2 BHK',budget:'50000',preferred_locations:'Harlur',tenant_type:'Family',furnishing:'Any',parking:'Any',pets:'Unknown',preferred_amenities:[],notes:''},
    activity:[],followups:[],drafts:[{id:'DRAFT-2',version:2,body:'Hello from persisted draft',status:'draft',created_at:'2026-10-01T02:30:00Z',ai_run_id:'RUN-2',ai_provider:'aws-bedrock',model_name:'au.anthropic.claude-opus-4-6-v1',input_tokens:12000,output_tokens:850,total_tokens:12850,estimated_cost_usd:0.08125},{id:'DRAFT-1',version:1,body:'Older draft',status:'draft',created_at:'2026-10-01T02:29:00Z',ai_run_id:'RUN-1',ai_provider:'ollama',model_name:'gpt-oss:20b'}],ai_runs:[{id:'RUN-2',model_name:'au.anthropic.claude-opus-4-6-v1',status:'proposed',created_at:'2026-10-01T02:30:00Z',input_tokens:12000,output_tokens:850,total_tokens:12850,estimated_cost_usd:0.08125}]
   })}));
 
   await page.route('**/api/db/leads/LIVE-1',route=>route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({id:'LIVE-1',lead_type:'Active Follow-up',tenant_type:'Family'})}));
   await page.route('**/api/inventory/matches*',route=>route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({rows:[]})}));
+  await page.route('**/api/audit/recent*',route=>route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({rows:[{id:900,action:'lead.updated',actor:'pilot',lead_id:'LIVE-1',occurred_at:'2026-10-01T10:00:00Z',details:{field:'status'}}],hasMore:false})}));
+  await page.route('**/api/audit/lead/*',route=>route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({rows:[{id:901,action:'requirements.updated',actor:'pilot',lead_id:'LIVE-1',occurred_at:'2026-10-01T10:01:00Z',details:{fields:['bhk']}}],hasMore:false})}));
 
   await page.goto(base);
   await page.getByRole('heading',{name:'Operator sign in'}).waitFor();
@@ -59,7 +61,7 @@ test('production CRM browser journey uses only live-record surfaces',async()=>{
   await page.getByText('228',{exact:true}).first().waitFor();
   await page.getByText('Actually qualified',{exact:false}).waitFor();
   await page.getByText('Waiting for classification',{exact:false}).waitFor();
-  await page.getByText('Total active inventory',{exact:false}).waitFor();
+  await page.getByText('Total available inventory',{exact:false}).waitFor();
   await page.getByText('Follow-ups',{exact:true}).first().waitFor();
 
   await page.getByRole('button',{name:'Inventory',exact:true}).click();
@@ -132,9 +134,19 @@ test('production CRM browser journey uses only live-record surfaces',async()=>{
   await page.getByLabel('Tenant Type').waitFor();
 
   await page.getByRole('button',{name:'Conversation',exact:true}).click();
-  await page.getByText('Sensitive message hidden').waitFor();
+  await page.getByText('Sensitive message hidden').first().waitFor();
   await page.getByRole('button',{name:/Privacy: Masked/}).click();
+  await page.getByText('Property reference',{exact:true}).waitFor();
+  await page.getByText('Messages without an explicit property reference',{exact:true}).waitFor();
   await page.getByText('Historical conversation message').waitFor();
+
+  await page.getByRole('button',{name:'Requirements',exact:true}).click();
+  await page.getByText('Editable normalized requirement profile.',{exact:false}).waitFor();
+  assert.equal(await page.locator('.requirements-table').count(),1);
+
+  await page.getByRole('button',{name:'Activity & History',exact:true}).click();
+  await page.getByText('Lead audit history',{exact:true}).waitFor();
+  await page.getByText('requirements.updated',{exact:true}).waitFor();
 
   await page.getByRole('button',{name:'Property Matches',exact:true}).click();
   await page.getByText(/No live inventory matches were returned/).waitFor();
@@ -151,8 +163,11 @@ test('production CRM browser journey uses only live-record surfaces',async()=>{
   await page.getByText('Output tokens: 850',{exact:true}).waitFor();
   await page.getByText('Estimated cost: $0.081250',{exact:true}).waitFor();
 
-  await page.locator('button.header-back').click();
-  await page.getByText('Production data').waitFor();
+  await page.getByRole('button',{name:'Dashboard',exact:true}).click();
+  await page.getByRole('button',{name:'Activity',exact:true}).click();
+  await page.getByText('All CRM activity across leads',{exact:false}).waitFor();
+  await page.getByText('lead.updated',{exact:true}).waitFor();
+
 
   // Exercise the compact/tablet viewport used by mobile browsers that expose a wider layout viewport.
   await page.getByRole('button',{name:'Dashboard',exact:true}).click();
