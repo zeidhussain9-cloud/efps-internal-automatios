@@ -187,3 +187,7 @@ Production CRM service srv-darsv560tbcc73cu4ip0 is on crm-ui-dashboard; the curr
 ## 2026-10-01 — AI runtime fallback
 
 Render production Bedrock settings now include `AWS_BEDROCK_FALLBACK_MODEL_ID=au.anthropic.claude-sonnet-4-6`. Runtime order is Claude Opus 4.6 AU → Claude Sonnet 4.6 AU → Ollama `gpt-oss:20b`. AI run and draft provenance are persisted. AWS documents the Sonnet 4.6 AU geo inference profile as routing within Australia/New Zealand destinations. 
+
+## Final verified checkpoint — 2026-10-01
+
+Production Render service `srv-darsv560tbcc73cu4ip0` is live on `crm-ui-dashboard` commit `c19e36c74a06eb7a5204e2f201a99916545b52b0`. Health endpoint returns `{"ok":true}`. `main` has the identical repository tree (`2dbd2258f655e7de599917c9e339f07d74c0e0b0`).

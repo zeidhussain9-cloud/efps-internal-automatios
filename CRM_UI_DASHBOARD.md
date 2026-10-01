@@ -89,3 +89,7 @@ Production: easyfind-crm-d01-d05 (srv-darsv560tbcc73cu4ip0). The current deploym
 ## 2026-10-01 — Current AI generation state
 
 AI provider chain: Bedrock Claude Opus 4.6 (`au.anthropic.claude-opus-4-6-v1`) → Bedrock Claude Sonnet 4.6 (`au.anthropic.claude-sonnet-4-6`) → Ollama `gpt-oss:20b`. Drafts display provider/model/fallback provenance and source-message evidence. Stale drafts are flagged, and the operator must pass a deterministic pre-send check before opening WhatsApp. Sending remains manual; `Mark sent` is an explicit operator audit action. Incremental message analysis remains deferred.
+
+## Final verified checkpoint — 2026-10-01
+
+`crm-ui-dashboard` commit `c19e36c74a06eb7a5204e2f201a99916545b52b0`, tree `2dbd2258f655e7de599917c9e339f07d74c0e0b0`. Render deployment `dep-dautfd3ncjis73cu6dj0` is live. `main` has been reconciled to the same tree in commit `562905cfe435ee7ad8851c9c4a42360726a9b317`. Build passes and the automated test suite is 66/66. Browser test runner remains hanging locally and is not claimed as passed.

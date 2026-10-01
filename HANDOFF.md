@@ -212,3 +212,15 @@ Production lead `+919108474861` was verified in Supabase with three drafts: v1/v
 A direct Bedrock tone audition was run against the same lead facts. `au.anthropic.claude-sonnet-4-6` produced a strong fallback candidate; `au.anthropic.claude-sonnet-4-5-20250929-v1:0` and Haiku 4.5 were also invokable but introduced less suitable phrasing/unsupported option language in the audition. `global.anthropic.claude-opus-4-5-20251101-v1:0` was invokable and produced a strong draft, but AWS documents Opus 4.5 without an AU geo inference profile, so Sonnet 4.6 is used as the production Bedrock fallback to preserve the existing AU routing. AWS documents Sonnet 4.6 as a 1M-context reasoning model and provides the `au.anthropic.claude-sonnet-4-6` profile.
 
 The approved six AI improvements are implemented: stale-draft detection; provenance; evidence attached to drafts; deterministic pre-send grounding/safety checks; explicit copied/opened/sent outcome tracking; and explicit primary/fallback visibility. Incremental message/delta analysis is intentionally not implemented yet.
+
+## 2026-10-01 — Final verified checkpoint after AI hardening
+
+- `crm-ui-dashboard` final verified commit: `c19e36c74a06eb7a5204e2f201a99916545b52b0`.
+- `crm-ui-dashboard` final tree: `2dbd2258f655e7de599917c9e339f07d74c0e0b0`.
+- Render service `srv-darsv560tbcc73cu4ip0` is live from that commit; deployment `dep-dautfd3ncjis73cu6dj0` reached `live` and startup/database connectivity were verified.
+- `main` final reconciliation commit: `562905cfe435ee7ad8851c9c4a42360726a9b317`.
+- `main` tree equals `crm-ui-dashboard` tree: `2dbd2258f655e7de599917c9e339f07d74c0e0b0`.
+- Local `crm-ui-dashboard` checkout equals `origin/crm-ui-dashboard` at `c19e36c...` and is clean.
+- Production migration 17 is applied. Current database counts: 3 AI runs (2 Ollama, 1 Bedrock), 3 drafts, all 3 with source evidence; no `confirmed_sent` outcomes yet.
+- Automated verification: `npm run build` passes; `npm test` passes 66/66. `npm run test:browser` remains unresolved locally because the runner hangs without producing a result; no browser pass is claimed.
+- GitHub combined-status API currently reports no status contexts for the final CRM/main commits; repository verification therefore relies on the local test suite, Git tree equality, Render deployment logs, health endpoint, and Supabase migration/data verification.
