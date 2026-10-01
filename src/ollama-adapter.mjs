@@ -1,50 +1,20 @@
 import {readFile} from 'node:fs/promises';
-// Server-side Ollama adapter. Disabled until the synthetic pilot gate is explicitly enabled.
 const steeringUrl=new URL('../steering.md',import.meta.url);
 let steeringPromise;
-export async function modelSteering(){if(!steeringPromise)steeringPromise=readFile(steeringUrl,'utf8').then(text=>{if(Buffer.byteLength(text,'utf8')>2048||!text.trim())throw Error('Invalid model steering');return text.trim()}).catch(error=>{steeringPromise=null;throw error});return steeringPromise;}
-const allowed=new Set(['L-1001','L-1002','L-1003','L-1004']);
+export async function modelSteering(){if(!steeringPromise)steeringPromise=readFile(steeringUrl,'utf8').then(text=>{if(Buffer.byteLength(text,'utf8')>12000||!text.trim())throw Error('Invalid model steering');return text.trim()}).catch(error=>{steeringPromise=null;throw error});return steeringPromise;}
 export function ollamaSettings(env){const base=env.OLLAMA_BASE_URL||env.OLLAMA_HOST;const model=env.OLLAMA_MODEL||env.OLLAMA_MODEL_NAME;return {ready:Boolean(base&&model),base,model,hasKey:Boolean(env.OLLAMA_API_KEY)};}
-export async function analyzeFictionalLead({leadId,env,fetcher=fetch}){
- if(env.CRM_SYNTHETIC_AI_ENABLED!=='true')throw Error('Synthetic AI disabled');
- if(!allowed.has(leadId))throw Error('Unknown fictional lead');
- const config=ollamaSettings(env);if(!config.ready)throw Error('Ollama provider configuration incomplete');
- const fixture={
- 'L-1001':'Fictional renter: 2 BHK Harlur, budget INR 50000, pet friendly preferred. Human-confirmed budget INR 52000.',
- 'L-1002':'Fictional renter: 1 BHK Bellandur, budget INR 34000, move next month.',
- 'L-1003':'Fictional renter: 3 BHK Whitefield, budget INR 80000, availability uncertain.',
- 'L-1004':'Fictional renter: 2 BHK Sarjapur Road, budget INR 60000, wants a viewing.'
- }[leadId];
- const endpoint=new URL('/api/chat',config.base);if(endpoint.protocol!=='https:'&&endpoint.hostname!=='localhost'&&endpoint.hostname!=='127.0.0.1')throw Error('Insecure Ollama endpoint');
- const steering=await modelSteering();
- const controller=new AbortController();const timeout=setTimeout(()=>controller.abort(),20000);
- try{
-  const response=await fetcher(endpoint,{method:'POST',headers:{'Content-Type':'application/json',...(env.OLLAMA_API_KEY?{Authorization:'Bearer '+env.OLLAMA_API_KEY}:{})},body:JSON.stringify({model:config.model,stream:false,format:'json',messages:[{role:'system',content:steering},{role:'user',content:fixture}]}),signal:controller.signal});
-  if(!response.ok)throw Error('Ollama request failed ('+response.status+')');
-  let body;try{body=await response.json()}catch{throw Error('Provider returned non-JSON HTTP body')}if(typeof body?.message?.content!=='string'){const shape=body?.message?'message_without_content':'no_message';throw Error('Provider response shape: '+shape)}let parsed;const raw=body.message.content.trim();const fenced=raw.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/i);const candidate=fenced?fenced[1].trim():raw;try{parsed=JSON.parse(candidate)}catch{throw Error(candidate?'Provider message is not JSON':'Provider message is empty')}
-  if(!parsed||typeof parsed!=='object'||Array.isArray(parsed))throw Error('Invalid model JSON');
-  return {leadId,provider:'ollama',model:config.model,proposal:parsed,fictional:true};
- }finally{clearTimeout(timeout)}
-}
-
-export async function analyzeRealLead({lead,env,fetcher=fetch}){
+const cleanJson=(raw)=>{const s=String(raw||'').trim();const fenced=s.match(/^\`\`\`(?:json)?\s*([\s\S]*?)\s*\`\`\`$/i);return JSON.parse((fenced?fenced[1]:s).trim())};
+const validate=(x)=>{if(!x||typeof x!=='object'||Array.isArray(x))throw Error('Invalid model JSON');const keys=['summary','timeline','requirement_updates','missing_information','contradictions','lead_status_suggestion','reply_strategy','reply_draft','evidence'];for(const k of keys)if(!(k in x))throw Error('Model JSON missing '+k);return x};
+export async function analyzeRealLead({lead,requirements,messages,aiHistory=[],cursor=null,evidence=[],env,fetcher=fetch}){
  if(env.CRM_REAL_AI_ENABLED!=='true')throw Error('Real AI disabled');
- if(!lead||typeof lead!=='object'||typeof lead.id!=='string')throw Error('Invalid lead');
+ if(!lead||typeof lead.id!=='string')throw Error('Invalid lead');
  const config=ollamaSettings(env);if(!config.ready)throw Error('Ollama provider configuration incomplete');
- const requirements=lead.requirements&&typeof lead.requirements==='object'&&!Array.isArray(lead.requirements)?lead.requirements:{};
  const steering=await modelSteering();
- const userPayload={
-  task:'Review the stored CRM lead requirements and return only evidence-grounded operator suggestions. Do not invent customer facts, availability, pricing, dates, preferences, or conversation history.',
-  lead:{status:lead.status,priority:lead.priority,requirements,operator_notes:lead.operator_notes||''},
-  known_message_count:0
- };
+ const chronological=(messages||[]).map(m=>({id:m.id,direction:m.direction,body:m.body,message_type:m.message_type,sender_name:m.sender_name,message_at:m.message_at,source_message_id:m.source_message_id||m.provider_message_id}));
+ const incoming=chronological.filter(m=>m.direction==='Incoming'),outgoing=chronological.filter(m=>m.direction==='Outgoing');
+ const first=incoming[0]?.message_at||chronological[0]?.message_at||null,last=chronological.at(-1)?.message_at||null,lastIncoming=incoming.at(-1)?.message_at||null,lastOutgoing=outgoing.at(-1)?.message_at||null;
+ const userPayload={task:'Perform a complete lead review and produce an operator-ready draft reply plus evidence-backed requirement updates. The entire supplied conversation is authoritative context; do not claim to know anything outside it.',lead:{id:lead.id,display_name:lead.display_name,phone:lead.normalized_phone,status:lead.status,lead_type:lead.lead_type,tenant_type:lead.tenant_type,priority:lead.priority,operator_notes:lead.operator_notes||''},requirements:requirements||{},conversation:chronological,timeline:{first_message_at:first,first_customer_message_at:incoming[0]?.message_at||null,last_customer_message_at:lastIncoming,last_operator_message_at:lastOutgoing,last_message_at:last,customer_message_count:incoming.length,operator_message_count:outgoing.length},prior_ai_runs:aiHistory,cursor,evidence};
  const endpoint=new URL('/api/chat',config.base);if(endpoint.protocol!=='https:'&&endpoint.hostname!=='localhost'&&endpoint.hostname!=='127.0.0.1')throw Error('Insecure Ollama endpoint');
- const controller=new AbortController();const timeout=setTimeout(()=>controller.abort(),20000);
- try{
-  const response=await fetcher(endpoint,{method:'POST',headers:{'Content-Type':'application/json',...(env.OLLAMA_API_KEY?{Authorization:'Bearer '+env.OLLAMA_API_KEY}:{})},body:JSON.stringify({model:config.model,stream:false,format:'json',messages:[{role:'system',content:steering},{role:'user',content:JSON.stringify(userPayload)}]}),signal:controller.signal});
-  if(!response.ok)throw Error('Ollama request failed ('+response.status+')');
-  let body;try{body=await response.json()}catch{throw Error('Provider returned non-JSON HTTP body')}if(typeof body?.message?.content!=='string'){const shape=body?.message?'message_without_content':'no_message';throw Error('Provider response shape: '+shape)}let parsed;const raw=body.message.content.trim();const fenced=raw.match(/^\`\`\`(?:json)?\s*([\s\S]*?)\s*\`\`\`$/i);const candidate=fenced?fenced[1].trim():raw;try{parsed=JSON.parse(candidate)}catch{throw Error(candidate?'Provider message is not JSON':'Provider message is empty')}
-  if(!parsed||typeof parsed!=='object'||Array.isArray(parsed))throw Error('Invalid model JSON');
-  return {leadId:lead.id,provider:'ollama',model:config.model,proposal:parsed,fictional:false,groundedIn:'stored lead requirements only',messageCount:0};
- }finally{clearTimeout(timeout)}
+ const controller=new AbortController();const timeout=setTimeout(()=>controller.abort(),60000);
+ try{const response=await fetcher(endpoint,{method:'POST',headers:{'Content-Type':'application/json',...(env.OLLAMA_API_KEY?{Authorization:'Bearer '+env.OLLAMA_API_KEY}:{})},body:JSON.stringify({model:config.model,stream:false,format:'json',messages:[{role:'system',content:steering},{role:'user',content:JSON.stringify(userPayload)}]}),signal:controller.signal});if(!response.ok)throw Error('Ollama request failed ('+response.status+')');let body;try{body=await response.json()}catch{throw Error('Provider returned non-JSON HTTP body')}if(typeof body?.message?.content!=='string')throw Error('Provider response shape invalid');const proposal=validate(cleanJson(body.message.content));return{leadId:lead.id,provider:'ollama',model:config.model,proposal,groundedIn:'complete CRM lead conversation and normalized requirement profile',messageCount:chronological.length,timeline:{first,last,lastIncoming,lastOutgoing}}}finally{clearTimeout(timeout)}
 }

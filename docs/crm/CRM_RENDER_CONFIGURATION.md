@@ -116,3 +116,9 @@ CI run **#284** for this revision is green: build, full test suite, Chromium ins
 The protected /api/db/leads response now includes contacted_at, last_message_direction, and last_message_at, derived from stored crm_messages with the existing (lead_id,message_at,id) index. The production source currently has 186 source-linked leads; a direct Supabase verification found 186 with at least one Incoming/customer message and 178 with at least one Outgoing message.
 
 Render deployment continues from crm-ui-dashboard. The browser displays the three timeline fields in Asia/Kolkata as DD-Month-YYYY / HH:MM, and the lead_sort request parameter controls server-side ordering.
+
+## 2026-10-01 production AI configuration
+
+Render service `srv-darsv560tbcc73cu4ip0` is the production CRM service and deploys branch `crm-ui-dashboard`. The production implementation uses the server-side Ollama adapter for authenticated lead analysis. `CRM_REAL_AI_ENABLED=true` and `CRM_DB_WRITE_ENABLED=true` have been enabled on this service; existing secrets were preserved because the environment update was a merge, not a replacement.
+
+The AI route builds its model input from the complete stored lead workspace: chronological CRM messages, normalized requirements, field-level requirement evidence, operator notes, prior AI runs and the per-lead cursor. AI produces a proposed requirement delta, evidence, timeline analysis, suggested lead status and an operator-editable reply draft. Requirement changes require explicit operator acceptance. Drafts are versioned and are never automatically sent to WhatsApp.

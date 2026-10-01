@@ -36,3 +36,7 @@ The original prototype was synthetic-only. That dated boundary is retained for h
 ## 2026-10-01 — Current production closure status
 
 The CRM browser regression is fixed and D07 is resolved on `crm-ui-dashboard`. D07 covers operator session security, sensitive-data masking, reversible archive, audit visibility, explicit export controls, retention/deletion boundaries and offline handling. D08 remains open.
+
+## 2026-10-01 production AI checkpoint
+
+The CRM AI workspace is now production-enabled on Render service `srv-darsv560tbcc73cu4ip0`. It analyzes the complete stored conversation and lead context rather than fictional fixtures. Requirements are normalized and editable in the Lead Workspace. AI proposals include evidence-backed requirement changes, timeline/context analysis, a suggested lead status, and a versioned reply draft. The AI does not automatically send WhatsApp messages.

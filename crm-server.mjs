@@ -82,7 +82,7 @@ createServer(async(req,res)=>{
    catch(e){const status=e?.statusCode||422;res.writeHead(status,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify({error:e.message==='Invalid classification'?'Invalid classification':status===404?'Classification not found':'Classification update failed'}));}
    finally{await repo.close();}
   }
-  if(process.env.CRM_DB_WRITE_ENABLED==='true'&&mode==='protected'&&req.method!=='GET'&&(p==='/api/db/leads'||p.startsWith('/api/db/leads/')||p==='/api/db/followups'||p.startsWith('/api/db/followups/'))){
+  if(process.env.CRM_DB_WRITE_ENABLED==='true'&&mode==='protected'&&req.method!=='GET'&&(p==='/api/db/leads'||p.startsWith('/api/db/leads/')||p==='/api/db/followups'||p.startsWith('/api/db/followups/'))&&!p.match(/^\/api\/db\/leads\/[^/]+\/requirements$/)){
    if(!process.env.DATABASE_URL){res.writeHead(404,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify({error:'Database write pilot disabled'}));}
    const repo=createCrmRepository();const actor=principal?.user||process.env.CRM_BASIC_AUTH_USERNAME;
    try{
@@ -119,6 +119,26 @@ createServer(async(req,res)=>{
    try{const data=await repo.list({limit:Number(limitRaw),offset:Number(offsetRaw),status:q.get('status')||'',classification:q.get('classification')||'',sourceNumber:q.get('source_number')||'+919148338801'});res.writeHead(200,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify(data));}
    finally{await repo.close();}
   }
+
+  if(process.env.CRM_DB_WRITE_ENABLED==='true'&&mode==='protected'&&principal&&p.match(/^\/api\/db\/leads\/[^/]+\/requirements$/)&&req.method==='PATCH'){
+   const id=decodeURIComponent(p.split('/')[4]);const body=await readJsonBody(req,32768);const repo=createCrmRepository();
+   try{const profile=await repo.upsertLeadRequirements({leadId:id,profile:body.profile||{},actor:principal.user});res.writeHead(200,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify(profile))}
+   catch(e){res.writeHead(e?.code==='23514'?422:500,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify({error:e.message||'Requirement update failed'}))}
+   finally{await repo.close()}
+  }
+  if(process.env.CRM_DB_WRITE_ENABLED==='true'&&mode==='protected'&&principal&&p.match(/^\/api\/ai\/runs\/[^/]+\/accept$/)&&req.method==='POST'){
+   const id=decodeURIComponent(p.split('/')[4]);const repo=createCrmRepository();try{const result=await repo.applyAiRun({id,actor:principal.user});res.writeHead(200,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify(result))}catch(e){res.writeHead(422,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify({error:e.message||'AI requirement acceptance failed'}))}finally{await repo.close()}
+  }
+  if(process.env.CRM_DB_WRITE_ENABLED==='true'&&mode==='protected'&&principal&&p.match(/^\/api\/ai\/runs\/[^/]+\/reject$/)&&req.method==='POST'){
+   const id=decodeURIComponent(p.split('/')[4]);const repo=createCrmRepository();try{const row=await repo.decideAiRun({id,status:'rejected',actor:principal.user});res.writeHead(200,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify(row))}catch(e){res.writeHead(422,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify({error:e.message||'AI rejection failed'}))}finally{await repo.close()}
+  }
+  if(process.env.CRM_DB_WRITE_ENABLED==='true'&&mode==='protected'&&principal&&p.match(/^\/api\/db\/leads\/[^/]+\/drafts$/)&&req.method==='POST'){
+   const id=decodeURIComponent(p.split('/')[4]);const body=await readJsonBody(req,8192);const repo=createCrmRepository();try{const row=await repo.saveDraft({leadId:id,body:String(body.body||''),actor:principal.user});res.writeHead(201,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify(row))}catch(e){res.writeHead(422,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify({error:e.message||'Draft save failed'}))}finally{await repo.close()}
+  }
+  if(process.env.CRM_DB_WRITE_ENABLED==='true'&&mode==='protected'&&principal&&p.match(/^\/api\/drafts\/[^/]+\/status$/)&&req.method==='POST'){
+   const id=decodeURIComponent(p.split('/')[3]);const body=await readJsonBody(req);const repo=createCrmRepository();try{const row=await repo.updateDraftStatus({id,status:String(body.status||''),actor:principal.user});if(!row){res.writeHead(404,security);return res.end('Draft not found')}res.writeHead(200,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify(row))}catch(e){res.writeHead(422,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify({error:e.message||'Draft status update failed'}))}finally{await repo.close()}
+  }
+
   // Read-only database pilot: explicit opt-in, protected access and no customer writes.
   if(p==='/api/db/status'||p==='/api/db/stats'||p==='/api/db/leads'||p.startsWith('/api/db/leads/')){
    if(process.env.CRM_DB_READ_ENABLED!=='true'||!process.env.DATABASE_URL||mode!=='protected'){
@@ -165,18 +185,22 @@ createServer(async(req,res)=>{
    const repo=createCrmRepository();try{const rows=await repo.matchInventory({bhk:q.get('bhk')||'',budget:budgetRaw===null?null:Number(budgetRaw),locality:q.get('locality')||'',furnishing:q.get('furnishing')||'',petFriendly:q.get('pet_friendly')||'',limit:Number(limitRaw)});res.writeHead(200,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify({rows}));}finally{await repo.close()}
   }
   if(p==='/api/ai/analyze'){res.writeHead(404,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify({error:'Retired API'}));}
+
   if(p==='/api/ai/analyze-real'&&req.method==='POST'){
-   if(mode!=='protected'||process.env.CRM_REAL_AI_ENABLED!=='true'||process.env.CRM_DB_READ_ENABLED!=='true'){res.writeHead(403,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify({error:'Real AI disabled'}));}
+   if(mode!=='protected'||process.env.CRM_REAL_AI_ENABLED!=='true'||process.env.CRM_DB_WRITE_ENABLED!=='true'){res.writeHead(403,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify({error:'Real AI production mode is not enabled'}));}
    const repo=createCrmRepository();
    try{
-    let raw='';for await(const chunk of req){raw+=chunk;if(raw.length>4096)throw Error('Request too large');}
-    const body=JSON.parse(raw);const id=String(body.leadId||'');
-    const workspace=await repo.getLeadWorkspace(id);if(!workspace.lead){res.writeHead(404,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify({error:'Lead not found'}));}
-    const result=await analyzeRealLead({lead:workspace.lead,env:process.env});
-    res.writeHead(200,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify(result));
+    const body=await readJsonBody(req,8192);const id=String(body.leadId||'');const workspace=await repo.getLeadWorkspace(id);
+    if(!workspace.lead){res.writeHead(404,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify({error:'Lead not found'}));}
+    const result=await analyzeRealLead({lead:workspace.lead,requirements:workspace.requirement_profile,messages:workspace.messages,aiHistory:workspace.ai_runs,cursor:workspace.ai_cursor,evidence:workspace.requirement_evidence,env:process.env});
+    const run=await repo.saveAiRun({leadId:id,modelName:result.model,proposal:result.proposal});
+    const last=workspace.messages.at(-1);if(last)await repo.setAiCursor({leadId:id,sourceNumber:workspace.sources[0]?.source_number||'+919148338801',lastMessageId:last.id,lastMessageAt:last.message_at});
+    let draft=null;if(result.proposal.reply_draft&&typeof result.proposal.reply_draft==='string')draft=await repo.saveDraft({leadId:id,body:result.proposal.reply_draft,actor:principal.user});
+    res.writeHead(200,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify({...result,run,draft}));
    }catch(e){res.writeHead(422,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify({error:e.message==='Request too large'?'Request too large':'Real AI request failed'}));}
    finally{await repo.close()}
   }
+
   if(!['GET','HEAD'].includes(req.method)){res.writeHead(405,security);return res.end('Method not allowed');}
   if(p.startsWith('/api/')){res.writeHead(404,security);return res.end('API not enabled');}
   let f=resolve(join(root,p));

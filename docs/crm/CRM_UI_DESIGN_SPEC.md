@@ -230,3 +230,23 @@ The Lead Status control now includes the compact operational status **OOC**, sto
 Service areas currently defined by the operator are: HSR Layout, Kudlu Gate, Bellandur, Sarjapur Road, Whitefield, Hoodi, Mahadevapura, Marathahalli, ITPL, Varthur, Kasavanahalli, Harlur, Panathur, Koramangala (limited), Yemalur, Bommanahalli (selective), and Old Airport Road (selective).
 
 OOC is a Layer-2 CRM lead status, not a Contact Classification result. It does not remove the lead or suppress its conversation history. Automatic geographic assignment is intentionally not inferred from free-text locality; a deterministic coverage rule must be separately approved before automation.
+
+
+## 2026-10-01 — Production AI + normalized requirements implementation
+
+Implemented on `crm-ui-dashboard` and verified locally:
+- Requirements are now a normalized one-row-per-lead table, `crm_lead_requirements`, with fixed inventory-matchable fields: BHK, budget, preferred locations, tenant type, move-in date, pets, veg/non-veg, furnishing, parking, property type, bathrooms, occupancy count, lease term, preferred floor, preferred amenities and notes. `lead_id`, timestamps and `updated_by` preserve relational/audit linkage. Legacy `crm_leads.requirements` remains a compatibility mirror, not the authoritative edit surface.
+- Requirements are editable from Lead Workspace and persisted transactionally through the protected CRM server.
+- AI is no longer synthetic-fixture-only. Production analysis receives the complete chronological lead conversation, normalized requirements, requirement evidence, operator notes, prior AI runs and a per-lead AI cursor.
+- AI output contains summary/timeline, evidence-backed requirement proposals, missing information, contradictions, suggested lead status, reply strategy, reply draft and evidence. Lead status remains suggestion-only.
+- Requirement proposals require explicit operator acceptance; acceptance updates the normalized requirement table and appends requirement evidence. Reject is also audited.
+- Every lead has its own AI cursor; the workspace exposes AI run history, requirement evidence, proposal review, draft editor and draft history.
+- AI reply drafts are versioned in `crm_drafts`. The operator can edit/save/copy/open WhatsApp; the CRM never auto-sends the draft.
+- Root `steering.md` now contains production EFPS context and explicit rules for full-history analysis, cold-lead reactivation, requirement evidence, inventory truth and operator-only sending. Public EasyFind context is based on the official EasyFind Property Solutions site. (official site: https://www.easyfindprops.com/)
+- Live Supabase verification after schema deployment: 186 requirement profiles, 186 per-lead AI cursors, 6,622 CRM messages (4,228 outgoing), 195 webhook events (195 processed, 0 failed). AI runs/drafts/evidence remain 0 until an operator first runs production AI and accepts/creates outputs.
+
+## 2026-10-01 — Production AI workspace
+
+The Requirements tab is now a normalized editable table backed by `crm_lead_requirements`. Fixed fields are BHK, budget, preferred locations, tenant type, move-in date, pets, veg/non-veg, furnishing, parking, property type, bathrooms, occupancy count, lease term, preferred floor, preferred amenities and notes. The profile retains `lead_id`, timestamps and `updated_by` for relational/audit linkage.
+
+The AI & Drafts tab is a per-lead operational workspace containing saved AI run history, evidence-backed requirement proposals, requirement accept/reject workflow, suggested lead status, complete-history timeline analysis, versioned reply drafts and draft history. The AI is supplied the full chronological CRM conversation and relevant lead context. It may propose requirement changes and a reply; it cannot autonomously send WhatsApp messages or silently change lead status.

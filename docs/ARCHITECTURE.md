@@ -137,3 +137,9 @@ The D01–D05 prototype uses synthetic data only. It must not read or write live
 ## CRM hosted AI boundary — 2026-09-27
 
 The `crm-ui-dashboard` branch deploys a separate authenticated Render CRM. `src/ollama-adapter.mjs` reads and caches dedicated root `steering.md` as its single system instruction (maximum 2 KiB), then sends only the selected fixed fictional fixture to the existing hosted Ollama `/api/chat` endpoint. The API key remains server-side in Render. This is separate from repository-agent `CORE_STEERING.md` and from the deterministic Housing_Listings inventory mirror. Real customer inference and automatic WhatsApp sending remain disabled.
+
+## 2026-10-01 — Production CRM AI architecture checkpoint
+
+The CRM production AI path is now lead-context based rather than fixture based. `src/ollama-adapter.mjs` receives the complete chronological message history for the selected lead together with the normalized requirement profile, field evidence, operator notes, prior AI runs, per-lead cursor and message timing. Root `steering.md` supplies the dedicated EFPS CRM model instructions. The browser never supplies the model's system instruction or substitutes its own conversation history.
+
+The AI output is advisory and durable: requirement proposals are accepted/rejected by an operator, accepted changes update the normalized requirement profile and evidence, and generated replies are stored as versioned drafts. WhatsApp sending remains an explicit operator action.

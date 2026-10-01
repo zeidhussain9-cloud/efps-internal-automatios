@@ -119,3 +119,7 @@ Current CRM/product items still requiring explicit closure are:
 - Independent encrypted backup artifact and isolated restore proof.
 
 The repository also contains older/historical planning checkboxes in the master plan and broader Inventory/external-runtime pointers. Those are not to be treated as current CRM implementation blockers without re-verification.
+
+## 2026-10-01 production AI closure update
+
+The former synthetic-only AI/live-data gate is superseded for the current CRM path. Production AI and database writes are enabled on Render service `srv-darsv560tbcc73cu4ip0`, and the production implementation uses complete lead history with normalized requirements, evidence, per-lead cursors, durable AI runs and versioned drafts. Remaining independent hardening items are encrypted backup/isolated restore, final credential rotation, and D08 visual/design handoff. Automatic WhatsApp sending remains disabled.
