@@ -255,7 +255,7 @@ test('production CRM browser journey uses only live-record surfaces',async()=>{
   assert.equal(await page.getByLabel('Sort leads').locator('option').count(),5,'all lead sort modes remain available on mobile');
   await page.getByRole('button',{name:'Leads Inbox',exact:true}).click();
   await page.locator('.lead-card-status-panel').first().waitFor();
-  const identityBox=await page.locator('.lead-card-identity').boundingBox();
+  const identityBox=await page.locator('.lead-card-identity').first().boundingBox();
   const statusBox=await page.locator('.lead-card-status-panel').first().boundingBox();
   assert.ok(identityBox&&statusBox&&statusBox.y>=identityBox.y+identityBox.height+6,'lead status remains separated from lead identity on mobile');
   assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=document.documentElement.clientWidth),'lead cards do not create horizontal page overflow at 390px');
