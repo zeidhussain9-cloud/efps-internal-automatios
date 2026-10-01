@@ -1,6 +1,6 @@
 ## P1–P5 hardening closure — 2026-10-01
 
-> **Full-audit pointer — 2026-10-01:** `docs/audits/CRM_FULL_AUDIT_2026-10-01.md` is the current source for audit status. The last successful live DB snapshot during the audit recorded 6,858 messages and 453 webhook events. New code hardening is locally green (76/76 tests, 1/1 browser). Remaining evidence gates are Cloudinary timeouts/non-image response, authenticated duplicate-webhook replay, final production deployment, and main/tree reconciliation.
+> **Full-audit pointer — 2026-10-01:** `docs/audits/CRM_FULL_AUDIT_2026-10-01.md` is the current source for audit status. The last successful live DB snapshot during the audit recorded 6,859 messages and 454 webhook events. New code hardening is locally green (76/76 tests, 1/1 browser), and the latest Render deployment is live. Remaining evidence gates are Cloudinary timeouts/non-image response, authenticated duplicate-webhook replay, final production deployment, and main/tree reconciliation.
 
 - P1 event-level lead linkage is reconciled during promotion and the 13 historical eligible rows were backfilled; current event/message lead mismatch is 0.
 - P2 AU/AV are enforced as reserved and excluded from the operational A:AT CRM projection; no production Sheet values were mutated.
@@ -40,7 +40,7 @@ This section is the current checkpoint for maintained documentation. Dated audit
 - **Tree equality:** `tree(main) == tree(crm-ui-dashboard)` = **TRUE**; commit histories differ by design.
 - **Render:** `easyfind-crm-d01-d05` / `srv-darsv560tbcc73cu4ip0`, deployment `dep-dav55km0tbcc73eelat0`, **live**.
 - **Production source:** `+919148338801`.
-- **Supabase CRM:** 186 leads; 307 classifications; 20 pending; 186 promoted; 6,853 messages; 436 webhook events, 436 processed, 0 received, 0 processing, 0 failed.
+- **Supabase CRM:** 186 leads; 309 classifications; 20 pending; 186 promoted; 6,853 messages; 436 webhook events, 436 processed, 0 received, 0 processing, 0 failed.
 - **AI persistence:** 196 AI runs, 196 proposed; 196 drafts; 186 AI cursors.
 - **Inventory:** 88 active Housing rows; 1,333 sync-run records; latest recorded sync = 88 rows / 0 changed / 0 removed; AU/AV remain outside the CRM operational A:AT mirror.
 - **Schedulers:** `crm_webhook_reconcile_1m` active every minute; `crm_inventory_sheet_reconcile_5m` active every five minutes.

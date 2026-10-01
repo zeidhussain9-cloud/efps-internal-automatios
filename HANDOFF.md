@@ -1,7 +1,7 @@
 
 # Current verified handoff — 2026-10-01
 
-> **Authoritative audit update:** `docs/audits/CRM_FULL_AUDIT_2026-10-01.md` supersedes the earlier checkpoint numbers below. Current evidence: 186 leads, 6,858 messages, 453 webhook events, 307 classifications, 196 AI runs, 196 drafts, 186 AI cursors, and 88 active inventory rows. Local validation is **76/76** automated tests and **1/1** browser regression. Cloudinary audit is not fully green: 719 completed image responses, 110 timeouts, 1 non-image response across 829 distinct URLs.
+> **Authoritative audit update:** `docs/audits/CRM_FULL_AUDIT_2026-10-01.md` supersedes the earlier checkpoint numbers below. Current evidence: 186 leads, 6,859 messages, 454 webhook events, 309 classifications, 196 AI runs, 196 drafts, 186 AI cursors, and 88 active inventory rows. Local validation is **76/76** automated tests and **1/1** browser regression. Cloudinary audit is not fully green: 719 completed image responses, 110 timeouts, 1 non-image response across 829 distinct URLs.
 
 ## Unreleased Inventory/UI hardening in crm-ui-dashboard
 
@@ -16,7 +16,7 @@ Validation: npm run build PASS; npm test PASS (74/74); npm run test:browser PASS
 
 ## Previous release metadata
 
-**Canonical branch:** `crm-ui-dashboard`**Commit:** `da13083f6cb1f3c78ec3f4df661c515d43f556fa`**Tree:** `f36a5ccb4bae742e83603b09bee59d01595ecf00`**Main reconciliation:** `692bdcbbab51752b8eb7d4927921d1cfc4830de7`, identical tree.**Render:** `easyfind-crm-d01-d05`, deployment `dep-dav55km0tbcc73eelat0`, **live**.**Production source:** `+919148338801`.**Current Supabase:** 186 leads; 307 classifications (20 pending, 186 promoted); 6,853 messages; 436 webhook events (436 processed, 0 received, 0 processing, 0 failed); 196 AI runs; 196 drafts; 186 AI cursors; 88 active inventory rows; 1,333 inventory sync records.**Schedulers:** webhook reconciliation every minute; inventory reconciliation every five minutes; both active.**Tests:** build PASS; 71/71 automated tests PASS; browser 1/1 PASS.**P1–P5:** closed and production-verified; see `docs/audits/PRODUCTION_LIVE_WEBHOOK_AND_INVENTORY_AUDIT_2026-10-01.md` and `docs/crm/CRM_CURRENT_VERIFIED_STATE.md`.
+**Canonical branch:** `crm-ui-dashboard`**Commit:** `da13083f6cb1f3c78ec3f4df661c515d43f556fa`**Tree:** `f36a5ccb4bae742e83603b09bee59d01595ecf00`**Main reconciliation:** `692bdcbbab51752b8eb7d4927921d1cfc4830de7`, identical tree.**Render:** `easyfind-crm-d01-d05`, deployment `dep-dav55km0tbcc73eelat0`, **live**.**Production source:** `+919148338801`.**Current Supabase:** 186 leads; 309 classifications (20 pending, 186 promoted); 6,853 messages; 436 webhook events (436 processed, 0 received, 0 processing, 0 failed); 196 AI runs; 196 drafts; 186 AI cursors; 88 active inventory rows; 1,333 inventory sync records.**Schedulers:** webhook reconciliation every minute; inventory reconciliation every five minutes; both active.**Tests:** build PASS; 71/71 automated tests PASS; browser 1/1 PASS.**P1–P5:** closed and production-verified; see `docs/audits/PRODUCTION_LIVE_WEBHOOK_AND_INVENTORY_AUDIT_2026-10-01.md` and `docs/crm/CRM_CURRENT_VERIFIED_STATE.md`.
 
 Historical dated sections below remain evidence snapshots and must not be interpreted as the current checkpoint.
 
@@ -29,7 +29,7 @@ Historical checkpoint retained below.
 
 ## Current production checkpoint — 2026-10-01
 
-Render `easyfind-crm-d01-d05` is live from the synchronized `crm-ui-dashboard` release. Supabase source `+919148338801` currently has 186 leads, 307 classifications, 20 pending classifications, 186 promoted classifications, 6,853 messages, and 436 webhook events, all 436 processed with 0 received, 0 processing, and 0 failed.
+Render `easyfind-crm-d01-d05` is live from the synchronized `crm-ui-dashboard` release. Supabase source `+919148338801` currently has 186 leads, 309 classifications, 20 pending classifications, 186 promoted classifications, 6,853 messages, and 436 webhook events, all 436 processed with 0 received, 0 processing, and 0 failed.
 
 The Leads Inbox card surface is simplified to lead status + source number. The inbox header exposes live clickable counts for all lead statuses and clicking a status applies the server-side filter. AI draft runs persist provider usage metrics (input/output/total tokens and estimated USD cost where pricing is known) alongside model/provider provenance. Complete conversation history remains authoritative; incremental/delta analysis is intentionally not implemented.
 

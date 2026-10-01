@@ -1,6 +1,6 @@
 # EasyFind CRM UI Dashboard — Single Working Home
 
-> **Authoritative audit update — 2026-10-01 19:12 IST:** See `docs/audits/CRM_FULL_AUDIT_2026-10-01.md` for the current evidence-first audit. Live Supabase counts at the last successful consolidated query were 186 leads, 6,858 messages, 453 webhook events, 307 classifications, 196 AI runs/drafts, 186 AI cursors, and 88 active Housing inventory rows. The current release hardening is locally verified by `npm run build`, `npm test` **76/76**, and `npm run test:browser` **1/1**. The Cloudinary enumeration remains open: 829 distinct URLs produced 719 valid image responses, 110 timeouts, and 1 JSON response. Older checkpoint numbers below are historical and are not the current live counts.
+> **Authoritative audit update — 2026-10-01 19:12 IST:** See `docs/audits/CRM_FULL_AUDIT_2026-10-01.md` for the current evidence-first audit. Live Supabase counts at the last successful consolidated query were 186 leads, 6,859 messages, 454 webhook events, 309 classifications, 196 AI runs/drafts, 186 AI cursors, and 88 active Housing inventory rows. The current release hardening is locally verified by `npm run build`, `npm test` **76/76**, and `npm run test:browser` **1/1**. The Cloudinary enumeration remains open: 829 distinct URLs produced 719 valid image responses, 110 timeouts, and 1 JSON response. Older checkpoint numbers below are historical and are not the current live counts.
 
 ## Unreleased production hardening — 2026-10-01
 
@@ -27,7 +27,7 @@ This section is the current checkpoint for maintained documentation. Dated audit
 - **Tree equality:** `tree(main) == tree(crm-ui-dashboard)` = **TRUE**; commit histories differ by design.
 - **Render:** `easyfind-crm-d01-d05` / `srv-darsv560tbcc73cu4ip0`, deployment `dep-dav55km0tbcc73eelat0`, **live**.
 - **Production source:** `+919148338801`.
-- **Supabase CRM:** 186 leads; 307 classifications; 20 pending; 186 promoted; 6,853 messages; 436 webhook events, 436 processed, 0 received, 0 processing, 0 failed.
+- **Supabase CRM:** 186 leads; 309 classifications; 20 pending; 186 promoted; 6,853 messages; 436 webhook events, 436 processed, 0 received, 0 processing, 0 failed.
 - **AI persistence:** 196 AI runs, 196 proposed; 196 drafts; 186 AI cursors.
 - **Inventory:** 88 active Housing rows; 1,333 sync-run records; latest recorded sync = 88 rows / 0 changed / 0 removed; AU/AV remain outside the CRM operational A:AT mirror.
 - **Schedulers:** `crm_webhook_reconcile_1m` active every minute; `crm_inventory_sheet_reconcile_5m` active every five minutes.
@@ -73,7 +73,7 @@ The P1–P5 hardening release added regression coverage for webhook promotion li
 ## Current production checkpoint — 2026-10-01
 
 - Render service `easyfind-crm-d01-d05` / `srv-darsv560tbcc73cu4ip0` is live from the synchronized `crm-ui-dashboard` release.
-- Production source `+919148338801`: 186 source-linked leads, 307 classifications, 20 pending, 186 promoted, 6,853 messages.
+- Production source `+919148338801`: 186 source-linked leads, 309 classifications, 20 pending, 186 promoted, 6,853 messages.
 - Webhook state: 436 persisted events, 436 processed, 0 received, 0 processing, 0 failed; automatic reconciliation remains active.
 - Leads Inbox cards now expose only lead status and source number. The Leads Inbox header includes clickable counts for every supported lead status; selecting a status applies the corresponding server-side lead filter.
 - AI draft provenance now records input/output/total tokens and an estimated USD cost when standard pricing is known; the draft workspace displays these metrics alongside provider/model provenance.
@@ -108,7 +108,7 @@ Do not use the historical CRM branches as the working location. All future UI da
 
 ## Current production workflow — 2026-10-01
 
-Verified current source: `+919148338801`; Supabase has 186 leads, 307 classifications, 20 pending classifications, 186 promoted classifications, 6,853 messages and 436 webhook events, all processed. OOC (`Out of Coverage Area`) is an available Layer-2 lead status. Automatic geographic OOC assignment is not enabled pending a deterministic coverage rule.
+Verified current source: `+919148338801`; Supabase has 186 leads, 309 classifications, 20 pending classifications, 186 promoted classifications, 6,853 messages and 436 webhook events, all processed. OOC (`Out of Coverage Area`) is an available Layer-2 lead status. Automatic geographic OOC assignment is not enabled pending a deterministic coverage rule.
 
 
 ### Contact Classification
