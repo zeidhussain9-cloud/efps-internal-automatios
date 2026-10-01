@@ -7,6 +7,7 @@ import {getRequestPrincipal,loginWithPassword,revokeRequestSession,sessionCookie
 import {analyzeRealLead} from './src/ollama-adapter.mjs';
 import {createCrmRepository} from './src/crm-repository.mjs';
 import {createCrmClassificationRepository} from './src/crm-classification-repository.mjs';
+import {draftPreflight} from './src/draft-preflight.mjs';
 import {startupDatabaseCheck} from './src/crm-startup-check.mjs';
 const root=resolve('dist');
 const mime={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.svg':'image/svg+xml','.png':'image/png','.ico':'image/x-icon'};
