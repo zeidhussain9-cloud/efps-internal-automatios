@@ -191,3 +191,7 @@ Render production Bedrock settings now include `AWS_BEDROCK_FALLBACK_MODEL_ID=au
 ## Final verified checkpoint — 2026-10-01
 
 Production Render service `srv-darsv560tbcc73cu4ip0` is live on `crm-ui-dashboard` commit `c19e36c74a06eb7a5204e2f201a99916545b52b0`. Health endpoint returns `{"ok":true}`. `main` has the identical repository tree (`2dbd2258f655e7de599917c9e339f07d74c0e0b0`).
+
+## 2026-10-01 — Dependency security checkpoint
+
+The AWS Bedrock runtime SDK was upgraded to `3.1144.0` after Render exposed a critical transitive `fast-xml-parser` advisory in the previous dependency tree. Local production-dependency audit now reports zero vulnerabilities; `npm test` remains 66/66.

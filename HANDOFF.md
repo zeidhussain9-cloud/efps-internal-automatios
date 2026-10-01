@@ -224,3 +224,7 @@ The approved six AI improvements are implemented: stale-draft detection; provena
 - Production migration 17 is applied. Current database counts: 3 AI runs (2 Ollama, 1 Bedrock), 3 drafts, all 3 with source evidence; no `confirmed_sent` outcomes yet.
 - Automated verification: `npm run build` passes; `npm test` passes 66/66. `npm run test:browser` remains unresolved locally because the runner hangs without producing a result; no browser pass is claimed.
 - GitHub combined-status API currently reports no status contexts for the final CRM/main commits; repository verification therefore relies on the local test suite, Git tree equality, Render deployment logs, health endpoint, and Supabase migration/data verification.
+
+## 2026-10-01 — Bedrock SDK security update
+
+Render's build surfaced dependency advisories through the newly added AWS Bedrock SDK, including a critical `fast-xml-parser` advisory in the older transitive tree. The Bedrock runtime SDK was upgraded from `3.922.0` to `3.1144.0`. Local `npm audit --omit=dev` now reports 0 vulnerabilities, and the full automated suite remains 66/66. The updated lockfile is part of the final repository state.
