@@ -23,7 +23,7 @@ This is the latest repository/production checkpoint. Older dated sections in mai
 - **Inventory:** 88 active rows = 71 Available + 17 Rented Out; 1,377 sync runs; latest sync recorded 88 rows / 0 changed / 0 removed; inventory-change rows = 0.
 - **Cloudinary:** 829/829 distinct production URLs returned HTTP 200 with `image/*` content-type by direct HEAD checks from the production-machine network path.
 - **AI integrity:** draft→AI-run lead mismatch = 0; stale evidence references = 0; invalid cursor lead links = 0.
-- **Tests:** `npm run build` PASS; `npm test` 76/76 PASS; `npm run test:browser` 1/1 PASS.
+- **Tests:** `npm run build` PASS; `npm test` 78/78 PASS; `npm run test:browser` 1/1 PASS.
 - **Supabase Edge Function:** `whapi-crm-webhook` ACTIVE v8.
 - **AWS legacy webhook:** no changes in the audited CRM hardening range.
 - **24-item CRM audit:** GREEN / VERIFIED.
@@ -47,7 +47,7 @@ Evidence snapshot after final verification:
 - AI/drafts: 196/196 draft→AI-run lead mappings valid; stale evidence references = 0; invalid cursor lead links = 0
 - Inventory: 88 active rows; 71 Available; 17 Rented Out; invalid media-array rows = 0
 - Cloudinary: 829/829 distinct production URLs returned HTTP 200 with image/* content-type using direct HEAD checks from the production-machine network path
-- Tests: npm run build PASS; npm test 76/76 PASS; npm run test:browser 1/1 PASS
+- Tests: npm run build PASS; npm test 78/78 PASS; npm run test:browser 1/1 PASS
 - Supabase Edge Function whapi-crm-webhook: ACTIVE version 8
 - Legacy AWS webhook/handler files: no changes in the CRM hardening commit range
 - 24-item audit status: GREEN / VERIFIED
@@ -87,7 +87,7 @@ This section is the current checkpoint for maintained documentation. Dated audit
 - **Inventory:** 88 active Housing rows; 1,377 sync-run records; latest recorded sync = 88 rows / 0 changed / 0 removed; AU/AV remain outside the CRM operational A:AT mirror.
 - **Schedulers:** `crm_webhook_reconcile_1m` active every minute; `crm_inventory_sheet_reconcile_5m` active every five minutes.
 - **P1–P5:** implemented and production-verified as documented in `docs/audits/PRODUCTION_LIVE_WEBHOOK_AND_INVENTORY_AUDIT_2026-10-01.md`.
-- Verification: build PASS; npm test PASS (76/76); browser PASS (1/1).
+- Verification: build PASS; npm test PASS (78/78); browser PASS (1/1).
 - **GitHub:** active remote UI branch search returns only `crm-ui-dashboard`; historical UI/inventory branches with deleted remotes are retained only as local historical evidence and are not active deployment branches.
 
 ### Current operational flow
@@ -170,8 +170,8 @@ Verified current source: +919148338801; Supabase has 186 leads, 310 classificati
 
 The production UI uses one simple qualification section with two sub-tabs:
 
-- Not pushed to CRM: pending and non-qualified contacts.
-- Qualified leads pushed to CRM: promoted contacts.
+- Waiting for classification: pending and non-qualified contacts.
+- Total active inventory to CRM: promoted contacts.
 
 The operator workflow is intentionally one action at a time:
 
