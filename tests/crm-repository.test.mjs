@@ -82,7 +82,7 @@ test('lead status validation accepts Out of Coverage Area and rejects unknown st
  const repo=createCrmRepository({pool:{connect:async()=>client}});
  const row=await repo.updateLead({id:'L-OOC',leadType:'Out of Coverage Area',actor:'pilot'});
  assert.equal(row.lead_type,'Out of Coverage Area');
- assert.match(calls[1][0],/INSERT INTO crm_activity/);
+ assert.match(calls[2][0],/INSERT INTO crm_activity/);
  await assert.rejects(()=>repo.updateLead({id:'L-OOC',leadType:'Outside Bengaluru',actor:'pilot'}),/Invalid lead status/);
 });
 
