@@ -6,9 +6,9 @@ Historical checkpoint retained below.
 
 ## Current state
 
-## Current production checkpoint — 2026-10-01 04:31 UTC
+## Current production checkpoint — 2026-10-01
 
-Render `easyfind-crm-d01-d05` is live on `crm-ui-dashboard` commit `53ae5f12ca3a89f09232b15687494d8de132921f` / deploy `dep-dauu3j60tbcc73e5ceeg`. Supabase source `+919148338801` currently has 186 source-linked leads, 292 classifications, 5 pending classifications, 186 promoted classifications, 6,641 messages, and 214 webhook events, all 214 processed with 0 received and 0 failed.
+Render `easyfind-crm-d01-d05` is live from the synchronized `crm-ui-dashboard` release. Supabase source `+919148338801` currently has 186 source-linked leads, 292 classifications, 5 pending classifications, 186 promoted classifications, 6,641 messages, and 214 webhook events, all 214 processed with 0 received and 0 failed.
 
 The Leads Inbox card surface is simplified to lead status + source number. The inbox header exposes live clickable counts for all lead statuses and clicking a status applies the server-side filter. AI draft runs persist provider usage metrics (input/output/total tokens and estimated USD cost where pricing is known) alongside model/provider provenance. Complete conversation history remains authoritative; incremental/delta analysis is intentionally not implemented.
 

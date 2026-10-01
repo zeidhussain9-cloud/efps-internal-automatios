@@ -2,9 +2,9 @@
 
 **Canonical working branch: `crm-ui-dashboard`.** Render, GitHub, and the local CRM UI checkout are aligned to this branch for the current production dashboard.
 
-## Current production checkpoint — 2026-10-01 04:31 UTC
+## Current production checkpoint — 2026-10-01
 
-- Render service `easyfind-crm-d01-d05` / `srv-darsv560tbcc73cu4ip0` is live on commit `53ae5f12ca3a89f09232b15687494d8de132921f`, deploy `dep-dauu51rncjis73cv69s0`.
+- Render service `easyfind-crm-d01-d05` / `srv-darsv560tbcc73cu4ip0` is live from the synchronized `crm-ui-dashboard` release.
 - Production source `+919148338801`: 186 source-linked leads, 292 classifications, 5 pending, 186 promoted, 6,641 messages.
 - Webhook state: 214 persisted events, 214 processed, 0 received, 0 failed; automatic reconciliation remains active.
 - Leads Inbox cards now expose only lead status and source number. The Leads Inbox header includes clickable counts for every supported lead status; selecting a status applies the corresponding server-side lead filter.

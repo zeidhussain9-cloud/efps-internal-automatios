@@ -4,9 +4,9 @@
 **Branch:** `crm-ui-dashboard`  
 **Status (2026-10-01):** Production CRM UI is live on `crm-ui-dashboard` / Render `easyfind-crm-d01-d05`. Current production source is `+919148338801`; historical and live data are reconciled in Supabase.
 
-## Current production checkpoint — 2026-10-01 04:31 UTC
+## Current production checkpoint — 2026-10-01
 
-- Render commit `53ae5f12ca3a89f09232b15687494d8de132921f`; deployment `dep-dauu3j60tbcc73e5ceeg` is live.
+- Render `easyfind-crm-d01-d05` is live from the synchronized `crm-ui-dashboard` release.
 - Source-linked leads: 186; classifications: 292; pending classifications: 5; promoted classifications: 186; CRM messages: 6,641.
 - Webhook events: 214 total, 214 processed, 0 received, 0 failed.
 - `crm_ai_runs` now includes `input_tokens`, `output_tokens`, `total_tokens`, `estimated_cost_usd`, and `pricing_source`. These are populated from provider usage when available and are retained with the AI run used to create the draft.

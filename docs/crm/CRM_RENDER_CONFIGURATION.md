@@ -1,10 +1,10 @@
 ## Current production audit — 2026-10-01 (post-reconciliation)
 
-Verified live state — 2026-10-01 04:31 UTC: Render `easyfind-crm-d01-d05` / `srv-darsv560tbcc73cu4ip0`, branch `crm-ui-dashboard`, deploy `dep-dauu3j60tbcc73e5ceeg`, commit `53ae5f12ca3a89f09232b15687494d8de132921f`. Supabase source `+919148338801`: 186 source-linked leads, 292 classifications, 5 pending, 186 promoted, and 6,641 CRM messages. All 214 webhook events are processed; 0 remain `received`; 0 failed. Automatic reconciliation is active. Browser Realtime is notification-only. RLS remains enabled on CRM tables and browser roles have no direct SELECT privilege.
+Verified live state — 2026-10-01: Render `easyfind-crm-d01-d05` / `srv-darsv560tbcc73cu4ip0`, branch `crm-ui-dashboard`; the synchronized release is live. Supabase source `+919148338801`: 186 source-linked leads, 292 classifications, 5 pending, 186 promoted, and 6,641 CRM messages. All 214 webhook events are processed; 0 remain `received`; 0 failed. Automatic reconciliation is active. Browser Realtime is notification-only. RLS remains enabled on CRM tables and browser roles have no direct SELECT privilege.
 
-## Current production checkpoint — 2026-10-01 04:31 UTC
+## Current production checkpoint — 2026-10-01
 
-Render service `easyfind-crm-d01-d05` (`srv-darsv560tbcc73cu4ip0`) deploys `crm-ui-dashboard`. Current deployed commit is `53ae5f12ca3a89f09232b15687494d8de132921f`, deployment `dep-dauu3j60tbcc73e5ceeg`, and the corresponding Render deploy is **live**. Supabase project `qttcutwzehtskfcwxkwj` is the CRM operational database.
+Render service `easyfind-crm-d01-d05` (`srv-darsv560tbcc73cu4ip0`) deploys `crm-ui-dashboard`; the synchronized release is **live**. Supabase project `qttcutwzehtskfcwxkwj` is the CRM operational database.
 
 Current source: `+919148338801`. The other configured source numbers `+917975102130` and `+919902024973` are visible/selectable in the UI only and are not active production ingestion sources.
 
