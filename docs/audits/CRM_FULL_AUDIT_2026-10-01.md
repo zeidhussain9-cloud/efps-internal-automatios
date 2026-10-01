@@ -54,7 +54,7 @@ Supabase project: `qttcutwzehtskfcwxkwj`
 Last successful consolidated Supabase queries during this audit recorded:
 
 - `crm_leads`: 186
-- `crm_messages`: 6,859
+- `crm_messages`: 6,870
 - `crm_webhook_events`: 454
 - `crm_contact_classifications`: 309
 - `crm_lead_requirements`: 186
