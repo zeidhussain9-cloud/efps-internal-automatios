@@ -10,6 +10,16 @@
 
 > This report records evidence from the live production database and the live Housing Sheet. It does not treat historical documentation snapshots as current state.
 
+## 0. P1–P5 hardening closure — 2026-10-01
+
+- **P1 — webhook event lead linkage:** the promotion transaction now reconciles historical webhook rows from their already-linked `crm_messages` relationship. The production migration backfilled the 13 previously eligible rows; current event→message lead mismatch is **0**.
+- **P2 — AU/AV contract:** the CRM adapter now explicitly projects only the operational A:AT source range and pads AU/AV as reserved blanks. Regression coverage proves values supplied in AU/AV do not enter the CRM operational projection. No production Sheet values were overwritten.
+- **P3 — inventory history:** `crm_inventory_sync_changes` now records create/restore/delete events and field-level old/new values for future changed rows, with source hashes and sync-run IDs.
+- **P4 — webhook state recovery:** the production one-minute reconciler now repairs `received`/`processing` events when their durable message already exists, then retries remaining `received` events. The live function invocation was verified after correcting an alias collision; final production checkpoint returned **0 received, 0 processing, 0 failed**.
+- **P5 — controlled round-trip regression:** the repository now has a disposable, non-production create/edit/delete inventory round-trip regression over the canonical projection and change-history logic. The production Housing Sheet remains intentionally read-only, so no real listing was mutated.
+
+The five items are implementation/test closure items; they do not authorize changing the Sheet ownership of AU/AV or enabling CRM-side Sheet writes.
+
 ## 1. Webhook → Contact → Lead production audit
 
 ### Audit window
@@ -67,17 +77,16 @@ Cross-table checks returned:
 
 For live messages belonging to promoted classifications, **34** message rows currently point to the correct lead and **0** are missing the promoted lead.
 
-### Historical event-row denormalization found
+### Historical event-row denormalization — resolved
 
-There are **13** live webhook rows where:
+The audit originally identified **13** pre-promotion webhook rows with a null event-level lead while their preserved message rows already had the promoted lead.
 
-- `crm_webhook_events.lead_id IS NULL`
-- but the corresponding `crm_messages.lead_id` is populated, and
-- the classification is now promoted to that lead.
+P1 is now implemented in the promotion transaction, and the production hardening migration backfilled the existing 13 eligible rows. The current production invariant is:
 
-These are pre-promotion events. The contact received the messages before the operator promotion occurred. The promotion transaction backfills the preserved `crm_messages` rows and the lead/classification relationship, but does not backfill the original `crm_webhook_events.lead_id` field.
+- event → message lead mismatch: **0**
+- promoted event rows with null lead while their message has a lead: **0**
 
-This is **not a message-to-lead routing failure or data loss**. It is a denormalization inconsistency in the historical webhook-event row. The message/lead graph is correct.
+The event row remains historical evidence; its `lead_id` now records the current resolved lead relationship without changing the preserved message content.
 
 ### Group/system event handling
 
@@ -87,7 +96,7 @@ There are **131** outgoing live events with no personal phone. All 131 have a Wh
 
 **Verified production state:** persisted webhook ingress, deduplication, customer-number reconciliation, classification linkage, message persistence, and promoted message-to-lead linkage are operationally healthy.
 
-**Remaining webhook data-quality item:** 13 historical webhook rows retain a null event-level `lead_id` after later promotion. This should be treated as a minor denormalization gap if event-row-level lead attribution is required.
+**Webhook data-quality item:** closed by P1. Historical event rows now reconcile their current lead relationship from the durable message linkage.
 
 ---
 
@@ -171,30 +180,21 @@ A manual production reconciliation tick was then run during this audit using the
 
 No inventory data mutation was introduced by the audit beyond the normal sync-run audit record.
 
-### Reserved-column exception
+### Reserved-column contract — operationally closed
 
-The live Sheet currently contains:
+The live Sheet audit recorded 43 `Yes` values in AV `inventory_locked`. The canonical schema defines AU `source_group` and AV `inventory_locked` as reserved/dummy columns, while the CRM adapter reads only A:AT and pads AU/AV as blank.
 
-- AU `source_group`: **0** nonblank rows
-- AV `inventory_locked`: **43** rows containing **`Yes`**
+P2 is now enforced in the CRM implementation: values supplied in AU/AV cannot enter the operational CRM projection or its operational row hash. No production Sheet values were overwritten because the CRM integration is intentionally read-only.
 
-The repository contract currently defines AU/AV as reserved/dummy columns that must remain blank, and the CRM sync deliberately reads A:AT so these reserved values are not copied into the operational CRM mirror.
-
-This means:
-
-- the **operational inventory dataset A:AT is fully reconciled**;
-- the live Sheet nevertheless has **43 nonblank AV values that violate the documented reserved/blank contract**;
-- those AV values are not represented in the CRM mirror and should not be overwritten without a confirmed ownership decision.
+The 43 source-side AV values therefore remain Sheet-owned metadata outside the CRM mirror; changing or deleting them requires the separate Sheet owner decision and is not part of the CRM reconciliation fix.
 
 ### Inventory verdict
 
-**Verified production state:** the live operational inventory rows reconcile exactly to Supabase at the row-hash level; scheduled reconciliation is running every five minutes with zero recorded scheduler failures; the current live tick reports 88/0/0.
-
-**Remaining inventory data-governance item:** AV `inventory_locked` has 43 live `Yes` values despite the current contract marking AV reserved/blank. This is outside the CRM operational sync boundary and requires a deliberate ownership/cleanup decision.
+**Verified production state:** the live operational inventory rows reconcile exactly to Supabase at the row-hash level; scheduled reconciliation is running every five minutes with zero recorded scheduler failures; the current live tick reports 88/0/0. P2 is closed at the CRM contract boundary.
 
 ### Historical granularity limitation
 
-The sync ledger records row counts, row hashes, sync timestamps, and removals, but it does not store prior row versions or field-level diffs. Therefore this audit can prove that every recorded sync converged to the current source state and identify all sync runs with detected row changes, but it cannot reconstruct the exact historical field-by-field edits that occurred between snapshots.
+The historical sync ledger remains limited for changes that occurred before P3 was deployed: prior row versions and field-level diffs cannot be reconstructed retrospectively. From this hardening release onward, `crm_inventory_sync_changes` stores field-level old/new values, source hashes, listing IDs, change type, and sync-run IDs, so future edits are reconstructable.
 
 ---
 
@@ -203,25 +203,21 @@ The sync ledger records row counts, row hashes, sync timestamps, and removals, b
 ### Verified healthy
 
 **Webhook side**
-- 419 persisted live webhook events.
-- 419/419 processed; 0 received; 0 failed.
-- 288 personal events reconcile to 288 persisted message rows.
-- 27 distinct customer phones all have classification records.
-- No duplicate lead mappings or provider-message duplicates.
+- Current production webhook rows are processed with **0 received, 0 processing, 0 failed** at the hardening checkpoint.
+- Event→message lead mismatch is **0** after the P1 backfill.
 - No promoted message is missing its lead.
-- Group traffic is correctly kept out of personal lead reconciliation.
+- The one-minute recovery job is active and now repairs message-backed received/processing states.
 
 **Inventory side**
-- 88 current operational Sheet rows.
-- Exact aggregate SHA-256 equality between live Sheet A:AT projection and active Supabase inventory.
-- 1,333/1,333 scheduler executions succeeded.
-- Latest live sync: 88 rows, 0 changes, 0 removals.
-- No active inventory row is missing from the operational mirror.
+- 88 current operational Sheet rows reconcile to 88 active Supabase rows at the operational A:AT hash boundary.
+- Inventory cron remains active every five minutes.
+- crm_inventory_sync_changes provides future field-level change history.
+- AU/AV are explicitly excluded from the CRM operational projection.
 
-### Not safe to describe as “100% perfect” without qualification
+### Historical limitations that remain factual
 
-1. **Webhook event-row denormalization:** 13 historical `crm_webhook_events` rows retain null `lead_id` after their contacts were subsequently promoted. The actual message/lead links are correct.
-2. **Housing Sheet contract drift:** 43 active Sheet rows have AV `inventory_locked=Yes`, although the repository contract says AV is reserved/blank and the CRM sync intentionally excludes it.
-3. **Historical inventory audit depth:** prior field-level Sheet edits are not reconstructable from the current sync ledger because previous row versions are not retained.
+1. The 13 pre-promotion event rows are now reconciled to their current lead relationship; their original event-time state remains historical evidence.
+2. The 43 AV inventory_locked=Yes source values remain Sheet-owned metadata outside the CRM mirror; the CRM integration does not overwrite them.
+3. Field-level inventory edits that occurred before P3 was deployed cannot be reconstructed retrospectively.
 
-These are data-model/governance limitations, not evidence that current customer messages or operational inventory rows are being lost or misrouted.
+These are now documented boundaries rather than open CRM reconciliation defects.

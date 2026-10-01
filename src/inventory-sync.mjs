@@ -2,6 +2,7 @@ import crypto from 'node:crypto';
 import pg from 'pg';
 import {normalizeConnectionString} from './crm-repository.mjs';
 import {readHousingSheet} from './housing-sheet-adapter.mjs';
+const OPERATIONAL_SHEET_COLUMN_COUNT=46; // A:AT; AU/AV are reserved and never part of the CRM mirror.
 const FIELDS=['listing_id','status','intake_status','internal_property_type','listing_state','onboarded_on','raw_message_text','locality','society_name','landmark','pincode','google_maps_url','furnish_type','BHK','bathrooms','balconies','floor_number','total_floors','built_up_area','carpet_area','monthly_rent','maintenance','maintenance_included','security_deposit','preferred_tenant_type','bachelor_preference','pet_friendly','servant_room','covered_parking','open_parking','society_amenities','flat_furnishings','property_highlights','catalog_title','cloudinary_image_urls','age_of_property_years','whatsapp_contact_link','whatsapp_group_link','transaction_type','property_subtype','city','posted_url','posted_at','error_notes','meta_catalog_id','meta_catalog_status','source_group','inventory_locked'];
 const safeString=v=>v===undefined||v===null?'':String(v);
 const hashRow=row=>crypto.createHash('sha256').update(JSON.stringify(row)).digest('hex');
@@ -9,7 +10,7 @@ export function projectSheetRows(values){
  const rows=new Map();
  for(const raw of values||[]){
   if(!raw||!safeString(raw[0]).trim())continue;
-  const padded=[...raw];while(padded.length<FIELDS.length)padded.push('');
+  const padded=[...raw].slice(0,OPERATIONAL_SHEET_COLUMN_COUNT);while(padded.length<FIELDS.length)padded.push('');
   const row=Object.fromEntries(FIELDS.map((k,i)=>[k,safeString(padded[i])]));
   const id=row.listing_id.trim();
   if(rows.has(id))throw Error('Duplicate listing_id in Housing_Listings: '+id);
@@ -25,6 +26,25 @@ export function diffInventory(existing, incoming){
  for(const x of incoming) if(existing.get(x.row.listing_id)?.source_hash!==x.sourceHash || existing.get(x.row.listing_id)?.deleted_at) changed++;
  for(const [id,row] of existing) if(row.source_kind==='housing_sheet'&&!incomingIds.has(id)&&!row.deleted_at) removed++;
  return {changed,removed,total:incoming.length};
+}
+
+export function inventoryChangeRows(existing, incoming, runId, changedAt){
+ const changes=[];const incomingIds=new Set(incoming.map(x=>x.row.listing_id));
+ for(const x of incoming){
+  const old=existing.get(x.row.listing_id);
+  if(!old){changes.push({run_id:runId,listing_id:x.row.listing_id,change_type:'created',field_name:null,old_value:null,new_value:x.row,source_hash_before:null,source_hash_after:x.sourceHash,changed_at:changedAt});continue;}
+  if(old.deleted_at){changes.push({run_id:runId,listing_id:x.row.listing_id,change_type:'restored',field_name:null,old_value:null,new_value:x.row,source_hash_before:old.source_hash,source_hash_after:x.sourceHash,changed_at:changedAt});continue;}
+  if(old.source_hash===x.sourceHash)continue;
+  const before=old.source_record||{};
+  for(const field of FIELDS){
+   const a=before[field]??'';const b=x.row[field]??'';
+   if(JSON.stringify(a)!==JSON.stringify(b))changes.push({run_id:runId,listing_id:x.row.listing_id,change_type:'updated',field_name:field,old_value:a,new_value:b,source_hash_before:old.source_hash,source_hash_after:x.sourceHash,changed_at:changedAt});
+  }
+ }
+ for(const [id,row] of existing){
+  if(row.source_kind==='housing_sheet'&&!incomingIds.has(id)&&!row.deleted_at)changes.push({run_id:runId,listing_id:id,change_type:'deleted',field_name:null,old_value:row.source_record||{},new_value:null,source_hash_before:row.source_hash,source_hash_after:null,changed_at:changedAt});
+ }
+ return changes;
 }
 export async function readCanonicalInventory(env=process.env){
  const previous=env.CRM_HOUSING_SHEET_READ_ENABLED;
@@ -42,7 +62,7 @@ export async function syncInventorySnapshot({rows,connectionString=process.env.D
   try{
    await client.query('BEGIN');
    await client.query('SELECT pg_advisory_xact_lock(104729, 81)');
-   const current=await client.query('SELECT listing_id,source_kind,source_hash,deleted_at FROM crm_inventory_snapshot');
+   const current=await client.query('SELECT listing_id,source_kind,source_hash,source_record,deleted_at FROM crm_inventory_snapshot');
    const existing=new Map(current.rows.map(r=>[r.listing_id,r]));
    const plan=diffInventory(existing,rows);
    if(rows.length){
@@ -55,6 +75,10 @@ export async function syncInventorySnapshot({rows,connectionString=process.env.D
    const incomingIds=[...new Set(rows.map(x=>x.row.listing_id))];
    if(incomingIds.length) await client.query(`UPDATE crm_inventory_snapshot SET deleted_at=$1,last_synced_at=$1 WHERE source_kind='housing_sheet' AND deleted_at IS NULL AND NOT(listing_id=ANY($2::text[]))`,[now,incomingIds]);
    else await client.query(`UPDATE crm_inventory_snapshot SET deleted_at=$1,last_synced_at=$1 WHERE source_kind='housing_sheet' AND deleted_at IS NULL`,[now]);
+   const changes=inventoryChangeRows(existing,rows,runId,now);
+   if(changes.length) await client.query(`INSERT INTO crm_inventory_sync_changes(run_id,listing_id,change_type,field_name,old_value,new_value,source_hash_before,source_hash_after,changed_at)
+     SELECT run_id,listing_id,change_type,field_name,old_value,new_value,source_hash_before,source_hash_after,changed_at
+     FROM jsonb_to_recordset($1::jsonb) AS x(run_id text,listing_id text,change_type text,field_name text,old_value jsonb,new_value jsonb,source_hash_before text,source_hash_after text,changed_at timestamptz)`,[JSON.stringify(changes)]);
    await client.query('INSERT INTO crm_inventory_sync_runs(run_id,source_kind,row_count,changed_count,removed_count) VALUES($1,$2,$3,$4,$5)',[runId,'housing_sheet',plan.total,plan.changed,plan.removed]);
    await client.query('COMMIT');
    return {...plan,runId,syncedAt:now};

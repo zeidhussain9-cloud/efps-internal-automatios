@@ -1,16 +1,26 @@
+## P1–P5 hardening closure — 2026-10-01
+
+- P1 event-level lead linkage is reconciled during promotion and the 13 historical eligible rows were backfilled; current event/message lead mismatch is 0.
+- P2 AU/AV are enforced as reserved and excluded from the operational A:AT CRM projection; no production Sheet values were mutated.
+- P3 future inventory syncs record field-level change history in crm_inventory_sync_changes.
+- P4 the one-minute webhook reconciler repairs message-backed received/processing states; current production checkpoint is 0 received/processing/failed.
+- P5 disposable inventory create/edit/delete history regression is covered in tests without writing to the production Sheet.
+
+These five audit findings are closed at the CRM implementation boundary. Historical pre-P3 inventory edits remain non-reconstructable, and AU/AV remain Sheet-owned metadata outside the CRM mirror.
+
 ## Current production closure — 2026-10-01
 
 Verified in the final 2026-10-01 production-live audit checkpoint:
 
 - Production source: `+919148338801`; `+917975102130` and `+919902024973` remain UI-visible but inactive.
-- Webhook state: **421** persisted `crm_webhook_events`, **421 processed**, **0 received**, **0 processing**, **0 failed**.
+- Webhook state: **436** persisted `crm_webhook_events`, **436 processed**, **0 received**, **0 processing**, **0 failed** at the post-hardening verification checkpoint.
 - Live customer-number reconciliation: **28** distinct phones, **28/28** classified, **0** duplicate classification-per-phone groups, **0** phones mapped to multiple promoted leads.
 - Lead/message integrity: **0** promoted messages missing their lead; **0** source/provider/message-ID reconciliation mismatches; **0** duplicate provider-event or source-message-ID groups.
-- A known historical denormalization remains: **13** pre-promotion webhook rows retain `crm_webhook_events.lead_id=NULL` while their preserved `crm_messages.lead_id` is now correct.
+- P1 historical event denormalization is closed: the 13 eligible pre-promotion rows were backfilled and current event/message lead mismatch is **0**.
 - Housing inventory: **88** active listing IDs in the live `Housing_Listings` Sheet and **88** active CRM inventory rows. The live Sheet A:AT operational hash aggregate exactly matches the active Supabase inventory hash aggregate.
 - Inventory cron: **1,336/1,336** executions succeeded, **0 failed** through `2026-10-01 12:10:00 UTC`; the latest production reconciliation returned **88 rows / 0 changed / 0 removed**.
-- Current live Sheet observation: AU `source_group` is blank on all active rows; AV `inventory_locked` contains `Yes` on **43/88** active rows. AV is reserved outside the CRM A:AT mirror and its ownership/cleanup remains unresolved.
-- Historical inventory sync records capture row counts/hashes but not prior field-level versions, so exact past Sheet edits cannot be reconstructed retrospectively.
+- Current live Sheet observation: AU `source_group` is blank on all active rows; AV `inventory_locked` contains `Yes` on **43/88** active rows. P2 closes the CRM boundary: AU/AV are reserved and excluded from the A:AT mirror; no Sheet mutation was performed.
+- Historical inventory edits before P3 remain non-reconstructable. New syncs record field-level old/new values in `crm_inventory_sync_changes`.
 
 The full evidence is recorded in `docs/audits/PRODUCTION_LIVE_WEBHOOK_AND_INVENTORY_AUDIT_2026-10-01.md`.
 

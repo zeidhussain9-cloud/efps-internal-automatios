@@ -1,7 +1,7 @@
 
 ## Production checkpoint — 2026-10-01
 
-The approved daily CRM flow is live. Current source: `+919148338801`. Current Supabase evidence: 185 source-linked leads, 288 classifications, 13 pending classifications, 6,620 messages, and 72 persisted webhook events. All 185 promoted classifications are linked to CRM leads; the 88 classified and 2 excluded non-promoted contacts have no lead link, and the 13 pending contacts have no lead link. The latest security hardening migration revoked Data API execution for the two server-only SECURITY DEFINER RPCs and pinned trigger-function search paths. The Housing Listings scheduler is active every five minutes; the latest five sync runs each recorded 81 rows with zero changes/removals. Render remains on `crm-ui-dashboard`; the latest reconciliation deployment is in progress.
+The approved daily CRM flow is live on `crm-ui-dashboard` for source `+919148338801`. The 2026-10-01 production audit recorded 88 active Housing inventory rows and current webhook processing with no final received/processing/failed events at the hardening checkpoint. P1 event-level lead reconciliation is closed; P2 reserved AU/AV boundaries are enforced; P3 future inventory field history is stored in `crm_inventory_sync_changes`; P4 webhook recovery is automatic every minute; P5 disposable inventory create/edit/delete regression is covered without mutating the production Sheet. Historical pre-P3 inventory edits remain non-reconstructable, and AU/AV remain Sheet-owned metadata outside the CRM mirror. Render production remains on `crm-ui-dashboard`.
 
 ## EasyFind Lead CRM — Master Plan
 

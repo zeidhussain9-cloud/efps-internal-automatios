@@ -53,6 +53,15 @@ export function createCrmClassificationRepository({connectionString=process.env.
         }
         await c.query('UPDATE crm_contact_classifications SET classification_code=$1,classification_label=$2,classification_source=$3,confidence=$4,status=\'promoted\',classified_at=now(),promoted_at=coalesce(promoted_at,now()),lead_id=$5 WHERE id=$6',[code,label,source,confidence,lead.id,id]);
         await c.query('UPDATE crm_messages SET lead_id=$1,classification_id=$2 WHERE classification_id=$2',[lead.id,id]);
+        // Reconcile webhook event linkage after a later operator promotion.
+        await c.query(`UPDATE crm_webhook_events e
+          SET lead_id=$1, message_id=coalesce(e.message_id,m.id)
+          FROM crm_messages m
+          WHERE e.source_number=$2 AND e.phone=$3
+            AND m.source_number=e.source_number
+            AND m.provider_message_id=e.provider_event_id
+            AND m.lead_id=$1
+            AND (e.lead_id IS DISTINCT FROM $1 OR e.message_id IS DISTINCT FROM m.id)`,[lead.id,SOURCE_NUMBER,row.phone]);
         const events=(await c.query('SELECT id,provider_event_id,direction,message_type,payload,message_at FROM crm_webhook_events WHERE source_number=$1 AND phone=$2 AND provider_event_id IS NOT NULL ORDER BY message_at ASC,id ASC',[SOURCE_NUMBER,row.phone])).rows;
         for(const e of events){
           const m=e.payload||{};let body=null;
