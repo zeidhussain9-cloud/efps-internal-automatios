@@ -2,20 +2,20 @@
 
 ## Authoritative current CRM UI verification — 2026-10-02
 
-This is the current production checkpoint after the audited CRM UI polish and routing hardening were merged to `crm-ui-dashboard`. Older dated sections remain historical evidence.
+This is the current production checkpoint after the audited CRM UI polish, routing hardening, verification, deployment, and repository reconciliation. Older dated sections remain historical evidence.
 
 - **CRM deployment branch:** `crm-ui-dashboard`
-- **Production application commit:** `7b663e6c8aab6813df89c52612e129a1c506558d`
-- **Previous application merge commit:** `7911ef574c98610063f0069e738c06b40fd911b2`
+- **Live repository commit:** `d372c1df061b25e77e43c25b77e0718390781461`
+- **Application/UI merge commit:** `7911ef574c98610063f0069e738c06b40fd911b2`
 - **Render service:** `easyfind-crm-d01-d05` / `srv-darsv560tbcc73cu4ip0`
-- **Live Render deployment:** `dep-davcn4lg1s2s73fhiq3g` = **LIVE**
+- **Live Render deployment:** `dep-davcp8rm8hqs73btm9g0` = **LIVE**
 - **Production health:** live fetch of `/health` returned HTTP 200 with `{"ok":true}`
-- **Automated verification:** GitHub Actions run #22 passed `npm run build`, `npm test` (84/84), and `npm run test:browser` (1/1) on Node.js 24.21.0. A later documentation/production-checkpoint CI run also passed.
+- **Automated verification:** GitHub Actions run #22 passed `npm run build`, `npm test` (84/84), and `npm run test:browser` (1/1) on Node.js 24.21.0 for the verified application candidate. A later documentation-state verification run also passed.
 - **Implemented:** stable direct CRM routes and lead deep links; browser-history and lead-tab routing; debounced lead search; restored desktop layout foundations; consolidated UI polish; responsive/mobile behavior; accessibility states; inventory presentation/filtering/sorting surfaces; route/browser regression coverage.
 - **Production boundary:** no backend source or API-contract changes were introduced by this UI release. Webhook ingestion/reconciliation, Supabase persistence, classification, AI, inventory data logic, authentication, privacy, and audit backend paths were preserved.
 - **Runtime:** Node.js 24.21.0 is explicitly pinned through `.node-version` and package engine constraints; this matches the current Render Node 24 default documented for services created on or after 2026-09-17.
 - **Replit defects resolved:** the accidental terminal-output file and Replit-only `.replit` configuration were not carried into the production tree; the deleted desktop CSS foundation was reconstructed from the verified production baseline.
-- **Repository state:** exact `main`/crm tree reconciliation is performed after production verification; the final synchronized tree must be identical on both branches.
+- **Repository state:** `tree(main) == tree(crm-ui-dashboard)` has been verified after the production release reconciliation. No force-push or history rewrite was used on `main`.
 
 ### Current operational flow
 
