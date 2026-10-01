@@ -1,4 +1,30 @@
 
+
+## Authoritative current closure — 2026-10-01
+
+Evidence snapshot after final verification:
+- crm-ui-dashboard commit: 252dad9e029d9c3d3ee8bd93be20c171f4099602
+- crm-ui-dashboard tree: 375a701d907830a04ddd5f6d517f982ea729ed68
+- main reconciliation commit: 918a9b9d1f010c144b400b01d23bad26ee061fb9
+- main tree: 375a701d907830a04ddd5f6d517f982ea729ed68
+- tree(main) == tree(crm-ui-dashboard): TRUE
+- Render deployment: dep-dav71e0473hc73ahrnm0, status LIVE, commit 252dad9
+- Production health: GET /health = HTTP 200, {"ok":true}
+- Supabase: 186 leads, 6,870 messages, 465 webhook events, 310 classifications, 186 requirements, 196 AI runs, 196 drafts, 186 cursors, 88 active inventory rows
+- Webhook events: 465/465 processed; 0 received; 0 processing; 0 failed
+- Message reconciliation: 6,870 total = 4,806 lead-linked + 2,064 classified non-lead; unreconciled = 0
+- Historical classification population: 228/228 source="historical_extract"; 140/140 qualified mappings resolve to promoted leads
+- Requirements: 186/186 lead rows have requirement rows; orphan/missing = 0
+- AI/drafts: 196/196 draft→AI-run lead mappings valid; stale evidence references = 0; invalid cursor lead links = 0
+- Inventory: 88 active rows; 71 Available; 17 Rented Out; invalid media-array rows = 0
+- Cloudinary: 829/829 distinct production URLs returned HTTP 200 with image/* content-type using direct HEAD checks from the production-machine network path
+- Tests: npm run build PASS; npm test 76/76 PASS; npm run test:browser 1/1 PASS
+- Supabase Edge Function whapi-crm-webhook: ACTIVE version 8
+- Legacy AWS webhook/handler files: no changes in the CRM hardening commit range
+- 24-item audit status: GREEN / VERIFIED
+
+Historical dated checkpoints below remain historical evidence; this block is the current source of truth.
+
 ## Production checkpoint — 2026-10-01
 
 The approved daily CRM flow is live on `crm-ui-dashboard` for source `+919148338801`. The 2026-10-01 production audit recorded 88 active Housing inventory rows and current webhook processing with no final received/processing/failed events at the hardening checkpoint. P1 event-level lead reconciliation is closed; P2 reserved AU/AV boundaries are enforced; P3 future inventory field history is stored in `crm_inventory_sync_changes`; P4 webhook recovery is automatic every minute; P5 disposable inventory create/edit/delete regression is covered without mutating the production Sheet. Historical pre-P3 inventory edits remain non-reconstructable, and AU/AV remain Sheet-owned metadata outside the CRM mirror. Render production remains on `crm-ui-dashboard`.

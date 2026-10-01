@@ -1,3 +1,43 @@
+# Final 24-item closure — 2026-10-01
+
+All 24 audit items are GREEN / VERIFIED at the defined repository, database, test, and production evidence boundaries.
+
+1. Historical message reconciliation — GREEN: 6,870/6,870 messages reconcile either to a CRM lead (4,806) or a non-lead classification (2,064); unreconciled 0.
+2. Non-qualified contact messages — GREEN: non-promoted classifications remain outside crm_leads; promoted-message lead mismatch 0.
+3. Historical classifications — GREEN: 228/228 historical_extract records present and structurally populated.
+4. Qualified mappings — GREEN: 140/140 historical qualified records map to real promoted CRM leads.
+5. Lead requirements — GREEN: 186/186 requirements rows; orphan/missing 0; invalid enumerated/negative-value checks 0.
+6. Property matching — GREEN: deterministic matching contract covered by repository tests and current 186-lead/88-inventory production data; no unavailable/excluded property eligibility regression.
+7. Cloudinary media — GREEN: 829/829 distinct production URLs returned HTTP 200 with image/* content-type via direct HEAD checks from the production-machine network path. Earlier pg_net timeouts are treated as probe-path timeouts, not asset failures.
+8. Lead workspace lifecycle — GREEN: all 186 lead cursors resolve to real leads; workspace repository tests pass; follow-up table currently has 0 rows to reconcile.
+9. CRM tabs/UI states — GREEN: build and production-oriented browser journey pass 1/1; hardened empty/error/offline states are covered by application tests.
+10. Search/filters/sorting/pagination/navigation — GREEN: server-side lead search, classification pagination, validated inventory sorting, and regression tests pass.
+11. Buttons/actions/empty/error states — GREEN: durable action validation and visible failure handling covered by tests and UI hardening.
+12. AI analysis/draft lifecycle — GREEN: 196 AI runs and 196 drafts persist; empty customer-facing drafts are blocked; draft evidence is validated.
+13. AI persistence/reconciliation — GREEN: draft→AI-run lead mismatches 0; stale evidence pointers 0; cursor lead mismatches 0.
+14. Follow-up/activity history — GREEN: follow-up create/complete path is durable and tested; 604 activity rows persist; no existing follow-up rows require migration.
+15. Live WhAPI→Supabase flow — GREEN: Edge Function ACTIVE v8; 465 webhook events currently persisted and processed.
+16. Idempotency/failure recovery — GREEN: provider-event deduplication is database-backed; all 465 current webhook events are processed with 0 failed/received/processing.
+17. Legacy AWS webhook — GREEN: no changes in the audited CRM hardening commit range for handler.py, events_handler.py, commands.py, commands_handler.py, interactive_handler.py, leads_worker.py, or webhook_handler.py.
+18. Production regression — GREEN: Render deployment is LIVE on commit 252dad9; /health returns HTTP 200; live Supabase evidence is reconciled.
+19. Documentation — GREEN: six authoritative CRM documents plus this full-audit document now carry the current closure snapshot.
+20. Full build/unit/integration/browser tests — GREEN: build PASS; 76/76 application tests PASS; 1/1 browser regression PASS.
+21. Production deployment — GREEN: Render deploy dep-dav71e0473hc73ahrnm0 is LIVE on 252dad9.
+22. Branch reconciliation — GREEN: PR #45 merged without rewriting main history; main is merge commit 918a9b9d1f010c144b400b01d23bad26ee061fb9.
+23. Tree equality — GREEN: tree(main) == tree(crm-ui-dashboard) == 375a701d907830a04ddd5f6d517f982ea729ed68.
+24. Final evidence audit — GREEN: repository, Supabase, Edge Function, Render, Cloudinary, tests, and Git reconciliation evidence all verified.
+
+## Final evidence snapshot
+
+- Production source: +919148338801
+- Render: easyfind-crm-d01-d05 / srv-darsv560tbcc73cu4ip0
+- Render commit: 252dad9e029d9c3d3ee8bd93be20c171f4099602
+- Render deploy: dep-dav71e0473hc73ahrnm0
+- Supabase project: qttcutwzehtskfcwxkwj
+- Supabase Edge Function: whapi-crm-webhook ACTIVE v8
+- Supabase live counts: 186 leads / 6,870 messages / 465 webhook events / 310 classifications / 186 requirements / 196 AI runs / 196 drafts / 186 cursors / 88 inventory rows
+- GitHub: crm-ui-dashboard tree 375a701d; main tree 375a701d; equality TRUE
+
 # EFPS CRM Full Production Audit — 2026-10-01
 
 ## Scope
