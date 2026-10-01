@@ -128,7 +128,7 @@ The P1–P5 hardening release added regression coverage for webhook promotion li
 ## Current production checkpoint — 2026-10-01
 
 - Render service `easyfind-crm-d01-d05` / `srv-darsv560tbcc73cu4ip0` is live from the synchronized `crm-ui-dashboard` release.
-- Production source `+919148338801`: 186 source-linked leads, 309 classifications, 20 pending, 186 promoted, 6,853 messages.
+- Production source `+919148338801`: 186 source-linked leads, 309 classifications, 20 pending, 186 promoted, 6,870 messages.
 - Webhook state: 436 persisted events, 436 processed, 0 received, 0 processing, 0 failed; automatic reconciliation remains active.
 - Leads Inbox cards now expose only lead status and source number. The Leads Inbox header includes clickable counts for every supported lead status; selecting a status applies the corresponding server-side lead filter.
 - AI draft provenance now records input/output/total tokens and an estimated USD cost when standard pricing is known; the draft workspace displays these metrics alongside provider/model provenance.
