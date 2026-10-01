@@ -1,3 +1,16 @@
+## Authoritative current repository state — 2026-10-02
+
+- **CRM implementation branch:** `crm-ui-dashboard`
+- **Current CRM dashboard commit:** `c53183d4da1bfc9a36eda55ddf92da87b48dabe9`
+- **Reconciliation commit on `main`:** `4266693e10144987c6fcc3ffd3dddf88511144cf`
+- **Repository tree state:** `main` and `crm-ui-dashboard` are synchronized to the same file tree; no force-push or history rewrite was used.
+- **Recovered UI work:** classification visibility/tone, overdue follow-up attention, inventory sorting/filtering/pagination, stale-response protection, classification pagination reset, responsive/accessibility regression coverage.
+- **Replit-only workspace artifacts:** excluded from the synchronized tree.
+- **Production dependency manifest:** restored to the verified baseline.
+- **Production backend boundary:** WhatsApp/WhAPI ingestion, Supabase persistence/reconciliation, CRM promotion/classification, AI/drafts, inventory synchronization, authentication, privacy, audit, archive/restore and exports were not intentionally altered by the UI reconciliation.
+- **Render source branch:** `crm-ui-dashboard`.
+- **Deployment status:** the dashboard branch has been updated and therefore the configured Render auto-deploy path has been triggered. Render live-deployment verification remains an external runtime check; repository reconciliation itself is verified.
+
 # EFPS Internal Automations
 
 ## Authoritative current CRM UI verification — 2026-10-02
