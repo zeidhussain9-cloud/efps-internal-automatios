@@ -270,3 +270,9 @@ Historical branch-reconciliation note superseded on 2026-09-30: `crm-ui-dashboar
 Operational usability refinement completed for the production Leads Inbox. The lead display now exposes first-contact time, latest-message sender, and latest-message time directly from crm_messages. These fields are server-computed and retained as read/query results rather than duplicated mutable columns.
 
 The default queue order is latest message first. Operators can switch to Customer replied first, First contacted newest, Last message oldest, or Name A–Z. Sort selection is part of the protected /api/db/leads query contract and applies before pagination.
+
+## 2026-10-01 — Service-area lead status
+
+Added Layer-2 CRM lead status `Out of Coverage Area`, displayed as **OOC**. It is used for leads whose requested property area is outside the approved service footprint. Current service areas: HSR Layout, Kudlu Gate, Bellandur, Sarjapur Road, Whitefield, Hoodi, Mahadevapura, Marathahalli, ITPL, Varthur, Kasavanahalli, Harlur, Panathur, Koramangala (limited), Yemalur, Bommanahalli (selective), and Old Airport Road (selective).
+
+Automatic OOC assignment is not enabled from free-text locality. A deterministic geographic coverage contract must be approved before automated assignment.
