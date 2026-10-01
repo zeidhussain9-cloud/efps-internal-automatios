@@ -159,3 +159,7 @@
 .ai-evidence small{display:block;color:var(--muted);margin-top:5px}
 .draft-editor{width:100%;min-height:180px;box-sizing:border-box;resize:vertical;border:1px solid var(--line);border-radius:10px;padding:12px;background:var(--bg);color:var(--text);font:inherit}
 @media(max-width:900px){.ai-grid{grid-template-columns:1fr}.ai-toolbar{align-items:flex-start;flex-direction:column}}
+
+.draft-list{display:grid;gap:8px;margin-top:10px}.draft-row{width:100%;display:flex;align-items:center;justify-content:space-between;gap:12px;text-align:left;border:1px solid var(--line);border-radius:9px;background:var(--soft);padding:10px 12px;color:var(--text);cursor:pointer}.draft-row:hover{border-color:#8eb3cc;background:#f7fafc}.draft-row div{min-width:0}.draft-row b,.draft-row small{display:block}.draft-row small{color:var(--muted);margin-top:3px}.draft-row>span{flex:0 0 auto;color:#286a9c;font-size:11px;font-weight:700}@media(max-width:600px){.draft-row{align-items:flex-start;flex-direction:column}.draft-row>span{align-self:flex-end}}
+
+.app-error-shell{min-height:100vh;display:grid;place-items:center;background:#f4f7fa;padding:24px}.app-error-shell .auth-card{max-width:460px}
