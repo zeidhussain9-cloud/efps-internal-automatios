@@ -298,3 +298,6 @@ This section supersedes older dated migration/pilot checkpoints for current-stat
 The current production state supersedes earlier synthetic-only AI checkpoints. `crm_lead_requirements` is the editable normalized requirement profile used by the Lead Workspace and compatibility-mirrored into `crm_leads.requirements`. The production AI path receives the entire stored conversation and lead context, maintains a per-lead cursor, records AI runs and requirement evidence, proposes requirement changes, suggests lead status, and creates versioned operator-editable reply drafts. Requirement changes are explicitly accepted/rejected; lead status remains suggestion-only; automatic WhatsApp sending remains disabled.
 
 Render service: `srv-darsv560tbcc73cu4ip0`, branch `crm-ui-dashboard`. Implementation commit: `6f5f3ea629fc1d26dfe0cef2d6b9602eb6a6ad0e`.
+
+## 2026-10-01 — Production AI provider and repository checkpoint
+Current production supersedes synthetic-only AI checkpoints. Bedrock Claude Opus 4.6 is primary and Ollama gpt-oss:20b fallback. Complete lead history and normalized requirements are supplied to AI; requirement changes are operator-approved and AI never auto-sends WhatsApp.

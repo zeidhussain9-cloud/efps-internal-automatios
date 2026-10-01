@@ -127,3 +127,6 @@ The AI route builds its model input from the complete stored lead workspace: chr
 ## 2026-10-01 — Bedrock primary / Ollama fallback configuration
 
 The production CRM AI provider order is now AWS Bedrock first, Ollama second. Render service `easyfind-crm-d01-d05` is configured with non-secret Bedrock settings: `AWS_REGION=ap-southeast-2`, `AWS_BEDROCK_MODEL_ID=au.anthropic.claude-opus-4-6-v1`, `AWS_BEDROCK_MAX_TOKENS=4096`, and `AWS_BEDROCK_TEMPERATURE=0.2`. The application uses the AWS SDK default credential chain, so AWS credentials must be provided to Render as protected environment variables or an equivalent runtime identity; local Mac profiles are not inherited by Render. The existing Ollama configuration remains the fallback and no-auto-send/operator approval controls are unchanged.
+
+## 2026-10-01 — Current Bedrock runtime
+Production provider order is AWS Bedrock Claude Opus 4.6 followed by Ollama gpt-oss:20b. Render holds AWS credentials as secrets; non-secret region/model configuration is ap-southeast-2 / au.anthropic.claude-opus-4-6-v1.

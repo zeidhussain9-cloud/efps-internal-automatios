@@ -20,7 +20,7 @@ The synthetic-only/live-data gate described below is historical. The current CRM
 ## Remaining sequential gates
 1. Verify actual remote Ollama response through the authenticated Render route using only fictional ID L-1001; check model identity, structured extraction, timeout and error handling. Never submit real conversations during this pilot.
 2. Independently verify encrypted Supabase backup and restore to an isolated target, then reconcile 735/23,454/966 against the curated 308/6,064 source by stable IDs and source attribution. Prepare a read-only dry-run manifest with zero PII in logs.
-3. Review production authentication, access scopes, retention and operator override; approve D06–D08. Only then authorize a controlled, audited real-data import. Keep `CRM_DB_WRITE_ENABLED` and `CRM_REAL_DATA_ENABLED` disabled until gates pass.
+3. Review production authentication, access scopes, retention and operator override; approve D06–D08. Only then authorize a controlled, audited real-data import. Historical 2026-09-27 gate language; superseded on 2026-10-01 for the current CRM UI production path.
 4. Confirm the latest live Render deployment, GitHub Actions result and browser journey after each change. `main` must never be modified.
 
 ## Superseding hosted-AI and steering verification — 2026-09-27
@@ -47,3 +47,6 @@ Implemented on `crm-ui-dashboard` and verified locally:
 - AI reply drafts are versioned in `crm_drafts`. The operator can edit/save/copy/open WhatsApp; the CRM never auto-sends the draft.
 - Root `steering.md` now contains production EFPS context and explicit rules for full-history analysis, cold-lead reactivation, requirement evidence, inventory truth and operator-only sending. Public EasyFind context is based on the official EasyFind Property Solutions site. (official site: https://www.easyfindprops.com/)
 - Live Supabase verification after schema deployment: 186 requirement profiles, 186 per-lead AI cursors, 6,622 CRM messages (4,228 outgoing), 195 webhook events (195 processed, 0 failed). AI runs/drafts/evidence remain 0 until an operator first runs production AI and accepts/creates outputs.
+
+## Superseding production checkpoint — 2026-10-01
+This file records historical gate conditions. The current CRM UI production path has real AI/database writes enabled after verification; provider order is Bedrock Claude Opus 4.6 then Ollama gpt-oss:20b.
