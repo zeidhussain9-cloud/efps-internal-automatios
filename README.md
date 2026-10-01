@@ -1,32 +1,21 @@
 # EFPS Internal Automations
 
-## Authoritative current verified state — 2026-10-01 21:55 IST
+## Authoritative current CRM UI verification — 2026-10-02
 
-This is the latest repository/production checkpoint. Older dated sections in maintained documents are historical evidence and must not be interpreted as current state.
+This is the current production checkpoint after the audited CRM UI polish and routing hardening were merged to `crm-ui-dashboard`. Older dated sections remain historical evidence.
 
 - **CRM deployment branch:** `crm-ui-dashboard`
-- **CRM commit:** `1c196577fc414be52c8fc889b3886f11e0e9da5d`
-- **CRM tree:** `908b635b2b7b04bdf3515934de2769393e282c34`
-- **main:** `b2fbf366021852aedd4bf0ec66484ad421fb5662`
-- **main tree:** `908b635b2b7b04bdf3515934de2769393e282c34`
-- **Tree equality:** `tree(main) == tree(crm-ui-dashboard)` = **TRUE**
-- **Render:** `easyfind-crm-d01-d05` / `srv-darsv560tbcc73cu4ip0`
-- **Live Render deployment:** `dep-dav82h3m8hqs7399j4ug` = **LIVE**
-- **Live Render commit:** `1c196577fc414be52c8fc889b3886f11e0e9da5d`
-- **Production health:** `GET /health` = HTTP 200, `{"ok":true}`
-- **Production WhatsApp source:** `+919148338801`
-- **Supabase:** 186 leads; 6,870 messages; 465 webhook events; 310 classifications; 186 requirements; 196 AI runs; 196 drafts; 186 AI cursors; 88 active inventory rows.
-- **Classification status:** 186 promoted; 88 classified; 23 pending; 13 excluded = 310 total.
-- **Webhook status:** 465 processed; 0 received; 0 processing; 0 failed.
-- **Message reconciliation:** 6,870 total = 4,806 lead-linked + 2,064 classified non-lead; unreconciled = 0.
-- **Historical classification population:** 228 historical records; 140 qualified mappings.
-- **Inventory:** 88 active rows = 71 Available + 17 Rented Out; 1,377 sync runs; latest sync recorded 88 rows / 0 changed / 0 removed; inventory-change rows = 0.
-- **Cloudinary:** 829/829 distinct production URLs returned HTTP 200 with `image/*` content-type by direct HEAD checks from the production-machine network path.
-- **AI integrity:** draft→AI-run lead mismatch = 0; stale evidence references = 0; invalid cursor lead links = 0.
-- **Tests:** `npm run build` PASS; `npm test` 78/78 PASS; `npm run test:browser` 1/1 PASS.
-- **Supabase Edge Function:** `whapi-crm-webhook` ACTIVE v8.
-- **AWS legacy webhook:** no changes in the audited CRM hardening range.
-- **24-item CRM audit:** GREEN / VERIFIED.
+- **Production application commit:** `7b663e6c8aab6813df89c52612e129a1c506558d`
+- **Previous application merge commit:** `7911ef574c98610063f0069e738c06b40fd911b2`
+- **Render service:** `easyfind-crm-d01-d05` / `srv-darsv560tbcc73cu4ip0`
+- **Live Render deployment:** `dep-davcn4lg1s2s73fhiq3g` = **LIVE**
+- **Production health:** live fetch of `/health` returned HTTP 200 with `{"ok":true}`
+- **Automated verification:** GitHub Actions run #22 passed `npm run build`, `npm test` (84/84), and `npm run test:browser` (1/1) on Node.js 24.21.0. A later documentation/production-checkpoint CI run also passed.
+- **Implemented:** stable direct CRM routes and lead deep links; browser-history and lead-tab routing; debounced lead search; restored desktop layout foundations; consolidated UI polish; responsive/mobile behavior; accessibility states; inventory presentation/filtering/sorting surfaces; route/browser regression coverage.
+- **Production boundary:** no backend source or API-contract changes were introduced by this UI release. Webhook ingestion/reconciliation, Supabase persistence, classification, AI, inventory data logic, authentication, privacy, and audit backend paths were preserved.
+- **Runtime:** Node.js 24.21.0 is explicitly pinned through `.node-version` and package engine constraints; this matches the current Render Node 24 default documented for services created on or after 2026-09-17.
+- **Replit defects resolved:** the accidental terminal-output file and Replit-only `.replit` configuration were not carried into the production tree; the deleted desktop CSS foundation was reconstructed from the verified production baseline.
+- **Repository state:** exact `main`/crm tree reconciliation is performed after production verification; the final synchronized tree must be identical on both branches.
 
 ### Current operational flow
 

@@ -1,41 +1,19 @@
-## Current UI-polish verification checkpoint — 2026-10-02
+## Authoritative current CRM UI verification — 2026-10-02
 
-This is an **unreleased candidate checkpoint** for `crm-ui-polish-final-2026-10-02`. It must not be described as production until it is merged to `crm-ui-dashboard`, deployed by Render, and production-verified.
+This is the current production checkpoint after the audited CRM UI polish and routing hardening were merged to `crm-ui-dashboard`. Older dated sections remain historical evidence.
 
-- **Implementation branch:** `crm-ui-polish-final-2026-10-02`
-- **Production baseline:** `crm-ui-dashboard` @ `510c62304751624a9e118db137fa4b9095d61bc9`
-- **Current production Render:** `easyfind-crm-d01-d05` is still LIVE from `crm-ui-dashboard` @ `510c62304751624a9e118db137fa4b9095d61bc9`
-- **Latest candidate code checkpoint:** `b20587e57105f7db27aeeda3714eb0a4cfe55a7b`
-- **Candidate verification:** GitHub Actions run #22 passed `npm run build`, `npm test` (84/84), and `npm run test:browser` (1/1) using Node.js 24.21.0.
-- **Implemented in candidate:** stable direct CRM routes and lead deep links, browser-history/tab routing, debounced lead search, restored verified desktop layout foundations, consolidated UI polish/responsive/accessibility styling, and route/browser regression coverage.
-- **Backend boundary:** no backend source/API contract changes were made by this UI candidate relative to the production baseline. Webhook ingestion, Supabase persistence/reconciliation, classification, AI, inventory data logic, authentication, privacy, and audit backend paths remain on the production baseline.
-- **Replit artifacts:** the accidental Replit workspace artifact and Replit-specific `.replit` configuration were not carried into the candidate branch.
-- **Node runtime:** the candidate pins Node.js 24.21.0 via `.node-version` and a bounded package engine range. Render documents 24.21.0 as the current default for services created on or after 2026-09-17 and documents `.node-version`/package engines as supported version controls.
-- **Status:** candidate verification is GREEN in CI; production deployment and production browser verification are still pending.
-- **Documentation rule:** this checkpoint supersedes neither the older production closure evidence nor the historical sections below; after production merge/deploy, this block must be updated with the actual deployed commit/deployment and tree-equality evidence.
-
-## Authoritative current closure — 2026-10-01
-
-Evidence snapshot after final verification:
-- crm-ui-dashboard commit: 252dad9e029d9c3d3ee8bd93be20c171f4099602
-- crm-ui-dashboard tree: 375a701d907830a04ddd5f6d517f982ea729ed68
-- main reconciliation commit: 918a9b9d1f010c144b400b01d23bad26ee061fb9
-- main tree: 375a701d907830a04ddd5f6d517f982ea729ed68
-- tree(main) == tree(crm-ui-dashboard): TRUE
-- Render deployment: dep-dav82h3m8hqs7399j4ug, status LIVE, commit 1c196577fc414be52c8fc889b3886f11e0e9da5d
-- Production health: GET /health = HTTP 200, {"ok":true}
-- Supabase: 186 leads, 6,870 messages, 465 webhook events, 310 classifications, 186 requirements, 196 AI runs, 196 drafts, 186 cursors, 88 active inventory rows
-- Webhook events: 465/465 processed; 0 received; 0 processing; 0 failed
-- Message reconciliation: 6,870 total = 4,806 lead-linked + 2,064 classified non-lead; unreconciled = 0
-- Historical classification population: 228/228 source="historical_extract"; 140/140 qualified mappings resolve to promoted leads
-- Requirements: 186/186 lead rows have requirement rows; orphan/missing = 0
-- AI/drafts: 196/196 draft→AI-run lead mappings valid; stale evidence references = 0; invalid cursor lead links = 0
-- Inventory: 88 active rows; 71 Available; 17 Rented Out; invalid media-array rows = 0
-- Cloudinary: 829/829 distinct production URLs returned HTTP 200 with image/* content-type using direct HEAD checks from the production-machine network path
-- Tests: npm run build PASS; npm test 78/78 PASS; npm run test:browser 1/1 PASS
-- Supabase Edge Function whapi-crm-webhook: ACTIVE version 8
-- Legacy AWS webhook/handler files: no changes in the CRM hardening commit range
-- 24-item audit status: GREEN / VERIFIED
+- **CRM deployment branch:** `crm-ui-dashboard`
+- **Production application commit:** `7b663e6c8aab6813df89c52612e129a1c506558d`
+- **Previous application merge commit:** `7911ef574c98610063f0069e738c06b40fd911b2`
+- **Render service:** `easyfind-crm-d01-d05` / `srv-darsv560tbcc73cu4ip0`
+- **Live Render deployment:** `dep-davcn4lg1s2s73fhiq3g` = **LIVE**
+- **Production health:** live fetch of `/health` returned HTTP 200 with `{"ok":true}`
+- **Automated verification:** GitHub Actions run #22 passed `npm run build`, `npm test` (84/84), and `npm run test:browser` (1/1) on Node.js 24.21.0. A later documentation/production-checkpoint CI run also passed.
+- **Implemented:** stable direct CRM routes and lead deep links; browser-history and lead-tab routing; debounced lead search; restored desktop layout foundations; consolidated UI polish; responsive/mobile behavior; accessibility states; inventory presentation/filtering/sorting surfaces; route/browser regression coverage.
+- **Production boundary:** no backend source or API-contract changes were introduced by this UI release. Webhook ingestion/reconciliation, Supabase persistence, classification, AI, inventory data logic, authentication, privacy, and audit backend paths were preserved.
+- **Runtime:** Node.js 24.21.0 is explicitly pinned through `.node-version` and package engine constraints; this matches the current Render Node 24 default documented for services created on or after 2026-09-17.
+- **Replit defects resolved:** the accidental terminal-output file and Replit-only `.replit` configuration were not carried into the production tree; the deleted desktop CSS foundation was reconstructed from the verified production baseline.
+- **Repository state:** exact `main`/crm tree reconciliation is performed after production verification; the final synchronized tree must be identical on both branches.
 
 Historical dated checkpoints below remain historical evidence; this block is the current source of truth.
 
