@@ -255,3 +255,7 @@ The approved six AI improvements are implemented: stale-draft detection; provena
 ## 2026-10-01 — Bedrock SDK security update
 
 Render's build surfaced dependency advisories through the newly added AWS Bedrock SDK, including a critical `fast-xml-parser` advisory in the older transitive tree. The Bedrock runtime SDK was upgraded from `3.922.0` to `3.1144.0`. Local `npm audit --omit=dev` now reports 0 vulnerabilities, and the full automated suite remains 66/66. The updated lockfile is part of the final repository state.
+
+## Final 24-item CRM closure — 2026-10-01
+
+The previous Cloudinary timeout and final deployment/tree items are closed. Evidence: 829/829 distinct Cloudinary URLs returned successful fl_getinfo metadata with zero timeouts; authenticated production replay of webhook event 5912 returned already_processed with no count change; Render deployment dep-dav71e0473hc73ahrnm0 for 252dad9e029d9c3d3ee8bd93be20c171f4099602 is live; /health is HTTP 200; build is PASS; tests are 76/76; browser is 1/1; remote main/crm-ui-dashboard trees are identical. Current DB has 186 leads, 6,861 messages, 309 classifications, 196 AI runs/drafts, 456 processed webhook events, and 88 active inventory rows. 24/24 audit items GREEN.

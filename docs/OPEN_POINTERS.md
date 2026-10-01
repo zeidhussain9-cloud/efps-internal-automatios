@@ -200,3 +200,17 @@ The saved-draft visibility defect is fixed in the source tree: persisted drafts 
 ## 2026-10-01 — Approved AI improvements completed
 
 Completed: stale-draft detection; model/provider provenance; draft evidence; deterministic pre-send grounding check; explicit AI outcome tracking; and explicit fallback-chain visibility. Incremental/delta message analysis remains deferred by operator decision. The Bedrock fallback is Claude Sonnet 4.6 using the AU geo inference profile, with Ollama retained as the final fallback.
+
+## Final 24-item CRM audit closure — 2026-10-01
+
+The earlier Cloudinary/idempotency/deployment/tree reconciliation pointers are superseded by the verified closure below.
+
+- Live Supabase: 186 leads / 6,861 messages / 309 classifications / 196 AI runs / 196 drafts / 456 webhook events / 88 inventory rows.
+- Historical classification baseline: 228/228 extracted; 140/140 historical qualified mappings valid; 0 non-qualified lead mappings.
+- Requirements: 186/186 profiles; zero structural anomalies in the audited constraints.
+- Webhook: 456/456 processed, zero pending/failed, zero duplicate provider IDs/fingerprints; authenticated replay returned already_processed with no row-count change.
+- Cloudinary: 829/829 distinct URLs returned successful fl_getinfo metadata; zero timeouts/failures.
+- Production: Render commit 252dad9e029d9c3d3ee8bd93be20c171f4099602, deployment dep-dav71e0473hc73ahrnm0, live; health HTTP 200.
+- Tests: build PASS; 76/76 tests PASS; browser 1/1 PASS.
+- Trees: origin/main tree == origin/crm-ui-dashboard tree == 375a701d907830a04ddd5f6d517f982ea729ed68.
+- 24/24 CRM audit items: GREEN.

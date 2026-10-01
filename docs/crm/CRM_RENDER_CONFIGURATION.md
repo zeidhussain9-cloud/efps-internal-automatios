@@ -197,3 +197,7 @@ The production Bedrock chain is now **Claude Opus 4.6 (`au.anthropic.claude-opus
 The Render service now has `AWS_BEDROCK_FALLBACK_MODEL_ID=au.anthropic.claude-sonnet-4-6`. AI run provenance records provider, exact model, fallback source and fallback reason. Draft provenance records the AI run, provider/model, source message IDs and evidence summary.
 
 The operator AI workspace now also implements: stale-draft detection when newer CRM activity exists; evidence visibility on drafts; a deterministic pre-send grounding check that blocks stale drafts, unresolved placeholders and unsupported inventory claims; explicit `Mark sent` outcome recording after WhatsApp is opened; and AI-run fallback visibility. Automatic WhatsApp sending remains disabled.
+
+## 2026-10-01 — Final production verification
+
+Render service easyfind-crm-d01-d05 (srv-darsv560tbcc73cu4ip0) is live from crm-ui-dashboard at commit 252dad9e029d9c3d3ee8bd93be20c171f4099602, deployment dep-dav71e0473hc73ahrnm0. /health returns HTTP 200. The active Supabase whapi-crm-webhook function is version 8; authenticated duplicate replay returned already_processed. Current production DB reconciliation is clean: 456/456 webhook events processed, 0 orphan messages, 0 classification/lead mismatches, 186/186 requirement rows, and 829/829 Cloudinary metadata probes successful. Build, 76/76 tests, and 1/1 browser regression pass. All 24 CRM audit items are GREEN.

@@ -266,3 +266,7 @@ The AI & Drafts tab now treats saved drafts as durable workspace state rather th
 ## 2026-10-01 — AI workspace hardening
 
 The AI & Drafts workspace now shows provider/model/fallback provenance, source message IDs, stale status, and a pre-send grounding check. Opening WhatsApp requires the deterministic check to pass; the operator can copy a draft and explicitly mark it sent after manual WhatsApp delivery. New CRM activity after draft generation marks the draft stale so it is not silently reused.
+
+## 2026-10-01 — Final implementation verification
+
+The UI implementation corresponding to this specification is production-live on crm-ui-dashboard. The final hardening release has passed build, 76/76 automated tests, and 1/1 browser regression. Search/pagination, inventory sorting and KPI filtering, draft/follow-up actions, error/empty states, Cloudinary fallback handling, and lead-workspace lifecycle controls are covered by the verified release. Production webhook reconciliation and AI persistence are live against real Supabase data. All 24 CRM audit items are GREEN.

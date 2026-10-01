@@ -358,3 +358,7 @@ Current production supersedes synthetic-only AI checkpoints. Bedrock Claude Opus
 ## 2026-10-01 — AI generation controls
 
 Current AI generation order is Bedrock Claude Opus 4.6 → Bedrock Claude Sonnet 4.6 → Ollama fallback. Drafts are traceable to exact provider/model and source messages. Stale drafts are detected, unsupported inventory claims are blocked by a deterministic pre-send check, and operator outcomes can be recorded through copied/opened/sent states. Incremental/delta message analysis remains intentionally deferred; the current AI call continues to receive the complete conversation.
+
+## 2026-10-01 — Final CRM 24-item audit closure
+
+The current production CRM closure supersedes earlier checkpoint counts: 186 leads, 6,861 messages, 309 classifications, 196 AI runs/drafts, 456 processed webhook events, and 88 active Housing rows. Historical classification verification is 228/228 with 140/140 qualified mappings valid; non-qualified classifications have zero lead mappings. Cloudinary source verification is 829/829 successful metadata probes. Production Render commit 252dad9e029d9c3d3ee8bd93be20c171f4099602 is live; build, 76/76 tests, and 1/1 browser regression pass. Remote main and crm-ui-dashboard have identical trees. All 24 audit tasks are GREEN.
