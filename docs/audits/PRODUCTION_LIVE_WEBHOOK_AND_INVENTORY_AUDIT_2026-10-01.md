@@ -20,8 +20,8 @@ The active Supabase Edge Function `whapi-crm-webhook` is ACTIVE at version 6. Th
 
 | Check | Result |
 |---|---:|
-| `crm_webhook_events` persisted events | **419** |
-| Processed | **419** |
+| `crm_webhook_events` persisted events | **421** |
+| Processed | **421** |
 | Still `received` | **0** |
 | `processing` | **0** |
 | Failed | **0** |
@@ -37,16 +37,16 @@ No persisted live event is stuck, failed, or missing its message row when a pers
 
 | Check | Result |
 |---|---:|
-| Distinct live customer phone numbers | **27** |
-| Phones with a classification record | **27 / 27** |
-| Live-created classifications | **23** |
+| Distinct live customer phone numbers | **28** |
+| Phones with a classification record | **28 / 28** |
+| Live-created classifications | **24** |
 | Pre-existing classifications encountered by live traffic | **4** |
 | Phones missing a classification | **0** |
 | Duplicate classification rows per source+phone | **0** |
 | Phones mapped to multiple promoted CRM leads | **0** |
 | Live phones with duplicate CRM leads | **0** |
 
-The production flow therefore reconciles a new customer phone to the durable classification registry first. Promotion to the CRM lead layer remains the operator-controlled qualification step.
+The production flow therefore reconciles each newly observed customer phone to the durable classification registry first. Promotion to the CRM lead layer remains the operator-controlled qualification step.
 
 ### Message / lead correctness
 
@@ -147,7 +147,7 @@ The production inventory sync ledger records:
 
 - first recorded Housing sync: `2026-09-26 20:53:54.286275 UTC`
 - latest scheduled sync before this audit: `2026-10-01 11:50:02.44293 UTC`
-- **1,322** recorded Housing sync snapshots at that point
+- **1,327** recorded Housing sync snapshots at the final checkpoint
 - **9** snapshots with non-zero changes
 - initial population: **81** changed rows
 - later delta runs: **18** changed-row instances across eight runs
@@ -158,7 +158,7 @@ The live scheduler is:
 - job: `crm_inventory_sheet_reconcile_5m`
 - schedule: `*/5 * * * *`
 - active: **true**
-- executions audited: **1,333**
+- executions audited: **1,336**
 - successful: **1,333**
 - failed: **0**
 - latest execution: `2026-10-01 11:55:00.077406 UTC`

@@ -2,10 +2,10 @@
 
 This addendum supersedes older numeric checkpoints in this document for current operational state.
 
-- Audit window: first persisted production event **2026-09-30 15:51:11.11684 UTC** through **2026-10-01 11:42:45.50938 UTC** for source `+919148338801`.
-- `crm_webhook_events`: **419** persisted events; **419 processed**, **0 received**, **0 processing**, **0 failed**.
+- Audit window: first persisted production event **2026-09-30 15:51:11.11684 UTC** through **2026-10-01 11:58:22.584248 UTC** for source `+919148338801`.
+- `crm_webhook_events`: **421** persisted events; **421 processed**, **0 received**, **0 processing**, **0 failed**.
 - **288** persisted events contain a normalized personal phone and all **288** link to a `crm_messages` row.
-- **27** distinct live customer phones were observed; **27/27** have a classification record; 23 classifications were first seen during this live window and 4 pre-existed.
+- **28** distinct live customer phones were observed; **28/28** have a classification record; 24 classifications were first seen during this live window and 4 pre-existed.
 - No duplicate classification rows per source+phone, no phones mapped to multiple promoted leads, no live phones with duplicate CRM leads, and no promoted message is missing its lead.
 - Provider/event integrity checks found **0** duplicate event-fingerprint groups, **0** duplicate provider-event-ID groups, and **0** duplicate source-message-ID groups.
 - **131** outgoing phone-null events have WhatsApp group JIDs (`@g.us`) and no personal JIDs; these are correctly outside personal lead reconciliation.

@@ -1,14 +1,14 @@
 ## Current production closure — 2026-10-01
 
-Verified in the 2026-10-01 production-live audit:
+Verified in the final 2026-10-01 production-live audit checkpoint:
 
 - Production source: `+919148338801`; `+917975102130` and `+919902024973` remain UI-visible but inactive.
-- Webhook state: **419** persisted `crm_webhook_events`, **419 processed**, **0 received**, **0 processing**, **0 failed**.
-- Live customer-number reconciliation: **27** distinct phones, **27/27** classified, **0** duplicate classification-per-phone groups, **0** phones mapped to multiple promoted leads.
+- Webhook state: **421** persisted `crm_webhook_events`, **421 processed**, **0 received**, **0 processing**, **0 failed**.
+- Live customer-number reconciliation: **28** distinct phones, **28/28** classified, **0** duplicate classification-per-phone groups, **0** phones mapped to multiple promoted leads.
 - Lead/message integrity: **0** promoted messages missing their lead; **0** source/provider/message-ID reconciliation mismatches; **0** duplicate provider-event or source-message-ID groups.
 - A known historical denormalization remains: **13** pre-promotion webhook rows retain `crm_webhook_events.lead_id=NULL` while their preserved `crm_messages.lead_id` is now correct.
 - Housing inventory: **88** active listing IDs in the live `Housing_Listings` Sheet and **88** active CRM inventory rows. The live Sheet A:AT operational hash aggregate exactly matches the active Supabase inventory hash aggregate.
-- Inventory cron: **1,333/1,333** executions succeeded, **0 failed** through `2026-10-01 11:55:00 UTC`; latest live reconciliation returned **88 rows / 0 changed / 0 removed**.
+- Inventory cron: **1,336/1,336** executions succeeded, **0 failed** through `2026-10-01 12:10:00 UTC`; the latest production reconciliation returned **88 rows / 0 changed / 0 removed**.
 - Current live Sheet observation: AU `source_group` is blank on all active rows; AV `inventory_locked` contains `Yes` on **43/88** active rows. AV is reserved outside the CRM A:AT mirror and its ownership/cleanup remains unresolved.
 - Historical inventory sync records capture row counts/hashes but not prior field-level versions, so exact past Sheet edits cannot be reconstructed retrospectively.
 
