@@ -1,3 +1,13 @@
+## Unreleased CRM UI feedback branch — production unchanged
+
+The isolated work branch is `crm-ui-feedback-polish-2026-10-02`. This section describes branch-only changes; the production verification below remains the latest production checkpoint.
+
+- Lead cards show the stored `crm_leads.classification` separately from `crm_leads.lead_type`; missing classification is labeled “Not recorded.”
+- Status tone remains secondary to its text label. Overdue attention is shown only for an incomplete follow-up whose stored due time has passed; message age and budget do not create inferred risk labels.
+- Inventory search, filters, sort, and pagination are applied to the protected read-only overview response. KPI totals and filter facets continue to represent the full inventory, not just the current page.
+- Existing server pagination for leads, classifications, global activity, and lead activity remains in place; filter/sort changes return to the first page and stale activity responses are ignored.
+- No production merge, deployment, database mutation, or schema change is part of this branch.
+
 ## Authoritative current CRM UI verification — 2026-10-02
 
 This is the current production checkpoint after the audited CRM UI polish, routing hardening, verification, deployment, and repository reconciliation. Older dated sections remain historical evidence.

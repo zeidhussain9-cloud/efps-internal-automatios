@@ -2,6 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {spawn} from 'node:child_process';
 import {chromium} from 'playwright';
+import {imageUrls} from '../src/crm-logic.mjs';
+import {buildInventoryPage,INVENTORY_PAGE_SIZE} from '../src/inventory-logic.mjs';
 
 const port=18763,base='http://127.0.0.1:'+port;
 const startServer=()=>spawn(process.execPath,['crm-server.mjs'],{
@@ -20,7 +22,10 @@ test('production CRM browser journey uses only live-record surfaces',async()=>{
   browser=await chromium.launch({headless:true});
   const page=await browser.newPage();
   await page.route('**/api/db/leads*',route=>route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({
-   leads:[{id:'LIVE-1',display_name:'Live lead',normalized_phone:'+919000000001',status:'New',lead_type:'New',tenant_type:'Not specified',priority:'Medium',classification:'Qualified Lead',requirements:{bhk:'2 BHK',locality:'Harlur',budget:50000},updated_at:'2026-09-30T00:00:00Z',contacted_at:'2026-08-26T07:30:00.000Z',last_message_direction:'Incoming',last_message_at:'2026-09-30T16:26:15.000Z',source_number:'+919148338801'}],
+    leads:[
+     {id:'LIVE-1',display_name:'Live lead',normalized_phone:'+919000000001',status:'New',lead_type:'New',tenant_type:'Not specified',priority:'Medium',classification:'Qualified Lead',overdue_followup_count:1,requirements:{bhk:'2 BHK',locality:'Harlur',budget:50000},updated_at:'2026-09-30T00:00:00Z',contacted_at:'2026-08-26T07:30:00.000Z',last_message_direction:'Incoming',last_message_at:'2026-09-30T16:26:15.000Z',source_number:'+919148338801'},
+     {id:'LIVE-2',display_name:'Unclassified lead',normalized_phone:'+919000000002',status:'New',lead_type:'Waiting on Customer',tenant_type:'Not specified',priority:'Medium',classification:null,overdue_followup_count:0,requirements:{},updated_at:'2026-09-30T00:00:00Z',contacted_at:null,last_message_direction:null,last_message_at:null,source_number:'+919148338801'}
+    ],
    total:228,sourceTotals:{'+919148338801':228}
   })}));
 
@@ -29,14 +34,18 @@ test('production CRM browser journey uses only live-record surfaces',async()=>{
   })}));
 
   await page.route('https://res.cloudinary.com/**',route=>route.fulfill({status:200,contentType:'image/svg+xml',body:'<svg xmlns="http://www.w3.org/2000/svg" width="320" height="220"><rect width="320" height="220" fill="#dce8f0"/></svg>'}));
-  await page.route('**/api/inventory/overview*',route=>route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({
-   rows:[
+  const inventoryRows=[
     {listing_id:'INV-3',locality:'Sarjapur',society_name:'Society 3',bhk:'3 BHK',monthly_rent:70000,furnishing:'Fully Furnished',listing_state:'Available',pet_friendly:'No',cloudinary_image_urls:['https://res.cloudinary.com/test/properties/INV-3/photo_1.jpg'],source_record:{onboarded_on:'30 Sep 2026, 8:00 AM',city:'Bengaluru'},last_synced_at:'2026-10-01T12:45:01Z'},
     {listing_id:'INV-1',locality:'Bellandur',society_name:'Society 1',bhk:'1 BHK',monthly_rent:22000,furnishing:'Semi Furnished',listing_state:'Rented Out',pet_friendly:'Yes',cloudinary_image_urls:[],source_record:{onboarded_on:'25 Sep 2026, 8:00 AM',city:'Bengaluru'},last_synced_at:'2026-10-01T12:45:01Z'},
-    {listing_id:'INV-2',locality:'Harlur',society_name:'Society 2',bhk:'2 BHK',monthly_rent:45000,furnishing:'Unfurnished',listing_state:'Available',pet_friendly:'Unknown',cloudinary_image_urls:['https://res.cloudinary.com/test/properties/INV-2/photo_1.jpg'],source_record:{onboarded_on:'28 Sep 2026, 8:00 AM',city:'Bengaluru'},last_synced_at:'2026-10-01T12:45:01Z'}
-   ],
-   latestSync:{created_at:'2026-10-01T12:45:01Z',row_count:88,changed_count:0,removed_count:0}
-  })}));
+    {listing_id:'INV-2',locality:'Harlur',society_name:'Society 2',bhk:'2 BHK',monthly_rent:45000,furnishing:'Unfurnished',listing_state:'Available',pet_friendly:'Unknown',cloudinary_image_urls:['https://res.cloudinary.com/test/properties/INV-2/photo_1.jpg'],source_record:{onboarded_on:'28 Sep 2026, 8:00 AM',city:'Bengaluru'},last_synced_at:'2026-10-01T12:45:01Z'},
+    ...Array.from({length:24},(_,index)=>{const id=String(index+4).padStart(2,'0');return{listing_id:'INV-'+id,locality:'Harlur',society_name:'Society '+id,bhk:'2 BHK',monthly_rent:85000+index,furnishing:'Not specified',listing_state:'Rented Out',pet_friendly:'Unknown',cloudinary_image_urls:[],source_record:{onboarded_on:'01 Oct 2026, 8:00 AM',city:'Bengaluru'},last_synced_at:'2026-10-01T12:45:01Z'}})
+   ];
+  await page.route('**/api/inventory/overview*',async route=>{
+   const params=new URL(route.request().url()).searchParams;
+   const withPhotos=params.get('with_photos');
+   const data=buildInventoryPage(inventoryRows,{limit:Number(params.get('limit')||INVENTORY_PAGE_SIZE),offset:Number(params.get('offset')||0),sort:params.get('inventory_sort')||'latest',status:params.get('status')||'All',bhk:params.get('bhk')||'All',locality:params.get('locality')||'All',withPhotos:withPhotos===''||withPhotos===null?null:withPhotos==='true',search:params.get('search')||''},row=>imageUrls(row).length>0);
+   await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({...data,sort:params.get('inventory_sort')||'latest',latestSync:{created_at:'2026-10-01T12:45:01Z',row_count:88,changed_count:0,removed_count:0}})});
+  });
 
   await page.route('**/api/db/leads/*/workspace*',route=>route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({
    lead:{id:'LIVE-1',display_name:'Live lead',normalized_phone:'+919000000001',status:'New',lead_type:'New',tenant_type:'Not specified',priority:'Medium',classification:'Qualified Lead',requirements:{bhk:'2 BHK',locality:'Harlur',budget:50000},operator_notes:''},
@@ -89,18 +98,37 @@ test('production CRM browser journey uses only live-record surfaces',async()=>{
   await page.getByRole('button',{name:/View property/}).first().click();
   await page.getByRole('dialog',{name:'Property details'}).waitFor();
   await page.getByRole('button',{name:/Close/}).click();
+  const nextInventoryRequest=page.waitForRequest(request=>{
+   try{return request.url().includes('/api/inventory/overview')&&new URL(request.url()).searchParams.get('offset')==='24'}catch{return false}
+  });
+  await page.getByRole('button',{name:'Next inventory page'}).click();
+  await nextInventoryRequest;
+  await page.getByText('Page 2 · 25–27 of 27',{exact:true}).waitFor();
+  assert.equal(await page.locator('.inventory-card').count(),3);
+  const resetInventoryRequest=page.waitForRequest(request=>{
+   try{const params=new URL(request.url()).searchParams;return request.url().includes('/api/inventory/overview')&&params.get('status')==='Available'&&params.get('offset')==='0'}catch{return false}
+  });
+  await page.getByRole('button',{name:/Available/}).click();
+  await resetInventoryRequest;
+  await page.getByText('2 properties',{exact:true}).waitFor();
 
   await page.getByRole('button',{name:'Leads Inbox',exact:true}).click();
   assert.equal(new URL(page.url()).pathname,'/leads');
   await page.getByLabel('Sort leads').waitFor();
   const activeFollowupSummary=page.getByRole('button',{name:/^Active Follow-up.*40/});
   await activeFollowupSummary.waitFor();
-  assert.equal(await page.locator('.lead-card-activity').count(),1);
+  assert.equal(await page.locator('.lead-card-activity').count(),2);
+  assert.equal(await page.getByText('Classification',{exact:true}).count(),2);
+  assert.equal(await page.getByText('Qualified Lead',{exact:true}).count(),1);
+  assert.equal(await page.locator('.lead-card-classification strong').nth(1).textContent(),'Not recorded');
   assert.equal(await page.getByText('Lead status · New',{exact:true}).count(),1);
-  assert.equal(await page.getByText('Source number · +919148338801',{exact:true}).count(),1);
-  assert.equal(await page.getByText('Contacted date',{exact:true}).count(),1);
-  assert.equal(await page.getByText('Last message sent by',{exact:true}).count(),1);
-  assert.equal(await page.getByText('Last message date',{exact:true}).count(),1);
+  assert.equal(await page.getByText('Lead status · Waiting on Customer',{exact:true}).count(),1);
+  assert.equal(await page.getByText('Source number · +919148338801',{exact:true}).count(),2);
+  assert.equal(await page.getByText('Overdue follow-up · 1',{exact:true}).count(),1);
+  assert.equal(await page.getByText(/financial risk|budget risk/i).count(),0,'no inferred financial-risk cue is shown');
+  assert.equal(await page.getByText('Contacted date',{exact:true}).count(),2);
+  assert.equal(await page.getByText('Last message sent by',{exact:true}).count(),2);
+  assert.equal(await page.getByText('Last message date',{exact:true}).count(),2);
   assert.equal(await activeFollowupSummary.locator('b').textContent(),'40');
   await activeFollowupSummary.click();
   await page.getByText('Lead status · New',{exact:true}).waitFor();
@@ -214,6 +242,12 @@ test('production CRM browser journey uses only live-record surfaces',async()=>{
   const activity=await page.locator('.lead-card-activity').boundingBox();
   assert.ok(activity&&activity.width<=390,'lead activity columns fit the mobile card');
   assert.equal(await page.getByLabel('Sort leads').locator('option').count(),5,'all lead sort modes remain available on mobile');
+  await page.getByRole('button',{name:'Leads Inbox',exact:true}).click();
+  await page.getByText('Classification',{exact:true}).waitFor();
+  const identityBox=await page.locator('.lead-card-identity').boundingBox();
+  const classificationBox=await page.locator('.lead-card-classification').boundingBox();
+  assert.ok(identityBox&&classificationBox&&classificationBox.y>=identityBox.y+identityBox.height+6,'classification remains separate from lead identity on mobile');
+  assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=document.documentElement.clientWidth),'lead cards do not create horizontal page overflow at 390px');
 
  }finally{await browser?.close();server.kill()}
 });

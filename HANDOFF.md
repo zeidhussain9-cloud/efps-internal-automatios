@@ -1,3 +1,7 @@
+## Unreleased CRM UI feedback branch checkpoint — production unchanged
+
+The requested UI polish is isolated on `crm-ui-feedback-polish-2026-10-02`; it has not been merged or deployed. This branch keeps stored classification separate from lead status, shows only persisted overdue follow-up attention, and paginates the filtered/sorted inventory response server-side while retaining full-inventory KPI totals and facets. No production data, CRM integrations, schema, or write behavior has been changed. Local check results and any runtime caveat will be recorded here after verification.
+
 ## Authoritative current CRM UI verification — 2026-10-02
 
 This is the current production checkpoint after the audited CRM UI polish, routing hardening, verification, deployment, and repository reconciliation. Older dated sections remain historical evidence.

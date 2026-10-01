@@ -37,6 +37,19 @@ test('inventory sort query rejects unknown modes before database access',async()
  }finally{proc.kill()}
 });
 
+test('inventory pagination and filter limits reject invalid requests before database access',async()=>{
+ const{proc,base}=await start({CRM_BASIC_AUTH_USERNAME:'pilot',CRM_BASIC_AUTH_PASSWORD:'fictional-secret',CRM_DB_READ_ENABLED:'true',DATABASE_URL:'postgresql://invalid:invalid@127.0.0.1:1/postgres'});
+ try{
+  const auth='Basic '+Buffer.from('pilot:fictional-secret').toString('base64');
+  const invalid=['limit=0','limit=101','offset=-1','with_photos=yes','search='+encodeURIComponent('x'.repeat(201)),'locality='+encodeURIComponent('x'.repeat(101))];
+  for(const query of invalid){
+   const response=await fetch(base+'/api/inventory/overview?'+query,{headers:{Authorization:auth}});
+   assert.equal(response.status,400,query);
+   assert.deepEqual(await response.json(),{error:'Invalid inventory query'},query);
+  }
+ }finally{proc.kill()}
+});
+
 test('Render no longer accepts WhatsApp webhook writes',async()=>{const{proc,base}=await start({CRM_BASIC_AUTH_USERNAME:'pilot',CRM_BASIC_AUTH_PASSWORD:'fictional-secret'});try{const auth='Basic '+Buffer.from('pilot:fictional-secret').toString('base64');const response=await fetch(base+'/api/webhooks/whatsapp',{method:'POST',headers:{Authorization:auth,'Content-Type':'application/json'},body:'{}'});assert.equal(response.status,405)}finally{proc.kill()}});
 
 test('operator session login, logout and cross-origin protection',async()=>{

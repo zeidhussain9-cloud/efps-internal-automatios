@@ -1,5 +1,9 @@
 # CRM UI branch reconciliation
 
+## Unreleased feedback branch — not reconciled or deployed
+
+Work is isolated on `crm-ui-feedback-polish-2026-10-02`. The production reconciliation details below remain unchanged and do not include this branch. This work adds only CRM UI/read-only overview behavior and regression coverage; no merge, deployment, production-data write, integration change, or schema migration has been performed. Record the branch’s local verification separately from the production verification below.
+
 ## Authoritative current verified state — 2026-10-01 21:55 IST
 
 This is the latest repository/production checkpoint. Older dated sections in maintained documents are historical evidence and must not be interpreted as current state.

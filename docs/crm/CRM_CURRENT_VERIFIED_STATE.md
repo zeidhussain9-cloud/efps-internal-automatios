@@ -1,5 +1,9 @@
 # EFPS CRM — Current Verified State
 
+## Unreleased feedback branch update — production unchanged
+
+The isolated branch `crm-ui-feedback-polish-2026-10-02` separates each lead’s stored classification from lead status, shows overdue attention only for a persisted overdue open follow-up, and adds read-only server-side inventory filtering, sorting, and pagination. No merge, deployment, production-data mutation, integration change, or schema change is part of this work. Local verification results for the branch will be recorded after the requested checks.
+
 ## Authoritative full-audit override — 2026-10-01
 
 The authoritative current live-data baseline is 186 leads, 6,870 messages, 465 webhook events, 310 classifications, 196 AI runs, 196 drafts, 186 AI cursors, and 88 active inventory rows. 52 leads now have reconciled WhatsApp sender names persisted as display names, with 52 reconciliation activity records. All 196 AI runs and 310 classification records have corresponding activity-history entries; 192/196 AI runs contain recorded input/output token usage and the remaining 4 accurately display as not recorded. Build, 78/78 tests, browser 1/1, Cloudinary 829/829, deployment, and branch reconciliation are verified.

@@ -6,7 +6,8 @@ import {authorized,accessMode} from './src/server-auth.mjs';
 import {getRequestPrincipal,loginWithPassword,revokeRequestSession,sessionCookie,clearSessionCookie,sameOrigin,sessionPolicy} from './src/server-session.mjs';
 import {analyzeRealLead} from './src/ollama-adapter.mjs';
 import {createCrmRepository} from './src/crm-repository.mjs';
-import {normalizeInventorySort,sortInventoryRows} from './src/inventory-logic.mjs';
+import {buildInventoryPage,INVENTORY_PAGE_SIZE,normalizeInventorySort} from './src/inventory-logic.mjs';
+import {imageUrls} from './src/crm-logic.mjs';
 import {createCrmClassificationRepository} from './src/crm-classification-repository.mjs';
 import {draftPreflight} from './src/draft-preflight.mjs';
 import {startupDatabaseCheck} from './src/crm-startup-check.mjs';
@@ -186,11 +187,14 @@ createServer(async(req,res)=>{
   if(p==='/api/inventory/overview'){
    if(process.env.CRM_DB_READ_ENABLED!=='true'||!process.env.DATABASE_URL||mode!=='protected'){res.writeHead(404,security);return res.end('Inventory unavailable');}
    if(req.method!=='GET'){res.writeHead(405,security);return res.end('Method not allowed');}
-   const sortRaw=new URL(req.url,'http://localhost').searchParams.get('inventory_sort')||'latest';
+    const q=new URL(req.url,'http://localhost').searchParams;
+    const sortRaw=q.get('inventory_sort')||'latest';
    const sort=normalizeInventorySort(sortRaw);
    if(sortRaw!==sort){res.writeHead(400,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify({error:'Invalid inventory sort',allowed:['latest','oldest','rent_asc','rent_desc','bhk_asc','bhk_desc','locality_asc']}));}
+    const limitRaw=q.get('limit')??String(INVENTORY_PAGE_SIZE),offsetRaw=q.get('offset')??'0',withPhotosRaw=q.get('with_photos')??'';
+    if(!/^\d{1,3}$/.test(limitRaw)||Number(limitRaw)<1||Number(limitRaw)>100||!/^\d{1,7}$/.test(offsetRaw)||!['','true','false'].includes(withPhotosRaw)||['status','bhk','locality'].some(key=>(q.get(key)||'').length>100)||(q.get('search')||'').length>200){res.writeHead(400,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify({error:'Invalid inventory query'}));}
    const repo=createCrmRepository();
-   try{const data=await repo.inventoryOverview();data.rows=sortInventoryRows(data.rows,sort);data.sort=sort;res.writeHead(200,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify(data))}
+    try{const data=await repo.inventoryOverview();const page=buildInventoryPage(data.rows,{limit:Number(limitRaw),offset:Number(offsetRaw),sort,status:q.get('status')||'All',bhk:q.get('bhk')||'All',locality:q.get('locality')||'All',withPhotos:withPhotosRaw===''?null:withPhotosRaw==='true',search:q.get('search')||''},row=>imageUrls(row).length>0);Object.assign(data,page,{sort});res.writeHead(200,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify(data))}
    finally{await repo.close()}
   }
   if(p==='/api/inventory/matches'){

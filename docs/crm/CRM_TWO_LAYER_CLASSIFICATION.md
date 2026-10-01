@@ -4,6 +4,12 @@ See the authoritative current-state block at the top of this document for the ve
 
 # CRM Two-Layer Classification and Webhook Gate
 
+## Unreleased lead-card display contract
+
+On `crm-ui-feedback-polish-2026-10-02`, a promoted CRM lead may display its persisted `crm_leads.classification` value, separately from the operational `crm_leads.lead_type` status. A missing classification is shown as “Not recorded”; the UI does not infer or rewrite a classification.
+
+The Contact Classification queue remains the source of operator decisions. “Cold Inquiry” is shown only when present in stored classification data; lead age, message age, budget, and AI output do not create cold-lead or financial-risk labels. An overdue attention cue is derived only from an incomplete stored follow-up whose due time has passed. These are display-only changes and do not alter the promotion transaction or classification registry.
+
 ## Authoritative current verified state — 2026-10-01 21:55 IST
 
 This is the latest repository/production checkpoint. Older dated sections in maintained documents are historical evidence and must not be interpreted as current state.

@@ -47,3 +47,68 @@ export function sortInventoryRows(rows,sort='latest'){
    return String(a.listing_id||'').localeCompare(String(b.listing_id||''));
   });
 }
+
+export const INVENTORY_PAGE_SIZE=24;
+
+function inventoryText(value,fallback=''){
+ return value!==null&&value!==undefined&&String(value).trim()?String(value).trim():fallback;
+}
+
+export function filterInventoryRows(rows,{status='All',bhk='All',locality='All',withPhotos=null,search=''}={},hasPhotos=row=>{
+ const raw=row?.photos??row?.cloudinary_image_urls??[];
+ return Array.isArray(raw)?raw.length>0:Boolean(String(raw||'').trim());
+}){
+ const query=String(search||'').trim().toLocaleLowerCase();
+ return (Array.isArray(rows)?rows:[]).filter(row=>
+  (status==='All'||inventoryText(row.listing_state,'Unknown')===status)&&
+  (bhk==='All'||String(row.bhk??'')===String(bhk))&&
+  (locality==='All'||inventoryText(row.locality,'Unspecified')===locality)&&
+  (withPhotos===null||Boolean(hasPhotos(row))===withPhotos)&&
+  (!query||[row.listing_id,row.locality,row.society_name,row.bhk,row.source_record?.catalog_title].join(' ').toLocaleLowerCase().includes(query))
+ );
+}
+
+export function inventoryFacets(rows){
+ const values=Array.isArray(rows)?rows:[];
+ const bhkNumber=value=>{const match=String(value||'').match(/\d+(?:\.\d+)?/);return match?Number(match[0]):Number.POSITIVE_INFINITY};
+ return{
+  statuses:[...new Set(values.map(row=>inventoryText(row.listing_state,'Unknown')))].sort(),
+  bhks:[...new Set(values.map(row=>row.bhk).filter(Boolean).map(String))].sort((a,b)=>bhkNumber(a)-bhkNumber(b)||a.localeCompare(b)),
+  localities:[...new Set(values.map(row=>inventoryText(row.locality,'Unspecified')))].sort((a,b)=>a.localeCompare(b))
+ };
+}
+
+export function summarizeInventoryRows(rows,hasPhotos=row=>{
+ const raw=row?.photos??row?.cloudinary_image_urls??[];
+ return Array.isArray(raw)?raw.length>0:Boolean(String(raw||'').trim());
+}){
+ const values=Array.isArray(rows)?rows:[];
+ const statuses=[...new Set(values.map(row=>inventoryText(row.listing_state,'Unknown')))];
+ return{
+  total:values.length,
+  available:values.filter(row=>row.listing_state==='Available').length,
+  rented:values.filter(row=>row.listing_state==='Rented Out').length,
+  withPhotos:values.filter(hasPhotos).length,
+  statusCounts:Object.fromEntries(statuses.map(status=>[status,values.filter(row=>inventoryText(row.listing_state,'Unknown')===status).length]))
+ };
+}
+
+export function buildInventoryPage(rows,{limit=INVENTORY_PAGE_SIZE,offset=0,sort='latest',status='All',bhk='All',locality='All',withPhotos=null,search=''}={},hasPhotos){
+ if(!Number.isInteger(limit)||limit<1||limit>100||!Number.isInteger(offset)||offset<0)throw Error('Invalid inventory pagination');
+ const values=Array.isArray(rows)?rows:[];
+ const photoCheck=hasPhotos||((row)=>{
+  const raw=row?.photos??row?.cloudinary_image_urls??[];
+  return Array.isArray(raw)?raw.length>0:Boolean(String(raw||'').trim());
+ });
+ const filtered=sortInventoryRows(filterInventoryRows(values,{status,bhk,locality,withPhotos,search},photoCheck),sort);
+ const pageRows=filtered.slice(offset,offset+limit);
+ return{
+  rows:pageRows,
+  total:filtered.length,
+  offset,
+  limit,
+  hasMore:offset+pageRows.length<filtered.length,
+  summary:summarizeInventoryRows(values,photoCheck),
+  facets:inventoryFacets(values)
+ };
+}
