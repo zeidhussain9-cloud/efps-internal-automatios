@@ -341,3 +341,16 @@ The current Lead Workspace implementation removes the redundant Actual lead badg
 Audit scope is now explicit: the global Activity page is CRM-wide and reads all crm_activity events; Lead Workspace Activity & History uses the same event table with lead_id scoping. Both support date ranges and pagination. This is one audit/event model with different UI scopes, not two independent histories.
 
 Local verification for this checkpoint: npm run build PASS; npm test 79/79 PASS; npm run test:browser 1/1 PASS; git diff --check PASS. Deployment verification is required before this checkpoint is called production-live.
+
+## 2026-10-02 — Final recovered-candidate audit record
+
+- Candidate branch: `crm-ui-feedback-polish-2026-10-02`
+- Candidate HEAD: `1241b062dfbc7a96b139ec0a7f68d68f43baab51e`
+- Production/dashboard baseline: `97b43a7d158eb8b3cd773ed3febb45c4f8a52540`
+- Pull request: #60 — CRM UI feedback polish
+- Replit-only workspace artifacts removed before promotion.
+- Production dependency manifest and lockfile restored to the verified baseline.
+- Recovered implementation includes classification visibility/tone, overdue follow-up attention, inventory filtering/sorting/pagination, stale-response guards, classification pagination reset, and browser/server regression coverage.
+- No production merge, Render deployment, database mutation, schema migration, or webhook/integration change has been performed from this candidate.
+- Automated build/test evidence for this exact candidate is still pending; do not mark the candidate production-verified until `npm run build`, `npm test`, and `npm run test:browser` are observed passing.
+- `main` and `crm-ui-dashboard` remain unchanged from the verified production baseline until that evidence gate is satisfied.
