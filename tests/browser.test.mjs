@@ -127,6 +127,7 @@ test('production CRM browser journey uses only live-record surfaces',async()=>{
   await page.getByRole('button',{name:'Overview',exact:true}).waitFor();
   await page.getByRole('heading',{name:'Live lead',exact:true}).waitFor();
   assert.equal(await page.getByText('Actual lead',{exact:true}).count(),0);
+  assert.equal(await page.getByText(/Priority · Medium/,{exact:true}).count(),0);
   await page.getByLabel('Lead Status').waitFor();
   const oocOption=page.getByLabel('Lead Status').locator('option[value="Out of Coverage Area"]');
   assert.equal(await oocOption.count(),1);
@@ -146,6 +147,8 @@ test('production CRM browser journey uses only live-record surfaces',async()=>{
 
   await page.getByRole('button',{name:'Activity & History',exact:true}).click();
   await page.getByText('Lead audit history',{exact:true}).waitFor();
+  assert.equal(await page.getByLabel('Lead audit date range').count(),1);
+  assert.deepEqual(await page.getByLabel('Lead audit date range').locator('option').allTextContents(),['All activity','Today','Last 7 days','Last 30 days','This month','Previous month','Custom range']);
   await page.getByText('requirements.updated',{exact:true}).waitFor();
 
   await page.getByRole('button',{name:'Property Matches',exact:true}).click();
@@ -166,6 +169,8 @@ test('production CRM browser journey uses only live-record surfaces',async()=>{
   await page.getByRole('button',{name:'Dashboard',exact:true}).click();
   await page.getByRole('button',{name:'Activity',exact:true}).click();
   await page.getByText('All CRM activity across leads',{exact:false}).waitFor();
+  assert.equal(await page.getByLabel('Audit date range').count(),1);
+  assert.deepEqual(await page.getByLabel('Audit date range').locator('option').allTextContents(),['All activity','Today','Last 7 days','Last 30 days','This month','Previous month','Custom range']);
   await page.getByText('lead.updated',{exact:true}).waitFor();
   await page.getByText('Lead',{exact:true}).last().waitFor();
 

@@ -329,11 +329,15 @@ The UI implementation corresponding to this specification is production-live on 
 
 ## 2026-10-02 — Lead Workspace and audit-history closure
 
-- Lead Workspace no longer displays the redundant “Actual lead” badge.
-- The priority chip is labeled Priority · <value> and its source is crm_leads.priority; the UI exposes that source through the control label/title rather than presenting an unexplained value.
+- Lead Workspace no longer displays the redundant “Actual lead” badge or the one-time bulk-import Priority · Medium chip.
+- `crm_leads.priority` remains a stored compatibility field, but it is intentionally not rendered in the operator UI.
 - Requirements are rendered as a structured normalized table. Database-defined enum fields use controlled dropdowns; BHK and preferred-location fields provide current inventory values as datalist suggestions while preserving custom-value entry.
 - Conversation property boundaries are evidence-based. A stored supported property URL creates a property-reference section; only messages explicitly replying to that source-message ID are grouped into it. Other messages remain in General conversation rather than being inferred into a property.
 - Dashboard inventory KPI is Total available inventory, sourced from crm_inventory_snapshot rows with listing_state='Available' and deleted_at IS NULL.
 - Global Activity is CRM-wide and reads all crm_activity events, including lead-scoped events. Lead Workspace Activity & History reads the same event table with lead_id scoping. Both support date ranges and pagination.
 
 - Audit rows display a presentation-only event category derived from the persisted action so operators can distinguish Lead, Message, Classification, Requirements, AI, Follow-up, Inventory, Webhook and System/Operator activity without changing stored event semantics.
+
+- Leads Inbox cards use separated vertical rhythm, consistent borders/radius/elevation, and an identity row with deliberate name-to-phone spacing on mobile and desktop.
+- The one-time bulk-import `crm_leads.priority` value is not rendered in the Lead Workspace UI.
+- Global and lead-scoped audit history use the same labelled Date range dropdown and Custom range behavior for consistent production interaction.

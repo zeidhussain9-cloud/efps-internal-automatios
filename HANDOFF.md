@@ -292,7 +292,7 @@ Final current-state evidence is maintained in the authoritative block at the top
 
 ## 2026-10-02 — UI/audit closure checkpoint
 
-The current Lead Workspace implementation removes the redundant Actual lead badge, makes the CRM priority source explicit, uses the normalized requirements table with controlled enum values, separates explicitly evidenced property conversations from general messages, and labels the dashboard inventory KPI as Total available inventory.
+The current Lead Workspace implementation removes the redundant Actual lead badge and the one-time bulk-import Priority · Medium UI chip, uses the normalized requirements table with controlled enum values, separates explicitly evidenced property conversations from general messages, and labels the dashboard inventory KPI as Total available inventory.
 
 Audit scope is now explicit: the global Activity page is CRM-wide and reads all crm_activity events; Lead Workspace Activity & History uses the same event table with lead_id scoping. Both support date ranges and pagination. This is one audit/event model with different UI scopes, not two independent histories.
 

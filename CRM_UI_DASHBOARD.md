@@ -233,7 +233,7 @@ Current live checkpoint: 186 leads, 6,870 messages, 310 classifications, 196 AI 
 
 ## 2026-10-02 — Lead Workspace UI and audit-history closure
 
-The Lead Workspace header no longer exposes the redundant “Actual lead” badge. The visible priority chip is explicitly sourced from `crm_leads.priority`; for example, the verified lead `+918939844866` currently has priority `Medium` in the database.
+The Lead Workspace header no longer exposes the redundant “Actual lead” badge or the bulk-import `Priority · Medium` chip. Priority remains stored in `crm_leads.priority` for data compatibility, but that one-time bulk-extraction field is intentionally not rendered in the operator UI.
 
 The Requirements tab is a normalized editable table backed by `crm_lead_requirements`. Enumerated fields use the database-defined allowed values; BHK and preferred-location inputs expose current inventory values as browser datalist suggestions without preventing valid custom requirements. Saves remain protected, transactional and audit-recorded.
 
@@ -246,3 +246,12 @@ These changes are locally verified on `crm-ui-dashboard` with the repository tes
 ## 2026-10-02 — Audit event categories
 
 Global and lead-scoped audit rows now display a derived category label (Lead, Message, Classification, Requirements, AI, Follow-up, Inventory, Webhook, or System / Operator) alongside the persisted action. The category is presentation-only and does not alter the underlying audit record.
+
+
+## 2026-10-02 — Lead list and audit filter UI refinement
+
+The Leads Inbox now uses separated production cards with deliberate vertical rhythm instead of visually merging adjacent leads. Each lead card has a consistent outer margin, border, radius and subtle elevation. Lead name and phone are rendered as a single identity row with an explicit gap and baseline alignment; the phone no longer touches the name on narrow screens.
+
+The Lead Workspace no longer renders the one-time bulk-import Priority field. `crm_leads.priority` remains stored for compatibility but is not presented as an operator-facing UI section.
+
+Global Audit Activity and Lead Workspace Activity & History now use the same production date-range control: a single labelled Date range dropdown with All activity, Today, Last 7 days, Last 30 days, This month, Previous month and Custom range. Custom range reveals From/To date fields only when selected. This replaces the previous row of ad-hoc action buttons and gives both audit scopes the same interaction model.
