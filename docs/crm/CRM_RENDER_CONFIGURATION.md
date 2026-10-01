@@ -18,7 +18,7 @@ Evidence snapshot after final verification:
 - AI/drafts: 196/196 draft→AI-run lead mappings valid; stale evidence references = 0; invalid cursor lead links = 0
 - Inventory: 88 active rows; 71 Available; 17 Rented Out; invalid media-array rows = 0
 - Cloudinary: 829/829 distinct production URLs returned HTTP 200 with image/* content-type using direct HEAD checks from the production-machine network path
-- Tests: npm run build PASS; npm test 76/76 PASS; npm run test:browser 1/1 PASS
+- Tests: npm run build PASS; npm test 78/78 PASS; npm run test:browser 1/1 PASS
 - Supabase Edge Function whapi-crm-webhook: ACTIVE version 8
 - Legacy AWS webhook/handler files: no changes in the CRM hardening commit range
 - 24-item audit status: GREEN / VERIFIED
@@ -66,7 +66,7 @@ This is the latest repository/production checkpoint. Older dated sections in mai
 - **Inventory:** 88 active rows = 71 Available + 17 Rented Out; 1,377 sync runs; latest sync recorded 88 rows / 0 changed / 0 removed; inventory-change rows = 0.
 - **Cloudinary:** 829/829 distinct production URLs returned HTTP 200 with `image/*` content-type by direct HEAD checks from the production-machine network path.
 - **AI integrity:** draft→AI-run lead mismatch = 0; stale evidence references = 0; invalid cursor lead links = 0.
-- **Tests:** `npm run build` PASS; `npm test` 76/76 PASS; `npm run test:browser` 1/1 PASS.
+- **Tests:** `npm run build` PASS; `npm test` 78/78 PASS; `npm run test:browser` 1/1 PASS.
 - **Supabase Edge Function:** `whapi-crm-webhook` ACTIVE v8.
 - **AWS legacy webhook:** no changes in the audited CRM hardening range.
 - **24-item CRM audit:** GREEN / VERIFIED.
