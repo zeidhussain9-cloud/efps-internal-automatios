@@ -101,11 +101,9 @@ test('production CRM browser journey uses only live-record surfaces',async()=>{
   await page.getByRole('dialog',{name:'Property details'}).waitFor();
   await page.getByRole('button',{name:/Close/}).click();
   await page.getByLabel('Inventory per page').selectOption('20');
-  const nextInventoryRequest=page.waitForRequest(request=>{
-   try{return request.url().includes('/api/inventory/overview')&&new URL(request.url()).searchParams.get('offset')==='20'&&new URL(request.url()).searchParams.get('limit')==='20'}catch{return false}
-  });
+  const nextInventoryResponse=page.waitForResponse(response=>{try{const params=new URL(response.url()).searchParams;return response.url().includes('/api/inventory/overview')&&params.get('offset')==='20'&&params.get('limit')==='20'&&response.status()===200}catch{return false}});
   await page.getByRole('button',{name:'Next inventory page'}).click();
-  await nextInventoryRequest;
+  await nextInventoryResponse;
   await page.getByText('Page 2 · 21–27 of 27',{exact:true}).waitFor();
   assert.equal(await page.locator('.inventory-card').count(),7);
   const resetInventoryRequest=page.waitForRequest(request=>{
