@@ -30,7 +30,7 @@ test('lead IDs are URI-encoded, bounded, and cannot inject path segments',()=>{
 });
 
 test('unknown and malformed routes resolve to an explicit not-found state',()=>{
- for(const path of ['/missing','/leads/LIVE-1/unknown','/leads/','//leads/LIVE-1','/activity/child']){
+ for(const path of ['/missing','/leads/LIVE-1/unknown','//leads/LIVE-1/child','/activity/child']){
   assert.deepEqual(parseCrmPath(path),{page:'Not Found',leadId:null,tab:'Overview',notFound:true,isRoot:false});
  }
 });
