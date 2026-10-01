@@ -151,3 +151,17 @@ test('follow-up create and complete write durable activity entries',async()=>{
  assert.equal(completed.id,'FU-1');
  assert.equal(calls.filter(x=>x[0].startsWith('INSERT INTO crm_activity')).length,2);
 });
+
+
+test('dashboard stats expose qualified CRM count and active inventory count',async()=>{
+ const calls=[];const pool={query:async(sql,args)=>{calls.push([sql,args]);if(sql.includes('crm_inventory_snapshot'))return{rows:[{n:88}]};if(sql.includes("status='promoted'"))return{rows:[{n:186}]};if(sql.includes("status='pending'"))return{rows:[{n:23}]};if(sql.includes("status='excluded'"))return{rows:[{n:13}]};if(sql.includes('crm_webhook_events'))return{rows:[{n:0}]};if(sql.includes('crm_followups'))return{rows:[{n:0}]};if(sql.includes('lead_type AS status'))return{rows:[]};return{rows:[{n:186}]};}};
+ const repo=createCrmRepository({pool});const stats=await repo.dashboardStats('+919148338801');
+ assert.equal(stats.qualifiedClassificationCount,186);assert.equal(stats.notPushedClassificationCount,23);assert.equal(stats.activeInventoryCount,88);
+});
+
+test('AI run save persists usage metrics',async()=>{
+ const calls=[];const pool={query:async(sql,args)=>{calls.push([sql,args]);return{rows:[{id:'RUN-1',lead_id:'L-1',input_tokens:120,output_tokens:30,total_tokens:150}]}}};
+ const repo=createCrmRepository({pool});
+ const row=await repo.saveAiRun({leadId:'L-1',modelName:'model',provider:'aws-bedrock',proposal:{},usage:{inputTokens:120,outputTokens:30,totalTokens:150}});
+ assert.equal(row.input_tokens,120);assert.equal(row.output_tokens,30);assert.equal(row.total_tokens,150);assert.match(calls[0][0],/input_tokens,output_tokens,total_tokens/);
+});
