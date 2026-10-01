@@ -42,6 +42,7 @@ export function createCrmClassificationRepository({connectionString=process.env.
         if(code!=='qualified_lead'){
         await c.query('UPDATE crm_contact_classifications SET classification_code=$1,classification_label=$2,classification_source=$3,confidence=$4,status=\'excluded\',classified_at=now(),last_seen_at=greatest(last_seen_at,now()) WHERE id=$5',[code,label,source,confidence,id]);
         await c.query('UPDATE crm_messages SET classification_id=$1 WHERE classification_id=$1',[id]);
+        await c.query('INSERT INTO crm_activity(lead_id,actor,action,details) VALUES(NULL,$1,$2,$3::jsonb)',[actor,'contact.classified',{classification_id:id,phone:row.phone,classification:code,status:'excluded'}]);
           return {status:'excluded',classification:code,lead_id:null};
         }
         let lead=(await c.query('SELECT l.* FROM crm_leads l JOIN crm_lead_sources s ON s.lead_id=l.id WHERE s.source_number=$1 AND s.source_contact_id=$2 LIMIT 1 FOR UPDATE OF l',[SOURCE_NUMBER,row.phone])).rows[0];
@@ -65,6 +66,7 @@ export function createCrmClassificationRepository({connectionString=process.env.
             AND m.lead_id=$1
             AND (e.lead_id IS DISTINCT FROM $1 OR e.message_id IS DISTINCT FROM m.id)`,[lead.id,SOURCE_NUMBER,row.phone]);
         const events=(await c.query('SELECT id,provider_event_id,direction,message_type,payload,message_at FROM crm_webhook_events WHERE source_number=$1 AND phone=$2 AND provider_event_id IS NOT NULL ORDER BY message_at ASC,id ASC',[SOURCE_NUMBER,row.phone])).rows;
+        await c.query('INSERT INTO crm_activity(lead_id,actor,action,details) VALUES($1,$2,$3,$4::jsonb)',[lead.id,actor,'contact.classified',JSON.stringify({classification_id:id,classification:code,status:'promoted',source_number:SOURCE_NUMBER})]);
         for(const e of events){
           const m=e.payload||{};let body=null;
           if(m.text&&typeof m.text==='object')body=String(m.text.body||'').trim()||null;

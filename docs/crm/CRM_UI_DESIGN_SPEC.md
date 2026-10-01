@@ -23,7 +23,7 @@ This is the latest repository/production checkpoint. Older dated sections in mai
 - **Inventory:** 88 active rows = 71 Available + 17 Rented Out; 1,377 sync runs; latest sync recorded 88 rows / 0 changed / 0 removed; inventory-change rows = 0.
 - **Cloudinary:** 829/829 distinct production URLs returned HTTP 200 with `image/*` content-type by direct HEAD checks from the production-machine network path.
 - **AI integrity:** draft→AI-run lead mismatch = 0; stale evidence references = 0; invalid cursor lead links = 0.
-- **Tests:** `npm run build` PASS; `npm test` 76/76 PASS; `npm run test:browser` 1/1 PASS.
+- **Tests:** `npm run build` PASS; `npm test` 78/78 PASS; `npm run test:browser` 1/1 PASS.
 - **Supabase Edge Function:** `whapi-crm-webhook` ACTIVE v8.
 - **AWS legacy webhook:** no changes in the audited CRM hardening range.
 - **24-item CRM audit:** GREEN / VERIFIED.
@@ -47,7 +47,7 @@ Evidence snapshot after final verification:
 - AI/drafts: 196/196 draft→AI-run lead mappings valid; stale evidence references = 0; invalid cursor lead links = 0
 - Inventory: 88 active rows; 71 Available; 17 Rented Out; invalid media-array rows = 0
 - Cloudinary: 829/829 distinct production URLs returned HTTP 200 with image/* content-type using direct HEAD checks from the production-machine network path
-- Tests: npm run build PASS; npm test 76/76 PASS; npm run test:browser 1/1 PASS
+- Tests: npm run build PASS; npm test 78/78 PASS; npm run test:browser 1/1 PASS
 - Supabase Edge Function whapi-crm-webhook: ACTIVE version 8
 - Legacy AWS webhook/handler files: no changes in the CRM hardening commit range
 - 24-item audit status: GREEN / VERIFIED
@@ -228,12 +228,12 @@ Contact Classification is a pre-lead queue, not another lead-management dashboar
 
 The screen has exactly two sub-tabs:
 
-1. Not pushed to CRM — pending and non-qualified contacts.
-2. Qualified leads pushed to CRM — promoted contacts.
+1. Waiting for classification — pending and non-qualified contacts.
+2. Total active inventory to CRM — promoted contacts.
 
 Each row has one classification dropdown and one explicit Update button. Selecting a value does not persist it until Update is pressed and the server confirms the transaction.
 
-- Non-qualified classifications remain in Not pushed to CRM.
+- Non-qualified classifications remain in Waiting for classification.
 - Qualified Lead creates/links the CRM lead, links preserved messages, and moves the contact to the qualified tab after the transaction commits.
 - Failed writes stay on the same row and display the returned error.
 - No additional classification filter is shown.
@@ -245,8 +245,8 @@ The dashboard then surfaces the next operational work: classification counts and
 
 The production UI intentionally uses one simple Contact Classification screen with two tabs:
 
-1. **Not pushed to CRM** — pending and non-qualified contacts.
-2. **Qualified leads pushed to CRM** — successfully promoted contacts.
+1. **Waiting for classification** — pending and non-qualified contacts.
+2. **Total active inventory to CRM** — successfully promoted contacts.
 
 Each contact row shows the phone number, a direct **Open WhatsApp** link, a classification selector and an explicit **Update** button. The button is disabled until the selected classification differs from the stored value. A successful non-qualified update keeps the contact outside CRM. A successful Qualified Lead update creates/links the CRM lead and preserved messages transactionally, then the UI moves the contact to the promoted tab. A failed write stays in place and displays the server error instead of silently moving the contact.
 
@@ -324,4 +324,4 @@ The AI & Drafts workspace now shows provider/model/fallback provenance, source m
 
 ## 2026-10-01 — Final implementation verification
 
-The UI implementation corresponding to this specification is production-live on crm-ui-dashboard. The final hardening release has passed build, 76/76 automated tests, and 1/1 browser regression. Search/pagination, inventory sorting and KPI filtering, draft/follow-up actions, error/empty states, Cloudinary fallback handling, and lead-workspace lifecycle controls are covered by the verified release. Production webhook reconciliation and AI persistence are live against real Supabase data. All 24 CRM audit items are GREEN.
+The UI implementation corresponding to this specification is production-live on crm-ui-dashboard. The final hardening release has passed build, 78/78 automated tests, and 1/1 browser regression. Search/pagination, inventory sorting and KPI filtering, draft/follow-up actions, error/empty states, Cloudinary fallback handling, and lead-workspace lifecycle controls are covered by the verified release. Production webhook reconciliation and AI persistence are live against real Supabase data. All 24 CRM audit items are GREEN.

@@ -23,7 +23,7 @@ This is the latest repository/production checkpoint. Older dated sections in mai
 - **Inventory:** 88 active rows = 71 Available + 17 Rented Out; 1,377 sync runs; latest sync recorded 88 rows / 0 changed / 0 removed; inventory-change rows = 0.
 - **Cloudinary:** 829/829 distinct production URLs returned HTTP 200 with `image/*` content-type by direct HEAD checks from the production-machine network path.
 - **AI integrity:** draft→AI-run lead mismatch = 0; stale evidence references = 0; invalid cursor lead links = 0.
-- **Tests:** `npm run build` PASS; `npm test` 76/76 PASS; `npm run test:browser` 1/1 PASS.
+- **Tests:** `npm run build` PASS; `npm test` 78/78 PASS; `npm run test:browser` 1/1 PASS.
 - **Supabase Edge Function:** `whapi-crm-webhook` ACTIVE v8.
 - **AWS legacy webhook:** no changes in the audited CRM hardening range.
 - **24-item CRM audit:** GREEN / VERIFIED.
@@ -98,7 +98,7 @@ For every implementation, the agent must review all maintained root and `docs/` 
 - Production source: `+919148338801`; `+917975102130` and `+919902024973` remain UI-visible but inactive.
 - Supabase current state: 186 leads, 310 classifications, 23 pending, 186 promoted, 6,870 messages, 465 webhook events.
 - Webhook audit: 46/46 processed, 0 received, 0 failed.
-- Contact Classification now has three queues: Not pushed to CRM, Qualified lead pushed to CRM, and Unqualified leads. Not pushed includes pending + explicitly unqualified; Unqualified is the explicit excluded subset.
+- Contact Classification now has three queues: Waiting for classification, Qualified lead pushed to CRM, and Unqualified leads. Waiting for classification contains only pending contacts; Unqualified leads are the explicit excluded subset.
 - RLS is enabled on all CRM tables; anon/authenticated have no SELECT privilege. Render reports Basic Auth configured and database connectivity connected.
 - Browser Realtime is notification-only; the server webhook/database path is independent.
 
@@ -172,9 +172,9 @@ The current CRM UI deployment is live. WhAPI events for +919148338801 are record
 
 ## CRM daily operating flow — 2026-09-30
 
-- Contact Classification is a single qualification queue with two sub-tabs: Not pushed to CRM, and Qualified leads pushed to CRM.
+- Contact Classification is a single qualification queue with two sub-tabs: Waiting for classification, and Qualified leads pushed to CRM.
 - There is no separate classification filter. Each contact has one classification dropdown and an explicit Update action.
-- Selecting a non-qualified classification saves the classification and keeps the contact in Not pushed to CRM.
+- Selecting a non-qualified classification saves the classification and moves the contact to Unqualified leads.
 - Selecting Qualified Lead and clicking Update performs the audited Supabase promotion transaction; only after success does the contact move to Qualified leads pushed to CRM and appear in Leads Inbox with preserved messages linked.
 - The Dashboard is intentionally action-oriented: CRM leads, contacts not pushed, qualified contacts pushed, and follow-ups due today, followed by the next open follow-ups.
 - Classification writes are explicitly gated by CRM_CLASSIFICATION_WRITE_ENABLED=true, protected CRM access, DATABASE_URL, and the server-side repository transaction.

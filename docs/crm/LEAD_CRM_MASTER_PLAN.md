@@ -18,7 +18,7 @@ Evidence snapshot after final verification:
 - AI/drafts: 196/196 draft→AI-run lead mappings valid; stale evidence references = 0; invalid cursor lead links = 0
 - Inventory: 88 active rows; 71 Available; 17 Rented Out; invalid media-array rows = 0
 - Cloudinary: 829/829 distinct production URLs returned HTTP 200 with image/* content-type using direct HEAD checks from the production-machine network path
-- Tests: npm run build PASS; npm test 76/76 PASS; npm run test:browser 1/1 PASS
+- Tests: npm run build PASS; npm test 78/78 PASS; npm run test:browser 1/1 PASS
 - Supabase Edge Function whapi-crm-webhook: ACTIVE version 8
 - Legacy AWS webhook/handler files: no changes in the CRM hardening commit range
 - 24-item audit status: GREEN / VERIFIED
@@ -56,7 +56,7 @@ This is the latest repository/production checkpoint. Older dated sections in mai
 - **Inventory:** 88 active rows = 71 Available + 17 Rented Out; 1,377 sync runs; latest sync recorded 88 rows / 0 changed / 0 removed; inventory-change rows = 0.
 - **Cloudinary:** 829/829 distinct production URLs returned HTTP 200 with `image/*` content-type by direct HEAD checks from the production-machine network path.
 - **AI integrity:** draft→AI-run lead mismatch = 0; stale evidence references = 0; invalid cursor lead links = 0.
-- **Tests:** `npm run build` PASS; `npm test` 76/76 PASS; `npm run test:browser` 1/1 PASS.
+- **Tests:** `npm run build` PASS; `npm test` 78/78 PASS; `npm run test:browser` 1/1 PASS.
 - **Supabase Edge Function:** `whapi-crm-webhook` ACTIVE v8.
 - **AWS legacy webhook:** no changes in the audited CRM hardening range.
 - **24-item CRM audit:** GREEN / VERIFIED.
@@ -285,7 +285,7 @@ Supabase `easyfind-crm` (`qttcutwzehtskfcwxkwj`, Mumbai) is ACTIVE_HEALTHY and i
 - Render deployed commit `a0efd02`: live inventory API is read by the React Inventory and Property Matches views when authenticated and available; synthetic fallback is explicitly labeled. The UI refreshes the inventory API every 60 seconds. Existing lead records are still fictional fixtures.
 - Render has the live Google Sheets service account credential and `CRM_HOUSING_SHEET_READ_ENABLED=true`, plus a signed inventory sync endpoint. No new AWS dependency. Full-row source hashes include the Sheet raw text and links for change detection, but raw messages and contact links are deliberately excluded from the CRM `source_record` for privacy.
 - **Historical pre-hardening checkpoint:** the five-minute scheduler was previously blocked on Vault HMAC provisioning. This is superseded by the verified current state: `crm_inventory_sheet_reconcile_5m` is active every five minutes, 1,377 sync records exist, 88 active inventory rows reconcile, and the latest sync recorded 88/0/0. Future field-level changes are recorded in `crm_inventory_sync_changes`.
-- Historical test checkpoint; current repository verification is 76/76 automated tests and browser 1/1.
+- Historical test checkpoint; current repository verification is 78/78 automated tests and browser 1/1.
 - Render paid cron was NOT provisioned: the free plan is unsupported. The Supabase scheduler avoids creating a new paid Render service once its secret is configured.
 
 ## 2026-09-27 — Inventory UI reconciliation correction
@@ -337,8 +337,8 @@ Historical branch-reconciliation note superseded on 2026-09-30: `crm-ui-dashboar
 ## 2026-09-30 — CRM daily workflow resolved
 
 - [x] Replaced the separate classification filter with one two-tab Contact Classification queue.
-- [x] Not pushed to CRM contains pending and non-qualified contacts.
-- [x] Qualified leads pushed to CRM contains promoted contacts.
+- [x] Waiting for classification contains pending and non-qualified contacts.
+- [x] Total active inventory to CRM contains promoted contacts.
 - [x] Added explicit dropdown → Update workflow with visible saving/error state.
 - [x] Qualified Lead promotion is transactional and links preserved messages before queue movement.
 - [x] Added Dashboard daily counters and next open follow-ups.

@@ -21,7 +21,7 @@ All 24 audit items are GREEN / VERIFIED at the defined repository, database, tes
 17. Legacy AWS webhook — GREEN: no changes in the audited CRM hardening commit range for handler.py, events_handler.py, commands.py, commands_handler.py, interactive_handler.py, leads_worker.py, or webhook_handler.py.
 18. Production regression — GREEN: Render deployment is LIVE on commit 1c196577; /health returns HTTP 200; live Supabase evidence is reconciled.
 19. Documentation — GREEN: six authoritative CRM documents plus this full-audit document now carry the current closure snapshot.
-20. Full build/unit/integration/browser tests — GREEN: build PASS; 76/76 application tests PASS; 1/1 browser regression PASS.
+20. Full build/unit/integration/browser tests — GREEN: build PASS; 78/78 application tests PASS; 1/1 browser regression PASS.
 21. Production deployment — GREEN: Render deploy dep-dav82h3m8hqs7399j4ug is LIVE on 1c196577.
 22. Branch reconciliation — GREEN: PR #46 merged without rewriting main history; main is merge commit b2fbf366021852aedd4bf0ec66484ad421fb5662.
 23. Tree equality — GREEN: tree(main) == tree(crm-ui-dashboard) == 908b635b2b7b04bdf3515934de2769393e282c34.
@@ -129,7 +129,7 @@ Tracked hashes for the legacy AWS webhook/handler files were unchanged between `
 Local repository verification on `crm-ui-dashboard`:
 
 - `npm run build`: PASS
-- `npm test`: PASS, 76/76
+- `npm test`: PASS, 78/78
 - `npm run test:browser`: PASS, 1/1
 - `git diff --check`: PASS
 - Live duplicate webhook replay: HTTP 200 with `already_processed`.
@@ -168,7 +168,7 @@ Render production:
 | 17 | Verify AWS Legacy Webhook Remains Untouched | VERIFIED by tracked-file hash comparison |
 | 18 | Production Regression Test on Real Data | PARTIAL: live DB/webhook/inventory/AI evidence verified and Render is live; authenticated browser regression against production is environment-limited |
 | 19 | Update CRM Documentation to Verified State | VERIFIED: audit and current-state pointers updated |
-| 20 | Run Full Build, Unit, Integration, and Browser Tests | VERIFIED: 76/76 and 1/1 |
+| 20 | Run Full Build, Unit, Integration, and Browser Tests | VERIFIED: 78/78 and 1/1 |
 | 21 | Deploy and Verify Production | VERIFIED: latest Render deployment for commit `1c3eb76...` is live |
 | 22 | Reconcile crm-ui-dashboard into main Without Rewriting History | VERIFIED: main reconciliation commit df8898e is complete, no history rewrite |
 | 23 | Verify tree(main) == tree(crm-ui-dashboard) | VERIFIED: final tree equality check completed |
@@ -206,7 +206,7 @@ This section supersedes the earlier in-progress evidence gates above for current
 - Live idempotency replay: authenticated replay of event 5912 returned already_processed; totals remained 465 events / 6,870 messages.
 - Production: Render deployment dep-dav82h3m8hqs7399j4ug for commit 1c196577fc414be52c8fc889b3886f11e0e9da5d is live; /health returns HTTP 200; unauthenticated webhook POST returns HTTP 401.
 - Legacy AWS: no AWS/legacy handler changes are present in the release diff; the only webhook-related source change is the Supabase whapi-crm-webhook path.
-- Repository/tests: build PASS; 76/76 automated tests PASS; 1/1 browser regression PASS; git diff --check PASS.
+- Repository/tests: build PASS; 78/78 automated tests PASS; 1/1 browser regression PASS; git diff --check PASS.
 - Repository reconciliation: remote origin/main and origin/crm-ui-dashboard currently have the same tree SHA 908b635b2b7b04bdf3515934de2769393e282c34; commit histories differ without rewriting history.
 
 24-item audit status: GREEN.

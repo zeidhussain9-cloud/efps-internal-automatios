@@ -25,7 +25,7 @@ test('production CRM browser journey uses only live-record surfaces',async()=>{
   })}));
 
   await page.route('**/api/db/stats*',route=>route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({
-   sourceNumber:'+919148338801',leadCount:228,liveLeadCount:3,pendingClassificationCount:4,webhookErrorCount:0,leadStatusCounts:[{status:'New',count:12},{status:'Active Follow-up',count:40},{status:'Waiting on Customer',count:18},{status:'Waiting on Us',count:10},{status:'Nurture',count:30},{status:'Dormant',count:25},{status:'Converted',count:8},{status:'Lost',count:15},{status:'On Hold',count:20},{status:'Out of Coverage Area',count:50}],supportedSourceNumbers:['+919148338801','+917975102130','+919902024973']
+   sourceNumber:'+919148338801',leadCount:228,liveLeadCount:3,pendingClassificationCount:4,notPushedClassificationCount:4,qualifiedClassificationCount:228,activeInventoryCount:3,webhookErrorCount:0,leadStatusCounts:[{status:'New',count:12},{status:'Active Follow-up',count:40},{status:'Waiting on Customer',count:18},{status:'Waiting on Us',count:10},{status:'Nurture',count:30},{status:'Dormant',count:25},{status:'Converted',count:8},{status:'Lost',count:15},{status:'On Hold',count:20},{status:'Out of Coverage Area',count:50}],supportedSourceNumbers:['+919148338801','+917975102130','+919902024973']
   })}));
 
   await page.route('https://res.cloudinary.com/**',route=>route.fulfill({status:200,contentType:'image/svg+xml',body:'<svg xmlns="http://www.w3.org/2000/svg" width="320" height="220"><rect width="320" height="220" fill="#dce8f0"/></svg>'}));
@@ -56,7 +56,11 @@ test('production CRM browser journey uses only live-record surfaces',async()=>{
   await page.getByRole('button',{name:'Sign in'}).click();
 
   await page.getByText('Production data').waitFor();
-  await page.getByText('228 leads').waitFor();
+  await page.getByText('228',{exact:true}).first().waitFor();
+  await page.getByText('Actually qualified',{exact:false}).waitFor();
+  await page.getByText('Waiting for classification',{exact:false}).waitFor();
+  await page.getByText('Total active inventory',{exact:false}).waitFor();
+  await page.getByText('Follow-ups',{exact:true}).first().waitFor();
 
   await page.getByRole('button',{name:'Inventory',exact:true}).click();
   await page.getByRole('heading',{name:'Property inventory'}).waitFor();
@@ -120,6 +124,7 @@ test('production CRM browser journey uses only live-record surfaces',async()=>{
 
   await page.getByRole('button',{name:'Overview',exact:true}).waitFor();
   await page.getByRole('heading',{name:'Live lead',exact:true}).waitFor();
+  assert.equal(await page.getByText('Actual lead',{exact:true}).count(),0);
   await page.getByLabel('Lead Status').waitFor();
   const oocOption=page.getByLabel('Lead Status').locator('option[value="Out of Coverage Area"]');
   assert.equal(await oocOption.count(),1);
