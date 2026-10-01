@@ -6,6 +6,12 @@ Historical checkpoint retained below.
 
 ## Current state
 
+## Current production checkpoint — 2026-10-01
+
+Render `easyfind-crm-d01-d05` is live from the synchronized `crm-ui-dashboard` release. Supabase source `+919148338801` currently has 186 source-linked leads, 292 classifications, 5 pending classifications, 186 promoted classifications, 6,641 messages, and 214 webhook events, all 214 processed with 0 received and 0 failed.
+
+The Leads Inbox card surface is simplified to lead status + source number. The inbox header exposes live clickable counts for all lead statuses and clicking a status applies the server-side filter. AI draft runs persist provider usage metrics (input/output/total tokens and estimated USD cost where pricing is known) alongside model/provider provenance. Complete conversation history remains authoritative; incremental/delta analysis is intentionally not implemented.
+
 ## Current state
 
 The active workstream is the **production CRM UI on `crm-ui-dashboard`**. The current production source is WhatsApp `+919148338801`; historical and live data reconcile through Supabase. The other two configured source numbers remain visible in the UI for later onboarding.

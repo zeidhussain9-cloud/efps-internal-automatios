@@ -26,7 +26,7 @@ test('production CRM browser journey uses only live-record surfaces',async()=>{
   })}));
 
   await page.route('**/api/db/stats*',route=>route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({
-   sourceNumber:'+919148338801',leadCount:228,liveLeadCount:3,pendingClassificationCount:4,webhookErrorCount:0,supportedSourceNumbers:['+919148338801','+917975102130','+919902024973']
+   sourceNumber:'+919148338801',leadCount:228,liveLeadCount:3,pendingClassificationCount:4,webhookErrorCount:0,leadStatusCounts:[{status:'New',count:12},{status:'Active Follow-up',count:40},{status:'Waiting on Customer',count:18},{status:'Waiting on Us',count:10},{status:'Nurture',count:30},{status:'Dormant',count:25},{status:'Converted',count:8},{status:'Lost',count:15},{status:'On Hold',count:20},{status:'Out of Coverage Area',count:50}],supportedSourceNumbers:['+919148338801','+917975102130','+919902024973']
   })}));
 
   await page.route('**/api/inventory/overview*',route=>route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({rows:[],latestSync:null})}));
@@ -35,7 +35,7 @@ test('production CRM browser journey uses only live-record surfaces',async()=>{
    lead:{id:'LIVE-1',display_name:'Live lead',normalized_phone:'+919000000001',status:'New',lead_type:'New',tenant_type:'Not specified',priority:'Medium',classification:'Qualified Lead',requirements:{bhk:'2 BHK',locality:'Harlur',budget:50000},operator_notes:''},
    sources:[{source_number:'+919148338801'}],
    messages:[{id:1,source_number:'+919148338801',direction:'Incoming',message_type:'text',body:'Historical conversation message',sender_name:'Customer',message_at:'2026-09-30T00:00:00Z'}],
-   activity:[],followups:[],drafts:[{id:'DRAFT-2',version:2,body:'Hello from persisted draft',status:'draft',created_at:'2026-10-01T02:30:00Z',ai_run_id:'RUN-2',ai_provider:'aws-bedrock',model_name:'au.anthropic.claude-opus-4-6-v1'},{id:'DRAFT-1',version:1,body:'Older draft',status:'draft',created_at:'2026-10-01T02:29:00Z',ai_run_id:'RUN-1',ai_provider:'ollama',model_name:'gpt-oss:20b'}],ai_runs:[{id:'RUN-2',model_name:'au.anthropic.claude-opus-4-6-v1',status:'proposed',created_at:'2026-10-01T02:30:00Z'}]
+   activity:[],followups:[],drafts:[{id:'DRAFT-2',version:2,body:'Hello from persisted draft',status:'draft',created_at:'2026-10-01T02:30:00Z',ai_run_id:'RUN-2',ai_provider:'aws-bedrock',model_name:'au.anthropic.claude-opus-4-6-v1',input_tokens:12000,output_tokens:850,total_tokens:12850,estimated_cost_usd:0.08125},{id:'DRAFT-1',version:1,body:'Older draft',status:'draft',created_at:'2026-10-01T02:29:00Z',ai_run_id:'RUN-1',ai_provider:'ollama',model_name:'gpt-oss:20b'}],ai_runs:[{id:'RUN-2',model_name:'au.anthropic.claude-opus-4-6-v1',status:'proposed',created_at:'2026-10-01T02:30:00Z',input_tokens:12000,output_tokens:850,total_tokens:12850,estimated_cost_usd:0.08125}]
   })}));
 
   await page.route('**/api/db/leads/LIVE-1',route=>route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({id:'LIVE-1',lead_type:'Active Follow-up',tenant_type:'Family'})}));
@@ -50,12 +50,13 @@ test('production CRM browser journey uses only live-record surfaces',async()=>{
   await page.getByText('Production data').waitFor();
   await page.getByText('228 leads').waitFor();
   await page.getByLabel('Sort leads').waitFor();
-  assert.equal(await page.getByText('Contacted date',{exact:true}).count(),1);
-  assert.equal(await page.getByText('Last message sent by',{exact:true}).count(),1);
-  assert.equal(await page.getByText('Last message date',{exact:true}).count(),1);
-  assert.equal(await page.locator('.lead-card-activity strong').nth(0).textContent(),'26-August-2026 / 13:00');
-  assert.equal(await page.locator('.lead-card-activity strong').nth(1).textContent(),'Customer');
-  assert.equal(await page.locator('.lead-card-activity strong').nth(2).textContent(),'30-September-2026 / 21:56');
+  await page.getByText('Active Follow-up',{exact:true}).first().waitFor();
+  assert.equal(await page.locator('.lead-card-activity').count(),0);
+  assert.equal(await page.getByText('Lead status · New',{exact:true}).count(),1);
+  assert.equal(await page.getByText('Source number · +919148338801',{exact:true}).count(),1);
+  assert.equal(await page.getByText('Active Follow-up',{exact:true}).first().evaluate(el=>el.closest('.status-summary-card')?.querySelector('b')?.textContent),'40');
+  await page.getByRole('button',{name:/Active Follow-up.*40/}).click();
+  await page.getByText('Lead status · New',{exact:true}).waitFor();
 
   const sortRequest=page.waitForRequest(request=>{
    try{return request.url().includes('/api/db/leads')&&new URL(request.url()).searchParams.get('lead_sort')==='customer_waiting'}catch{return false}
@@ -96,6 +97,9 @@ test('production CRM browser journey uses only live-record surfaces',async()=>{
   await persistedDraft.waitFor();
   assert.equal(await persistedDraft.inputValue(),'Hello from persisted draft');
   assert.equal(await page.getByText(/au\.anthropic\.claude-opus-4-6-v1 · aws-bedrock/).count(),2);
+  await page.getByText('Input tokens: 12,000',{exact:true}).waitFor();
+  await page.getByText('Output tokens: 850',{exact:true}).waitFor();
+  await page.getByText('Estimated cost: $0.081250',{exact:true}).waitFor();
 
   await page.locator('button.header-back').click();
   await page.getByText('Production data').waitFor();
@@ -120,8 +124,8 @@ test('production CRM browser journey uses only live-record surfaces',async()=>{
   assert.ok(toolbarBox&&toolbarBox.width<=390,'lead controls fit the mobile viewport');
   const sortBox=await page.getByLabel('Sort leads').boundingBox();
   assert.ok(sortBox&&sortBox.width>0&&sortBox.width<=195,'sort control stays within its mobile column');
-  const activityBox=await page.locator('.lead-card-activity').boundingBox();
-  assert.ok(activityBox&&activityBox.width<=390,'lead activity columns fit the mobile card');
+  const minimalMeta=await page.locator('.lead-card-meta-minimal').boundingBox();
+  assert.ok(minimalMeta&&minimalMeta.width<=390,'lead status/source summary fits the mobile card');
   assert.equal(await page.getByLabel('Sort leads').locator('option').count(),5,'all lead sort modes remain available on mobile');
 
  }finally{await browser?.close();server.kill()}
