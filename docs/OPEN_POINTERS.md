@@ -1,3 +1,19 @@
+## Current UI-polish verification checkpoint — 2026-10-02
+
+This is an **unreleased candidate checkpoint** for `crm-ui-polish-final-2026-10-02`. It must not be described as production until it is merged to `crm-ui-dashboard`, deployed by Render, and production-verified.
+
+- **Implementation branch:** `crm-ui-polish-final-2026-10-02`
+- **Production baseline:** `crm-ui-dashboard` @ `510c62304751624a9e118db137fa4b9095d61bc9`
+- **Current production Render:** `easyfind-crm-d01-d05` is still LIVE from `crm-ui-dashboard` @ `510c62304751624a9e118db137fa4b9095d61bc9`
+- **Latest candidate code checkpoint:** `b20587e57105f7db27aeeda3714eb0a4cfe55a7b`
+- **Candidate verification:** GitHub Actions run #22 passed `npm run build`, `npm test` (84/84), and `npm run test:browser` (1/1) using Node.js 24.21.0.
+- **Implemented in candidate:** stable direct CRM routes and lead deep links, browser-history/tab routing, debounced lead search, restored verified desktop layout foundations, consolidated UI polish/responsive/accessibility styling, and route/browser regression coverage.
+- **Backend boundary:** no backend source/API contract changes were made by this UI candidate relative to the production baseline. Webhook ingestion, Supabase persistence/reconciliation, classification, AI, inventory data logic, authentication, privacy, and audit backend paths remain on the production baseline.
+- **Replit artifacts:** the accidental Replit workspace artifact and Replit-specific `.replit` configuration were not carried into the candidate branch.
+- **Node runtime:** the candidate pins Node.js 24.21.0 via `.node-version` and a bounded package engine range. Render documents 24.21.0 as the current default for services created on or after 2026-09-17 and documents `.node-version`/package engines as supported version controls.
+- **Status:** candidate verification is GREEN in CI; production deployment and production browser verification are still pending.
+- **Documentation rule:** this checkpoint supersedes neither the older production closure evidence nor the historical sections below; after production merge/deploy, this block must be updated with the actual deployed commit/deployment and tree-equality evidence.
+
 ## P1–P5 hardening closure — 2026-10-01
 
 ## Authoritative current closure — 2026-10-01
