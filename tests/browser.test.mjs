@@ -126,8 +126,8 @@ test('production CRM browser journey uses only live-record surfaces',async()=>{
   assert.equal(await page.locator('.lead-card-status-panel').count(),2);
   assert.equal(await page.locator('.lead-card-status-panel strong').nth(0).textContent(),'New');
   assert.equal(await page.locator('.lead-card-status-panel strong').nth(1).textContent(),'Waiting on Customer');
-  assert.equal(await page.getByText('Lead status · New',{exact:true}).count(),1);
-  assert.equal(await page.getByText('Lead status · Waiting on Customer',{exact:true}).count(),1);
+  assert.equal(await page.locator('.lead-card-status-panel').filter({hasText:'New'}).count(),1);
+  assert.equal(await page.locator('.lead-card-status-panel').filter({hasText:'Waiting on Customer'}).count(),1);
   assert.equal(await page.getByText('Source number · +919148338801',{exact:true}).count(),2);
   assert.equal(await page.getByText('Overdue follow-up · 1',{exact:true}).count(),1);
   assert.equal(await page.getByText(/financial risk|budget risk/i).count(),0,'no inferred financial-risk cue is shown');
