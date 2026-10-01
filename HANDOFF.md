@@ -1,6 +1,8 @@
 
 # Current verified handoff — 2026-10-01
 
+> **Authoritative audit update:** `docs/audits/CRM_FULL_AUDIT_2026-10-01.md` supersedes the earlier checkpoint numbers below. Current evidence: 186 leads, 6,858 messages, 453 webhook events, 307 classifications, 196 AI runs, 196 drafts, 186 AI cursors, and 88 active inventory rows. Local validation is **76/76** automated tests and **1/1** browser regression. Cloudinary audit is not fully green: 719 completed image responses, 110 timeouts, 1 non-image response across 829 distinct URLs.
+
 ## Unreleased Inventory/UI hardening in crm-ui-dashboard
 
 The safe working tree includes an Inventory release that makes all four inventory KPI cards clickable filters, adds validated inventory sorting via the inventory_sort query contract (Latest, Oldest, rent low/high, BHK low/high, Locality A–Z), and hardens Cloudinary/source media handling. Media values are normalized across arrays, direct URLs, object records, JSON strings, and delimited strings; card images lazy-load with explicit failure/retry states.

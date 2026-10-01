@@ -1,5 +1,7 @@
 ## P1–P5 hardening closure — 2026-10-01
 
+> **Full-audit pointer — 2026-10-01:** `docs/audits/CRM_FULL_AUDIT_2026-10-01.md` is the current source for audit status. The last successful live DB snapshot during the audit recorded 6,858 messages and 453 webhook events. New code hardening is locally green (76/76 tests, 1/1 browser). Remaining evidence gates are Cloudinary timeouts/non-image response, authenticated duplicate-webhook replay, final production deployment, and main/tree reconciliation.
+
 - P1 event-level lead linkage is reconciled during promotion and the 13 historical eligible rows were backfilled; current event/message lead mismatch is 0.
 - P2 AU/AV are enforced as reserved and excluded from the operational A:AT CRM projection; no production Sheet values were mutated.
 - P3 future inventory syncs record field-level change history in crm_inventory_sync_changes.

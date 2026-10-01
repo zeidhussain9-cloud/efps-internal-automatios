@@ -1,5 +1,7 @@
 # EasyFind CRM UI Dashboard — Single Working Home
 
+> **Authoritative audit update — 2026-10-01 19:12 IST:** See `docs/audits/CRM_FULL_AUDIT_2026-10-01.md` for the current evidence-first audit. Live Supabase counts at the last successful consolidated query were 186 leads, 6,858 messages, 453 webhook events, 307 classifications, 196 AI runs/drafts, 186 AI cursors, and 88 active Housing inventory rows. The current release hardening is locally verified by `npm run build`, `npm test` **76/76**, and `npm run test:browser` **1/1**. The Cloudinary enumeration remains open: 829 distinct URLs produced 719 valid image responses, 110 timeouts, and 1 JSON response. Older checkpoint numbers below are historical and are not the current live counts.
+
 ## Unreleased production hardening — 2026-10-01
 
 The current crm-ui-dashboard working tree contains the next Inventory hardening release. The four Inventory KPIs are actionable filters rather than static counters: Total properties clears inventory filters, Available filters to available rows, Rented out filters to rented rows, and With photos filters to rows with source media.

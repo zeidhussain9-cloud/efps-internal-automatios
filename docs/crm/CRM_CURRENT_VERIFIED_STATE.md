@@ -1,5 +1,9 @@
 # EFPS CRM — Current Verified State
 
+## Authoritative full-audit override — 2026-10-01
+
+See `docs/audits/CRM_FULL_AUDIT_2026-10-01.md`. The currently verified live-data baseline is 186 leads, 6,858 messages, 453 webhook events, 307 classifications (228 historical), 196 AI runs, 196 drafts, 186 AI cursors, and 88 active inventory rows. The prior commit/tree/deployment values in this file are retained as historical checkpoints. The new hardening release is locally verified with build PASS, 76/76 tests PASS, and 1/1 browser regression PASS. Cloudinary is still an open media gate: 829 distinct URLs yielded 719 valid images, 110 timeouts, and 1 JSON response.
+
 ## Current verified repository state — 2026-10-01
 
 This section is the current checkpoint for maintained documentation. Dated audit sections below remain historical evidence and are not silently rewritten.

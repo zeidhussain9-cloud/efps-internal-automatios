@@ -1,5 +1,7 @@
 ## Current production audit — 2026-10-01 (post-reconciliation)
 
+> **Current authoritative release note:** This section reflects the last deployed checkpoint. The next hardening release is being prepared on `crm-ui-dashboard`. See `docs/audits/CRM_FULL_AUDIT_2026-10-01.md` for the evidence state of the pending release. Current live-data baseline from Supabase: 186 leads, 6,857 messages, 452 webhook events, 307 classifications, 196 AI runs/drafts, 186 AI cursors, 88 active inventory rows. Render auto-deploys from `crm-ui-dashboard`; the currently live commit before this release is `de45fd09ee63d7450804fb9b39e32007bdc37640`.
+
 Verified live state — 2026-10-01: Render `easyfind-crm-d01-d05` / `srv-darsv560tbcc73cu4ip0`, branch `crm-ui-dashboard`; the synchronized release is live. Supabase source `+919148338801`: 186 source-linked leads, 307 classifications, 20 pending, 186 promoted, and 6,853 CRM messages. All 436 webhook events are processed; 0 remain `received`; 0 failed. Automatic reconciliation is active. Browser Realtime is notification-only. RLS remains enabled on CRM tables and browser roles have no direct SELECT privilege.
 
 ## Current production checkpoint — 2026-10-01
