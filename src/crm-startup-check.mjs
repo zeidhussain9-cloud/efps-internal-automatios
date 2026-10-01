@@ -11,6 +11,8 @@ export function configurationStatus(env){
   ollamaEndpointPresent:Boolean(env.OLLAMA_BASE_URL||env.OLLAMA_HOST),
   ollamaModelPresent:Boolean(env.OLLAMA_MODEL||env.OLLAMA_MODEL_NAME),
   ollamaApiKeyPresent:Boolean(env.OLLAMA_API_KEY),
+  bedrockRegionPresent:Boolean(env.AWS_REGION||env.AWS_DEFAULT_REGION),
+  bedrockModelPresent:Boolean(env.AWS_BEDROCK_MODEL_ID),
   sheetsCredentialPresent:Boolean(env.GOOGLE_SERVICE_ACCOUNT_JSON_BASE64||env.GOOGLE_SERVICE_ACCOUNT_JSON||env.GOOGLE_APPLICATION_CREDENTIALS),
   sheetsIdPresent:Boolean(env.HOUSING_SHEET_ID||env.SHEET_ID),
   liveDataEnabled:env.CRM_REAL_DATA_ENABLED==='true'

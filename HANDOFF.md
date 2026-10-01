@@ -184,3 +184,14 @@ A production operator run exposed a UI-state defect after successful AI inferenc
 Observed production lead workspace after the operator test run: 6 conversation messages, 2 saved AI runs and 2 saved draft versions. The Activity & History view also records `draft.created`, confirming persistence/audit survived the UI failure.
 
 Local verification after the fix: `npm run build` passed and `npm test` passed 63/63; `git diff --check` passed. The Playwright browser regression command was retried but did not complete in the local environment during this checkpoint, so it is not claimed as passed for this fix.
+
+
+## 2026-10-01 — AWS Bedrock primary AI provider
+
+The local Mac AWS configuration was verified against account `294417174793` in `ap-southeast-2`. Anthropic model availability was checked with Bedrock `GetFoundationModelAvailability`. The account currently has completed model agreement/authorization/entitlement for five Anthropic models: Claude Haiku 4.5, Claude Sonnet 4.6, Claude Sonnet 4.5, Claude Opus 4.6, and Claude Opus 4.5. Other listed Anthropic models were not selected because their agreement status is not available in this account.
+
+The CRM AI provider order is now **AWS Bedrock → Ollama fallback**. The selected primary is **Claude Opus 4.6** using the APAC geographic inference profile `au.anthropic.claude-opus-4-6-v1`. This preserves the existing full-conversation steering/JSON contract and does not change operator approval or no-auto-send behavior. Bedrock uses the AWS SDK default credential chain; Ollama remains the fallback path.
+
+Verified account quota values relevant to the enabled models include: Claude Opus 4.6 cross-region 25 RPM / 3,000,000 TPM; Claude Sonnet 4.6 50 RPM / 6,000,000 TPM; Claude Sonnet 4.5 50 RPM / 5,000,000 TPM; Claude Haiku 4.5 50 RPM / 5,000,000 TPM. Claude Opus 4.5 had 25 RPM global cross-region and 2,000,000 TPM global cross-region observed in the account quota pages. AWS documents that runtime TPM counts input and output together and that model-specific RPM/TPM values are enforced per model/region. The account-specific quota values take precedence over AWS published defaults.
+
+A real local Bedrock Converse invocation against `au.anthropic.claude-opus-4-6-v1` succeeded with a 20-token test call, proving the configured AWS credentials can invoke the selected primary model. The production Render service has non-secret Bedrock configuration set to `AWS_REGION=ap-southeast-2`, `AWS_BEDROCK_MODEL_ID=au.anthropic.claude-opus-4-6-v1`, `AWS_BEDROCK_MAX_TOKENS=4096`, and `AWS_BEDROCK_TEMPERATURE=0.2`. Production still requires a Bedrock-capable AWS credential in Render; the Mac's local AWS profile is not automatically available to Render. Do not copy the existing broad `all-access-user` credential into production. Use a dedicated least-privilege Bedrock runtime identity before claiming production Bedrock inference is live.

@@ -122,3 +122,8 @@ Render deployment continues from crm-ui-dashboard. The browser displays the thre
 Render service `srv-darsv560tbcc73cu4ip0` is the production CRM service and deploys branch `crm-ui-dashboard`. The production implementation uses the server-side Ollama adapter for authenticated lead analysis. `CRM_REAL_AI_ENABLED=true` and `CRM_DB_WRITE_ENABLED=true` have been enabled on this service; existing secrets were preserved because the environment update was a merge, not a replacement.
 
 The AI route builds its model input from the complete stored lead workspace: chronological CRM messages, normalized requirements, field-level requirement evidence, operator notes, prior AI runs and the per-lead cursor. AI produces a proposed requirement delta, evidence, timeline analysis, suggested lead status and an operator-editable reply draft. Requirement changes require explicit operator acceptance. Drafts are versioned and are never automatically sent to WhatsApp.
+
+
+## 2026-10-01 — Bedrock primary / Ollama fallback configuration
+
+The production CRM AI provider order is now AWS Bedrock first, Ollama second. Render service `easyfind-crm-d01-d05` is configured with non-secret Bedrock settings: `AWS_REGION=ap-southeast-2`, `AWS_BEDROCK_MODEL_ID=au.anthropic.claude-opus-4-6-v1`, `AWS_BEDROCK_MAX_TOKENS=4096`, and `AWS_BEDROCK_TEMPERATURE=0.2`. The application uses the AWS SDK default credential chain, so AWS credentials must be provided to Render as protected environment variables or an equivalent runtime identity; local Mac profiles are not inherited by Render. The existing Ollama configuration remains the fallback and no-auto-send/operator approval controls are unchanged.
