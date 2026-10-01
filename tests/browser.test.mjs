@@ -51,9 +51,12 @@ test('production CRM browser journey uses only live-record surfaces',async()=>{
   await page.getByText('228 leads').waitFor();
   await page.getByLabel('Sort leads').waitFor();
   await page.getByText('Active Follow-up',{exact:true}).first().waitFor();
-  assert.equal(await page.locator('.lead-card-activity').count(),0);
+  assert.equal(await page.locator('.lead-card-activity').count(),1);
   assert.equal(await page.getByText('Lead status · New',{exact:true}).count(),1);
   assert.equal(await page.getByText('Source number · +919148338801',{exact:true}).count(),1);
+  assert.equal(await page.getByText('Contacted date',{exact:true}).count(),1);
+  assert.equal(await page.getByText('Last message sent by',{exact:true}).count(),1);
+  assert.equal(await page.getByText('Last message date',{exact:true}).count(),1);
   assert.equal(await page.getByText('Active Follow-up',{exact:true}).first().evaluate(el=>el.closest('.status-summary-card')?.querySelector('b')?.textContent),'40');
   await page.getByRole('button',{name:/Active Follow-up.*40/}).click();
   await page.getByText('Lead status · New',{exact:true}).waitFor();
@@ -124,8 +127,8 @@ test('production CRM browser journey uses only live-record surfaces',async()=>{
   assert.ok(toolbarBox&&toolbarBox.width<=390,'lead controls fit the mobile viewport');
   const sortBox=await page.getByLabel('Sort leads').boundingBox();
   assert.ok(sortBox&&sortBox.width>0&&sortBox.width<=195,'sort control stays within its mobile column');
-  const minimalMeta=await page.locator('.lead-card-meta-minimal').boundingBox();
-  assert.ok(minimalMeta&&minimalMeta.width<=390,'lead status/source summary fits the mobile card');
+  const activity=await page.locator('.lead-card-activity').boundingBox();
+  assert.ok(activity&&activity.width<=390,'lead activity columns fit the mobile card');
   assert.equal(await page.getByLabel('Sort leads').locator('option').count(),5,'all lead sort modes remain available on mobile');
 
  }finally{await browser?.close();server.kill()}

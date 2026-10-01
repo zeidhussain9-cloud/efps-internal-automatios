@@ -59,9 +59,15 @@ const classificationLabel=value=>({
 function LeadCard({lead,onClick,privacyMode}){
  const displayPhone=lead.normalized_phone?(privacyMode?maskPhone(lead.normalized_phone):lead.normalized_phone):'No phone stored';
  const title=lead.display_name||displayPhone||'Lead';
+ const lastMessageBy=lead.last_message_direction==='Incoming'?'Customer':lead.last_message_direction==='Outgoing'?'Us':'Not recorded';
  return <button className="lead-card" onClick={onClick} type="button">
   <div className="lead-card-main"><div><b>{title}</b>{lead.display_name&&<span>{displayPhone}</span>}</div></div>
   <div className="lead-card-meta lead-card-meta-minimal"><span>Lead status · {LEAD_STATUS_LABELS[lead.lead_type]||lead.lead_type||'New'}</span><span>Source number · {lead.source_number||SOURCE_NUMBER}</span></div>
+  <div className="lead-card-activity" aria-label="Lead conversation activity">
+   <div><small>Contacted date</small><strong>{formatLeadDate(lead.contacted_at)}</strong></div>
+   <div><small>Last message sent by</small><strong>{lastMessageBy}</strong></div>
+   <div><small>Last message date</small><strong>{formatLeadDate(lead.last_message_at)}</strong></div>
+  </div>
  </button>;
 }
 

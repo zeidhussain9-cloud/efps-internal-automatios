@@ -9,7 +9,7 @@
 
 ## Current UI implementation checkpoint — 2026-10-01
 
-The production Leads Inbox card intentionally shows only **Lead status** and **Source number** beneath the lead identity. The former priority/classification/contacted-date/last-message activity row is removed from this list surface.
+The production Leads Inbox card shows **Lead status** and **Source number** beneath the lead identity, followed by the operational conversation summary: **Contacted date**, **Last message sent by**, and **Last message date**. Priority and classification chips are not shown on the inbox card.
 
 The Leads Inbox header provides one clickable summary block for every supported lead status (`New`, `Active Follow-up`, `Waiting on Customer`, `Waiting on Us`, `Nurture`, `Dormant`, `Converted`, `Lost`, `On Hold`, `Out of Coverage Area`). Each block shows the live count for the selected source and applies the corresponding server-side filter when clicked. Lead-status edits in Lead Workspace persist to `crm_leads.lead_type`; the inbox reloads from the database so the lead moves to its new status grouping.
 
