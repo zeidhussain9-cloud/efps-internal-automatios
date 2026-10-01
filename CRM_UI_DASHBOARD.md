@@ -170,3 +170,7 @@ AI provider chain: Bedrock Claude Opus 4.6 (`au.anthropic.claude-opus-4-6-v1`) �
 ## Final verified checkpoint — 2026-10-01
 
 `crm-ui-dashboard` commit `da13083f6cb1f3c78ec3f4df661c515d43f556fa`, tree `f36a5ccb4bae742e83603b09bee59d01595ecf00`. Render deployment `dep-dav55km0tbcc73eelat0` is live. `main` has been reconciled to the same tree in commit `692bdcbbab51752b8eb7d4927921d1cfc4830de7`. Build passes, `npm test` passes 71/71, and browser regression passes 1/1.
+
+## 2026-10-01 — Final evidence-first 24-item closure
+
+Current live checkpoint: 186 leads, 6,861 messages, 309 classifications, 196 AI runs/drafts, 456 processed webhook events, and 88 active inventory rows. Historical classification evidence is 228/228 extracted with 140/140 qualified mappings valid. Non-qualified contacts have zero lead mappings. Cloudinary verification is now 829/829 successful metadata probes with zero timeouts. Authenticated webhook replay returned already_processed without changing event/message totals. Render commit 252dad9e029d9c3d3ee8bd93be20c171f4099602 is live. Build, 76/76 automated tests, and 1/1 browser regression pass. Remote main and crm-ui-dashboard trees are identical. All 24 audit items are GREEN.

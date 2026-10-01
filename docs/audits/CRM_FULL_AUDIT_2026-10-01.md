@@ -149,3 +149,24 @@ Render production:
 - tree(crm-ui-dashboard): 6dedbfb97bdbc07302733a58eb15560bd6704812
 - Equality: YES
 - Main history was not rewritten.
+
+## Final 24-item closure — 2026-10-01 15:38 UTC
+
+This section supersedes the earlier in-progress evidence gates above for current-state reporting.
+
+- Current DB: 186 leads; 6,861 messages; 309 classifications; 186 qualified/promoted classifications; 186 requirement rows; 196 AI runs; 196 drafts; 186 cursors; 604 activity rows; 456 webhook events; 88 active inventory rows; 1,366 inventory sync runs.
+- Historical classification baseline: 228 historical-extract classifications; 140 historical qualified classifications; 140/140 have real lead mappings; 0 bad lead mappings.
+- Non-qualified contacts: 0 non-qualified classifications have lead mappings; 2,055 current non-qualified messages remain outside CRM leads; 0 are incorrectly attached to qualified leads.
+- Message reconciliation: 0 orphan messages, 0 bad classification FKs, 0 unclassified messages.
+- Requirements: 186/186 leads have requirement rows; zero negative budgets, invalid occupancy, or invalid lease terms.
+- AI/drafts: 0 draft evidence mismatches, 0 drafts without runs, 0 runs without leads. Five empty-body analysis-only draft rows remain intentionally non-sendable and are disabled by the UI.
+- Inventory/matching: 88 active snapshot rows; latest sync = 88 / 0 changed / 0 removed; no orphan property matches. Matching logic is deterministic and covered by repository tests; no persisted match rows currently exist.
+- Cloudinary: 829/829 distinct source URLs were enumerated and re-probed through Cloudinary fl_getinfo; 829/829 returned HTTP 200 JSON image metadata, 0 timeouts, 0 failed probes. The normalized crm_property_media table remains empty by design; inventory media is sourced from crm_inventory_snapshot.cloudinary_image_urls and rendered with explicit failure/retry handling.
+- Webhook: 456/456 processed, 0 received, 0 processing, 0 failed; zero duplicate provider-event-ID groups and zero duplicate fingerprints; zero event-to-lead/message FK anomalies.
+- Live idempotency replay: authenticated replay of event 5912 returned already_processed; totals remained 456 events / 6,861 messages.
+- Production: Render deployment dep-dav71e0473hc73ahrnm0 for commit 252dad9e029d9c3d3ee8bd93be20c171f4099602 is live; /health returns HTTP 200; unauthenticated webhook POST returns HTTP 401.
+- Legacy AWS: no AWS/legacy handler changes are present in the release diff; the only webhook-related source change is the Supabase whapi-crm-webhook path.
+- Repository/tests: build PASS; 76/76 automated tests PASS; 1/1 browser regression PASS; git diff --check PASS.
+- Repository reconciliation: remote origin/main and origin/crm-ui-dashboard currently have the same tree SHA 375a701d907830a04ddd5f6d517f982ea729ed68; commit histories differ without rewriting history.
+
+24-item audit status: GREEN.
