@@ -15,7 +15,7 @@
     "pretest": "npm run build"
   },
   "dependencies": {
-    "@aws-sdk/client-bedrock-runtime": "^3.922.0",
+    "@aws-sdk/client-bedrock-runtime": "^3.1144.0",
     "@supabase/supabase-js": "2.117.2",
     "@vitejs/plugin-react": "4.3.4",
     "lucide-react": "0.468.0",

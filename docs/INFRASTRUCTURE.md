@@ -187,3 +187,11 @@ Production CRM service srv-darsv560tbcc73cu4ip0 is on crm-ui-dashboard; the curr
 ## 2026-10-01 — AI runtime fallback
 
 Render production Bedrock settings now include `AWS_BEDROCK_FALLBACK_MODEL_ID=au.anthropic.claude-sonnet-4-6`. Runtime order is Claude Opus 4.6 AU → Claude Sonnet 4.6 AU → Ollama `gpt-oss:20b`. AI run and draft provenance are persisted. AWS documents the Sonnet 4.6 AU geo inference profile as routing within Australia/New Zealand destinations. 
+
+## Final verified checkpoint — 2026-10-01
+
+Production Render service `srv-darsv560tbcc73cu4ip0` is live on `crm-ui-dashboard` commit `c8c0b3b458e1d71bf4a81f7efea749aaf1ef4bde`. Health endpoint returns `{"ok":true}`. `main` has the identical repository tree (`7bce9e42ccd4efa9d14d85bbba8767961943aab0`).
+
+## 2026-10-01 — Dependency security checkpoint
+
+The AWS Bedrock runtime SDK was upgraded to `3.1144.0` after Render exposed a critical transitive `fast-xml-parser` advisory in the previous dependency tree. Local production-dependency audit now reports zero vulnerabilities; `npm test` remains 66/66.

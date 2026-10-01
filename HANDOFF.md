@@ -212,3 +212,19 @@ Production lead `+919108474861` was verified in Supabase with three drafts: v1/v
 A direct Bedrock tone audition was run against the same lead facts. `au.anthropic.claude-sonnet-4-6` produced a strong fallback candidate; `au.anthropic.claude-sonnet-4-5-20250929-v1:0` and Haiku 4.5 were also invokable but introduced less suitable phrasing/unsupported option language in the audition. `global.anthropic.claude-opus-4-5-20251101-v1:0` was invokable and produced a strong draft, but AWS documents Opus 4.5 without an AU geo inference profile, so Sonnet 4.6 is used as the production Bedrock fallback to preserve the existing AU routing. AWS documents Sonnet 4.6 as a 1M-context reasoning model and provides the `au.anthropic.claude-sonnet-4-6` profile.
 
 The approved six AI improvements are implemented: stale-draft detection; provenance; evidence attached to drafts; deterministic pre-send grounding/safety checks; explicit copied/opened/sent outcome tracking; and explicit primary/fallback visibility. Incremental message/delta analysis is intentionally not implemented yet.
+
+## 2026-10-01 — Final verified checkpoint after AI hardening
+
+- `crm-ui-dashboard` final verified commit: `c8c0b3b458e1d71bf4a81f7efea749aaf1ef4bde`.
+- `crm-ui-dashboard` final tree: `7bce9e42ccd4efa9d14d85bbba8767961943aab0`.
+- Render service `srv-darsv560tbcc73cu4ip0` is live from that commit; deployment `dep-dautgos9v7es73bnc44g` reached `live` and startup/database connectivity were verified.
+- `main` final reconciliation commit: `562905cfe435ee7ad8851c9c4a42360726a9b317`.
+- `main` tree equals `crm-ui-dashboard` tree: `7bce9e42ccd4efa9d14d85bbba8767961943aab0`.
+- Local `crm-ui-dashboard` checkout equals `origin/crm-ui-dashboard` at `c19e36c...` and is clean.
+- Production migration 17 is applied. Current database counts: 3 AI runs (2 Ollama, 1 Bedrock), 3 drafts, all 3 with source evidence; no `confirmed_sent` outcomes yet.
+- Automated verification: `npm run build` passes; `npm test` passes 66/66. `npm run test:browser` remains unresolved locally because the runner hangs without producing a result; no browser pass is claimed.
+- GitHub combined-status API currently reports no status contexts for the final CRM/main commits; repository verification therefore relies on the local test suite, Git tree equality, Render deployment logs, health endpoint, and Supabase migration/data verification.
+
+## 2026-10-01 — Bedrock SDK security update
+
+Render's build surfaced dependency advisories through the newly added AWS Bedrock SDK, including a critical `fast-xml-parser` advisory in the older transitive tree. The Bedrock runtime SDK was upgraded from `3.922.0` to `3.1144.0`. Local `npm audit --omit=dev` now reports 0 vulnerabilities, and the full automated suite remains 66/66. The updated lockfile is part of the final repository state.
