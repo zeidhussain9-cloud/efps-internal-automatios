@@ -182,4 +182,4 @@ The separate CRM UI deploys **only** from `crm-ui-dashboard` to Render service `
 Repository reconciliation is maintained separately from the Render deployment path. `crm-ui-dashboard` is the Render branch; `main` is kept reconciled to the approved CRM repository checkpoint. The active CRM checkout is `/Users/zeidzakir/Projects/efps-internal-automatios/leads_automation/crm-ui-dashboard`; the separate `main` worktree is `/Users/zeidzakir/Projects/efps-internal-automatios`.
 
 ## 2026-10-01 — CRM Render/AWS runtime checkpoint
-Production CRM service srv-darsv560tbcc73cu4ip0 is on crm-ui-dashboard, live commit b61b4f7f686957c194094acec8638d7db602ec15. Bedrock region/model presence and database connectivity were verified at startup; AWS credentials are Render secrets.
+Production CRM service srv-darsv560tbcc73cu4ip0 is on crm-ui-dashboard; the current deployment commit is recorded in the final checkpoint below. Bedrock region/model presence and database connectivity were verified at startup; AWS credentials are Render secrets.

@@ -125,6 +125,7 @@ function App(){
  const[requirementsDraft,setRequirementsDraft]=useState(null);
  const[requirementsState,setRequirementsState]=useState('idle');
  const[draftBody,setDraftBody]=useState('');
+ const[selectedDraftId,setSelectedDraftId]=useState(null);
  const[draftState,setDraftState]=useState('idle');
  const[aiError,setAiError]=useState('');
 
@@ -202,7 +203,7 @@ function App(){
     if(!r.ok)throw Error('Lead workspace unavailable');
     const data=await r.json();
     if(!active)return;
-    setWorkspace(data);setLeadStatus(data.lead?.lead_type||'New');setTenantType(data.lead?.tenant_type||'Not specified');setRequirementsDraft(requirementProfile(data.requirement_profile));setDraftBody(data.drafts?.[0]?.body||'');setAiError('');setWorkspaceState('ready');
+    setWorkspace(data);setSelectedDraftId(data.drafts?.[0]?.id||null);setLeadStatus(data.lead?.lead_type||'New');setTenantType(data.lead?.tenant_type||'Not specified');setRequirementsDraft(requirementProfile(data.requirement_profile));setDraftBody(data.drafts?.[0]?.body||'');setAiError('');setWorkspaceState('ready');
     const req=requirementProfile(data.requirement_profile);
     const bhkMatch=String(req.bhk||'').match(/\d+/);
     const bhk=bhkMatch?bhkMatch[0]:'';
@@ -250,7 +251,7 @@ function App(){
   setArchiveState('saving');
   try{const r=await apiFetch('/api/db/leads/'+encodeURIComponent(selectedId)+'/'+(archived?'restore':'archive'),{method:'POST'});const d=await r.json().catch(()=>({}));if(!r.ok)throw Error(d.error||'Lead action failed');setArchiveState(archived?'restored':'archived');setWorkspace(prev=>prev?{...prev,lead:d}:prev);refresh()}catch{setArchiveState('error')}finally{setTimeout(()=>setArchiveState(''),2500)}
  }
- function backToInbox(){setSelectedId(null);setWorkspace(null);setTab('Overview');setPage('Leads Inbox')}
+ function backToInbox(){setSelectedId(null);setWorkspace(null);setSelectedDraftId(null);setTab('Overview');setPage('Leads Inbox')}
  function refresh(){setRefreshToken(v=>v+1)}
  function classifyContact(id,classification){setClassificationDrafts(prev=>({...prev,[id]:classification}));setClassificationErrors(prev=>{const next={...prev};delete next[id];return next})}
  async function saveClassification(row){const classification=classificationDrafts[row.id];if(!classification||classification==='pending'||classification===row.classification_code)return;setClassificationSaving(prev=>({...prev,[row.id]:true}));setClassificationErrors(prev=>{const next={...prev};delete next[row.id];return next});try{const r=await apiFetch('/api/db/classifications/'+row.id,{method:'POST',credentials:'include',headers:{'Content-Type':'application/json'},body:JSON.stringify({classification,source:'operator'})});const d=await r.json().catch(()=>({}));if(!r.ok)throw Error(d.error||('Classification update failed (HTTP '+r.status+')'));refresh()}catch(e){setClassificationErrors(prev=>({...prev,[row.id]:e.message||'Classification update failed'}))}finally{setClassificationSaving(prev=>{const next={...prev};delete next[row.id];return next})}}
@@ -277,7 +278,7 @@ function App(){
  }
  async function acceptAiRequirements(runId){const r=await apiFetch('/api/ai/runs/'+encodeURIComponent(runId)+'/accept',{method:'POST'});if(!r.ok)return;setRefreshToken(v=>v+1)}
  async function rejectAiRequirements(runId){const r=await apiFetch('/api/ai/runs/'+encodeURIComponent(runId)+'/reject',{method:'POST'});if(!r.ok)return;setRefreshToken(v=>v+1)}
- async function saveDraftVersion(){if(!workspace?.lead?.id||!draftBody.trim())return;setDraftState('saving');try{const r=await apiFetch('/api/db/leads/'+encodeURIComponent(workspace.lead.id)+'/drafts',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({body:draftBody})});if(!r.ok)throw Error();const d=await r.json();setWorkspace(prev=>prev?{...prev,drafts:[d,...(prev.drafts||[])]}:prev);setDraftState('saved');setTimeout(()=>setDraftState('idle'),1200)}catch{setDraftState('error')}}
+ async function saveDraftVersion(){if(!workspace?.lead?.id||!draftBody.trim())return;setDraftState('saving');try{const r=await apiFetch('/api/db/leads/'+encodeURIComponent(workspace.lead.id)+'/drafts',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({body:draftBody,aiRunId:workspace?.drafts?.find(d=>d.id===selectedDraftId)?.ai_run_id||workspace?.drafts?.[0]?.ai_run_id||null,aiProvider:workspace?.drafts?.find(d=>d.id===selectedDraftId)?.ai_provider||workspace?.drafts?.[0]?.ai_provider||'operator-edit',modelName:workspace?.drafts?.find(d=>d.id===selectedDraftId)?.model_name||workspace?.drafts?.[0]?.model_name||'operator-edit'})});if(!r.ok)throw Error();const d=await r.json();setWorkspace(prev=>prev?{...prev,drafts:[d,...(prev.drafts||[])]}:prev);setSelectedDraftId(d.id);setDraftState('saved');setTimeout(()=>setDraftState('idle'),1200)}catch{setDraftState('error')}}
  async function markDraft(id,status){
   const r=await apiFetch('/api/drafts/'+encodeURIComponent(id)+'/status',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({status})});
   if(r.ok)setRefreshToken(v=>v+1);
@@ -286,7 +287,7 @@ function App(){
   const phone=String(workspace?.lead?.normalized_phone||'').replace(/\D/g,'');
   if(!phone)return;
   window.open('https://wa.me/'+phone,'_blank','noopener,noreferrer');
-  const draft=workspace?.drafts?.[0];
+  const draft=workspace?.drafts?.find(d=>d.id===selectedDraftId)||workspace?.drafts?.[0];
   if(draft?.id)markDraft(draft.id,'opened');
  }
 
@@ -328,9 +329,9 @@ function App(){
         {aiState==='unavailable'&&<div className="notice">AI analysis failed. {aiError||'No fallback or fabricated result is shown.'}</div>}
         {ai?.proposal&&<div className="ai-grid">
          <div className="inner"><h3>AI evidence & timeline</h3><p>{ai.proposal.summary}</p><pre className="jsonview">{JSON.stringify(ai.proposal.timeline,null,2)}</pre><h4>Requirement changes proposed</h4>{ai.proposal.requirement_updates?.length?ai.proposal.requirement_updates.map((u,i)=><div className="ai-evidence" key={i}><b>{u.field}: {String(u.value)}</b><small>{u.evidence||'Evidence linked to conversation.'} · messages: {(u.source_message_ids||[]).join(', ')}</small></div>):<div className="empty">No requirement changes proposed.</div>}{ai.run?.status==='proposed'&&ai.proposal.requirement_updates?.length>0&&<div className="requirements-actions"><button className="primary" onClick={()=>acceptAiRequirements(ai.run.id)}>Accept requirement changes</button><button className="secondary" onClick={()=>rejectAiRequirements(ai.run.id)}>Reject</button></div>}<h4>Suggested lead status</h4><div className="chip">{ai.proposal.lead_status_suggestion?.status||'No change suggested'}</div><p>{ai.proposal.lead_status_suggestion?.reason||''}</p></div>
-         <div className="inner"><h3>Reply draft</h3><textarea className="draft-editor" value={draftBody} onChange={e=>setDraftBody(e.target.value)} placeholder="AI draft appears here after analysis."/><div className="requirements-actions"><button className="primary" disabled={!draftBody.trim()||draftState==='saving'} onClick={saveDraftVersion}>{draftState==='saving'?'Saving…':draftState==='saved'?'Saved':'Save draft edit'}</button>{workspace.drafts?.[0]&&<><button className="secondary" onClick={openDraftInWhatsApp}>Open WhatsApp</button><button className="secondary" onClick={()=>navigator.clipboard?.writeText(draftBody)}>Copy</button></>}{draftState==='error'&&<span className="error">Draft save failed.</span>}</div></div>
+
         </div>}
-        <div className="inner"><h3>Draft workspace</h3>{workspace.drafts?.length?<div className="draft-list">{workspace.drafts.map(d=><button type="button" className="draft-row" key={d.id} onClick={()=>setDraftBody(String(d.body||''))}><div><b>v{d.version} · {d.status}</b><small>{formatLeadDate(d.created_at)}</small></div><span>View / edit</span></button>)}</div>:<div className="empty">No drafts saved.</div>}</div>
+        <div className="inner"><h3>Draft workspace</h3>{workspace.drafts?.length?<><div className="draft-list">{workspace.drafts.map(d=><button type="button" className={'draft-row '+(selectedDraftId===d.id?'selected':'')} key={d.id} aria-label={'Open draft version '+d.version} onClick={()=>{setSelectedDraftId(d.id);setDraftBody(String(d.body||''));}}><div><b>v{d.version} · {d.status}</b><small>{formatLeadDate(d.created_at)}</small><small>AI: {d.model_name||'unknown'} · {d.ai_provider||'unknown'}</small></div><span>Open / edit</span></button>)}</div><div className="draft-detail"><div className="draft-meta"><div><b>{selectedDraftId?'Selected draft':'Latest draft'}</b><small>{workspace.drafts.find(d=>d.id===selectedDraftId)?.model_name||workspace.drafts[0]?.model_name||'unknown'} · {workspace.drafts.find(d=>d.id===selectedDraftId)?.ai_provider||workspace.drafts[0]?.ai_provider||'unknown'}</small></div></div><textarea className="draft-editor" value={draftBody} onChange={e=>setDraftBody(e.target.value)} placeholder="Select a saved draft to view or edit it."/><div className="requirements-actions"><button className="primary" disabled={!draftBody.trim()||draftState==='saving'} onClick={saveDraftVersion}>{draftState==='saving'?'Saving…':draftState==='saved'?'Saved':'Save draft edit'}</button>{selectedDraftId&&<><button className="secondary" onClick={openDraftInWhatsApp}>Open WhatsApp</button><button className="secondary" onClick={()=>navigator.clipboard?.writeText(draftBody)}>Copy</button></>}{draftState==='error'&&<span className="error">Draft save failed.</span>}</div></div></>:<div className="empty">No drafts saved.</div>}</div>
         <div className="inner"><h3>Saved AI run history</h3>{workspace.ai_runs?.length?workspace.ai_runs.map(r=><div className="event" key={r.id}><BrainCircuit size={16}/><div><b>{r.model_name} · {r.status}</b><small>{formatLeadDate(r.created_at)}{r.decided_at?' · decided '+formatLeadDate(r.decided_at):''}</small></div></div>):<div className="empty">No AI runs yet.</div>}</div>
        </div>}       {tab==='Activity & History'&&<>{workspace.followups?.length?<div className="inner"><h3>Follow-ups</h3>{workspace.followups.map(f=><div className="event" key={f.id}><CheckCircle2 size={17}/><div><b>{f.completed_at?'Completed':'Scheduled'}</b><small>{f.due_at?new Date(f.due_at).toLocaleString():''} · {f.note||'No note recorded'}</small></div></div>)}</div>:<div className="notice">No follow-up records are stored for this lead.</div>}{workspace.activity.length?workspace.activity.map(a=><div className="event" key={a.id}><CheckCircle2 size={17}/><div><b>{a.action}</b><small>{a.occurred_at?new Date(a.occurred_at).toLocaleString():''} · {a.actor}</small></div></div>):<div className="empty">No activity recorded for this lead.</div>}</>}
       </div>

@@ -136,7 +136,7 @@ The D01–D05 prototype uses synthetic data only. It must not read or write live
 
 ## CRM hosted AI boundary — 2026-09-27
 
-The `crm-ui-dashboard` branch deploys a separate authenticated Render CRM. `src/ollama-adapter.mjs` reads and caches dedicated root `steering.md` as its single system instruction (maximum 2 KiB), then sends only the selected fixed fictional fixture to the existing hosted Ollama `/api/chat` endpoint. The API key remains server-side in Render. This is separate from repository-agent `CORE_STEERING.md` and from the deterministic Housing_Listings inventory mirror. AWS Bedrock Claude Opus 4.6 is now the primary production AI provider and Ollama gpt-oss:20b is the fallback. Production AI receives complete lead history and normalized requirements; requirement changes require operator acceptance and WhatsApp sending remains manual.
+The `crm-ui-dashboard` branch deploys a separate authenticated Render CRM. `src/ollama-adapter.mjs` reads and caches dedicated root `steering.md` as its single system instruction (maximum 2 KiB), then sends only the selected fixed fictional fixture to the existing hosted Ollama `/api/chat` endpoint. The API key remains server-side in Render. The first sentence above records the historical pilot architecture. The current production provider order is AWS Bedrock Claude Opus 4.6 primary and Ollama gpt-oss:20b fallback. Production AI receives complete lead history and normalized requirements; requirement changes require operator acceptance and WhatsApp sending remains manual.
 
 ## 2026-10-01 — Production CRM AI architecture checkpoint
 

@@ -35,7 +35,7 @@ test('production CRM browser journey uses only live-record surfaces',async()=>{
    lead:{id:'LIVE-1',display_name:'Live lead',normalized_phone:'+919000000001',status:'New',lead_type:'New',tenant_type:'Not specified',priority:'Medium',classification:'Qualified Lead',requirements:{bhk:'2 BHK',locality:'Harlur',budget:50000},operator_notes:''},
    sources:[{source_number:'+919148338801'}],
    messages:[{id:1,source_number:'+919148338801',direction:'Incoming',message_type:'text',body:'Historical conversation message',sender_name:'Customer',message_at:'2026-09-30T00:00:00Z'}],
-   activity:[],followups:[]
+   activity:[],followups:[],drafts:[{id:'DRAFT-2',version:2,body:'Hello from persisted draft',status:'draft',created_at:'2026-10-01T02:30:00Z',ai_run_id:'RUN-2',ai_provider:'aws-bedrock',model_name:'au.anthropic.claude-opus-4-6-v1'},{id:'DRAFT-1',version:1,body:'Older draft',status:'draft',created_at:'2026-10-01T02:29:00Z',ai_run_id:'RUN-1',ai_provider:'ollama',model_name:'gpt-oss:20b'}],ai_runs:[{id:'RUN-2',model_name:'au.anthropic.claude-opus-4-6-v1',status:'proposed',created_at:'2026-10-01T02:30:00Z'}]
   })}));
 
   await page.route('**/api/db/leads/LIVE-1',route=>route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({id:'LIVE-1',lead_type:'Active Follow-up',tenant_type:'Family'})}));
@@ -90,6 +90,12 @@ test('production CRM browser journey uses only live-record surfaces',async()=>{
 
   await page.getByRole('button',{name:'AI & Drafts',exact:true}).click();
   await page.getByText(/Production AI reviews the complete chronological conversation/).waitFor();
+  await page.getByRole('button',{name:'Open draft version 2'}).waitFor();
+  await page.getByRole('button',{name:'Open draft version 2'}).click();
+  const persistedDraft=page.locator('textarea.draft-editor');
+  await persistedDraft.waitFor();
+  assert.equal(await persistedDraft.inputValue(),'Hello from persisted draft');
+  assert.equal(await page.getByText(/au\.anthropic\.claude-opus-4-6-v1 · aws-bedrock/).count(),2);
 
   await page.locator('button.header-back').click();
   await page.getByText('Production data').waitFor();

@@ -130,3 +130,7 @@ The production CRM AI provider order is now AWS Bedrock first, Ollama second. Re
 
 ## 2026-10-01 — Current Bedrock runtime
 Production provider order is AWS Bedrock Claude Opus 4.6 followed by Ollama gpt-oss:20b. Render holds AWS credentials as secrets; non-secret region/model configuration is ap-southeast-2 / au.anthropic.claude-opus-4-6-v1.
+
+## 2026-10-01 — Current draft provenance/runtime checkpoint
+
+Production migration 16 adds AI provenance to `crm_drafts`: `ai_run_id`, `ai_provider`, and `model_name`. Render continues to use Bedrock Claude Opus 4.6 as primary and Ollama gpt-oss:20b as fallback. AWS credentials are currently stored as Render secrets using the operator-approved temporary broad identity; least-privilege credential rotation remains an explicit hardening item.
