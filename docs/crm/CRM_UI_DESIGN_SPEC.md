@@ -1,3 +1,40 @@
+## 2026-10-02 — Replit feedback branch recovery and line-by-line audit checkpoint
+
+The isolated branch `crm-ui-feedback-polish-2026-10-02` was recovered after the Replit workspace exhausted its credits. The branch is based directly on production checkpoint `97b43a7d158eb8b3cd773ed3febb45c4f8a52540` and contains the recovered UI/inventory implementation plus regression coverage.
+
+### Audited implementation extracted for verification
+
+- Lead cards now expose persisted `crm_leads.classification` separately from operational `crm_leads.lead_type`; missing classification is rendered as `Not recorded` and is not inferred from age, message history, budget, or AI output.
+- Lead cards expose a persisted overdue-follow-up count derived from incomplete follow-ups whose due time has passed. No financial-risk label is inferred from budget.
+- Lead status tones are secondary, low-contrast semantic styling and remain text-labelled; color is not the only meaning.
+- Lead-card classification spacing and mobile hierarchy were hardened with explicit identity-to-classification separation and narrow-screen overflow coverage.
+- Inventory KPI cards remain clickable and use full-inventory summaries/facets rather than page counts.
+- Inventory search, status/BHK/locality/photo filters, sorting, and 24-row pagination now compose through the protected inventory overview response. Filter/sort changes reset to page zero; the browser ignores stale inventory/audit responses.
+- Inventory pagination has explicit query validation and deterministic filter/sort/page regression coverage.
+- Global and lead Activity requests use cancellation guards so stale responses cannot overwrite current state.
+- Contact Classification filter/source changes reset pagination without issuing a stale page response.
+- Browser regression coverage now exercises inventory page 2, filter reset, classification visibility, overdue attention, mobile classification spacing, and horizontal-overflow safety.
+
+### Audit exclusions / corrections
+
+- Replit-only `.replit` and startup-instruction asset were removed from the promotion candidate.
+- Replit-mutated dependency ranges and package-firewall lockfile URLs were removed; the production `package.json` and `package-lock.json` were restored to the verified `97b43a7` baseline.
+- No production database write, webhook/integration change, schema migration, or Render deployment is included in this checkpoint.
+
+### Verification state
+
+Implementation review is complete at the repository diff level. Build, full automated tests, browser regression, production deployment, and branch reconciliation remain evidence-gated until the recovered candidate is executed and verified. This section must not be interpreted as a production-live claim.
+
+## Unreleased CRM UI feedback branch — production unchanged
+
+The isolated work branch is `crm-ui-feedback-polish-2026-10-02`. This section describes branch-only changes; the production verification below remains the latest production checkpoint.
+
+- Lead cards show the stored `crm_leads.classification` separately from `crm_leads.lead_type`; missing classification is labeled “Not recorded.”
+- Status tone remains secondary to its text label. Overdue attention is shown only for an incomplete follow-up whose stored due time has passed; message age and budget do not create inferred risk labels.
+- Inventory search, filters, sort, and pagination are applied to the protected read-only overview response. KPI totals and filter facets continue to represent the full inventory, not just the current page.
+- Existing server pagination for leads, classifications, global activity, and lead activity remains in place; filter/sort changes return to the first page and stale activity responses are ignored.
+- No production merge, deployment, database mutation, or schema change is part of this branch.
+
 ## Authoritative current CRM UI verification — 2026-10-02
 
 This is the current production checkpoint after the audited CRM UI polish, routing hardening, verification, deployment, and repository reconciliation. Older dated sections remain historical evidence.
