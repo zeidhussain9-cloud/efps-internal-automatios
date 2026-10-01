@@ -23,13 +23,16 @@
 
 **D01–D05: APPROVED**
 
-D06 and D07 are resolved in the production CRM path. D08 remains the final unresolved design/handoff stage and requires an explicit design update before implementation.
+D06 and D07 are resolved in the production CRM path. D08 remains the final unresolved design/handoff stage. D08 is a design/handoff item, not a production-data gate.
 
 ## Current rule
 
 Do not use the historical CRM branches as the working location. All future UI dashboard work belongs on `crm-ui-dashboard`.
 
-## Current production workflow — 2026-09-30
+## Current production workflow — 2026-10-01
+
+Verified current source: `+919148338801`; Supabase has 186 source-linked leads, 289 classifications, 2 pending classifications, 6,621 messages and 73 webhook events, all processed. OOC (`Out of Coverage Area`) is an available Layer-2 lead status. Automatic geographic OOC assignment is not enabled pending a deterministic coverage rule.
+
 
 ### Contact Classification
 

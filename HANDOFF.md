@@ -119,7 +119,7 @@ These are future live-runtime verification tasks, not unresolved Phase-1 impleme
 - Render `easyfind-crm-d01-d05` successfully called hosted Ollama `gpt-oss:20b` with fictional `L-1001` at 2026-09-26 21:25:38 UTC. The five expected keys were returned. No local model.
 - Dedicated root `steering.md` is the only CRM model system instruction, loaded and cached by `src/ollama-adapter.mjs` (2-KiB maximum). It conveys EFPS brokerage purpose, model role, structured extraction, operator control and no invented facts. Repository `CORE_STEERING.md` remains separate.
 - Application tests, build, browser and GitHub Actions must pass on the new steering commit; Render `49b4f30` succeeded with the dedicated steering at 2026-09-26 21:36:16 UTC. Optional `CRM_OLLAMA_STARTUP_SMOKE_ENABLED=false` is deployed: `dep-das3lspa4omc738mqre0` live at 2026-09-26 21:37:57 UTC; no startup inference observed. On-demand fictional pilot remains enabled.
-- Current production Supabase state contains reconciled real CRM data for `+919148338801`; historical records and live webhook events use the same source-aware reconciliation path. D06–D08 and later source onboarding remain future scope. Credential rotation remains a final production hardening step.
+- Current production Supabase state contains reconciled real CRM data for `+919148338801`; historical records and live webhook events use the same source-aware reconciliation path. D06 and D07 are resolved; D08 remains the final visual-system/handoff item. Independent encrypted backup + isolated restore proof remains a separate infrastructure hardening item.
 
 ## 2026-09-27 — CRM UI branch reconciliation
 
@@ -128,7 +128,7 @@ These are future live-runtime verification tasks, not unresolved Phase-1 impleme
 - The other configured WhatsApp source numbers remain visible in the UI for future onboarding but are not part of the current production import scope.
 - Render currently tracks `crm-ui-dashboard`; do not repoint this CRM UI deployment to `main` as part of the current production flow.
 - The CRM UI working checkout is `/Users/zeidzakir/Projects/efps-internal-automatios/leads_automation/crm-ui-dashboard`, tracking `origin/crm-ui-dashboard`. Keep the historical `leads_automation/leads-ui` application separate.
-- Real-data migration for the current source is complete. Backup/restore and D06–D08 are separate hardening/future-scope items and do not disable the current `+919148338801` production flow.
+- Source-scoped real-data migration for the current source is complete. Independent backup/restore proof and D08 remain open; D06/D07 are resolved. These items do not disable the current `+919148338801` production flow.
 
 ## CRM daily workflow — 2026-09-30
 

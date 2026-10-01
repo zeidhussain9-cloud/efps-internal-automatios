@@ -6,7 +6,7 @@ Verified live state: Render `easyfind-crm-d01-d05` / `srv-darsv560tbcc73cu4ip0`,
 
 This document contains historical source-of-truth decisions below. The current operational CRM truth is now split by provenance: the audited local SQLite extraction remains the historical evidence set, while Supabase is the production operational store for the connected source `+919148338801`. Live WhAPI messages enter through the Supabase webhook boundary and are persisted in `crm_webhook_events` before downstream reconciliation.
 
-Current production baseline: 141 source-linked CRM leads, 287 classifications, 58 pending classifications, 6,561 messages, and 28 webhook events (13 processed, 15 received). The current Contact Classification UI is operator-gated; Qualified Lead is the only path into CRM. The two other source numbers remain visible for future onboarding only.
+Current production baseline: 186 source-linked CRM leads, 289 classifications, 2 pending classifications, 6,621 messages, and 73 webhook events (73 processed, 0 received, 0 failed). The current Contact Classification UI is operator-gated; Qualified Lead is the only path into CRM. The two other source numbers remain visible for future onboarding only.
 
 The older statements in this document that WhAPI was a future integration are historical and are superseded by this section.
 

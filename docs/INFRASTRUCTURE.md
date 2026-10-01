@@ -1,6 +1,6 @@
 ## Current production audit — 2026-10-01
 
-Verified live baseline: Render `easyfind-crm-d01-d05` (`srv-darsv560tbcc73cu4ip0`) on `crm-ui-dashboard`, commit `45dbab7b1ba92387e5e001f74929ad40c92be6a9`; Supabase source `+919148338801`; 185 source-linked leads, 288 classifications, 13 pending, 6,561 messages, 46 webhook events (13 processed, 33 received, 0 failed). Other UI-visible sources `+917975102130`, `+919902024973` remain inactive. Browser Realtime is notification-only; the exact Supabase HTTPS/WSS origin is allowlisted in CSP. No WhAPI historical API extraction was run.
+Verified live baseline: Render `easyfind-crm-d01-d05` (`srv-darsv560tbcc73cu4ip0`) on `crm-ui-dashboard`, commit `d28046266239cd889ad14f87a61a92742383305e`; Supabase source `+919148338801`; 186 source-linked leads, 289 classifications, 2 pending, 6,621 messages, 73 webhook events (73 processed, 0 received, 0 failed). Other UI-visible sources `+917975102130`, `+919902024973` remain inactive. Browser Realtime is notification-only; the exact Supabase HTTPS/WSS origin is allowlisted in CSP. No WhAPI historical API extraction was run.
 
 # Infrastructure Registry
 
@@ -18,10 +18,11 @@ This is the canonical registry for external systems and verified resource identi
 
 - Render service: `easyfind-crm-d01-d05` (`srv-darsv560tbcc73cu4ip0`)
 - Deployment branch: `crm-ui-dashboard`
-- Latest live commit: `184abfe58052b01ebf5be4dd26044f31fc579536`
+- Latest live commit: `d28046266239cd889ad14f87a61a92742383305e`
+- Live deployment: `dep-dauq8hg473hc739ve530`
 - Production source: `+919148338801`
-- Supabase baseline: 141 source-linked leads, 287 classifications, 58 pending classifications, 6,561 messages, 28 webhook events (13 processed, 15 received).
-- `main` is repository-reconciled but Render is not switched to it.
+- Supabase baseline: 186 source-linked leads, 289 classifications, 2 pending classifications, 6,621 messages, 73 webhook events (73 processed, 0 received, 0 failed).
+- `main` is repository-reconciled to the same tree; Render remains on `crm-ui-dashboard`.
 
 ## Historical CRM prototype deployment target
 

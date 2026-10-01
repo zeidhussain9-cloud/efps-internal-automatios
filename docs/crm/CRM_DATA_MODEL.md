@@ -2,16 +2,17 @@
 
 **Canonical repository:** `zeidhussain9-cloud/efps-internal-automatios`  
 **Branch:** `crm-ui-dashboard`  
-**Status (2026-09-30):** Production CRM UI is live on `crm-ui-dashboard` / Render `easyfind-crm-d01-d05`. Current production source is `+919148338801`; historical and live data are reconciled in Supabase.
+**Status (2026-10-01):** Production CRM UI is live on `crm-ui-dashboard` / Render `easyfind-crm-d01-d05`. Current production source is `+919148338801`; historical and live data are reconciled in Supabase.
 
-## Current operational baseline — 2026-09-30
+## Current operational baseline — 2026-10-01
 
 - Production source: `+919148338801`
-- Source-linked CRM leads: 141
-- Contact classifications: 287
-- Pending classifications: 58
-- Current CRM messages: 6,561
-- Webhook events: 28 (13 processed, 15 received)
+- Source-linked CRM leads: 186
+- Contact classifications: 289
+- Pending classifications: 2
+- Promoted classifications: 186
+- Current CRM messages: 6,621
+- Webhook events: 73 (73 processed, 0 received, 0 failed)
 - Historical SQLite message archive: 5,286; this remains historical evidence and is not the current live message count.
 - The Contact Classification UI is operator-gated and uses explicit Update actions.
 - Qualified Lead is the only path into Lead CRM.

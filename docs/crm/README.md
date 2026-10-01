@@ -24,9 +24,9 @@ The two audit reports under `docs/audits/` are dated evidence snapshots. The lea
 
 D01–D05 are approved, D06 is resolved, D07 is resolved, and D08 remains unresolved.
 
-## Prototype boundary
+## Historical prototype boundary
 
-Synthetic data only. No live customer data, live WhatsApp sending, destructive Sheets sync, or production writes.
+The original prototype was synthetic-only. That dated boundary is retained for historical context; the current CRM production path uses source-scoped Supabase data for `+919148338801`. Automatic WhatsApp sending remains disabled, and inventory remains read-only from the CRM.
 
 ## CRM AI-specific steering
 
