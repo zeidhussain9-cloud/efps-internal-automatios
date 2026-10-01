@@ -24,7 +24,7 @@ test('production CRM browser journey uses only live-record surfaces',async()=>{
   await page.route('**/api/db/leads*',route=>route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({
     leads:[
      {id:'LIVE-1',display_name:'Live lead',normalized_phone:'+919000000001',status:'New',lead_type:'New',tenant_type:'Not specified',priority:'Medium',classification:'Qualified Lead',overdue_followup_count:1,requirements:{bhk:'2 BHK',locality:'Harlur',budget:50000},updated_at:'2026-09-30T00:00:00Z',contacted_at:'2026-08-26T07:30:00.000Z',last_message_direction:'Incoming',last_message_at:'2026-09-30T16:26:15.000Z',source_number:'+919148338801'},
-     {id:'LIVE-2',display_name:'Unclassified lead',normalized_phone:'+919000000002',status:'New',lead_type:'Waiting on Customer',tenant_type:'Not specified',priority:'Medium',classification:null,overdue_followup_count:0,requirements:{},updated_at:'2026-09-30T00:00:00Z',contacted_at:null,last_message_direction:null,last_message_at:null,source_number:'+919148338801'}
+     {id:'LIVE-2',display_name:'Unclassified lead',normalized_phone:'+919000000002',status:'New',lead_type:'Waiting on Customer',tenant_type:'Not specified',priority:'Medium',classification:'Cold Inquiry',overdue_followup_count:0,requirements:{},updated_at:'2026-09-30T00:00:00Z',contacted_at:null,last_message_direction:null,last_message_at:null,source_number:'+919148338801'}
     ],
    total:228,sourceTotals:{'+919148338801':228}
   })}));
@@ -120,7 +120,8 @@ test('production CRM browser journey uses only live-record surfaces',async()=>{
   assert.equal(await page.locator('.lead-card-activity').count(),2);
   assert.equal(await page.getByText('Classification',{exact:true}).count(),2);
   assert.equal(await page.getByText('Qualified Lead',{exact:true}).count(),1);
-  assert.equal(await page.locator('.lead-card-classification strong').nth(1).textContent(),'Not recorded');
+  assert.equal(await page.locator('.lead-card-classification strong').nth(1).textContent(),'Cold Inquiry');
++  assert.ok(await page.locator('.lead-card-classification-cold').count()===1,'cold classification uses a subtle semantic tone');
   assert.equal(await page.getByText('Lead status · New',{exact:true}).count(),1);
   assert.equal(await page.getByText('Lead status · Waiting on Customer',{exact:true}).count(),1);
   assert.equal(await page.getByText('Source number · +919148338801',{exact:true}).count(),2);
