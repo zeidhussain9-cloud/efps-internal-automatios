@@ -16,6 +16,7 @@ const LEAD_STATUS_LABELS={'Out of Coverage Area':'OOC'};
 const TENANT_TYPES=['Family','Bachelors','Couples','Students','Working Professionals','Corporate','Other','Not specified'];
 const LEAD_SORT_OPTIONS=[['last_message_desc','Last message — newest'],['customer_waiting','Customer replied — newest'],['first_customer_desc','First contacted — newest'],['last_message_asc','Last message — oldest'],['name_asc','Name — A–Z']];
 const LEAD_STATUS_TONES={'Active Follow-up':'active','Waiting on Customer':'waiting-customer','Waiting on Us':'waiting-us','Dormant':'dormant','Converted':'converted'};
+const LEAD_CLASSIFICATION_TONES={'Qualified Lead':'qualified','Cold Inquiry':'cold'};
 const formatLeadDate=value=>{if(!value)return'Not recorded';const d=new Date(value);if(!Number.isFinite(d.valueOf()))return'Not recorded';const parts=new Intl.DateTimeFormat('en-IN',{day:'2-digit',month:'long',year:'numeric',hour:'2-digit',minute:'2-digit',hourCycle:'h23',timeZone:'Asia/Kolkata'}).formatToParts(d);const part=name=>parts.find(p=>p.type===name)?.value||'';return part('day')+'-'+part('month')+'-'+part('year')+' / '+part('hour')+':'+part('minute')};
 const TABS=['Overview','Conversation','Requirements','Property Matches','AI & Drafts','Activity & History'];
 const MENU=[['Dashboard',LayoutDashboard],['Contact Classification',Inbox],['Leads Inbox',Inbox],['Inventory',Building2],['Activity',ActivityIcon],['Settings',Settings]];
@@ -78,7 +79,7 @@ function LeadCard({lead,onClick,privacyMode}){
  const overdueFollowups=Number(lead.overdue_followup_count)||0;
  return <button className="lead-card" onClick={onClick} type="button">
   <div className="lead-card-main"><div className="lead-card-identity"><b>{title}</b>{lead.display_name&&<span className="lead-card-phone">{displayPhone}</span>}</div></div>
-  <div className="lead-card-classification"><small>Classification</small><strong>{lead.classification||'Not recorded'}</strong></div>
+  <div className={'lead-card-classification lead-card-classification-'+(LEAD_CLASSIFICATION_TONES[lead.classification]||'neutral')}><small>Classification</small><strong>{lead.classification||'Not recorded'}</strong></div>
   <div className="lead-card-meta lead-card-meta-minimal"><span className={'lead-card-status lead-card-status-'+(LEAD_STATUS_TONES[status]||'neutral')}>Lead status · {LEAD_STATUS_LABELS[status]||status||'Not recorded'}</span><span>Source number · {lead.source_number||SOURCE_NUMBER}</span>{overdueFollowups>0&&<span className="lead-card-attention"><Clock3 size={13} aria-hidden="true"/>Overdue follow-up · {overdueFollowups}</span>}</div>
   <div className="lead-card-activity" aria-label="Lead conversation activity">
    <div><small>Contacted date</small><strong>{formatLeadDate(lead.contacted_at)}</strong></div>
