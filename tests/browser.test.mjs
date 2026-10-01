@@ -76,6 +76,7 @@ test('production CRM browser journey uses only live-record surfaces',async()=>{
   await page.getByRole('button',{name:'Inventory',exact:true}).click();
   assert.equal(new URL(page.url()).pathname,'/inventory');
   await page.getByRole('heading',{name:'Property inventory'}).waitFor();
+  await page.getByRole('button',{name:/Total properties/}).waitFor();
   assert.equal(await page.getByRole('button',{name:/Total properties/}).count(),1);
   assert.equal(await page.getByRole('button',{name:/Available/}).count(),1);
   assert.equal(await page.getByRole('button',{name:/Rented out/}).count(),1);
