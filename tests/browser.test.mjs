@@ -103,6 +103,12 @@ test('production CRM browser journey uses only live-record surfaces',async()=>{
   await page.getByLabel('Sort leads').selectOption('customer_waiting');
   await sortRequest;
 
+  const searchRequest=page.waitForRequest(request=>{
+   try{return request.url().includes('/api/db/leads')&&new URL(request.url()).searchParams.get('lead_search')==='live'}catch{return false}
+  });
+  await page.getByLabel('Search live leads').fill('live');
+  await searchRequest;
+
   const phoneText=await page.locator('.lead-card-main span').first().textContent();
   assert.match(phoneText||'',/\*\*\*\*\*\*0001$/);
   assert.equal(await page.getByText('Synthetic preview').count(),0);
