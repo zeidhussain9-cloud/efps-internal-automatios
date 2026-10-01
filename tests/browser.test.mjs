@@ -250,7 +250,7 @@ test('production CRM browser journey uses only live-record surfaces',async()=>{
   assert.ok(toolbarBox&&toolbarBox.width<=390,'lead controls fit the mobile viewport');
   const sortBox=await page.getByLabel('Sort leads').boundingBox();
   assert.ok(sortBox&&sortBox.width>0&&sortBox.width<=195,'sort control stays within its mobile column');
-  const activity=await page.locator('.lead-card-activity').boundingBox();
+  const activity=await page.locator('.lead-card-activity').first().boundingBox();
   assert.ok(activity&&activity.width<=390,'lead activity columns fit the mobile card');
   assert.equal(await page.getByLabel('Sort leads').locator('option').count(),5,'all lead sort modes remain available on mobile');
   await page.getByRole('button',{name:'Leads Inbox',exact:true}).click();
