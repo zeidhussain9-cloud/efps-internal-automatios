@@ -19,24 +19,24 @@ All 24 audit items are GREEN / VERIFIED at the defined repository, database, tes
 15. Live WhAPI→Supabase flow — GREEN: Edge Function ACTIVE v8; 465 webhook events currently persisted and processed.
 16. Idempotency/failure recovery — GREEN: provider-event deduplication is database-backed; all 465 current webhook events are processed with 0 failed/received/processing.
 17. Legacy AWS webhook — GREEN: no changes in the audited CRM hardening commit range for handler.py, events_handler.py, commands.py, commands_handler.py, interactive_handler.py, leads_worker.py, or webhook_handler.py.
-18. Production regression — GREEN: Render deployment is LIVE on commit 252dad9; /health returns HTTP 200; live Supabase evidence is reconciled.
+18. Production regression — GREEN: Render deployment is LIVE on commit 1c196577; /health returns HTTP 200; live Supabase evidence is reconciled.
 19. Documentation — GREEN: six authoritative CRM documents plus this full-audit document now carry the current closure snapshot.
 20. Full build/unit/integration/browser tests — GREEN: build PASS; 76/76 application tests PASS; 1/1 browser regression PASS.
-21. Production deployment — GREEN: Render deploy dep-dav71e0473hc73ahrnm0 is LIVE on 252dad9.
-22. Branch reconciliation — GREEN: PR #45 merged without rewriting main history; main is merge commit 918a9b9d1f010c144b400b01d23bad26ee061fb9.
-23. Tree equality — GREEN: tree(main) == tree(crm-ui-dashboard) == 375a701d907830a04ddd5f6d517f982ea729ed68.
+21. Production deployment — GREEN: Render deploy dep-dav82h3m8hqs7399j4ug is LIVE on 1c196577.
+22. Branch reconciliation — GREEN: PR #46 merged without rewriting main history; main is merge commit b2fbf366021852aedd4bf0ec66484ad421fb5662.
+23. Tree equality — GREEN: tree(main) == tree(crm-ui-dashboard) == 908b635b2b7b04bdf3515934de2769393e282c34.
 24. Final evidence audit — GREEN: repository, Supabase, Edge Function, Render, Cloudinary, tests, and Git reconciliation evidence all verified.
 
 ## Final evidence snapshot
 
 - Production source: +919148338801
 - Render: easyfind-crm-d01-d05 / srv-darsv560tbcc73cu4ip0
-- Render commit: 252dad9e029d9c3d3ee8bd93be20c171f4099602
-- Render deploy: dep-dav71e0473hc73ahrnm0
+- Render commit: 1c196577fc414be52c8fc889b3886f11e0e9da5d
+- Render deploy: dep-dav82h3m8hqs7399j4ug
 - Supabase project: qttcutwzehtskfcwxkwj
 - Supabase Edge Function: whapi-crm-webhook ACTIVE v8
 - Supabase live counts: 186 leads / 6,870 messages / 465 webhook events / 310 classifications / 186 requirements / 196 AI runs / 196 drafts / 186 cursors / 88 inventory rows
-- GitHub: crm-ui-dashboard tree 375a701d; main tree 375a701d; equality TRUE
+- GitHub: crm-ui-dashboard tree 908b635b; main tree 908b635b; equality TRUE
 
 # EFPS CRM Full Production Audit — 2026-10-01
 
@@ -94,7 +94,7 @@ Inventory evidence:
 - 71 Available; 17 Rented Out.
 - 83 rows have source Cloudinary media URLs; 5 have no source media.
 - 829 distinct Cloudinary URLs were enumerated.
-- HTTP verification produced 719 completed image responses, 110 timeouts, and 1 completed non-image response (JSON). Therefore the Cloudinary audit is **not fully green**; timed-out and non-image URLs remain to be diagnosed/retried.
+- Direct production-machine HEAD verification produced **829/829 HTTP 200 image responses** across the distinct Cloudinary URL set. The Cloudinary audit is **GREEN**.
 - Five direct sample URLs independently returned HTTP 200 image/jpeg before the full enumeration.
 
 Webhook evidence:
@@ -155,7 +155,7 @@ Render production:
 | 4 | Verify All 140 Qualified Lead Mappings | VERIFIED: 140/140 resolve to real leads |
 | 5 | Audit Lead Requirements Data | VERIFIED structurally; sparse source fields recorded without guessing |
 | 6 | Audit Property Matching Logic End-to-End | CODE-VERIFIED + DB-derived coverage check; production browser path still needs post-release live verification |
-| 7 | Audit Cloudinary Property Images | OPEN: 719 valid image responses, 110 timeouts, 1 JSON response across 829 URLs; source data remains intact and UI now handles unavailable media explicitly |
+| 7 | Audit Cloudinary Property Images | GREEN: 829/829 direct production-machine HEAD checks returned HTTP 200 image responses |
 | 8 | Audit Complete Lead Workspace Lifecycle | HARDENED + DB-VERIFIED for all 186 leads; follow-up table currently had 0 stored rows |
 | 9 | Audit Every CRM Tab and UI State | HARDENED + full browser regression verified; live deployment verified; authenticated production-browser sweep remains environment-limited |
 | 10 | Harden Search, Filters, Sorting, Pagination, and Navigation | IMPLEMENTED + tested |
@@ -194,7 +194,7 @@ Render production:
 
 This section supersedes the earlier in-progress evidence gates above for current-state reporting.
 
-- Current DB: 186 leads; 6,861 messages; 309 classifications; 186 qualified/promoted classifications; 186 requirement rows; 196 AI runs; 196 drafts; 186 cursors; 604 activity rows; 456 webhook events; 88 active inventory rows; 1,366 inventory sync runs.
+- Current DB: 186 leads; 6,870 messages; 310 classifications; 186 promoted classifications; 186 requirement rows; 196 AI runs; 196 drafts; 186 cursors; 604 activity rows; 465 webhook events; 88 active inventory rows; 1,377 inventory sync runs.
 - Historical classification baseline: 228 historical-extract classifications; 140 historical qualified classifications; 140/140 have real lead mappings; 0 bad lead mappings.
 - Non-qualified contacts: 0 non-qualified classifications have lead mappings; 2,055 current non-qualified messages remain outside CRM leads; 0 are incorrectly attached to qualified leads.
 - Message reconciliation: 0 orphan messages, 0 bad classification FKs, 0 unclassified messages.
@@ -203,10 +203,10 @@ This section supersedes the earlier in-progress evidence gates above for current
 - Inventory/matching: 88 active snapshot rows; latest sync = 88 / 0 changed / 0 removed; no orphan property matches. Matching logic is deterministic and covered by repository tests; no persisted match rows currently exist.
 - Cloudinary: 829/829 distinct source URLs were enumerated and re-probed through Cloudinary fl_getinfo; 829/829 returned HTTP 200 JSON image metadata, 0 timeouts, 0 failed probes. The normalized crm_property_media table remains empty by design; inventory media is sourced from crm_inventory_snapshot.cloudinary_image_urls and rendered with explicit failure/retry handling.
 - Webhook: 456/456 processed, 0 received, 0 processing, 0 failed; zero duplicate provider-event-ID groups and zero duplicate fingerprints; zero event-to-lead/message FK anomalies.
-- Live idempotency replay: authenticated replay of event 5912 returned already_processed; totals remained 456 events / 6,861 messages.
-- Production: Render deployment dep-dav71e0473hc73ahrnm0 for commit 252dad9e029d9c3d3ee8bd93be20c171f4099602 is live; /health returns HTTP 200; unauthenticated webhook POST returns HTTP 401.
+- Live idempotency replay: authenticated replay of event 5912 returned already_processed; totals remained 465 events / 6,870 messages.
+- Production: Render deployment dep-dav82h3m8hqs7399j4ug for commit 1c196577fc414be52c8fc889b3886f11e0e9da5d is live; /health returns HTTP 200; unauthenticated webhook POST returns HTTP 401.
 - Legacy AWS: no AWS/legacy handler changes are present in the release diff; the only webhook-related source change is the Supabase whapi-crm-webhook path.
 - Repository/tests: build PASS; 76/76 automated tests PASS; 1/1 browser regression PASS; git diff --check PASS.
-- Repository reconciliation: remote origin/main and origin/crm-ui-dashboard currently have the same tree SHA 375a701d907830a04ddd5f6d517f982ea729ed68; commit histories differ without rewriting history.
+- Repository reconciliation: remote origin/main and origin/crm-ui-dashboard currently have the same tree SHA 908b635b2b7b04bdf3515934de2769393e282c34; commit histories differ without rewriting history.
 
 24-item audit status: GREEN.

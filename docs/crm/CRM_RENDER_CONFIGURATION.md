@@ -8,7 +8,7 @@ Evidence snapshot after final verification:
 - main reconciliation commit: 918a9b9d1f010c144b400b01d23bad26ee061fb9
 - main tree: 375a701d907830a04ddd5f6d517f982ea729ed68
 - tree(main) == tree(crm-ui-dashboard): TRUE
-- Render deployment: dep-dav71e0473hc73ahrnm0, status LIVE, commit 252dad9
+- Render deployment: dep-dav82h3m8hqs7399j4ug, status LIVE, commit 1c196577fc414be52c8fc889b3886f11e0e9da5d
 - Production health: GET /health = HTTP 200, {"ok":true}
 - Supabase: 186 leads, 6,870 messages, 465 webhook events, 310 classifications, 186 requirements, 196 AI runs, 196 drafts, 186 cursors, 88 active inventory rows
 - Webhook events: 465/465 processed; 0 received; 0 processing; 0 failed
@@ -26,9 +26,9 @@ Evidence snapshot after final verification:
 Historical dated checkpoints below remain historical evidence; this block is the current source of truth.
 
 
-> **Current authoritative release note:** This section reflects the last deployed checkpoint. The next hardening release is being prepared on `crm-ui-dashboard`. See `docs/audits/CRM_FULL_AUDIT_2026-10-01.md` for the evidence state of the pending release. Current live-data baseline from Supabase: 186 leads, 6,859 messages, 454 webhook events, 309 classifications, 196 AI runs/drafts, 186 AI cursors, 88 active inventory rows. Render auto-deploys from `crm-ui-dashboard`; the latest live commit is `1c3eb76eaa45f27aae72a19db46566fcc46a2fb8`.
+> Current authoritative release note: the verified production release is crm-ui-dashboard commit 1c196577fc414be52c8fc889b3886f11e0e9da5d, Render deployment dep-dav82h3m8hqs7399j4ug (LIVE).
 
-Verified live state — 2026-10-01: Render `easyfind-crm-d01-d05` / `srv-darsv560tbcc73cu4ip0`, branch `crm-ui-dashboard`; the synchronized release is live. Supabase source `+919148338801`: 186 source-linked leads, 309 classifications, 20 pending, 186 promoted, and 6,853 CRM messages. All 436 webhook events are processed; 0 remain `received`; 0 failed. Automatic reconciliation is active. Browser Realtime is notification-only. RLS remains enabled on CRM tables and browser roles have no direct SELECT privilege.
+See the authoritative current-state block at the top of this document for the verified Render/Supabase checkpoint.
 
 ## Current production checkpoint — 2026-10-01
 
@@ -36,32 +36,40 @@ Render service `easyfind-crm-d01-d05` (`srv-darsv560tbcc73cu4ip0`) deploys `crm-
 
 Current source: `+919148338801`. The other configured source numbers `+917975102130` and `+919902024973` are visible/selectable in the UI only and are not active production ingestion sources.
 
-Current production database state: 186 leads, 309 classifications, 20 pending classifications, 186 promoted classifications, 6,853 messages, and 436 webhook events (436 processed, 0 received, 0 processing, 0 failed).
+Current production database state: 186 leads, 310 classifications, 23 pending classifications, 186 promoted classifications, 6,870 messages, and 465 webhook events (465 processed, 0 received, 0 processing, 0 failed).
 
 The browser Realtime channel is a UI refresh signal, not the webhook source of truth. The latest hardening change explicitly allows the exact Supabase HTTPS/WSS origin in the server CSP so the browser Realtime client is not blocked by the previous `connect-src 'self'` restriction.
 
 
 # CRM deployment configuration — staged setup
 
-## Current verified repository state — 2026-10-01
+## Authoritative current verified state — 2026-10-01 21:55 IST
 
-This section is the current checkpoint for maintained documentation. Dated audit sections below remain historical evidence and are not silently rewritten.
+This is the latest repository/production checkpoint. Older dated sections in maintained documents are historical evidence and must not be interpreted as current state.
 
-- **Canonical UI/deployment branch:** `crm-ui-dashboard`
-- **`crm-ui-dashboard` commit:** `da13083f6cb1f3c78ec3f4df661c515d43f556fa`
-- **`crm-ui-dashboard` tree:** `f36a5ccb4bae742e83603b09bee59d01595ecf00`
-- **`main` reconciliation commit:** `692bdcbbab51752b8eb7d4927921d1cfc4830de7`
-- **`main` tree:** `f36a5ccb4bae742e83603b09bee59d01595ecf00`
-- **Tree equality:** `tree(main) == tree(crm-ui-dashboard)` = **TRUE**; commit histories differ by design.
-- **Render:** `easyfind-crm-d01-d05` / `srv-darsv560tbcc73cu4ip0`, deployment `dep-dav55km0tbcc73eelat0`, **live**.
-- **Production source:** `+919148338801`.
-- **Supabase CRM:** 186 leads; 309 classifications; 20 pending; 186 promoted; 6,853 messages; 436 webhook events, 436 processed, 0 received, 0 processing, 0 failed.
-- **AI persistence:** 196 AI runs, 196 proposed; 196 drafts; 186 AI cursors.
-- **Inventory:** 88 active Housing rows; 1,333 sync-run records; latest recorded sync = 88 rows / 0 changed / 0 removed; AU/AV remain outside the CRM operational A:AT mirror.
-- **Schedulers:** `crm_webhook_reconcile_1m` active every minute; `crm_inventory_sheet_reconcile_5m` active every five minutes.
-- **P1–P5:** implemented and production-verified as documented in `docs/audits/PRODUCTION_LIVE_WEBHOOK_AND_INVENTORY_AUDIT_2026-10-01.md`.
-- **Verification:** `npm run build` PASS; `npm test` PASS (71/71); `npm run test:browser` PASS (1/1).
-- **GitHub:** active remote UI branch search returns only `crm-ui-dashboard`; historical UI/inventory branches with deleted remotes are retained only as local historical evidence and are not active deployment branches.
+- **CRM deployment branch:** `crm-ui-dashboard`
+- **CRM commit:** `1c196577fc414be52c8fc889b3886f11e0e9da5d`
+- **CRM tree:** `908b635b2b7b04bdf3515934de2769393e282c34`
+- **main:** `b2fbf366021852aedd4bf0ec66484ad421fb5662`
+- **main tree:** `908b635b2b7b04bdf3515934de2769393e282c34`
+- **Tree equality:** `tree(main) == tree(crm-ui-dashboard)` = **TRUE**
+- **Render:** `easyfind-crm-d01-d05` / `srv-darsv560tbcc73cu4ip0`
+- **Live Render deployment:** `dep-dav82h3m8hqs7399j4ug` = **LIVE**
+- **Live Render commit:** `1c196577fc414be52c8fc889b3886f11e0e9da5d`
+- **Production health:** `GET /health` = HTTP 200, `{"ok":true}`
+- **Production WhatsApp source:** `+919148338801`
+- **Supabase:** 186 leads; 6,870 messages; 465 webhook events; 310 classifications; 186 requirements; 196 AI runs; 196 drafts; 186 AI cursors; 88 active inventory rows.
+- **Classification status:** 186 promoted; 88 classified; 23 pending; 13 excluded = 310 total.
+- **Webhook status:** 465 processed; 0 received; 0 processing; 0 failed.
+- **Message reconciliation:** 6,870 total = 4,806 lead-linked + 2,064 classified non-lead; unreconciled = 0.
+- **Historical classification population:** 228 historical records; 140 qualified mappings.
+- **Inventory:** 88 active rows = 71 Available + 17 Rented Out; 1,377 sync runs; latest sync recorded 88 rows / 0 changed / 0 removed; inventory-change rows = 0.
+- **Cloudinary:** 829/829 distinct production URLs returned HTTP 200 with `image/*` content-type by direct HEAD checks from the production-machine network path.
+- **AI integrity:** draft→AI-run lead mismatch = 0; stale evidence references = 0; invalid cursor lead links = 0.
+- **Tests:** `npm run build` PASS; `npm test` 76/76 PASS; `npm run test:browser` 1/1 PASS.
+- **Supabase Edge Function:** `whapi-crm-webhook` ACTIVE v8.
+- **AWS legacy webhook:** no changes in the audited CRM hardening range.
+- **24-item CRM audit:** GREEN / VERIFIED.
 
 ### Current operational flow
 
@@ -226,4 +234,4 @@ The operator AI workspace now also implements: stale-draft detection when newer 
 
 ## 2026-10-01 — Final production verification
 
-Render service easyfind-crm-d01-d05 (srv-darsv560tbcc73cu4ip0) is live from crm-ui-dashboard at commit 252dad9e029d9c3d3ee8bd93be20c171f4099602, deployment dep-dav71e0473hc73ahrnm0. /health returns HTTP 200. The active Supabase whapi-crm-webhook function is version 8; authenticated duplicate replay returned already_processed. Current production DB reconciliation is clean: 456/456 webhook events processed, 0 orphan messages, 0 classification/lead mismatches, 186/186 requirement rows, and 829/829 Cloudinary metadata probes successful. Build, 76/76 tests, and 1/1 browser regression pass. All 24 CRM audit items are GREEN.
+Render service easyfind-crm-d01-d05 (srv-darsv560tbcc73cu4ip0) is live from crm-ui-dashboard at commit 1c196577fc414be52c8fc889b3886f11e0e9da5d, deployment dep-dav82h3m8hqs7399j4ug. /health returns HTTP 200.

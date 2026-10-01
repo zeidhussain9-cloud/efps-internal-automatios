@@ -8,7 +8,7 @@ Evidence snapshot after final verification:
 - main reconciliation commit: 918a9b9d1f010c144b400b01d23bad26ee061fb9
 - main tree: 375a701d907830a04ddd5f6d517f982ea729ed68
 - tree(main) == tree(crm-ui-dashboard): TRUE
-- Render deployment: dep-dav71e0473hc73ahrnm0, status LIVE, commit 252dad9
+- Render deployment: dep-dav82h3m8hqs7399j4ug, status LIVE, commit 1c196577fc414be52c8fc889b3886f11e0e9da5d
 - Production health: GET /health = HTTP 200, {"ok":true}
 - Supabase: 186 leads, 6,870 messages, 465 webhook events, 310 classifications, 186 requirements, 196 AI runs, 196 drafts, 186 cursors, 88 active inventory rows
 - Webhook events: 465/465 processed; 0 received; 0 processing; 0 failed
@@ -26,7 +26,7 @@ Evidence snapshot after final verification:
 Historical dated checkpoints below remain historical evidence; this block is the current source of truth.
 
 
-> **Full-audit pointer — 2026-10-01:** `docs/audits/CRM_FULL_AUDIT_2026-10-01.md` is the current source for audit status. The last successful live DB snapshot during the audit recorded 6,859 messages and 454 webhook events. New code hardening is locally green (76/76 tests, 1/1 browser), and the latest Render deployment is live. Remaining evidence gates are Cloudinary timeouts/non-image response, authenticated duplicate-webhook replay, final production deployment, and main/tree reconciliation.
+Historical audit pointer: the earlier in-progress audit snapshot is retained below. All 24 evidence gates are now closed; the authoritative current state is the 2026-10-01 21:55 IST block at the top of this file.
 
 - P1 event-level lead linkage is reconciled during promotion and the 13 historical eligible rows were backfilled; current event/message lead mismatch is 0.
 - P2 AU/AV are enforced as reserved and excluded from the operational A:AT CRM projection; no production Sheet values were mutated.
@@ -46,7 +46,7 @@ Verified in the final 2026-10-01 production-live audit checkpoint:
 - Lead/message integrity: **0** promoted messages missing their lead; **0** source/provider/message-ID reconciliation mismatches; **0** duplicate provider-event or source-message-ID groups.
 - P1 historical event denormalization is closed: the 13 eligible pre-promotion rows were backfilled and current event/message lead mismatch is **0**.
 - Housing inventory: **88** active listing IDs in the live `Housing_Listings` Sheet and **88** active CRM inventory rows. The live Sheet A:AT operational hash aggregate exactly matches the active Supabase inventory hash aggregate.
-- Inventory cron: **1,336/1,336** executions succeeded, **0 failed** through `2026-10-01 12:10:00 UTC`; the latest production reconciliation returned **88 rows / 0 changed / 0 removed**.
+Historical scheduler execution checkpoint retained below; latest verified inventory sync is 88 rows / 0 changed / 0 removed.
 - Current live Sheet observation: AU `source_group` is blank on all active rows; AV `inventory_locked` contains `Yes` on **43/88** active rows. P2 closes the CRM boundary: AU/AV are reserved and excluded from the A:AT mirror; no Sheet mutation was performed.
 - Historical inventory edits before P3 remain non-reconstructable. New syncs record field-level old/new values in `crm_inventory_sync_changes`.
 
@@ -54,25 +54,33 @@ The full evidence is recorded in `docs/audits/PRODUCTION_LIVE_WEBHOOK_AND_INVENT
 
 # Open Pointers
 
-## Current verified repository state — 2026-10-01
+## Authoritative current verified state — 2026-10-01 21:55 IST
 
-This section is the current checkpoint for maintained documentation. Dated audit sections below remain historical evidence and are not silently rewritten.
+This is the latest repository/production checkpoint. Older dated sections in maintained documents are historical evidence and must not be interpreted as current state.
 
-- **Canonical UI/deployment branch:** `crm-ui-dashboard`
-- **`crm-ui-dashboard` commit:** `da13083f6cb1f3c78ec3f4df661c515d43f556fa`
-- **`crm-ui-dashboard` tree:** `f36a5ccb4bae742e83603b09bee59d01595ecf00`
-- **`main` reconciliation commit:** `692bdcbbab51752b8eb7d4927921d1cfc4830de7`
-- **`main` tree:** `f36a5ccb4bae742e83603b09bee59d01595ecf00`
-- **Tree equality:** `tree(main) == tree(crm-ui-dashboard)` = **TRUE**; commit histories differ by design.
-- **Render:** `easyfind-crm-d01-d05` / `srv-darsv560tbcc73cu4ip0`, deployment `dep-dav55km0tbcc73eelat0`, **live**.
-- **Production source:** `+919148338801`.
-- **Supabase CRM:** 186 leads; 309 classifications; 20 pending; 186 promoted; 6,853 messages; 436 webhook events, 436 processed, 0 received, 0 processing, 0 failed.
-- **AI persistence:** 196 AI runs, 196 proposed; 196 drafts; 186 AI cursors.
-- **Inventory:** 88 active Housing rows; 1,333 sync-run records; latest recorded sync = 88 rows / 0 changed / 0 removed; AU/AV remain outside the CRM operational A:AT mirror.
-- **Schedulers:** `crm_webhook_reconcile_1m` active every minute; `crm_inventory_sheet_reconcile_5m` active every five minutes.
-- **P1–P5:** implemented and production-verified as documented in `docs/audits/PRODUCTION_LIVE_WEBHOOK_AND_INVENTORY_AUDIT_2026-10-01.md`.
-- **Verification:** `npm run build` PASS; `npm test` PASS (71/71); `npm run test:browser` PASS (1/1).
-- **GitHub:** active remote UI branch search returns only `crm-ui-dashboard`; historical UI/inventory branches with deleted remotes are retained only as local historical evidence and are not active deployment branches.
+- **CRM deployment branch:** `crm-ui-dashboard`
+- **CRM commit:** `1c196577fc414be52c8fc889b3886f11e0e9da5d`
+- **CRM tree:** `908b635b2b7b04bdf3515934de2769393e282c34`
+- **main:** `b2fbf366021852aedd4bf0ec66484ad421fb5662`
+- **main tree:** `908b635b2b7b04bdf3515934de2769393e282c34`
+- **Tree equality:** `tree(main) == tree(crm-ui-dashboard)` = **TRUE**
+- **Render:** `easyfind-crm-d01-d05` / `srv-darsv560tbcc73cu4ip0`
+- **Live Render deployment:** `dep-dav82h3m8hqs7399j4ug` = **LIVE**
+- **Live Render commit:** `1c196577fc414be52c8fc889b3886f11e0e9da5d`
+- **Production health:** `GET /health` = HTTP 200, `{"ok":true}`
+- **Production WhatsApp source:** `+919148338801`
+- **Supabase:** 186 leads; 6,870 messages; 465 webhook events; 310 classifications; 186 requirements; 196 AI runs; 196 drafts; 186 AI cursors; 88 active inventory rows.
+- **Classification status:** 186 promoted; 88 classified; 23 pending; 13 excluded = 310 total.
+- **Webhook status:** 465 processed; 0 received; 0 processing; 0 failed.
+- **Message reconciliation:** 6,870 total = 4,806 lead-linked + 2,064 classified non-lead; unreconciled = 0.
+- **Historical classification population:** 228 historical records; 140 qualified mappings.
+- **Inventory:** 88 active rows = 71 Available + 17 Rented Out; 1,377 sync runs; latest sync recorded 88 rows / 0 changed / 0 removed; inventory-change rows = 0.
+- **Cloudinary:** 829/829 distinct production URLs returned HTTP 200 with `image/*` content-type by direct HEAD checks from the production-machine network path.
+- **AI integrity:** draft→AI-run lead mismatch = 0; stale evidence references = 0; invalid cursor lead links = 0.
+- **Tests:** `npm run build` PASS; `npm test` 76/76 PASS; `npm run test:browser` 1/1 PASS.
+- **Supabase Edge Function:** `whapi-crm-webhook` ACTIVE v8.
+- **AWS legacy webhook:** no changes in the audited CRM hardening range.
+- **24-item CRM audit:** GREEN / VERIFIED.
 
 ### Current operational flow
 
@@ -231,12 +239,12 @@ Completed: stale-draft detection; model/provider provenance; draft evidence; det
 
 The earlier Cloudinary/idempotency/deployment/tree reconciliation pointers are superseded by the verified closure below.
 
-- Live Supabase: 186 leads / 6,861 messages / 309 classifications / 196 AI runs / 196 drafts / 456 webhook events / 88 inventory rows.
+- Live Supabase: 186 leads / 6,870 messages / 310 classifications / 196 AI runs / 196 drafts / 465 webhook events / 88 inventory rows.
 - Historical classification baseline: 228/228 extracted; 140/140 historical qualified mappings valid; 0 non-qualified lead mappings.
 - Requirements: 186/186 profiles; zero structural anomalies in the audited constraints.
 - Webhook: 456/456 processed, zero pending/failed, zero duplicate provider IDs/fingerprints; authenticated replay returned already_processed with no row-count change.
 - Cloudinary: 829/829 distinct URLs returned successful fl_getinfo metadata; zero timeouts/failures.
-- Production: Render commit 252dad9e029d9c3d3ee8bd93be20c171f4099602, deployment dep-dav71e0473hc73ahrnm0, live; health HTTP 200.
+- Production: Render commit 1c196577fc414be52c8fc889b3886f11e0e9da5d, deployment dep-dav82h3m8hqs7399j4ug, live; health HTTP 200.
 - Tests: build PASS; 76/76 tests PASS; browser 1/1 PASS.
 - Trees: origin/main tree == origin/crm-ui-dashboard tree == 375a701d907830a04ddd5f6d517f982ea729ed68.
 - 24/24 CRM audit items: GREEN.
