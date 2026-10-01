@@ -1,0 +1,41 @@
+name: CRM UI Verification
+
+on:
+  push:
+    branches:
+      - main
+      - crm-ui-dashboard
+      - crm-ui-polish-final-2026-10-02
+  pull_request:
+    branches:
+      - main
+      - crm-ui-dashboard
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Use Node.js 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24.21.0
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Unit and server tests
+        run: npm test
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Browser regression tests
+        run: npm run test:browser
