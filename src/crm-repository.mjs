@@ -84,7 +84,7 @@ export function createCrmRepository({pool,connectionString=process.env.DATABASE_
   async updateLead({id,displayName,normalizedPhone,status,leadType,tenantType,priority,requirements,operatorNotes,actor}){
    if(typeof id!=='string'||!id||id.length>128)throw Error('Invalid lead ID');if(!actor||typeof actor!=='string'||actor.length>128)throw Error('Invalid actor');
    if(status!==undefined&&!['New','Qualified','Contacted','Follow-up','Review','Archived'].includes(status))throw Error('Invalid status');
-   if(leadType!==undefined&&!['New','Active Follow-up','Waiting on Customer','Waiting on Us','Nurture','Dormant','Converted','Lost','On Hold'].includes(leadType))throw Error('Invalid lead status');
+   if(leadType!==undefined&&!['New','Active Follow-up','Waiting on Customer','Waiting on Us','Nurture','Dormant','Converted','Lost','On Hold','Out of Coverage Area'].includes(leadType))throw Error('Invalid lead status');
    if(tenantType!==undefined&&!['Family','Bachelors','Couples','Students','Working Professionals','Corporate','Other','Not specified'].includes(tenantType))throw Error('Invalid tenant type');
    if(priority!==undefined&&!['High','Medium','Low'].includes(priority))throw Error('Invalid priority');
    const fields=[],args=[];const add=(sql,v)=>{fields.push(sql);args.push(v)};
