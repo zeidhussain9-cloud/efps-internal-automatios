@@ -237,3 +237,12 @@ The operator AI workspace now also implements: stale-draft detection when newer 
 ## 2026-10-01 — Final production verification
 
 Render service easyfind-crm-d01-d05 (srv-darsv560tbcc73cu4ip0) is live from crm-ui-dashboard at commit 1c196577fc414be52c8fc889b3886f11e0e9da5d, deployment dep-dav82h3m8hqs7399j4ug. /health returns HTTP 200.
+
+
+## 2026-10-02 — Lead status + pagination UI release
+
+Current verified UI release on `crm-ui-dashboard`: commit `a2a9598967153047919a84a53763656a4a8d1a71`. Render service `srv-darsv560tbcc73cu4ip0` / `easyfind-crm-d01-d05` deployed this commit as `dep-davdufhh83ns73c0bd00`, status LIVE. Live `GET /health` returned HTTP 200 with `{"ok":true}`.
+
+UI scope: Lead Status replaces Classification on lead cards; lead-card borders/separation are strengthened; compact 10/20/30 pagination is standardized for Leads, Inventory, Dashboard follow-ups and Lead Workspace Requirements. Inventory page changes include stale-response protection. Production webhook/reconciliation, Supabase persistence, authentication, privacy, audit and AI backend paths were not changed.
+
+Final verification: build PASS; 87/87 repository tests PASS; browser regression 1/1 PASS; git diff --check PASS.
