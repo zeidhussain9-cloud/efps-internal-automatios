@@ -35,6 +35,7 @@ test('production CRM browser journey uses only live-record surfaces',async()=>{
    lead:{id:'LIVE-1',display_name:'Live lead',normalized_phone:'+919000000001',status:'New',lead_type:'New',tenant_type:'Not specified',priority:'Medium',classification:'Qualified Lead',requirements:{bhk:'2 BHK',locality:'Harlur',budget:50000},operator_notes:''},
    sources:[{source_number:'+919148338801'}],
    messages:[{id:1,source_number:'+919148338801',direction:'Incoming',message_type:'text',body:'Historical conversation message',sender_name:'Customer',message_at:'2026-09-30T00:00:00Z'}],
+   requirement_profile:{bhk:'2 BHK',budget:'50000',preferred_locations:'Harlur',tenant_type:'Family',furnishing:'Any',parking:'Any',pets:'Unknown',preferred_amenities:[],notes:''},
    activity:[],followups:[],drafts:[{id:'DRAFT-2',version:2,body:'Hello from persisted draft',status:'draft',created_at:'2026-10-01T02:30:00Z',ai_run_id:'RUN-2',ai_provider:'aws-bedrock',model_name:'au.anthropic.claude-opus-4-6-v1',input_tokens:12000,output_tokens:850,total_tokens:12850,estimated_cost_usd:0.08125},{id:'DRAFT-1',version:1,body:'Older draft',status:'draft',created_at:'2026-10-01T02:29:00Z',ai_run_id:'RUN-1',ai_provider:'ollama',model_name:'gpt-oss:20b'}],ai_runs:[{id:'RUN-2',model_name:'au.anthropic.claude-opus-4-6-v1',status:'proposed',created_at:'2026-10-01T02:30:00Z',input_tokens:12000,output_tokens:850,total_tokens:12850,estimated_cost_usd:0.08125}]
   })}));
 
@@ -49,16 +50,18 @@ test('production CRM browser journey uses only live-record surfaces',async()=>{
 
   await page.getByText('Production data').waitFor();
   await page.getByText('228 leads').waitFor();
+  await page.getByRole('button',{name:'Leads Inbox',exact:true}).click();
   await page.getByLabel('Sort leads').waitFor();
-  await page.getByText('Active Follow-up',{exact:true}).first().waitFor();
+  const activeFollowupSummary=page.getByRole('button',{name:/^Active Follow-up.*40/});
+  await activeFollowupSummary.waitFor();
   assert.equal(await page.locator('.lead-card-activity').count(),1);
   assert.equal(await page.getByText('Lead status · New',{exact:true}).count(),1);
   assert.equal(await page.getByText('Source number · +919148338801',{exact:true}).count(),1);
   assert.equal(await page.getByText('Contacted date',{exact:true}).count(),1);
   assert.equal(await page.getByText('Last message sent by',{exact:true}).count(),1);
   assert.equal(await page.getByText('Last message date',{exact:true}).count(),1);
-  assert.equal(await page.getByText('Active Follow-up',{exact:true}).first().evaluate(el=>el.closest('.status-summary-card')?.querySelector('b')?.textContent),'40');
-  await page.getByRole('button',{name:/Active Follow-up.*40/}).click();
+  assert.equal(await activeFollowupSummary.locator('b').textContent(),'40');
+  await activeFollowupSummary.click();
   await page.getByText('Lead status · New',{exact:true}).waitFor();
 
   const sortRequest=page.waitForRequest(request=>{
