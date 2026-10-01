@@ -163,7 +163,9 @@ createServer(async(req,res)=>{
     let data;
     if(p==='/api/db/status')data={connected:await repo.health(),readOnly:true};
     else if(p==='/api/db/stats'){
-     data=await repo.dashboardStats(q.get('source_number')||'+919148338801');
+     const followupLimitRaw=q.get('followup_limit')||'5',followupOffsetRaw=q.get('followup_offset')||'0';
+     if(!/^\d{1,3}$/.test(followupLimitRaw)||Number(followupLimitRaw)<1||Number(followupLimitRaw)>100||!/^[0-9]{1,7}$/.test(followupOffsetRaw)){res.writeHead(400,security);return res.end('Invalid follow-up pagination');}
+     data=await repo.dashboardStats(q.get('source_number')||'+919148338801',Number(followupLimitRaw),Number(followupOffsetRaw));
     }
     else if(p==='/api/db/leads'){
      const raw=q.get('limit')??'50',offset=q.get('offset')??'0',sourceNumber=q.get('source_number')||'+919148338801',leadSort=q.get('lead_sort')||'last_message_desc',leadSearch=q.get('lead_search')||'';
