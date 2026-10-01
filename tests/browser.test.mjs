@@ -140,7 +140,7 @@ test('production CRM browser journey uses only live-record surfaces',async()=>{
   await leadPageSizeRequest;
   assert.equal(await activeFollowupSummary.locator('b').textContent(),'40');
   await activeFollowupSummary.click();
-  await page.getByText('Lead status · New',{exact:true}).waitFor();
+  await page.locator('.lead-card-status-panel').filter({hasText:'New'}).waitFor();
 
   const sortRequest=page.waitForRequest(request=>{
    try{return request.url().includes('/api/db/leads')&&new URL(request.url()).searchParams.get('lead_sort')==='customer_waiting'}catch{return false}
