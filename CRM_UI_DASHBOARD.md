@@ -1,12 +1,65 @@
 # EasyFind CRM UI Dashboard — Single Working Home
 
+## Current verified repository state — 2026-10-01
+
+This section is the current checkpoint for maintained documentation. Dated audit sections below remain historical evidence and are not silently rewritten.
+
+- **Canonical UI/deployment branch:** `crm-ui-dashboard`
+- **`crm-ui-dashboard` commit:** `da13083f6cb1f3c78ec3f4df661c515d43f556fa`
+- **`crm-ui-dashboard` tree:** `f36a5ccb4bae742e83603b09bee59d01595ecf00`
+- **`main` reconciliation commit:** `692bdcbbab51752b8eb7d4927921d1cfc4830de7`
+- **`main` tree:** `f36a5ccb4bae742e83603b09bee59d01595ecf00`
+- **Tree equality:** `tree(main) == tree(crm-ui-dashboard)` = **TRUE**; commit histories differ by design.
+- **Render:** `easyfind-crm-d01-d05` / `srv-darsv560tbcc73cu4ip0`, deployment `dep-dav55km0tbcc73eelat0`, **live**.
+- **Production source:** `+919148338801`.
+- **Supabase CRM:** 186 leads; 307 classifications; 20 pending; 186 promoted; 6,853 messages; 436 webhook events, 436 processed, 0 received, 0 processing, 0 failed.
+- **AI persistence:** 196 AI runs, 196 proposed; 196 drafts; 186 AI cursors.
+- **Inventory:** 88 active Housing rows; 1,333 sync-run records; latest recorded sync = 88 rows / 0 changed / 0 removed; AU/AV remain outside the CRM operational A:AT mirror.
+- **Schedulers:** `crm_webhook_reconcile_1m` active every minute; `crm_inventory_sheet_reconcile_5m` active every five minutes.
+- **P1–P5:** implemented and production-verified as documented in `docs/audits/PRODUCTION_LIVE_WEBHOOK_AND_INVENTORY_AUDIT_2026-10-01.md`.
+- **Verification:** `npm run build` PASS; `npm test` PASS (71/71); `npm run test:browser` PASS (1/1).
+- **GitHub:** active remote UI branch search returns only `crm-ui-dashboard`; historical UI/inventory branches with deleted remotes are retained only as local historical evidence and are not active deployment branches.
+
+### Current operational flow
+
+```text
+WhAPI +919148338801
+  -> crm_webhook_events (persist + deduplicate)
+  -> webhook processor/reconciler
+  -> crm_messages + classification registry
+  -> operator classification update
+       -> non-qualified: remains outside CRM leads
+       -> Qualified Lead: audited promotion transaction
+            -> crm_leads + preserved messages
+            -> webhook event lead linkage reconciled
+
+CRM lead workspace
+  -> complete chronological conversation + normalized requirements + evidence + notes + prior AI runs + cursor
+  -> Bedrock primary / Sonnet fallback / Ollama fallback
+  -> persisted crm_ai_runs + crm_drafts + provenance
+  -> operator review/edit/pre-send grounding
+  -> manual WhatsApp action only; no automatic send
+
+Housing_Listings A:AV
+  -> CRM reads operational A:AT only
+  -> 88-row operational mirror in crm_inventory_snapshot
+  -> five-minute reconciliation
+  -> crm_inventory_sync_changes records future field-level changes
+```
+
+### Test-history checkpoint
+
+The P1–P5 hardening release added regression coverage for webhook promotion linkage, reserved AU/AV exclusion, and disposable inventory create/edit/delete history. The final repository verification was 71/71 automated tests, browser 1/1, and production build PASS. Historical earlier test counts in dated handoff/audit sections are retained as historical checkpoints.
+
+
+
 **Canonical working branch: `crm-ui-dashboard`.** Render, GitHub, and the local CRM UI checkout are aligned to this branch for the current production dashboard.
 
 ## Current production checkpoint — 2026-10-01
 
 - Render service `easyfind-crm-d01-d05` / `srv-darsv560tbcc73cu4ip0` is live from the synchronized `crm-ui-dashboard` release.
-- Production source `+919148338801`: 186 source-linked leads, 292 classifications, 5 pending, 186 promoted, 6,641 messages.
-- Webhook state: 214 persisted events, 214 processed, 0 received, 0 failed; automatic reconciliation remains active.
+- Production source `+919148338801`: 186 source-linked leads, 307 classifications, 20 pending, 186 promoted, 6,853 messages.
+- Webhook state: 436 persisted events, 436 processed, 0 received, 0 processing, 0 failed; automatic reconciliation remains active.
 - Leads Inbox cards now expose only lead status and source number. The Leads Inbox header includes clickable counts for every supported lead status; selecting a status applies the corresponding server-side lead filter.
 - AI draft provenance now records input/output/total tokens and an estimated USD cost when standard pricing is known; the draft workspace displays these metrics alongside provider/model provenance.
 - Delta/incremental message analysis remains intentionally deferred; AI continues to receive complete chronological lead history.
@@ -40,7 +93,7 @@ Do not use the historical CRM branches as the working location. All future UI da
 
 ## Current production workflow — 2026-10-01
 
-Verified current source: `+919148338801`; Supabase has 186 source-linked leads, 289 classifications, 2 pending classifications, 6,621 messages and 73 webhook events, all processed. OOC (`Out of Coverage Area`) is an available Layer-2 lead status. Automatic geographic OOC assignment is not enabled pending a deterministic coverage rule.
+Verified current source: `+919148338801`; Supabase has 186 leads, 307 classifications, 20 pending classifications, 186 promoted classifications, 6,853 messages and 436 webhook events, all processed. OOC (`Out of Coverage Area`) is an available Layer-2 lead status. Automatic geographic OOC assignment is not enabled pending a deterministic coverage rule.
 
 
 ### Contact Classification
@@ -101,4 +154,4 @@ AI provider chain: Bedrock Claude Opus 4.6 (`au.anthropic.claude-opus-4-6-v1`) �
 
 ## Final verified checkpoint — 2026-10-01
 
-`crm-ui-dashboard` commit `c8c0b3b458e1d71bf4a81f7efea749aaf1ef4bde`, tree `7bce9e42ccd4efa9d14d85bbba8767961943aab0`. Render deployment `dep-dautgos9v7es73bnc44g` is live. `main` has been reconciled to the same tree in commit `562905cfe435ee7ad8851c9c4a42360726a9b317`. Build passes and the automated test suite is 66/66. Browser test runner remains hanging locally and is not claimed as passed.
+`crm-ui-dashboard` commit `da13083f6cb1f3c78ec3f4df661c515d43f556fa`, tree `f36a5ccb4bae742e83603b09bee59d01595ecf00`. Render deployment `dep-dav55km0tbcc73eelat0` is live. `main` has been reconciled to the same tree in commit `692bdcbbab51752b8eb7d4927921d1cfc4830de7`. Build passes, `npm test` passes 71/71, and browser regression passes 1/1.

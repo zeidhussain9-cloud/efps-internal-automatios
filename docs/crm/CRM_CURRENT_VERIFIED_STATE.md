@@ -1,4 +1,4 @@
-# Shared WhAPI transport
+# EFPS CRM — Current Verified State
 
 ## Current verified repository state — 2026-10-01
 
@@ -51,22 +51,24 @@ Housing_Listings A:AV
 
 The P1–P5 hardening release added regression coverage for webhook promotion linkage, reserved AU/AV exclusion, and disposable inventory create/edit/delete history. The final repository verification was 71/71 automated tests, browser 1/1, and production build PASS. Historical earlier test counts in dated handoff/audit sections are retained as historical checkpoints.
 
+## Evidence sources
 
+- Repository implementation and tests on `crm-ui-dashboard`.
+- Supabase production database `easyfind-crm` (`qttcutwzehtskfcwxkwj`).
+- Render production deployment for `easyfind-crm-d01-d05`.
+- GitHub branch/ref and tree comparison.
+- Historical audit: `docs/audits/PRODUCTION_LIVE_WEBHOOK_AND_INVENTORY_AUDIT_2026-10-01.md`.
 
-This package contains only technical WhatsApp/WhAPI transport primitives: authentication, channel/settings access, webhook payload normalization and provider-safe message parsing.
+## Change history since the prior 2026-10-01 audit
 
-## CRM live path
+1. P1 historical webhook event lead linkage was implemented in the promotion transaction and existing eligible rows were backfilled.
+2. P2 AU/AV were made an explicit CRM boundary: A:AT is operational; AU/AV remain Sheet-owned metadata outside the mirror.
+3. P3 `crm_inventory_sync_changes` was added for future field-level inventory audit history.
+4. P4 the one-minute webhook reconciler was hardened for message-backed `received`/`processing` states.
+5. P5 disposable inventory create/edit/delete regression coverage was added without mutating the production Sheet.
+6. The production Render deployment now runs the verified hardening commit.
+7. `main` was reconciled to the same repository tree without rewriting history.
 
-The CRM does not use source listeners, inventory listeners, lead listeners, polling, or a server-side WhAPI fetch loop. The production CRM path is:
+## Documentation rule
 
-`WhAPI messages webhook -> Supabase Edge Function -> crm_webhook_events -> crm_leads + crm_messages -> Supabase Realtime -> CRM UI`
-
-The connected CRM source is `+919148338801`. Every accepted webhook message is treated as lead activity. Existing leads receive another chronological message; a previously unseen customer phone creates a lead row directly.
-
-The CRM does not send WhatsApp messages automatically.
-
-## Parser boundary
-
-The shared parser normalizes common text, link-preview, location, image, video, document and audio message shapes. It does not decide whether a message is inventory, a lead, a promotion or any other business object.
-
-Webhook event names and live settings must be verified against the provider's current settings before a live configuration change. This module does not mutate live provider settings automatically.
+This file is the canonical current operational checkpoint. Historical audit reports remain immutable evidence. When a new verified production checkpoint is established, update this file and the maintained canonical summaries in the same work session.

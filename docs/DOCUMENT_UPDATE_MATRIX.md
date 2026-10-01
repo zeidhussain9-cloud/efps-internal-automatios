@@ -1,5 +1,58 @@
 # Documentation Update Matrix
 
+## Current verified repository state — 2026-10-01
+
+This section is the current checkpoint for maintained documentation. Dated audit sections below remain historical evidence and are not silently rewritten.
+
+- **Canonical UI/deployment branch:** `crm-ui-dashboard`
+- **`crm-ui-dashboard` commit:** `da13083f6cb1f3c78ec3f4df661c515d43f556fa`
+- **`crm-ui-dashboard` tree:** `f36a5ccb4bae742e83603b09bee59d01595ecf00`
+- **`main` reconciliation commit:** `692bdcbbab51752b8eb7d4927921d1cfc4830de7`
+- **`main` tree:** `f36a5ccb4bae742e83603b09bee59d01595ecf00`
+- **Tree equality:** `tree(main) == tree(crm-ui-dashboard)` = **TRUE**; commit histories differ by design.
+- **Render:** `easyfind-crm-d01-d05` / `srv-darsv560tbcc73cu4ip0`, deployment `dep-dav55km0tbcc73eelat0`, **live**.
+- **Production source:** `+919148338801`.
+- **Supabase CRM:** 186 leads; 307 classifications; 20 pending; 186 promoted; 6,853 messages; 436 webhook events, 436 processed, 0 received, 0 processing, 0 failed.
+- **AI persistence:** 196 AI runs, 196 proposed; 196 drafts; 186 AI cursors.
+- **Inventory:** 88 active Housing rows; 1,333 sync-run records; latest recorded sync = 88 rows / 0 changed / 0 removed; AU/AV remain outside the CRM operational A:AT mirror.
+- **Schedulers:** `crm_webhook_reconcile_1m` active every minute; `crm_inventory_sheet_reconcile_5m` active every five minutes.
+- **P1–P5:** implemented and production-verified as documented in `docs/audits/PRODUCTION_LIVE_WEBHOOK_AND_INVENTORY_AUDIT_2026-10-01.md`.
+- **Verification:** `npm run build` PASS; `npm test` PASS (71/71); `npm run test:browser` PASS (1/1).
+- **GitHub:** active remote UI branch search returns only `crm-ui-dashboard`; historical UI/inventory branches with deleted remotes are retained only as local historical evidence and are not active deployment branches.
+
+### Current operational flow
+
+```text
+WhAPI +919148338801
+  -> crm_webhook_events (persist + deduplicate)
+  -> webhook processor/reconciler
+  -> crm_messages + classification registry
+  -> operator classification update
+       -> non-qualified: remains outside CRM leads
+       -> Qualified Lead: audited promotion transaction
+            -> crm_leads + preserved messages
+            -> webhook event lead linkage reconciled
+
+CRM lead workspace
+  -> complete chronological conversation + normalized requirements + evidence + notes + prior AI runs + cursor
+  -> Bedrock primary / Sonnet fallback / Ollama fallback
+  -> persisted crm_ai_runs + crm_drafts + provenance
+  -> operator review/edit/pre-send grounding
+  -> manual WhatsApp action only; no automatic send
+
+Housing_Listings A:AV
+  -> CRM reads operational A:AT only
+  -> 88-row operational mirror in crm_inventory_snapshot
+  -> five-minute reconciliation
+  -> crm_inventory_sync_changes records future field-level changes
+```
+
+### Test-history checkpoint
+
+The P1–P5 hardening release added regression coverage for webhook promotion linkage, reserved AU/AV exclusion, and disposable inventory create/edit/delete history. The final repository verification was 71/71 automated tests, browser 1/1, and production build PASS. Historical earlier test counts in dated handoff/audit sections are retained as historical checkpoints.
+
+
+
 **Status:** Active baseline  
 **Purpose:** Define which maintained documents must be reviewed or updated when repository reality changes.
 
@@ -26,6 +79,7 @@
 | Inventory validation/normalized-storage contract changes | `docs/DATA_CONTRACTS.md`, `docs/DETERMINISTIC_FIELD_RESOLUTION.md`, `docs/PROJECT_RULES.md`, Inventory module `README.md`, affected validation/regression tests, `HANDOFF.md` |
 | Inventory model-audit/reporting behavior changes | `docs/DETERMINISTIC_FIELD_RESOLUTION.md`, `docs/DATA_CONTRACTS.md`, Inventory module `README.md`, `HANDOFF.md`, affected test tooling |
 | Repository overview changes | root `README.md` |
+| CRM current verified state checkpoint | `docs/crm/CRM_CURRENT_VERIFIED_STATE.md`, `HANDOFF.md`, `docs/INFRASTRUCTURE.md`, `docs/OPEN_POINTERS.md`, affected CRM docs |
 | CRM data-source/schema reconciliation | `docs/crm/CRM_SOURCE_OF_TRUTH_RECONCILIATION.md`, `docs/crm/CRM_DATA_MODEL.md`, `docs/DATA_CONTRACTS.md`, `docs/OPEN_POINTERS.md`, `HANDOFF.md` |
 | CRM design decision/status changes | `docs/crm/CRM_DESIGN_DECISIONS.md`, `docs/crm/CRM_UI_DESIGN_SPEC.md`, `docs/crm/LEAD_CRM_MASTER_PLAN.md`, affected Figma handoff references, `HANDOFF.md` |
 | CRM prototype repository/runtime changes | `docs/crm/LEAD_CRM_MASTER_PLAN.md`, `docs/crm/CRM_UI_DESIGN_SPEC.md`, `docs/ARCHITECTURE.md`, `docs/INFRASTRUCTURE.md`, `HANDOFF.md` |

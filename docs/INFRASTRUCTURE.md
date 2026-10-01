@@ -1,8 +1,61 @@
 ## Current production audit — 2026-10-01
 
-Verified live baseline: Render `easyfind-crm-d01-d05` (`srv-darsv560tbcc73cu4ip0`) on `crm-ui-dashboard`, commit `d28046266239cd889ad14f87a61a92742383305e`; Supabase source `+919148338801`; 186 source-linked leads, 289 classifications, 2 pending, 6,621 messages, 73 webhook events (73 processed, 0 received, 0 failed). Other UI-visible sources `+917975102130`, `+919902024973` remain inactive. Browser Realtime is notification-only; the exact Supabase HTTPS/WSS origin is allowlisted in CSP. No WhAPI historical API extraction was run.
+Verified live baseline: Render `easyfind-crm-d01-d05` (`srv-darsv560tbcc73cu4ip0`) on `crm-ui-dashboard`, commit `da13083f6cb1f3c78ec3f4df661c515d43f556fa`; Supabase source `+919148338801`; 186 leads, 307 classifications, 20 pending, 6,853 messages, 436 webhook events (436 processed, 0 received, 0 processing, 0 failed). Other UI-visible sources `+917975102130`, `+919902024973` remain inactive. Browser Realtime is notification-only; the exact Supabase HTTPS/WSS origin is allowlisted in CSP. No WhAPI historical API extraction was run.
 
 # Infrastructure Registry
+
+## Current verified repository state — 2026-10-01
+
+This section is the current checkpoint for maintained documentation. Dated audit sections below remain historical evidence and are not silently rewritten.
+
+- **Canonical UI/deployment branch:** `crm-ui-dashboard`
+- **`crm-ui-dashboard` commit:** `da13083f6cb1f3c78ec3f4df661c515d43f556fa`
+- **`crm-ui-dashboard` tree:** `f36a5ccb4bae742e83603b09bee59d01595ecf00`
+- **`main` reconciliation commit:** `692bdcbbab51752b8eb7d4927921d1cfc4830de7`
+- **`main` tree:** `f36a5ccb4bae742e83603b09bee59d01595ecf00`
+- **Tree equality:** `tree(main) == tree(crm-ui-dashboard)` = **TRUE**; commit histories differ by design.
+- **Render:** `easyfind-crm-d01-d05` / `srv-darsv560tbcc73cu4ip0`, deployment `dep-dav55km0tbcc73eelat0`, **live**.
+- **Production source:** `+919148338801`.
+- **Supabase CRM:** 186 leads; 307 classifications; 20 pending; 186 promoted; 6,853 messages; 436 webhook events, 436 processed, 0 received, 0 processing, 0 failed.
+- **AI persistence:** 196 AI runs, 196 proposed; 196 drafts; 186 AI cursors.
+- **Inventory:** 88 active Housing rows; 1,333 sync-run records; latest recorded sync = 88 rows / 0 changed / 0 removed; AU/AV remain outside the CRM operational A:AT mirror.
+- **Schedulers:** `crm_webhook_reconcile_1m` active every minute; `crm_inventory_sheet_reconcile_5m` active every five minutes.
+- **P1–P5:** implemented and production-verified as documented in `docs/audits/PRODUCTION_LIVE_WEBHOOK_AND_INVENTORY_AUDIT_2026-10-01.md`.
+- **Verification:** `npm run build` PASS; `npm test` PASS (71/71); `npm run test:browser` PASS (1/1).
+- **GitHub:** active remote UI branch search returns only `crm-ui-dashboard`; historical UI/inventory branches with deleted remotes are retained only as local historical evidence and are not active deployment branches.
+
+### Current operational flow
+
+```text
+WhAPI +919148338801
+  -> crm_webhook_events (persist + deduplicate)
+  -> webhook processor/reconciler
+  -> crm_messages + classification registry
+  -> operator classification update
+       -> non-qualified: remains outside CRM leads
+       -> Qualified Lead: audited promotion transaction
+            -> crm_leads + preserved messages
+            -> webhook event lead linkage reconciled
+
+CRM lead workspace
+  -> complete chronological conversation + normalized requirements + evidence + notes + prior AI runs + cursor
+  -> Bedrock primary / Sonnet fallback / Ollama fallback
+  -> persisted crm_ai_runs + crm_drafts + provenance
+  -> operator review/edit/pre-send grounding
+  -> manual WhatsApp action only; no automatic send
+
+Housing_Listings A:AV
+  -> CRM reads operational A:AT only
+  -> 88-row operational mirror in crm_inventory_snapshot
+  -> five-minute reconciliation
+  -> crm_inventory_sync_changes records future field-level changes
+```
+
+### Test-history checkpoint
+
+The P1–P5 hardening release added regression coverage for webhook promotion linkage, reserved AU/AV exclusion, and disposable inventory create/edit/delete history. The final repository verification was 71/71 automated tests, browser 1/1, and production build PASS. Historical earlier test counts in dated handoff/audit sections are retained as historical checkpoints.
+
+
 
 This is the canonical registry for external systems and verified resource identifiers used by EFPS Internal Automations. Never store secrets, tokens, passwords, or private keys here.
 
@@ -18,10 +71,10 @@ This is the canonical registry for external systems and verified resource identi
 
 - Render service: `easyfind-crm-d01-d05` (`srv-darsv560tbcc73cu4ip0`)
 - Deployment branch: `crm-ui-dashboard`
-- Latest live commit: `d28046266239cd889ad14f87a61a92742383305e`
-- Live deployment: `dep-dauq8hg473hc739ve530`
+- Latest live commit: `da13083f6cb1f3c78ec3f4df661c515d43f556fa`
+- Live deployment: `dep-dav55km0tbcc73eelat0`
 - Production source: `+919148338801`
-- Supabase baseline: 186 source-linked leads, 289 classifications, 2 pending classifications, 6,621 messages, 73 webhook events (73 processed, 0 received, 0 failed).
+- Supabase baseline: 186 leads, 307 classifications, 20 pending classifications, 6,853 messages, 436 webhook events (436 processed, 0 received, 0 processing, 0 failed).
 - `main` is repository-reconciled to the same tree; Render remains on `crm-ui-dashboard`.
 
 ## Historical CRM prototype deployment target
@@ -190,8 +243,8 @@ Render production Bedrock settings now include `AWS_BEDROCK_FALLBACK_MODEL_ID=au
 
 ## Final verified checkpoint — 2026-10-01
 
-Production Render service `srv-darsv560tbcc73cu4ip0` is live on `crm-ui-dashboard` commit `c8c0b3b458e1d71bf4a81f7efea749aaf1ef4bde`. Health endpoint returns `{"ok":true}`. `main` has the identical repository tree (`7bce9e42ccd4efa9d14d85bbba8767961943aab0`).
+Production Render service `srv-darsv560tbcc73cu4ip0` is live on `crm-ui-dashboard` commit `da13083f6cb1f3c78ec3f4df661c515d43f556fa`. The health endpoint returns `{"ok":true}`. `main` has the identical repository tree (`f36a5ccb4bae742e83603b09bee59d01595ecf00`).
 
 ## 2026-10-01 — Dependency security checkpoint
 
-The AWS Bedrock runtime SDK was upgraded to `3.1144.0` after Render exposed a critical transitive `fast-xml-parser` advisory in the previous dependency tree. Local production-dependency audit now reports zero vulnerabilities; `npm test` remains 66/66.
+The AWS Bedrock runtime SDK was upgraded to `3.1144.0` after Render exposed a critical transitive `fast-xml-parser` advisory in the previous dependency tree. Local production-dependency audit now reports zero vulnerabilities; the current automated suite is 71/71 and browser regression is 1/1.
