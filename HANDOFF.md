@@ -168,3 +168,11 @@ Implemented on `crm-ui-dashboard` and verified locally:
 - AI reply drafts are versioned in `crm_drafts`. The operator can edit/save/copy/open WhatsApp; the CRM never auto-sends the draft.
 - Root `steering.md` now contains production EFPS context and explicit rules for full-history analysis, cold-lead reactivation, requirement evidence, inventory truth and operator-only sending. Public EasyFind context is based on the official EasyFind Property Solutions site. (official site: https://www.easyfindprops.com/)
 - Live Supabase verification after schema deployment: 186 requirement profiles, 186 per-lead AI cursors, 6,622 CRM messages (4,228 outgoing), 195 webhook events (195 processed, 0 failed). AI runs/drafts/evidence remain 0 until an operator first runs production AI and accepts/creates outputs.
+
+## 2026-10-01 — Production activation and repository-wide documentation checkpoint
+
+Render service `srv-darsv560tbcc73cu4ip0` is the production CRM dashboard service and deploys `crm-ui-dashboard`. Commit `6f5f3ea629fc1d26dfe0cef2d6b9602eb6a6ad0e` contains the normalized requirements and production AI workspace implementation. Render auto-deployed that commit; the subsequent environment merge enabled `CRM_REAL_AI_ENABLED=true` and `CRM_DB_WRITE_ENABLED=true` without replacing existing secrets.
+
+Current production AI behavior: complete chronological lead conversation + normalized requirements + requirement evidence + operator notes + prior AI runs + per-lead cursor are supplied to the configured Ollama model. AI produces evidence-backed requirement proposals, a timeline/context summary, a suggested lead status, and an editable reply draft. Requirement changes require operator acceptance. Drafts are versioned. No AI-generated message is automatically sent to WhatsApp and lead status is suggestion-only.
+
+Local evidence: `npm test` passed 63/63 tests and production build passed. A local authenticated server smoke confirmed the dashboard serves the operator sign-in route. Supabase verification after migrations showed 186 normalized requirement profiles and 186 per-lead AI cursors. Existing production message/webhook counts were also rechecked. The Render deploy for the environment activation is tracked separately by its Render deploy ID.

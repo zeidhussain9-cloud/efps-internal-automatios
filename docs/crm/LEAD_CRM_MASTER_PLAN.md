@@ -292,3 +292,9 @@ This section supersedes older dated migration/pilot checkpoints for current-stat
 - D08 final visual/design-system handoff remains open.
 - Independent encrypted backup artifact + isolated restore proof remains open.
 - `crm-ui-dashboard` tree SHA and `main` tree SHA are both `47aebad57612ab147af43372f6f1e19f197d374c` at the current repository checkpoint.
+
+## 2026-10-01 — Current production AI and requirements state
+
+The current production state supersedes earlier synthetic-only AI checkpoints. `crm_lead_requirements` is the editable normalized requirement profile used by the Lead Workspace and compatibility-mirrored into `crm_leads.requirements`. The production AI path receives the entire stored conversation and lead context, maintains a per-lead cursor, records AI runs and requirement evidence, proposes requirement changes, suggests lead status, and creates versioned operator-editable reply drafts. Requirement changes are explicitly accepted/rejected; lead status remains suggestion-only; automatic WhatsApp sending remains disabled.
+
+Render service: `srv-darsv560tbcc73cu4ip0`, branch `crm-ui-dashboard`. Implementation commit: `6f5f3ea629fc1d26dfe0cef2d6b9602eb6a6ad0e`.
