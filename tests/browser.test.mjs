@@ -49,6 +49,7 @@ test('production CRM browser journey uses only live-record surfaces',async()=>{
 
   await page.getByText('Production data').waitFor();
   await page.getByText('228 leads').waitFor();
+  await page.getByRole('button',{name:'Leads Inbox',exact:true}).click();
   await page.getByLabel('Sort leads').waitFor();
   const activeFollowupSummary=page.getByRole('button',{name:/^Active Follow-up.*40/});
   await activeFollowupSummary.waitFor();
