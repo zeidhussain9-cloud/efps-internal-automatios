@@ -34,7 +34,7 @@ This is the latest repository/production checkpoint. Older dated sections in mai
 Evidence snapshot after final verification:
 - CRM UI commit: 1c196577fc414be52c8fc889b3886f11e0e9da5d
 - CRM UI tree: 908b635b2b7b04bdf3515934de2769393e282c34
-- main reconciliation commit: b2fbf366021852aedd4bf0ec66484ad421fb5662
+- main reconciliation: completed without rewriting main history; current tree is identical to crm-ui-dashboard
 - main tree: 908b635b2b7b04bdf3515934de2769393e282c34
 - tree(main) == tree(crm-ui-dashboard): TRUE
 - Render deployment: dep-dav82h3m8hqs7399j4ug, status LIVE, commit 1c196577fc414be52c8fc889b3886f11e0e9da5d

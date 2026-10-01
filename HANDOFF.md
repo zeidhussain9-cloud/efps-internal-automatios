@@ -275,7 +275,7 @@ The approved six AI improvements are implemented: stale-draft detection; provena
 - Historical release metadata; see the authoritative current-state block at the top of this file.
 - `crm-ui-dashboard` final tree: `7bce9e42ccd4efa9d14d85bbba8767961943aab0`.
 - Render service `srv-darsv560tbcc73cu4ip0` is live from that commit; deployment `dep-dautgos9v7es73bnc44g` reached `live` and startup/database connectivity were verified.
-- Historical reconciliation metadata; current main is b2fbf366021852aedd4bf0ec66484ad421fb5662.
+- Historical reconciliation metadata; current main is reconciled to the crm-ui-dashboard tree.
 - `main` tree equals `crm-ui-dashboard` tree: `7bce9e42ccd4efa9d14d85bbba8767961943aab0`.
 - Local `crm-ui-dashboard` checkout equals `origin/crm-ui-dashboard` at `c19e36c...` and is clean.
 - Production migration 17 is applied. Current database counts: 3 AI runs (2 Ollama, 1 Bedrock), 3 drafts, all 3 with source evidence; no `confirmed_sent` outcomes yet.
