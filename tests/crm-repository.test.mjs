@@ -70,10 +70,10 @@ test('provider event deduplication relies on a database unique key',async()=>{
  const result=await repo.recordProviderEvent({provider:'test',providerEventId:'evt-1',eventType:'message',payload:{id:1}});
  assert.deepEqual(result,{inserted:false,id:null});assert.match(calls[0][0],/ON CONFLICT\(provider,provider_event_id\) DO NOTHING/);
 });
-test('AI cursor is upserted per source',async()=>{
- const calls=[];const pool={query:async(sql,args)=>{calls.push([sql,args]);return{rows:[{source_number:'wa-1',cursor:'c1'}]}}};
+test('AI cursor is upserted per lead',async()=>{
+ const calls=[];const pool={query:async(sql,args)=>{calls.push([sql,args]);return{rows:[{lead_id:'L-1001',source_number:'wa-1',last_message_id:7,last_message_at:'2026-10-01T00:00:00Z'}]}}};
  const repo=createCrmRepository({pool});
- const row=await repo.setAiCursor({sourceNumber:'wa-1',cursor:'c1'});assert.equal(row.cursor,'c1');assert.match(calls[0][0],/ON CONFLICT\(source_number\) DO UPDATE/);
+ const row=await repo.setAiCursor({leadId:'L-1001',sourceNumber:'wa-1',lastMessageId:7,lastMessageAt:'2026-10-01T00:00:00Z'});assert.equal(row.lead_id,'L-1001');assert.match(calls[0][0],/ON CONFLICT\(lead_id\) DO UPDATE/);
 });
 
 test('lead status validation accepts Out of Coverage Area and rejects unknown statuses',async()=>{

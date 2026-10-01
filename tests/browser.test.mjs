@@ -89,7 +89,7 @@ test('production CRM browser journey uses only live-record surfaces',async()=>{
   await page.getByText(/No live inventory matches were returned/).waitFor();
 
   await page.getByRole('button',{name:'AI & Drafts',exact:true}).click();
-  await page.getByText(/Real AI is on-demand/).waitFor();
+  await page.getByText(/Production AI reviews the complete chronological conversation/).waitFor();
 
   await page.locator('button.header-back').click();
   await page.getByText('Production data').waitFor();
