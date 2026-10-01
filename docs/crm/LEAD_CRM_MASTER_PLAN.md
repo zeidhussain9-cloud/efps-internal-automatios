@@ -7,6 +7,59 @@ The approved daily CRM flow is live on `crm-ui-dashboard` for source `+919148338
 
 # EasyFind Lead CRM — Master Plan
 
+## Current verified repository state — 2026-10-01
+
+This section is the current checkpoint for maintained documentation. Dated audit sections below remain historical evidence and are not silently rewritten.
+
+- **Canonical UI/deployment branch:** `crm-ui-dashboard`
+- **`crm-ui-dashboard` commit:** `da13083f6cb1f3c78ec3f4df661c515d43f556fa`
+- **`crm-ui-dashboard` tree:** `f36a5ccb4bae742e83603b09bee59d01595ecf00`
+- **`main` reconciliation commit:** `692bdcbbab51752b8eb7d4927921d1cfc4830de7`
+- **`main` tree:** `f36a5ccb4bae742e83603b09bee59d01595ecf00`
+- **Tree equality:** `tree(main) == tree(crm-ui-dashboard)` = **TRUE**; commit histories differ by design.
+- **Render:** `easyfind-crm-d01-d05` / `srv-darsv560tbcc73cu4ip0`, deployment `dep-dav55km0tbcc73eelat0`, **live**.
+- **Production source:** `+919148338801`.
+- **Supabase CRM:** 186 leads; 307 classifications; 20 pending; 186 promoted; 6,853 messages; 436 webhook events, 436 processed, 0 received, 0 processing, 0 failed.
+- **AI persistence:** 196 AI runs, 196 proposed; 196 drafts; 186 AI cursors.
+- **Inventory:** 88 active Housing rows; 1,333 sync-run records; latest recorded sync = 88 rows / 0 changed / 0 removed; AU/AV remain outside the CRM operational A:AT mirror.
+- **Schedulers:** `crm_webhook_reconcile_1m` active every minute; `crm_inventory_sheet_reconcile_5m` active every five minutes.
+- **P1–P5:** implemented and production-verified as documented in `docs/audits/PRODUCTION_LIVE_WEBHOOK_AND_INVENTORY_AUDIT_2026-10-01.md`.
+- **Verification:** `npm run build` PASS; `npm test` PASS (71/71); `npm run test:browser` PASS (1/1).
+- **GitHub:** active remote UI branch search returns only `crm-ui-dashboard`; historical UI/inventory branches with deleted remotes are retained only as local historical evidence and are not active deployment branches.
+
+### Current operational flow
+
+```text
+WhAPI +919148338801
+  -> crm_webhook_events (persist + deduplicate)
+  -> webhook processor/reconciler
+  -> crm_messages + classification registry
+  -> operator classification update
+       -> non-qualified: remains outside CRM leads
+       -> Qualified Lead: audited promotion transaction
+            -> crm_leads + preserved messages
+            -> webhook event lead linkage reconciled
+
+CRM lead workspace
+  -> complete chronological conversation + normalized requirements + evidence + notes + prior AI runs + cursor
+  -> Bedrock primary / Sonnet fallback / Ollama fallback
+  -> persisted crm_ai_runs + crm_drafts + provenance
+  -> operator review/edit/pre-send grounding
+  -> manual WhatsApp action only; no automatic send
+
+Housing_Listings A:AV
+  -> CRM reads operational A:AT only
+  -> 88-row operational mirror in crm_inventory_snapshot
+  -> five-minute reconciliation
+  -> crm_inventory_sync_changes records future field-level changes
+```
+
+### Test-history checkpoint
+
+The P1–P5 hardening release added regression coverage for webhook promotion linkage, reserved AU/AV exclusion, and disposable inventory create/edit/delete history. The final repository verification was 71/71 automated tests, browser 1/1, and production build PASS. Historical earlier test counts in dated handoff/audit sections are retained as historical checkpoints.
+
+
+
 **Canonical repository:** `zeidhussain9-cloud/efps-internal-automatios`  
 **Working branch:** `crm-ui-dashboard`  
 **Current status (2026-09-30):** CRM UI production flow is live on `crm-ui-dashboard` / Render `easyfind-crm-d01-d05`. Production source currently in scope is WhatsApp `+919148338801`. Historical CRM records have been reconciled into Supabase, live WhAPI events are persisted to `crm_webhook_events` before downstream reconciliation, and current live messages are being reconciled. Contact classification remains operator-gated; tenant type is a stored requirement rather than a separate lead-header editor. The other two configured source numbers remain visible for later onboarding only.
@@ -188,7 +241,7 @@ Supabase `easyfind-crm` (`qttcutwzehtskfcwxkwj`, Mumbai) is ACTIVE_HEALTHY and i
 
 ## 2026-09-27 — Inventory snapshot checkpoint (supersedes earlier inventory-pending statements)
 - Imported a read-only snapshot of the `Housing_Listings` tab from the locally available `Housing Agent — Listings.xlsx` export into Supabase `crm_inventory_snapshot`: **81 unique listing rows; 65 Available, 16 Rented Out; 76 rows have source Cloudinary URLs**. Only property fields and at most two Cloudinary image URLs per row were imported; no raw listing messages, WhatsApp links or customer contacts were imported.
-- Added `003_crm_inventory_snapshot.sql` to source control. The snapshot has RLS enabled, no anon/authenticated table grants and no write path from CRM to the Slack-owned sheet. The export is a point-in-time snapshot, **not a verified live Google Sheets fetch**; live credential/access validation remains pending.
+- Historical inventory gate checkpoint. The current production inventory path is now verified: the canonical `Housing_Listings` Sheet is read through the CRM adapter, operational A:AT rows reconcile to `crm_inventory_snapshot`, the five-minute scheduler is active, and the latest production sync is 88 rows / 0 changed / 0 removed. AU/AV remain outside the CRM mirror and the Sheet remains read-only to CRM.
 - Added three explicitly fictional `L-TEST-INV-*` leads to Supabase with no phone numbers and append-only seed audit events. The server-only, security-invoker `crm_lead_inventory_matches` view links their requirements to Available inventory by exact BHK and rent ceiling; verified match counts: 20, 23, 10 respectively. These matches are test data, not confirmed customer recommendations. This is database-level matching; the deployed React interface still uses its synthetic browser fixtures until its inventory API/UI is wired.
 - Existing historical CI and Render checkpoints remain historical. The expanded browser test on commit `c1d7376` and any later deployment require independent verification. No claim of live Sheets sync, production-ready customer import, encrypted restore proof or final auth is implied.
 - Next gates: implement protected inventory and per-lead match API/UI; verify latest CI and Render; set server-only Sheets credential and perform a read-only live fetch with a diff against this export; add scheduled snapshot refresh with source provenance; independent backup and isolated restore; authorized local SQLite reconciliation; synthetic Ollama evaluation; D06–D08 decisions. Leave credential rotation until the final production move.
@@ -197,8 +250,8 @@ Supabase `easyfind-crm` (`qttcutwzehtskfcwxkwj`, Mumbai) is ACTIVE_HEALTHY and i
 - `crm-ui-dashboard` only; repository `main` untouched. Supabase migrations `crm_inventory_snapshot_v1`, `crm_inventory_sync_metadata_v1`, and scheduler extensions/function migrations applied. 81 snapshot rows (65 Available) are still the last confirmed database inventory baseline.
 - Render deployed commit `a0efd02`: live inventory API is read by the React Inventory and Property Matches views when authenticated and available; synthetic fallback is explicitly labeled. The UI refreshes the inventory API every 60 seconds. Existing lead records are still fictional fixtures.
 - Render has the live Google Sheets service account credential and `CRM_HOUSING_SHEET_READ_ENABLED=true`, plus a signed inventory sync endpoint. No new AWS dependency. Full-row source hashes include the Sheet raw text and links for change detection, but raw messages and contact links are deliberately excluded from the CRM `source_record` for privacy.
-- Supabase `pg_cron` and `pg_net` were enabled, and `crm_inventory_sync_tick()` was deployed to call the signed Render endpoint. A five-minute schedule was created, but the scheduler Vault HMAC secret could not be provisioned through the available approved tool path. The job was therefore unscheduled rather than left repeatedly failing. **Successful sync runs: zero; live Sheet-to-DB propagation NOT VERIFIED.** Do not claim production-ready synchronization until the same HMAC secret is installed in Supabase Vault and Render, the five-minute job is rescheduled, and add/edit/delete propagation is tested end to end.
-- Code build passed; 57 application tests and 8 focused inventory/server tests passed before deploy. Render reports `a0efd02` live. The authenticated live UI browser test and real Sheet mutation round trip are still outstanding.
+- **Historical pre-hardening checkpoint:** the five-minute scheduler was previously blocked on Vault HMAC provisioning. This is superseded by the verified current state: `crm_inventory_sheet_reconcile_5m` is active every five minutes, 1,333 sync records exist, 88 active inventory rows reconcile, and the latest sync recorded 88/0/0. Future field-level changes are recorded in `crm_inventory_sync_changes`.
+- **Historical checkpoint:** earlier application/browser counts and the real Sheet mutation round-trip gate belong to the pre-production inventory phase. Current repository verification is 71/71 automated tests and browser 1/1; P5 is covered by disposable non-production regression logic because the production CRM integration remains Sheet-read-only.
 - Render paid cron was NOT provisioned: the free plan is unsupported. The Supabase scheduler avoids creating a new paid Render service once its secret is configured.
 
 ## 2026-09-27 — Inventory UI reconciliation correction
@@ -226,7 +279,7 @@ Historical branch-reconciliation note superseded on 2026-09-30: `crm-ui-dashboar
 - [x] Added durable `crm_webhook_events` activity/audit storage with provider-message idempotency and received/processing/processed/failed states.
 - [x] New source-phone activity is held in `crm_contact_classifications` with `pending` status and preserved `crm_messages`; it does not create a `crm_leads` row until an operator selects Qualified Lead. Existing promoted contacts continue to append to their lead.
 - [x] Removed CRM intake tables and Render intake routes. There is no separate new-contact staging model.
-- [x] Historical SQLite evidence remains 5,286 messages; current Supabase production state is 186 source-linked leads and 6,621 messages for `+919148338801`.
+- [x] Historical SQLite evidence remains 5,286 messages; current Supabase production state is 186 leads and 6,853 messages for `+919148338801`.
 - [x] Workspace message ordering is chronological by provider `message_at`, with source/provider identity preserved separately.
 - [x] Added sanitized Supabase Realtime broadcast after message insertion so the UI refreshes live without polling WhAPI or polling the CRM workspace.
 - [x] Removed the Render-side WhatsApp ingestion route; the old CRM WhatsApp environment gate remains disabled.
@@ -244,7 +297,7 @@ Historical branch-reconciliation note superseded on 2026-09-30: `crm-ui-dashboar
 - [x] Dashboard now reports CRM lead count, waiting-to-be-classified count, live-WhAPI-qualified-lead count and webhook error count for the selected source. It no longer presents a hardcoded historical message count as the live lead metric.
 - [x] Realtime diagnostics now surface the actual channel error alongside the connection state instead of only showing `Realtime: error`.
 - [x] Applied production migration `20260930145131` (`crm_lead_status_tenant_type_and_webhook_gate_reconciliation`) and verified `crm_leads.tenant_type` plus the reconciled no-auto-lead webhook processor in Supabase.
-- [x] Current production evidence at the 2026-10-01 verified checkpoint: 186 source-linked `crm_leads`, 289 source classifications for `+919148338801`, 2 pending classifications, 6,621 current `crm_messages`, and 73 persisted webhook events (73 processed, 0 received, 0 failed).
+- [x] Current production evidence at the 2026-10-01 verified checkpoint: 186 `crm_leads`, 307 source classifications for `+919148338801`, 20 pending classifications, 186 promoted classifications, 6,853 current `crm_messages`, and 436 persisted webhook events (436 processed, 0 received, 0 processing, 0 failed).
 - [x] Local production build, all 62 unit/integration tests, and the Playwright browser journey pass. The browser journey now covers the live-record surface, Lead Status/Tenant Type controls and persisted-update API path.
 
 ## 2026-09-30 — CRM daily workflow resolved
@@ -283,9 +336,9 @@ Automatic OOC assignment is not enabled from free-text locality. A deterministic
 
 This section supersedes older dated migration/pilot checkpoints for current-state reporting.
 
-- Production Render deployment: `d28046266239cd889ad14f87a61a92742383305e` / `dep-dauq8hg473hc739ve530` — live.
+- Production Render deployment: `da13083f6cb1f3c78ec3f4df661c515d43f556fa` / `dep-dav55km0tbcc73eelat0` — live.
 - Production source: `+919148338801`.
-- Supabase: 186 source-linked leads, 289 classifications, 2 pending classifications, 186 promoted classifications, 6,621 messages.
+- Supabase: 186 leads, 307 classifications, 20 pending classifications, 186 promoted classifications, 6,853 messages.
 - Webhook state: 73 persisted events, all 73 processed, 0 received, 0 failed; active `crm_webhook_reconcile_1m` runs every minute.
 - D06: resolved. D07: resolved. Browser E2E: GitHub Actions #309 succeeded.
 - OOC: `Out of Coverage Area`, displayed as `OOC`, is implemented as a Layer-2 lead status. Automatic geographic assignment is intentionally pending a deterministic coverage rule because the approved service area includes selective areas.

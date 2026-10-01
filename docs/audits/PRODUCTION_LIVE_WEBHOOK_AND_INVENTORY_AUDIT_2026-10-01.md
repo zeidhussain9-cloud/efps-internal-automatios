@@ -20,6 +20,10 @@
 
 The five items are implementation/test closure items; they do not authorize changing the Sheet ownership of AU/AV or enabling CRM-side Sheet writes.
 
+## Post-audit live checkpoint — 2026-10-01 12:33 UTC
+
+The production system continued receiving data after the audit window. The current verified checkpoint is **436 persisted webhook events, 436 processed, 0 received, 0 processing, 0 failed**; **6,853 CRM messages**; **307 classifications (20 pending, 186 promoted)**; **186 CRM leads**; and **88 active inventory rows**. The production webhook reconciler and five-minute inventory scheduler are both active. The latest inventory sync record is 88 rows / 0 changed / 0 removed. The P1–P5 implementation is deployed on `da13083f6cb1f3c78ec3f4df661c515d43f556fa` and Render deployment `dep-dav55km0tbcc73eelat0` is live.
+
 ## 1. Webhook → Contact → Lead production audit
 
 ### Audit window

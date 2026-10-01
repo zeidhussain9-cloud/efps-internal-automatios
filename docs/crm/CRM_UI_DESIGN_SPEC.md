@@ -165,7 +165,7 @@ Figma defines editable visual composition. This specification defines behavior/d
 
 ## AI pilot implementation checkpoint — 2026-09-27
 
-The deployed on-demand `AI & Drafts` control currently analyzes **only a fixed fictional fixture** by lead ID. It does not yet send the lead workspace's displayed message history or human-edited requirements. The hosted provider has been verified, and its server-side dedicated `steering.md` supplies compact EFPS role and JSON extraction instructions. Human Accept/Reject remains required; full D04 source-backed delta analysis, versioned durable evidence and real-data access are future gates.
+The deployed on-demand `AI & Drafts` control is production source-backed. It analyzes the selected lead's complete chronological CRM conversation, normalized requirements, requirement evidence, operator notes, prior AI runs and per-lead cursor. The hosted provider chain is Bedrock primary with Ollama fallback, and `steering.md` supplies the dedicated model instructions. Human review/Accept/Reject remains required; AI-suggested lead status is not automatically applied and WhatsApp sending remains manual. Earlier fictional-fixture behavior is retained only in the dated prototype history.
 
 ## 8. Contact Classification — production simplification — 2026-09-30
 

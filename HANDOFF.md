@@ -1,4 +1,10 @@
 
+# Current verified handoff — 2026-10-01
+
+**Canonical branch:** `crm-ui-dashboard`**Commit:** `da13083f6cb1f3c78ec3f4df661c515d43f556fa`**Tree:** `f36a5ccb4bae742e83603b09bee59d01595ecf00`**Main reconciliation:** `692bdcbbab51752b8eb7d4927921d1cfc4830de7`, identical tree.**Render:** `easyfind-crm-d01-d05`, deployment `dep-dav55km0tbcc73eelat0`, **live**.**Production source:** `+919148338801`.**Current Supabase:** 186 leads; 307 classifications (20 pending, 186 promoted); 6,853 messages; 436 webhook events (436 processed, 0 received, 0 processing, 0 failed); 196 AI runs; 196 drafts; 186 AI cursors; 88 active inventory rows; 1,333 inventory sync records.**Schedulers:** webhook reconciliation every minute; inventory reconciliation every five minutes; both active.**Tests:** build PASS; 71/71 automated tests PASS; browser 1/1 PASS.**P1–P5:** closed and production-verified; see `docs/audits/PRODUCTION_LIVE_WEBHOOK_AND_INVENTORY_AUDIT_2026-10-01.md` and `docs/crm/CRM_CURRENT_VERIFIED_STATE.md`.
+
+Historical dated sections below remain evidence snapshots and must not be interpreted as the current checkpoint.
+
 ## CRM production checkpoint — 2026-09-30
 
 Historical checkpoint retained below.
@@ -8,7 +14,7 @@ Historical checkpoint retained below.
 
 ## Current production checkpoint — 2026-10-01
 
-Render `easyfind-crm-d01-d05` is live from the synchronized `crm-ui-dashboard` release. Supabase source `+919148338801` currently has 186 source-linked leads, 292 classifications, 5 pending classifications, 186 promoted classifications, 6,641 messages, and 214 webhook events, all 214 processed with 0 received and 0 failed.
+Render `easyfind-crm-d01-d05` is live from the synchronized `crm-ui-dashboard` release. Supabase source `+919148338801` currently has 186 leads, 307 classifications, 20 pending classifications, 186 promoted classifications, 6,853 messages, and 436 webhook events, all 436 processed with 0 received, 0 processing, and 0 failed.
 
 The Leads Inbox card surface is simplified to lead status + source number. The inbox header exposes live clickable counts for all lead statuses and clicking a status applies the server-side filter. AI draft runs persist provider usage metrics (input/output/total tokens and estimated USD cost where pricing is known) alongside model/provider provenance. Complete conversation history remains authoritative; incremental/delta analysis is intentionally not implemented.
 
@@ -221,14 +227,14 @@ The approved six AI improvements are implemented: stale-draft detection; provena
 
 ## 2026-10-01 — Final verified checkpoint after AI hardening
 
-- `crm-ui-dashboard` final verified commit: `c8c0b3b458e1d71bf4a81f7efea749aaf1ef4bde`.
+- `crm-ui-dashboard` final verified commit: `da13083f6cb1f3c78ec3f4df661c515d43f556fa`.
 - `crm-ui-dashboard` final tree: `7bce9e42ccd4efa9d14d85bbba8767961943aab0`.
 - Render service `srv-darsv560tbcc73cu4ip0` is live from that commit; deployment `dep-dautgos9v7es73bnc44g` reached `live` and startup/database connectivity were verified.
-- `main` final reconciliation commit: `562905cfe435ee7ad8851c9c4a42360726a9b317`.
+- `main` final reconciliation commit: `692bdcbbab51752b8eb7d4927921d1cfc4830de7`.
 - `main` tree equals `crm-ui-dashboard` tree: `7bce9e42ccd4efa9d14d85bbba8767961943aab0`.
 - Local `crm-ui-dashboard` checkout equals `origin/crm-ui-dashboard` at `c19e36c...` and is clean.
 - Production migration 17 is applied. Current database counts: 3 AI runs (2 Ollama, 1 Bedrock), 3 drafts, all 3 with source evidence; no `confirmed_sent` outcomes yet.
-- Automated verification: `npm run build` passes; `npm test` passes 66/66. `npm run test:browser` remains unresolved locally because the runner hangs without producing a result; no browser pass is claimed.
+- Automated verification: `npm run build` passes; `npm test` passes 71/71; `npm run test:browser` passes 1/1.
 - GitHub combined-status API currently reports no status contexts for the final CRM/main commits; repository verification therefore relies on the local test suite, Git tree equality, Render deployment logs, health endpoint, and Supabase migration/data verification.
 
 ## 2026-10-01 — Bedrock SDK security update
