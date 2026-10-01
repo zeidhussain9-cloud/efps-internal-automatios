@@ -108,3 +108,14 @@ Hosted Ollama authentication and one fictional response are **verified**; these 
 - Current controls include protected sessions, default phone/message masking, reversible archive, global audit visibility, explicit export, retention/deletion boundaries, and offline/write gating.
 - D08 remains the outstanding product/design handoff stage. Independent encrypted backup + isolated restore remains an infrastructure hardening item.
 - Current CRM deployment branch remains `crm-ui-dashboard`.
+
+## Current CRM closure audit — 2026-10-01
+
+Current CRM implementation is production-live on `crm-ui-dashboard`. D06 and D07 are resolved; browser E2E is green; webhook reconciliation is automatic; classification queues are live; Leads Inbox timeline fields and server-side sorting are implemented.
+
+Current CRM/product items still requiring explicit closure are:
+- OOC service-area automation: the `Out of Coverage Area` / `OOC` status is implemented, but automatic geographic assignment is intentionally pending a deterministic coverage rule because several service areas are selective.
+- D08 final visual/design-system handoff.
+- Independent encrypted backup artifact and isolated restore proof.
+
+The repository also contains older/historical planning checkboxes in the master plan and broader Inventory/external-runtime pointers. Those are not to be treated as current CRM implementation blockers without re-verification.
