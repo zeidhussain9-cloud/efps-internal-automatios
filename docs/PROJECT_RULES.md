@@ -94,7 +94,7 @@ Maintenance is a normalized numeric amount with an optional source qualifier; `m
 - D01–D04 are approved design decisions; D05 is proposed until the owner approves it.
 - Figma is the working visual design environment; Canva remains the visual reference.
 - Prototype work uses synthetic data and must not mutate live CRM/inventory records until a later explicit integration gate.
-- Do not declare one universal lead source of truth while historical backups, legacy `leads.db`, the live Leads Tracker, and current DynamoDB lead domains remain unreconciled.
+- Treat historical backups, legacy `leads.db`, and the legacy Leads Tracker as evidence layers only. The current CRM production source is WhAPI → Supabase CRM tables; the separate `Housing_Listings` Sheet is the inventory source. Do not reintroduce legacy lead Sheets into the production CRM path without an explicit architecture decision.
 
 ## Security
 

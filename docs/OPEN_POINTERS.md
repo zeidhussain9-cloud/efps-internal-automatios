@@ -82,8 +82,8 @@ Open blockers before CRM live-data integration:
 
 - Legacy `leads.db` (23,454 conversation rows) does not reconcile with the 6,064-message extraction evidence.
 - Legacy `leads.db` has not been reconciled with current master DynamoDB lead-domain tables.
-- Current Leads Tracker ownership/update mechanism must be verified as an ongoing operating source.
-- Legacy Sheets sync clears/rewrites operational tabs and is unsuitable as a CRM write path.
+- [x] Audit the legacy Leads Tracker (`1GfM9lPQSukVpxCEVUlUDxFj_WYg0xQj8Inn7FA4sLVI`) as a current runtime dependency. It is accessible to the legacy service account, but no current executable repository reference or Render log hit was found; it is historical/documentation infrastructure, not the CRM runtime path.
+- [x] Confirm the legacy Sheets sync is not part of the current CRM deployment. Historical `sync_to_sheet_v2.py` references remain only in extraction evidence/logs; current CRM uses WhAPI + Supabase for leads and the separate `Housing_Listings` Sheet for inventory.
 - Housing column L has live header `w` while the canonical field is `google_maps_url`.
 - Housing `listing_state` write ownership remains undecided.
 - Housing AU/AV historical contents, if any, require controlled investigation; current contract says both are reserved/blank.

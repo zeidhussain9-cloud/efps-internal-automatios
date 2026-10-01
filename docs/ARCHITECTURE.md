@@ -119,9 +119,10 @@ The private CRM is a separate EFPS business capability and UI product layered ov
 **Lead data**
 - Historical source evidence: three WhatsApp backup sets and their decrypted `msgstore.db` files.
 - Historical normalized dataset: legacy `leads.db`.
-- Curated historical/operational spreadsheet: the live Leads Tracker with `Leads`, `Conversations`, `Events`, `Extraction Log`, `Findings`, and `Priority Sharing`.
-- Current master runtime: DynamoDB domains `efps-leads`, `efps-interactions`, and `efps-lead-audit`.
-- These lead layers have not yet been proven to be one synchronized dataset. The CRM must not silently choose one as the universal live source.
+- Curated historical extraction spreadsheet: Leads Tracker `1GfM9lPQSukVpxCEVUlUDxFj_WYg0xQj8Inn7FA4sLVI`, containing historical `Leads`, `Conversations`, `Events`, `Extraction Log`, and `Priority Sharing` tabs. It is retained as evidence and is not part of the current CRM runtime path.
+- Current CRM runtime: WhAPI live ingress → `crm_webhook_events` durable boundary → Supabase CRM tables.
+- Current inventory runtime is separate: `Housing_Listings` spreadsheet `1zdOLWklkWlnVECCtcH4SJj6vm6nEVjINpTT2U2UJEKc` → inventory adapter/sync → `crm_inventory_snapshot`.
+- The old Leads Tracker remains accessible to the legacy service account, but repository and Render runtime audit found no current executable reference to its spreadsheet ID.
 
 ### CRM data boundary
 
