@@ -132,6 +132,9 @@ test('production CRM browser journey uses only live-record surfaces',async()=>{
   const workspaceResponse=await workspaceResponsePromise;
   assert.equal(workspaceResponse.status(),200);
   assert.deepEqual(pageErrors,[]);
+  console.log('LEAD_WORKSPACE_BODY_AFTER_RESPONSE:',await page.locator('body').innerText());
+  console.log('LEAD_DETAIL_COUNT:',await page.locator('.live-detail').count());
+  console.log('OVERVIEW_TAB_COUNT:',await page.getByRole('button',{name:'Overview',exact:true}).count());
 
   await page.getByRole('button',{name:'Overview',exact:true}).waitFor();
   await page.getByRole('heading',{name:'Live lead',exact:true}).waitFor();
