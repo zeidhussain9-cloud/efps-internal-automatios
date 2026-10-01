@@ -50,7 +50,7 @@ The canonical CRM implementation repository is `efps-internal-automatios`. CRM r
 
 D01–D04 are approved design decisions. D05 is proposed and is now informed by the verified Housing Listings audit. Figma is the working design environment; Canva remains the visual reference.
 
-The CRM currently has multiple lead data layers: historical WhatsApp backups, legacy `leads.db`, the live Leads Tracker, and current master DynamoDB lead domains. They are not yet proven to be one synchronized dataset. Never declare one universal lead source of truth until the documented reconciliation blockers are closed.
+The CRM has historical lead evidence layers (WhatsApp backups, legacy `leads.db`, and the Leads Tracker spreadsheet `1GfM9lPQSukVpxCEVUlUDxFj_WYg0xQj8Inn7FA4sLVI`) plus the current production CRM runtime. The Leads Tracker is not a current CRM dependency. Current lead ingress is WhAPI → Supabase `crm_webhook_events`/CRM tables; current inventory is the separate `Housing_Listings` Sheet contract. Do not reintroduce the legacy Leads Tracker into the production CRM path without an explicit architecture decision and verification.
 
 ## Deterministic Inventory architecture
 

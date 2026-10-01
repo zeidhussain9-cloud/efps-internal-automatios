@@ -78,7 +78,7 @@ Reconciled:
 - Figma is the working design environment; Canva remains the visual reference.
 - Housing Inventory is the live `Housing_Listings` Google Sheet under the 48-field repository contract.
 - Inventory Stage-1/2 write boundary is A:D and F:AO; AU/AV are reserved and blank.
-- The legacy lead extraction, legacy `leads.db`, Leads Tracker, and current DynamoDB lead runtime are distinct layers that still require reconciliation before live CRM source selection.
+- The legacy lead extraction, legacy `leads.db`, and Leads Tracker (`1GfM9lPQSukVpxCEVUlUDxFj_WYg0xQj8Inn7FA4sLVI`) are historical evidence layers. They are not the current CRM lead write/read path. Current production CRM ingress is WhAPI → `crm_webhook_events` → Supabase CRM tables; the canonical inventory Sheet is the separate `Housing_Listings` workbook.
 - The current audit reports are evidence snapshots, not permission to mutate production data.
 
 Open blockers are maintained in `docs/OPEN_POINTERS.md`.
