@@ -80,6 +80,7 @@ export async function syncInventorySnapshot({rows,connectionString=process.env.D
      SELECT run_id,listing_id,change_type,field_name,old_value,new_value,source_hash_before,source_hash_after,changed_at
      FROM jsonb_to_recordset($1::jsonb) AS x(run_id text,listing_id text,change_type text,field_name text,old_value jsonb,new_value jsonb,source_hash_before text,source_hash_after text,changed_at timestamptz)`,[JSON.stringify(changes)]);
    await client.query('INSERT INTO crm_inventory_sync_runs(run_id,source_kind,row_count,changed_count,removed_count) VALUES($1,$2,$3,$4,$5)',[runId,'housing_sheet',plan.total,plan.changed,plan.removed]);
+   await client.query('INSERT INTO crm_activity(lead_id,actor,action,details) VALUES(NULL,$1,$2,$3::jsonb)',['housing-sheet-sync','inventory.sync.completed',JSON.stringify({run_id:runId,row_count:plan.total,changed_count:plan.changed,removed_count:plan.removed})]);
    await client.query('COMMIT');
    return {...plan,runId,syncedAt:now};
   }catch(e){try{await client.query('ROLLBACK')}catch{}throw e}finally{client.release()}
