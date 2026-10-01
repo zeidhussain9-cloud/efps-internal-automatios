@@ -1,3 +1,15 @@
+## Authoritative current repository state — 2026-10-02
+
+- **CRM implementation branch:** `crm-ui-dashboard`
+- **Current synchronized application tree:** recovered CRM UI feedback implementation plus stable production baseline.
+- **Repository reconciliation:** `main` was reconciled to the CRM dashboard tree without force-pushing or rewriting `main` history.
+- **Recovered UI scope:** classification visibility/tone, overdue follow-up attention, inventory sorting/filtering/pagination, stale-response protection, classification pagination reset, responsive/accessibility regression coverage.
+- **Replit-only workspace artifacts:** excluded from the synchronized tree.
+- **Production dependency manifest:** restored to the verified baseline.
+- **Production backend boundary:** WhatsApp/WhAPI ingestion, Supabase persistence/reconciliation, CRM promotion/classification, AI/drafts, inventory synchronization, authentication, privacy, audit, archive/restore and exports were preserved.
+- **Render source branch:** `crm-ui-dashboard`; branch updates trigger the configured Render deployment path.
+- **Runtime verification:** repository reconciliation is verified. Live Render runtime verification is an external deployment check and is not represented as a repository-only fact.
+
 ## Authoritative current CRM UI verification — 2026-10-02
 
 This is the current production checkpoint after the audited CRM UI polish, routing hardening, verification, deployment, and repository reconciliation. Older dated sections remain historical evidence.

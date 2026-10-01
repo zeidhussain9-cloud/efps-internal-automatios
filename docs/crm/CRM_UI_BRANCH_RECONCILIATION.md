@@ -143,3 +143,8 @@ A single operator test on contact `+919216063368` produced the definitive Render
 - No production merge, Render deployment, database mutation, schema migration, or webhook/integration change has been performed from this candidate.
 - Automated build/test evidence for this exact candidate is still pending; do not mark the candidate production-verified until `npm run build`, `npm test`, and `npm run test:browser` are observed passing.
 - `main` and `crm-ui-dashboard` remain unchanged from the verified production baseline until that evidence gate is satisfied.
+
+
+## 2026-10-02 synchronized state
+
+The recovered CRM UI feedback work is now on `crm-ui-dashboard`. The `main` branch has been reconciled to the same repository tree without rewriting main history. Replit-only workspace artifacts were excluded and the production dependency manifest was restored. Render deploys from `crm-ui-dashboard`; repository reconciliation is verified, while live runtime status must be confirmed from Render.
