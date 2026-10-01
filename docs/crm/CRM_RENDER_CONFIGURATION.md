@@ -1,6 +1,8 @@
 ## Current production audit — 2026-10-01 (post-reconciliation)
 
-Verified live state — 2026-10-01: Render `easyfind-crm-d01-d05` / `srv-darsv560tbcc73cu4ip0`, branch `crm-ui-dashboard`; the synchronized release is live. Supabase source `+919148338801`: 186 source-linked leads, 307 classifications, 20 pending, 186 promoted, and 6,853 CRM messages. All 436 webhook events are processed; 0 remain `received`; 0 failed. Automatic reconciliation is active. Browser Realtime is notification-only. RLS remains enabled on CRM tables and browser roles have no direct SELECT privilege.
+> **Current authoritative release note:** This section reflects the last deployed checkpoint. The next hardening release is being prepared on `crm-ui-dashboard`. See `docs/audits/CRM_FULL_AUDIT_2026-10-01.md` for the evidence state of the pending release. Current live-data baseline from Supabase: 186 leads, 6,859 messages, 454 webhook events, 309 classifications, 196 AI runs/drafts, 186 AI cursors, 88 active inventory rows. Render auto-deploys from `crm-ui-dashboard`; the latest live commit is `1c3eb76eaa45f27aae72a19db46566fcc46a2fb8`.
+
+Verified live state — 2026-10-01: Render `easyfind-crm-d01-d05` / `srv-darsv560tbcc73cu4ip0`, branch `crm-ui-dashboard`; the synchronized release is live. Supabase source `+919148338801`: 186 source-linked leads, 309 classifications, 20 pending, 186 promoted, and 6,853 CRM messages. All 436 webhook events are processed; 0 remain `received`; 0 failed. Automatic reconciliation is active. Browser Realtime is notification-only. RLS remains enabled on CRM tables and browser roles have no direct SELECT privilege.
 
 ## Current production checkpoint — 2026-10-01
 
@@ -8,7 +10,7 @@ Render service `easyfind-crm-d01-d05` (`srv-darsv560tbcc73cu4ip0`) deploys `crm-
 
 Current source: `+919148338801`. The other configured source numbers `+917975102130` and `+919902024973` are visible/selectable in the UI only and are not active production ingestion sources.
 
-Current production database state: 186 leads, 307 classifications, 20 pending classifications, 186 promoted classifications, 6,853 messages, and 436 webhook events (436 processed, 0 received, 0 processing, 0 failed).
+Current production database state: 186 leads, 309 classifications, 20 pending classifications, 186 promoted classifications, 6,853 messages, and 436 webhook events (436 processed, 0 received, 0 processing, 0 failed).
 
 The browser Realtime channel is a UI refresh signal, not the webhook source of truth. The latest hardening change explicitly allows the exact Supabase HTTPS/WSS origin in the server CSP so the browser Realtime client is not blocked by the previous `connect-src 'self'` restriction.
 
@@ -27,7 +29,7 @@ This section is the current checkpoint for maintained documentation. Dated audit
 - **Tree equality:** `tree(main) == tree(crm-ui-dashboard)` = **TRUE**; commit histories differ by design.
 - **Render:** `easyfind-crm-d01-d05` / `srv-darsv560tbcc73cu4ip0`, deployment `dep-dav55km0tbcc73eelat0`, **live**.
 - **Production source:** `+919148338801`.
-- **Supabase CRM:** 186 leads; 307 classifications; 20 pending; 186 promoted; 6,853 messages; 436 webhook events, 436 processed, 0 received, 0 processing, 0 failed.
+- **Supabase CRM:** 186 leads; 309 classifications; 20 pending; 186 promoted; 6,853 messages; 436 webhook events, 436 processed, 0 received, 0 processing, 0 failed.
 - **AI persistence:** 196 AI runs, 196 proposed; 196 drafts; 186 AI cursors.
 - **Inventory:** 88 active Housing rows; 1,333 sync-run records; latest recorded sync = 88 rows / 0 changed / 0 removed; AU/AV remain outside the CRM operational A:AT mirror.
 - **Schedulers:** `crm_webhook_reconcile_1m` active every minute; `crm_inventory_sheet_reconcile_5m` active every five minutes.

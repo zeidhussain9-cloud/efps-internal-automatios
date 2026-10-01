@@ -45,14 +45,15 @@ test('lead inbox returns conversation timeline fields and validates server-side 
   return{rows:[{id:'L-LIVE-1',contacted_at:'2026-08-26T07:30:00.000Z',last_message_direction:'Incoming',last_message_at:'2026-09-30T16:26:15.000Z'}]};
  }};
  const cr= createCrmRepository({pool});
- const data=await cr.listLeadsPage(100,0,'+919148338801','', 'customer_waiting');
+ const data=await cr.listLeadsPage(100,0,'+919148338801','', 'customer_waiting','shiv');
  assert.equal(data.sort,'customer_waiting');
  assert.equal(data.total,186);
  assert.equal(data.leads[0].last_message_direction,'Incoming');
  assert.match(calls[0].sql,/contacted_at/);
  assert.match(calls[0].sql,/last_message_at/);
  assert.match(calls[0].sql,/ORDER BY \(last_message\.last_message_direction='Incoming'\) DESC/);
- assert.deepEqual(calls[0].args,['+919148338801',100,0]);
+ assert.deepEqual(calls[0].args,['+919148338801','%shiv%',100,0]);
+ assert.match(calls[0].sql,/lower\(coalesce\(l\.display_name,l\.normalized_phone,''\)\) LIKE/);
  await assert.rejects(()=>cr.listLeadsPage(100,0,'+919148338801','', 'unsupported_sort'),/Invalid lead sort/);
 });
 
@@ -119,4 +120,34 @@ test('property matching expands historical BHK and locality requirements without
  assert.deepEqual(params[2],['1 BHK','2 BHK']);
  assert.match(sql,/locality ILIKE/);
  assert.deepEqual(params.at(-1),10);
+});
+
+test('lead workspace reads the AI cursor for the selected lead',async()=>{
+ const calls=[];
+ const pool={query:async(sql,args)=>{calls.push({sql,args});return{rows:[]}}};
+ const repo=createCrmRepository({pool});
+ await repo.getLeadWorkspace('L-LIVE-1','+919148338801');
+ const cursorCall=calls.find(x=>x.sql.includes('crm_ai_cursors'));
+ assert.ok(cursorCall);
+ assert.match(cursorCall.sql,/WHERE lead_id=\$1 AND source_number=\$2/);
+ assert.deepEqual(cursorCall.args,['L-LIVE-1','+919148338801']);
+});
+
+test('follow-up create and complete write durable activity entries',async()=>{
+ const calls=[];
+ const client={query:async(sql,args)=>{
+  calls.push([sql,args]);
+  if(sql==='BEGIN'||sql==='COMMIT'||sql==='ROLLBACK')return{rows:[]};
+  if(sql.startsWith('INSERT INTO crm_followups'))return{rows:[{id:'FU-1',lead_id:'L-1'}]};
+  if(sql.startsWith('UPDATE crm_followups'))return{rows:[{id:'FU-1',lead_id:'L-1',completed_at:'2026-10-01T00:00:00Z'}]};
+  if(sql.startsWith('INSERT INTO crm_activity'))return{rows:[{id:1}]};
+  return{rows:[]};
+ },release:()=>{}};
+ const pool={connect:async()=>client};
+ const repo=createCrmRepository({pool});
+ const created=await repo.addFollowup({id:'FU-1',leadId:'L-1',dueAt:'2026-10-02T10:00:00',note:'Call customer',actor:'pilot'});
+ assert.equal(created.id,'FU-1');
+ const completed=await repo.completeFollowup({id:'FU-1',actor:'pilot'});
+ assert.equal(completed.id,'FU-1');
+ assert.equal(calls.filter(x=>x[0].startsWith('INSERT INTO crm_activity')).length,2);
 });

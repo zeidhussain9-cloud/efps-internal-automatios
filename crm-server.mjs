@@ -6,6 +6,7 @@ import {authorized,accessMode} from './src/server-auth.mjs';
 import {getRequestPrincipal,loginWithPassword,revokeRequestSession,sessionCookie,clearSessionCookie,sameOrigin,sessionPolicy} from './src/server-session.mjs';
 import {analyzeRealLead} from './src/ollama-adapter.mjs';
 import {createCrmRepository} from './src/crm-repository.mjs';
+import {normalizeInventorySort,sortInventoryRows} from './src/inventory-logic.mjs';
 import {createCrmClassificationRepository} from './src/crm-classification-repository.mjs';
 import {draftPreflight} from './src/draft-preflight.mjs';
 import {startupDatabaseCheck} from './src/crm-startup-check.mjs';
@@ -156,9 +157,10 @@ createServer(async(req,res)=>{
      data=await repo.dashboardStats(q.get('source_number')||'+919148338801');
     }
     else if(p==='/api/db/leads'){
-     const raw=q.get('limit')??'50',offset=q.get('offset')??'0',sourceNumber=q.get('source_number')||'+919148338801',leadSort=q.get('lead_sort')||'last_message_desc';
+     const raw=q.get('limit')??'50',offset=q.get('offset')??'0',sourceNumber=q.get('source_number')||'+919148338801',leadSort=q.get('lead_sort')||'last_message_desc',leadSearch=q.get('lead_search')||'';
      if(!/^\d{1,3}$/.test(raw)||!/^\d{1,7}$/.test(offset)){res.writeHead(400,security);return res.end('Invalid pagination');}
-     data=await repo.listLeadsPage(Number(raw),Number(offset),sourceNumber,q.get('lead_status')||'',leadSort);
+     if(leadSearch.length>200){res.writeHead(400,security);return res.end('Invalid lead search');}
+     data=await repo.listLeadsPage(Number(raw),Number(offset),sourceNumber,q.get('lead_status')||'',leadSort,leadSearch);
     }else if(/^\/api\/db\/leads\/[^/]+\/workspace$/.test(p)){
      const id=decodeURIComponent(p.slice('/api/db/leads/'.length,-'/workspace'.length));
      if(!id||id.includes('/')||id.length>128){res.writeHead(400,security);return res.end('Invalid lead ID');}
@@ -176,7 +178,12 @@ createServer(async(req,res)=>{
   if(p==='/api/inventory/overview'){
    if(process.env.CRM_DB_READ_ENABLED!=='true'||!process.env.DATABASE_URL||mode!=='protected'){res.writeHead(404,security);return res.end('Inventory unavailable');}
    if(req.method!=='GET'){res.writeHead(405,security);return res.end('Method not allowed');}
-   const repo=createCrmRepository();try{const data=await repo.inventoryOverview();res.writeHead(200,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify(data))}finally{await repo.close()}
+   const sortRaw=new URL(req.url,'http://localhost').searchParams.get('inventory_sort')||'latest';
+   const sort=normalizeInventorySort(sortRaw);
+   if(sortRaw!==sort){res.writeHead(400,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify({error:'Invalid inventory sort',allowed:['latest','oldest','rent_asc','rent_desc','bhk_asc','bhk_desc','locality_asc']}));}
+   const repo=createCrmRepository();
+   try{const data=await repo.inventoryOverview();data.rows=sortInventoryRows(data.rows,sort);data.sort=sort;res.writeHead(200,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify(data))}
+   finally{await repo.close()}
   }
   if(p==='/api/inventory/matches'){
    if(process.env.CRM_DB_READ_ENABLED!=='true'||!process.env.DATABASE_URL||mode!=='protected'){res.writeHead(404,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify({error:'Inventory database disabled'}));}
@@ -197,7 +204,8 @@ createServer(async(req,res)=>{
     const result=await analyzeRealLead({lead:workspace.lead,requirements:workspace.requirement_profile,messages:workspace.messages,aiHistory:workspace.ai_runs,cursor:workspace.ai_cursor,evidence:workspace.requirement_evidence,env:process.env});
     const run=await repo.saveAiRun({leadId:id,modelName:result.model,provider:result.provider,fallbackFrom:result.fallbackFrom||null,fallbackReason:result.fallbackReason||null,proposal:result.proposal,usage:result.usage||{}});
     const last=workspace.messages.at(-1);if(last)await repo.setAiCursor({leadId:id,sourceNumber:workspace.sources[0]?.source_number||'+919148338801',lastMessageId:last.id,lastMessageAt:last.message_at});
-    let draft=null;if(result.proposal.reply_draft&&typeof result.proposal.reply_draft==='string'){const evidenceIds=[...(Array.isArray(result.proposal.evidence)?result.proposal.evidence.map(x=>Number(x?.message_id)).filter(Number.isInteger):[]),...(Array.isArray(result.proposal.requirement_updates)?result.proposal.requirement_updates.flatMap(x=>Array.isArray(x?.source_message_ids)?x.source_message_ids.map(Number):[]).filter(Number.isInteger):[])].filter((v,i,a)=>a.indexOf(v)===i);draft=await repo.saveDraft({leadId:id,body:result.proposal.reply_draft,actor:principal.user,aiRunId:run.id,aiProvider:result.provider,modelName:result.model,evidenceMessageIds:evidenceIds,evidenceSummary:Array.isArray(result.proposal.evidence)?result.proposal.evidence.map(x=>String(x?.body||'')).filter(Boolean).slice(0,3).join(' | '):''});}
+    const resolveMessageRef=ref=>{const key=String(ref??'').trim();if(!key)return null;const match=workspace.messages.find(m=>String(m.id)===key||String(m.source_message_id||m.provider_message_id||'')===key);return match?.id??null;};
+    let draft=null;if(typeof result.proposal.reply_draft==='string'&&result.proposal.reply_draft.trim()){const rawEvidence=[...(Array.isArray(result.proposal.evidence)?result.proposal.evidence.map(x=>x?.message_id):[]),...(Array.isArray(result.proposal.requirement_updates)?result.proposal.requirement_updates.flatMap(x=>Array.isArray(x?.source_message_ids)?x.source_message_ids:[]):[])];const evidenceIds=[...new Set(rawEvidence.map(resolveMessageRef).filter(Number.isInteger))];draft=await repo.saveDraft({leadId:id,body:result.proposal.reply_draft,actor:principal.user,aiRunId:run.id,aiProvider:result.provider,modelName:result.model,evidenceMessageIds:evidenceIds,evidenceSummary:Array.isArray(result.proposal.evidence)?result.proposal.evidence.map(x=>String(x?.body||'')).filter(Boolean).slice(0,3).join(' | '):''});}
     res.writeHead(200,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify({...result,run,draft}));
    }catch(e){res.writeHead(422,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify({error:e.message==='Request too large'?'Request too large':'Real AI request failed'}));}
    finally{await repo.close()}

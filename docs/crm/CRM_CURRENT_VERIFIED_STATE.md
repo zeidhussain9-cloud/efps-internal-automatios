@@ -1,5 +1,9 @@
 # EFPS CRM — Current Verified State
 
+## Authoritative full-audit override — 2026-10-01
+
+See `docs/audits/CRM_FULL_AUDIT_2026-10-01.md`. The currently verified live-data baseline is 186 leads, 6,859 messages, 454 webhook events, 309 classifications (228 historical), 196 AI runs, 196 drafts, 186 AI cursors, and 88 active inventory rows. The prior commit/tree/deployment values in this file are retained as historical checkpoints. The new hardening release is locally verified with build PASS, 76/76 tests PASS, and 1/1 browser regression PASS. Cloudinary is still an open media gate: 829 distinct URLs yielded 719 valid images, 110 timeouts, and 1 JSON response.
+
 ## Current verified repository state — 2026-10-01
 
 This section is the current checkpoint for maintained documentation. Dated audit sections below remain historical evidence and are not silently rewritten.
@@ -12,7 +16,7 @@ This section is the current checkpoint for maintained documentation. Dated audit
 - **Tree equality:** `tree(main) == tree(crm-ui-dashboard)` = **TRUE**; commit histories differ by design.
 - **Render:** `easyfind-crm-d01-d05` / `srv-darsv560tbcc73cu4ip0`, deployment `dep-dav55km0tbcc73eelat0`, **live**.
 - **Production source:** `+919148338801`.
-- **Supabase CRM:** 186 leads; 307 classifications; 20 pending; 186 promoted; 6,853 messages; 436 webhook events, 436 processed, 0 received, 0 processing, 0 failed.
+- **Supabase CRM:** 186 leads; 309 classifications; 20 pending; 186 promoted; 6,853 messages; 436 webhook events, 436 processed, 0 received, 0 processing, 0 failed.
 - **AI persistence:** 196 AI runs, 196 proposed; 196 drafts; 186 AI cursors.
 - **Inventory:** 88 active Housing rows; 1,333 sync-run records; latest recorded sync = 88 rows / 0 changed / 0 removed; AU/AV remain outside the CRM operational A:AT mirror.
 - **Schedulers:** `crm_webhook_reconcile_1m` active every minute; `crm_inventory_sheet_reconcile_5m` active every five minutes.
