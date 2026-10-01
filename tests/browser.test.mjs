@@ -65,6 +65,7 @@ test('production CRM browser journey uses only live-record surfaces',async()=>{
   await page.getByText('Follow-ups',{exact:true}).first().waitFor();
 
   await page.getByRole('button',{name:'Inventory',exact:true}).click();
+  assert.equal(new URL(page.url()).pathname,'/inventory');
   await page.getByRole('heading',{name:'Property inventory'}).waitFor();
   assert.equal(await page.getByRole('button',{name:/Total properties/}).count(),1);
   assert.equal(await page.getByRole('button',{name:/Available/}).count(),1);
@@ -90,6 +91,7 @@ test('production CRM browser journey uses only live-record surfaces',async()=>{
   await page.getByRole('button',{name:/Close/}).click();
 
   await page.getByRole('button',{name:'Leads Inbox',exact:true}).click();
+  assert.equal(new URL(page.url()).pathname,'/leads');
   await page.getByLabel('Sort leads').waitFor();
   const activeFollowupSummary=page.getByRole('button',{name:/^Active Follow-up.*40/});
   await activeFollowupSummary.waitFor();
@@ -123,6 +125,7 @@ test('production CRM browser journey uses only live-record surfaces',async()=>{
   const leadButton=page.getByRole('button',{name:/Live lead/}).first();
   await leadButton.waitFor();
   await leadButton.click();
+  assert.equal(new URL(page.url()).pathname,'/leads/LIVE-1/overview');
 
   await page.getByRole('button',{name:'Overview',exact:true}).waitFor();
   await page.getByRole('heading',{name:'Live lead',exact:true}).waitFor();
@@ -135,6 +138,7 @@ test('production CRM browser journey uses only live-record surfaces',async()=>{
   await page.getByLabel('Tenant Type').waitFor();
 
   await page.getByRole('button',{name:'Conversation',exact:true}).click();
+  assert.equal(new URL(page.url()).pathname,'/leads/LIVE-1/conversation');
   await page.getByText('Sensitive message hidden').first().waitFor();
   await page.getByRole('button',{name:/Privacy: Masked/}).click();
   await page.getByText('Property reference',{exact:true}).waitFor();
@@ -142,19 +146,23 @@ test('production CRM browser journey uses only live-record surfaces',async()=>{
   await page.getByText('Historical conversation message').waitFor();
 
   await page.getByRole('button',{name:'Requirements',exact:true}).click();
+  assert.equal(new URL(page.url()).pathname,'/leads/LIVE-1/requirements');
   await page.getByText('Editable normalized requirement profile.',{exact:false}).waitFor();
   assert.equal(await page.locator('.requirements-table').count(),1);
 
   await page.getByRole('button',{name:'Activity & History',exact:true}).click();
+  assert.equal(new URL(page.url()).pathname,'/leads/LIVE-1/activity-history');
   await page.getByText('Lead audit history',{exact:true}).waitFor();
   assert.equal(await page.getByLabel('Lead audit date range').count(),1);
   assert.deepEqual(await page.getByLabel('Lead audit date range').locator('option').allTextContents(),['All activity','Today','Last 7 days','Last 30 days','This month','Previous month','Custom range']);
   await page.getByText('requirements.updated',{exact:true}).waitFor();
 
   await page.getByRole('button',{name:'Property Matches',exact:true}).click();
+  assert.equal(new URL(page.url()).pathname,'/leads/LIVE-1/property-matches');
   await page.getByText(/No live inventory matches were returned/).waitFor();
 
   await page.getByRole('button',{name:'AI & Drafts',exact:true}).click();
+  assert.equal(new URL(page.url()).pathname,'/leads/LIVE-1/ai-drafts');
   await page.getByText(/Production AI reviews the complete chronological conversation/).waitFor();
   await page.getByRole('button',{name:'Open draft version 2'}).waitFor();
   await page.getByRole('button',{name:'Open draft version 2'}).click();
@@ -167,7 +175,9 @@ test('production CRM browser journey uses only live-record surfaces',async()=>{
   await page.getByText('Estimated cost: $0.081250',{exact:true}).waitFor();
 
   await page.getByRole('button',{name:'Dashboard',exact:true}).click();
+  assert.equal(new URL(page.url()).pathname,'/dashboard');
   await page.getByRole('button',{name:'Activity',exact:true}).click();
+  assert.equal(new URL(page.url()).pathname,'/activity');
   await page.getByText('All CRM activity across leads',{exact:false}).waitFor();
   assert.equal(await page.getByLabel('Audit date range').count(),1);
   assert.deepEqual(await page.getByLabel('Audit date range').locator('option').allTextContents(),['All activity','Today','Last 7 days','Last 30 days','This month','Previous month','Custom range']);
