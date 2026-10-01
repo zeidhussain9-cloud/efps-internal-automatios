@@ -135,6 +135,7 @@ function App(){
  const[inventorySort,setInventorySort]=useState('latest');
  const[inventoryOffset,setInventoryOffset]=useState(0);
  const[inventoryPageSize,setInventoryPageSize]=useState(DEFAULT_LIST_PAGE_SIZE);
+ const inventoryRequestRef=useRef(0);
  const[inventoryFilters,setInventoryFilters]=useState({status:'All',bhk:'All',locality:'All',withPhotos:null});
  const[matches,setMatches]=useState([]);
  const[matchState,setMatchState]=useState('idle');
@@ -279,14 +280,15 @@ function App(){
   let active=true;
   if(!authenticated||page!=='Inventory')return()=>{active=false};
   async function load(){
+   const requestId=++inventoryRequestRef.current;
    try{
     const qs=new URLSearchParams({limit:String(inventoryPageSize),offset:String(inventoryOffset),inventory_sort:normalizeInventorySort(inventorySort),status:inventoryFilters.status==='All'?'':inventoryFilters.status,bhk:inventoryFilters.bhk==='All'?'':inventoryFilters.bhk,locality:inventoryFilters.locality==='All'?'':inventoryFilters.locality,with_photos:inventoryFilters.withPhotos===null?'':String(inventoryFilters.withPhotos),search:debouncedInventoryQuery.trim()});
     const r=await apiFetch('/api/inventory/overview?'+qs.toString(),{cache:'no-store',credentials:'include'});
     if(!r.ok)throw Error('Inventory unavailable');
     const data=await r.json();
     if(!Array.isArray(data.rows)||!data.summary||!data.facets||!Number.isFinite(Number(data.total)))throw Error('Inventory response incomplete');
-    if(active)setInventoryData(data),setInventoryState('live');
-   }catch{if(active)setInventoryState('unavailable')}
+    if(active&&requestId===inventoryRequestRef.current)setInventoryData(data),setInventoryState('live');
+   }catch{if(active&&requestId===inventoryRequestRef.current)setInventoryState('unavailable')}
   }
   load();
   return()=>{active=false};
