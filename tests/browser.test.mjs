@@ -75,6 +75,9 @@ test('production CRM browser journey uses only live-record surfaces',async()=>{
   await page.getByRole('button',{name:'Overview',exact:true}).waitFor();
   await page.getByRole('heading',{name:'Live lead',exact:true}).waitFor();
   await page.getByLabel('Lead Status').waitFor();
+  const oocOption=page.getByLabel('Lead Status').locator('option[value="Out of Coverage Area"]');
+  assert.equal(await oocOption.count(),1);
+  assert.equal(await oocOption.textContent(),'OOC');
   await page.getByLabel('Tenant Type').waitFor();
 
   await page.getByRole('button',{name:'Conversation',exact:true}).click();

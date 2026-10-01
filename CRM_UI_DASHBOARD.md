@@ -71,3 +71,11 @@ Lead rows/cards now show Contacted date, Last message sent by, and Last message 
 The Inbox provides server-side sorting for Last message newest, Customer replied newest, First contacted newest, Last message oldest, and Name A–Z. Sorting occurs before pagination so the operator is not limited to the currently loaded page.
 
 All current source-linked production leads have at least one stored customer message at the 2026-10-01 verification checkpoint; no fixture/default timestamp is used for the new fields.
+
+## 2026-10-01 — Out-of-coverage lead status
+
+Lead Workspace and Lead Inbox support the compact status **OOC** (`Out of Coverage Area`) for leads requesting properties outside the approved service area.
+
+Defined coverage currently includes HSR Layout, Kudlu Gate, Bellandur, Sarjapur Road, Whitefield, Hoodi, Mahadevapura, Marathahalli, ITPL, Varthur, Kasavanahalli, Harlur, Panathur, Koramangala (limited), Yemalur, Bommanahalli (selective), and Old Airport Road (selective).
+
+The status is stored in `crm_leads.lead_type`. The current implementation does not automatically adjudicate free-text locations; that requires a separately verified geographic rule because some listed areas are selective.

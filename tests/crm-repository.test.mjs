@@ -76,6 +76,16 @@ test('AI cursor is upserted per source',async()=>{
  const row=await repo.setAiCursor({sourceNumber:'wa-1',cursor:'c1'});assert.equal(row.cursor,'c1');assert.match(calls[0][0],/ON CONFLICT\(source_number\) DO UPDATE/);
 });
 
+test('lead status validation accepts Out of Coverage Area and rejects unknown statuses',async()=>{
+ const calls=[];
+ const client={query:async(sql,args)=>{calls.push([sql,args]);if(sql.startsWith('UPDATE crm_leads'))return{rows:[{id:'L-OOC',lead_type:'Out of Coverage Area'}]};return{rows:[]}},release:()=>{}};
+ const repo=createCrmRepository({pool:{connect:async()=>client}});
+ const row=await repo.updateLead({id:'L-OOC',leadType:'Out of Coverage Area',actor:'pilot'});
+ assert.equal(row.lead_type,'Out of Coverage Area');
+ assert.match(calls[2][0],/INSERT INTO crm_activity/);
+ await assert.rejects(()=>repo.updateLead({id:'L-OOC',leadType:'Outside Bengaluru',actor:'pilot'}),/Invalid lead status/);
+});
+
 test('property media accepts only Cloudinary external references',async()=>{
  const calls=[];const pool={query:async(sql,args)=>{calls.push([sql,args]);return{rows:[{listing_id:'EF-1',media_url:args[1]}]}}};
  const repo=createCrmRepository({pool});

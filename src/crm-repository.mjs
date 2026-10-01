@@ -24,7 +24,7 @@ export function createCrmRepository({pool,connectionString=process.env.DATABASE_
   async listLeadsPage(limit=50,offset=0,sourceNumber=SOURCE_NUMBER,leadStatus='',leadSort='last_message_desc'){
    if(!Number.isInteger(limit)||limit<1||limit>100||!Number.isInteger(offset)||offset<0||!SOURCE_NUMBERS.includes(sourceNumber))throw Error('Invalid pagination/source');
    const source=sourceNumber;
-   const allowed=['New','Active Follow-up','Waiting on Customer','Waiting on Us','Nurture','Dormant','Converted','Lost','On Hold'];
+   const allowed=['New','Active Follow-up','Waiting on Customer','Waiting on Us','Nurture','Dormant','Converted','Lost','On Hold','Out of Coverage Area'];
    if(leadStatus&&!allowed.includes(leadStatus))throw Error('Invalid lead status');
    const dollar=n=>String.fromCharCode(36)+n;
    const sortOrder={last_message_desc:'last_message.last_message_at DESC NULLS LAST,l.updated_at DESC,l.id',customer_waiting:"(last_message.last_message_direction='Incoming') DESC NULLS LAST,last_message.last_message_at DESC NULLS LAST,l.id",first_customer_desc:'first_customer.contacted_at DESC NULLS LAST,l.updated_at DESC,l.id',last_message_asc:'last_message.last_message_at ASC NULLS LAST,l.updated_at ASC,l.id',name_asc:"lower(coalesce(l.display_name,l.normalized_phone,'')) ASC,l.id"};
@@ -84,7 +84,7 @@ export function createCrmRepository({pool,connectionString=process.env.DATABASE_
   async updateLead({id,displayName,normalizedPhone,status,leadType,tenantType,priority,requirements,operatorNotes,actor}){
    if(typeof id!=='string'||!id||id.length>128)throw Error('Invalid lead ID');if(!actor||typeof actor!=='string'||actor.length>128)throw Error('Invalid actor');
    if(status!==undefined&&!['New','Qualified','Contacted','Follow-up','Review','Archived'].includes(status))throw Error('Invalid status');
-   if(leadType!==undefined&&!['New','Active Follow-up','Waiting on Customer','Waiting on Us','Nurture','Dormant','Converted','Lost','On Hold'].includes(leadType))throw Error('Invalid lead status');
+   if(leadType!==undefined&&!['New','Active Follow-up','Waiting on Customer','Waiting on Us','Nurture','Dormant','Converted','Lost','On Hold','Out of Coverage Area'].includes(leadType))throw Error('Invalid lead status');
    if(tenantType!==undefined&&!['Family','Bachelors','Couples','Students','Working Professionals','Corporate','Other','Not specified'].includes(tenantType))throw Error('Invalid tenant type');
    if(priority!==undefined&&!['High','Medium','Low'].includes(priority))throw Error('Invalid priority');
    const fields=[],args=[];const add=(sql,v)=>{fields.push(sql);args.push(v)};

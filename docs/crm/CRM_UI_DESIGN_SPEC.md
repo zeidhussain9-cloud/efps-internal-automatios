@@ -222,3 +222,11 @@ Inbox sorting is server-side so sorting remains correct across pagination. Avail
 5. Name — A–Z
 
 The same lead card is used by Dashboard and Leads Inbox, so these conversation fields remain visible in both surfaces.
+
+## 2026-10-01 — Service-area status
+
+The Lead Status control now includes the compact operational status **OOC**, stored as `Out of Coverage Area`.
+
+Service areas currently defined by the operator are: HSR Layout, Kudlu Gate, Bellandur, Sarjapur Road, Whitefield, Hoodi, Mahadevapura, Marathahalli, ITPL, Varthur, Kasavanahalli, Harlur, Panathur, Koramangala (limited), Yemalur, Bommanahalli (selective), and Old Airport Road (selective).
+
+OOC is a Layer-2 CRM lead status, not a Contact Classification result. It does not remove the lead or suppress its conversation history. Automatic geographic assignment is intentionally not inferred from free-text locality; a deterministic coverage rule must be separately approved before automation.
