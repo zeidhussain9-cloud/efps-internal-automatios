@@ -386,3 +386,8 @@ Current AI generation order is Bedrock Claude Opus 4.6 → Bedrock Claude Sonnet
 ## 2026-10-01 — Final CRM 24-item audit closure
 
 The current production CRM closure is 186 leads, 6,870 messages, 310 classifications, 196 AI runs/drafts, 465 processed webhook events, and 88 active Housing rows.
+
+
+## 2026-10-02 repository reconciliation
+
+The current CRM UI implementation and its documentation checkpoint are synchronized on `crm-ui-dashboard`; `main` has been reconciled to the same tree without history rewriting.

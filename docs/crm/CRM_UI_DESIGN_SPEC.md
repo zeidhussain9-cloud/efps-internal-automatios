@@ -391,3 +391,8 @@ The UI implementation corresponding to this specification is production-live on 
 - Leads Inbox cards use separated vertical rhythm, consistent borders/radius/elevation, and an identity row with deliberate name-to-phone spacing on mobile and desktop.
 - The one-time bulk-import `crm_leads.priority` value is not rendered in the Lead Workspace UI.
 - Global and lead-scoped audit history use the same labelled Date range dropdown and Custom range behavior for consistent production interaction.
+
+
+## 2026-10-02 repository reconciliation
+
+The implemented CRM UI feedback work is synchronized on `crm-ui-dashboard`; `main` has been reconciled to the same tree. Render continues to deploy from `crm-ui-dashboard`.
