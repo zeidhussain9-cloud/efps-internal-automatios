@@ -72,7 +72,7 @@ The existing Slack automation alone creates and updates the Housing Listings She
 - [x] Editable synthetic requirements: BHK, locality, budget, furnishing, move-in, pets, parking, occupancy, notes and priority (session-only).
 - [x] Provider-unavailable simulation; real Ollama pilot pending.
 - [x] Synthetic inventory browse/search/match and explicit no-image fallback; real sheet/photos pending.
-- [x] Basic editable draft preparation; versioning pending.
+- [x] Basic editable draft preparation and durable versioned draft history.
 - [x] Session-only activity/history, follow-up scheduling/completion and settings visibility; durable history pending.
 - [x] Initial responsive mobile layout; QA pending.
 - [x] Chromium browser journey test and CI workflow added for synthetic requirements, persistence, follow-ups, inventory and Settings.\n- [x] Verify successful CI browser run and deployed build: GitHub Actions `CRM synthetic CI` run #81 passed build, 45/45 unit/integration tests and Chromium browser journey 1/1.\n- [ ] Expand browser coverage for remaining flows.

@@ -126,3 +126,7 @@ The former synthetic-only AI/live-data gate is superseded for the current CRM pa
 
 ## 2026-10-01 — Current production checkpoint
 Current CRM production is live on srv-darsv560tbcc73cu4ip0 at commit b61b4f7f686957c194094acec8638d7db602ec15. Remaining hardening: encrypted backup/restore proof, least-privilege AWS credential rotation, D08 handoff, incremental delta analysis and field-level AI proposal editing.
+
+## 2026-10-01 — AI workspace follow-up
+
+The saved-draft visibility defect is fixed in the source tree: persisted drafts are independently rendered and selectable after reload, with provider/model provenance. Migration 16 is live. The next production verification should exercise a real AI run through Render and confirm a new draft records `aws-bedrock` plus `au.anthropic.claude-opus-4-6-v1`; existing verified drafts are Ollama-era.
