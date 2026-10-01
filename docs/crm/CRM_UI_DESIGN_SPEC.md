@@ -29,28 +29,29 @@ This is the latest repository/production checkpoint. Older dated sections in mai
 - **24-item CRM audit:** GREEN / VERIFIED.
 
 
-## Authoritative current closure — 2026-10-01
+## Authoritative current closure — 2026-10-02
 
 Evidence snapshot after final verification:
-- crm-ui-dashboard commit: 252dad9e029d9c3d3ee8bd93be20c171f4099602
-- crm-ui-dashboard tree: 375a701d907830a04ddd5f6d517f982ea729ed68
-- main reconciliation commit: 918a9b9d1f010c144b400b01d23bad26ee061fb9
-- main tree: 375a701d907830a04ddd5f6d517f982ea729ed68
+- crm-ui-dashboard commit: 22f73f966889e2707def2d60571ae0e0ce0a2bb9
+- crm-ui-dashboard tree: 4ba9f920167f2bc893b9a1a38aab18162a10650c
+- main reconciliation commit: 2827e90cf1fa2099b3520ff5c06be33e7a8d12c0
+- main tree: 4ba9f920167f2bc893b9a1a38aab18162a10650c
 - tree(main) == tree(crm-ui-dashboard): TRUE
-- Render deployment: dep-dav82h3m8hqs7399j4ug, status LIVE, commit 1c196577fc414be52c8fc889b3886f11e0e9da5d
+- Render deployment: dep-davau7jm8hqs73bqsuug, status LIVE, commit 22f73f966889e2707def2d60571ae0e0ce0a2bb9
 - Production health: GET /health = HTTP 200, {"ok":true}
-- Supabase: 186 leads, 6,870 messages, 465 webhook events, 310 classifications, 186 requirements, 196 AI runs, 196 drafts, 186 cursors, 88 active inventory rows
-- Webhook events: 465/465 processed; 0 received; 0 processing; 0 failed
-- Message reconciliation: 6,870 total = 4,806 lead-linked + 2,064 classified non-lead; unreconciled = 0
-- Historical classification population: 228/228 source="historical_extract"; 140/140 qualified mappings resolve to promoted leads
+- Supabase current snapshot: 186 leads, 6,881 messages, 476 webhook events, 313 classifications, 186 requirement rows, 196 AI runs, 196 drafts, 88 active inventory rows, 71 Available inventory rows, and 1,189 crm_activity events.
+- Webhook event counts are 476 total in the current snapshot; detailed processing-state reconciliation is not restated here unless freshly queried.
+- Historical message-reconciliation totals from the 2026-10-01 checkpoint are retained in dated audit records; they were not re-run as part of this UI-only closure.
+- Historical classification totals from the 2026-10-01 checkpoint are retained in dated audit records; they were not re-run as part of this UI-only closure.
 - Requirements: 186/186 lead rows have requirement rows; orphan/missing = 0
-- AI/drafts: 196/196 draft→AI-run lead mappings valid; stale evidence references = 0; invalid cursor lead links = 0
-- Inventory: 88 active rows; 71 Available; 17 Rented Out; invalid media-array rows = 0
-- Cloudinary: 829/829 distinct production URLs returned HTTP 200 with image/* content-type using direct HEAD checks from the production-machine network path
-- Tests: npm run build PASS; npm test 78/78 PASS; npm run test:browser 1/1 PASS
-- Supabase Edge Function whapi-crm-webhook: ACTIVE version 8
+- AI/drafts: 196 AI runs and 196 drafts exist in the current snapshot; the earlier verified mapping/evidence/cursor checks remain dated audit evidence.
+- Inventory: 88 active rows; 71 Available; 17 Rented Out.
+- Cloudinary: 829 distinct production URLs were identified in the earlier audit; external probing encountered timeouts, so 829/829 reachability is not claimed. The UI now fails closed to a media fallback for unreachable/non-Cloudinary URLs.
+- Tests: npm run build PASS; npm test 79/79 PASS; npm run test:browser 1/1 PASS; git diff --check PASS.
+- Supabase Edge Function whapi-crm-webhook deployment version was not re-verified during this UI checkpoint.
 - Legacy AWS webhook/handler files: no changes in the CRM hardening commit range
-- 24-item audit status: GREEN / VERIFIED
+- AI usage metadata: 192/196 current AI runs have complete input/output/total token metadata; 4 historical runs have no usage metadata and are not fabricated.
+- 18-point Lead Workspace/UI/audit hardening scope: implemented, locally tested, deployed, production health verified, and reconciled into main.
 
 Historical dated checkpoints below remain historical evidence; this block is the current source of truth.
 
