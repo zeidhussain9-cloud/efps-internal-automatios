@@ -77,10 +77,12 @@ test('AI cursor is upserted per source',async()=>{
 });
 
 test('lead status validation accepts Out of Coverage Area and rejects unknown statuses',async()=>{
- const pool={query:async(sql,args)=>({rows:[{id:'L-OOC',lead_type:args?.[0]||'Out of Coverage Area'}]})};
- const repo=createCrmRepository({pool});
+ const calls=[];
+ const client={query:async(sql,args)=>{calls.push([sql,args]);if(sql.startsWith('UPDATE crm_leads'))return{rows:[{id:'L-OOC',lead_type:'Out of Coverage Area'}]};return{rows:[]}},release:()=>{}};
+ const repo=createCrmRepository({pool:{connect:async()=>client}});
  const row=await repo.updateLead({id:'L-OOC',leadType:'Out of Coverage Area',actor:'pilot'});
  assert.equal(row.lead_type,'Out of Coverage Area');
+ assert.match(calls[1][0],/INSERT INTO crm_activity/);
  await assert.rejects(()=>repo.updateLead({id:'L-OOC',leadType:'Outside Bengaluru',actor:'pilot'}),/Invalid lead status/);
 });
 
