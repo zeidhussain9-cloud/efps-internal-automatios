@@ -121,7 +121,7 @@ test('production CRM browser journey uses only live-record surfaces',async()=>{
   assert.equal(await page.getByText('Classification',{exact:true}).count(),2);
   assert.equal(await page.getByText('Qualified Lead',{exact:true}).count(),1);
   assert.equal(await page.locator('.lead-card-classification strong').nth(1).textContent(),'Cold Inquiry');
-+  assert.ok(await page.locator('.lead-card-classification-cold').count()===1,'cold classification uses a subtle semantic tone');
+  assert.equal(await page.locator('.lead-card-classification-cold').count(),1,'cold classification uses a subtle semantic tone');
   assert.equal(await page.getByText('Lead status · New',{exact:true}).count(),1);
   assert.equal(await page.getByText('Lead status · Waiting on Customer',{exact:true}).count(),1);
   assert.equal(await page.getByText('Source number · +919148338801',{exact:true}).count(),2);
