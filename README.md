@@ -172,9 +172,9 @@ The current CRM UI deployment is live. WhAPI events for +919148338801 are record
 
 ## CRM daily operating flow — 2026-09-30
 
-- Contact Classification is a single qualification queue with two sub-tabs: Waiting for classification, and Qualified leads pushed to CRM.
+- Contact Classification is a single qualification queue with two sub-tabs: Waiting for classification, and Qualified lead pushed to CRM.
 - There is no separate classification filter. Each contact has one classification dropdown and an explicit Update action.
 - Selecting a non-qualified classification saves the classification and moves the contact to Unqualified leads.
-- Selecting Qualified Lead and clicking Update performs the audited Supabase promotion transaction; only after success does the contact move to Qualified leads pushed to CRM and appear in Leads Inbox with preserved messages linked.
+- Selecting Qualified Lead and clicking Update performs the audited Supabase promotion transaction; only after success does the contact move to Qualified lead pushed to CRM and appear in Leads Inbox with preserved messages linked.
 - The Dashboard is intentionally action-oriented: CRM leads, contacts not pushed, qualified contacts pushed, and follow-ups due today, followed by the next open follow-ups.
 - Classification writes are explicitly gated by CRM_CLASSIFICATION_WRITE_ENABLED=true, protected CRM access, DATABASE_URL, and the server-side repository transaction.
