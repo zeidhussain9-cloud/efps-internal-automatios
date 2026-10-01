@@ -23,7 +23,7 @@ This is the latest repository/production checkpoint. Older dated sections in mai
 - **Inventory:** 88 active rows = 71 Available + 17 Rented Out; 1,377 sync runs; latest sync recorded 88 rows / 0 changed / 0 removed; inventory-change rows = 0.
 - **Cloudinary:** 829/829 distinct production URLs returned HTTP 200 with `image/*` content-type by direct HEAD checks from the production-machine network path.
 - **AI integrity:** draft→AI-run lead mismatch = 0; stale evidence references = 0; invalid cursor lead links = 0.
-- **Tests:** `npm run build` PASS; `npm test` 76/76 PASS; `npm run test:browser` 1/1 PASS.
+- **Tests:** `npm run build` PASS; `npm test` 78/78 PASS; `npm run test:browser` 1/1 PASS.
 - **Supabase Edge Function:** `whapi-crm-webhook` ACTIVE v8.
 - **AWS legacy webhook:** no changes in the audited CRM hardening range.
 - **24-item CRM audit:** GREEN / VERIFIED.
@@ -194,8 +194,8 @@ The approved CRM interaction model is deliberately simple:
 1. Open Dashboard and review the four daily counters.
 2. Open Contact Classification for contacts not yet promoted.
 3. Select one classification and click Update.
-4. Non-qualified contacts remain in Not pushed to CRM.
-5. Qualified Lead moves the contact to Qualified leads pushed to CRM only after the Supabase transaction succeeds.
+4. Non-qualified contacts remain in Waiting for classification.
+5. Qualified Lead moves the contact to Total active inventory to CRM only after the Supabase transaction succeeds.
 6. Open the next item from Today's follow-ups and continue work from the lead workspace.
 7. Follow-up history remains visible under the lead's Activity & History tab.
 
@@ -279,7 +279,7 @@ The approved six AI improvements are implemented: stale-draft detection; provena
 - `main` tree equals `crm-ui-dashboard` tree: `7bce9e42ccd4efa9d14d85bbba8767961943aab0`.
 - Local `crm-ui-dashboard` checkout equals `origin/crm-ui-dashboard` at `c19e36c...` and is clean.
 - Production migration 17 is applied. Current database counts: 3 AI runs (2 Ollama, 1 Bedrock), 3 drafts, all 3 with source evidence; no `confirmed_sent` outcomes yet.
-- Historical test checkpoint; current verification is build PASS, 76/76 automated tests, browser 1/1.
+- Historical test checkpoint; current verification is build PASS, 78/78 automated tests, browser 1/1.
 - GitHub combined-status API currently reports no status contexts for the final CRM/main commits; repository verification therefore relies on the local test suite, Git tree equality, Render deployment logs, health endpoint, and Supabase migration/data verification.
 
 ## 2026-10-01 — Bedrock SDK security update
