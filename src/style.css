@@ -682,3 +682,5 @@ button:disabled{opacity:.45;cursor:not-allowed}
 @media(prefers-reduced-motion:reduce){
   *,*::before,*::after{scroll-behavior:auto!important;transition-duration:.01ms!important;animation-duration:.01ms!important;animation-iteration-count:1!important}
 }
+
+.lead-card-classification-qualified{background:#edf6ee;border-color:#d9e9db;border-left-color:#88aa8e;color:#4d7252}.lead-card-classification-qualified strong{color:#4d7252}.lead-card-classification-cold{background:#f1f4f7;border-color:#dce3e8;border-left-color:#9aaab5;color:#657681}.lead-card-classification-cold strong{color:#596b76}
