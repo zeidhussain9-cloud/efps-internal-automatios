@@ -367,3 +367,8 @@ Local verification for this checkpoint: npm run build PASS; npm test 79/79 PASS;
 - No production merge, Render deployment, database mutation, schema migration, or webhook/integration change has been performed from this candidate.
 - Automated build/test evidence for this exact candidate is still pending; do not mark the candidate production-verified until `npm run build`, `npm test`, and `npm run test:browser` are observed passing.
 - `main` and `crm-ui-dashboard` remain unchanged from the verified production baseline until that evidence gate is satisfied.
+
+
+## 2026-10-02 final branch synchronization
+
+`main` and `crm-ui-dashboard` now point to the same commit and identical repository tree. Current synchronized commit: `ca396f09fbb12c6871a36c1ab4436390338c6f74`. The dashboard branch was fast-forwarded to the reconciled main commit; no force-push or history rewrite was used.
