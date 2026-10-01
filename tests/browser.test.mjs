@@ -134,9 +134,9 @@ test('production CRM browser journey uses only live-record surfaces',async()=>{
   assert.deepEqual(pageErrors,[]);
   console.log('LEAD_WORKSPACE_BODY_AFTER_RESPONSE:',await page.locator('body').innerText());
   console.log('LEAD_DETAIL_COUNT:',await page.locator('.live-detail').count());
-  console.log('OVERVIEW_TAB_COUNT:',await page.getByRole('button',{name:'Overview',exact:true}).count());
+  console.log('OVERVIEW_TAB_COUNT:',await page.getByRole('tab',{name:'Overview',exact:true}).count());
 
-  await page.getByRole('button',{name:'Overview',exact:true}).waitFor();
+  await page.getByRole('tab',{name:'Overview',exact:true}).waitFor();
   await page.getByRole('heading',{name:'Live lead',exact:true}).waitFor();
   assert.equal(await page.getByText('Actual lead',{exact:true}).count(),0);
   assert.equal(await page.getByText(/Priority · Medium/,{exact:true}).count(),0);
@@ -146,7 +146,7 @@ test('production CRM browser journey uses only live-record surfaces',async()=>{
   assert.equal(await oocOption.textContent(),'OOC');
   await page.getByLabel('Tenant Type').waitFor();
 
-  await page.getByRole('button',{name:'Conversation',exact:true}).click();
+  await page.getByRole('tab',{name:'Conversation',exact:true}).click();
   assert.equal(new URL(page.url()).pathname,'/leads/LIVE-1/conversation');
   await page.getByText('Sensitive message hidden').first().waitFor();
   await page.getByRole('button',{name:/Privacy: Masked/}).click();
@@ -154,23 +154,23 @@ test('production CRM browser journey uses only live-record surfaces',async()=>{
   await page.getByText('Messages without an explicit property reference',{exact:true}).waitFor();
   await page.getByText('Historical conversation message').waitFor();
 
-  await page.getByRole('button',{name:'Requirements',exact:true}).click();
+  await page.getByRole('tab',{name:'Requirements',exact:true}).click();
   assert.equal(new URL(page.url()).pathname,'/leads/LIVE-1/requirements');
   await page.getByText('Editable normalized requirement profile.',{exact:false}).waitFor();
   assert.equal(await page.locator('.requirements-table').count(),1);
 
-  await page.getByRole('button',{name:'Activity & History',exact:true}).click();
+  await page.getByRole('tab',{name:'Activity & History',exact:true}).click();
   assert.equal(new URL(page.url()).pathname,'/leads/LIVE-1/activity-history');
   await page.getByText('Lead audit history',{exact:true}).waitFor();
   assert.equal(await page.getByLabel('Lead audit date range').count(),1);
   assert.deepEqual(await page.getByLabel('Lead audit date range').locator('option').allTextContents(),['All activity','Today','Last 7 days','Last 30 days','This month','Previous month','Custom range']);
   await page.getByText('requirements.updated',{exact:true}).waitFor();
 
-  await page.getByRole('button',{name:'Property Matches',exact:true}).click();
+  await page.getByRole('tab',{name:'Property Matches',exact:true}).click();
   assert.equal(new URL(page.url()).pathname,'/leads/LIVE-1/property-matches');
   await page.getByText(/No live inventory matches were returned/).waitFor();
 
-  await page.getByRole('button',{name:'AI & Drafts',exact:true}).click();
+  await page.getByRole('tab',{name:'AI & Drafts',exact:true}).click();
   assert.equal(new URL(page.url()).pathname,'/leads/LIVE-1/ai-drafts');
   await page.getByText(/Production AI reviews the complete chronological conversation/).waitFor();
   await page.getByRole('button',{name:'Open draft version 2'}).waitFor();
