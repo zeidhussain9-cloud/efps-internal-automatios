@@ -6,6 +6,7 @@ import {LayoutDashboard,Inbox,Building2,Settings,Search,ChevronLeft,BrainCircuit
 import {maskPhone,maskMessage} from './privacy.mjs';
 import InventoryPanel from './inventory-panel.jsx';
 import {normalizeInventorySort} from './inventory-logic.mjs';
+import {buildCrmPath,CRM_PAGE_PATHS,parseCrmPath} from './crm-ui-routes.mjs';
 import './style.css';
 
 const SOURCE_NUMBERS=['+919148338801','+917975102130','+919902024973'];
@@ -90,7 +91,20 @@ class AppErrorBoundary extends Component{
  render(){if(this.state.hasError)return <div className="app-error-shell"><div className="auth-card"><h1>CRM workspace error</h1><p>The lead workspace hit a display error. Your saved CRM/AI data is not deleted. Reload the workspace to continue.</p><button className="primary" type="button" onClick={()=>window.location.reload()}>Reload CRM</button></div></div>;return this.props.children}
 }
 
+class AppErrorBoundary extends Component{
+ static getDerivedStateFromError(){return{hasError:true}}
+ constructor(props){super(props);this.state={hasError:false}}
+ componentDidCatch(error){console.error('CRM UI render error',error)}
+ render(){if(this.state.hasError)return <div className="app-error-shell"><div className="auth-card"><h1>CRM workspace error</h1><p>The CRM workspace hit a display error. Saved CRM and AI data was not deleted.</p><button className="primary" type="button" onClick={()=>window.location.reload()}>Reload CRM</button></div></div>;return this.props.children}
+}
+
 function App(){
+ const[initialRoute]=useState(()=>{
+  const route=parseCrmPath(window.location.pathname);
+  if(!route.isRoot)return route;
+  try{const stored=window.sessionStorage.getItem('efps-crm-active-page');if(Object.hasOwn(CRM_PAGE_PATHS,stored))return{...route,page:stored}}catch{}
+  return route;
+ });
  const[authReady,setAuthReady]=useState(false);
  const[authenticated,setAuthenticated]=useState(false);
  const[operator,setOperator]=useState('');
@@ -98,15 +112,17 @@ function App(){
  const[authBusy,setAuthBusy]=useState(false);
  const[privacyMode,setPrivacyMode]=useState(()=>{try{const v=window.sessionStorage.getItem('efps-crm-privacy-mode');return v===null?true:v==='masked'}catch{return true}});
  const[online,setOnline]=useState(()=>typeof navigator==='undefined'||navigator.onLine!==false);
- const[page,setPage]=useState(()=>{try{return window.sessionStorage.getItem('efps-crm-active-page')||'Dashboard'}catch{return'Dashboard'}});
- const[tab,setTab]=useState('Overview');
+ const[page,setPage]=useState(initialRoute.page);
+ const[routeNotFound,setRouteNotFound]=useState(initialRoute.notFound);
+ const[tab,setTab]=useState(initialRoute.tab);
  const[query,setQuery]=useState('');
+ const[debouncedQuery,setDebouncedQuery]=useState('');
  const[offset,setOffset]=useState(0);
  const[leads,setLeads]=useState([]);
  const[total,setTotal]=useState(0);
  const[loading,setLoading]=useState(true);
  const[error,setError]=useState('');
- const[selectedId,setSelectedId]=useState(null);
+ const[selectedId,setSelectedId]=useState(initialRoute.leadId);
  const[workspace,setWorkspace]=useState(null);
  const[workspaceState,setWorkspaceState]=useState('idle');
  const[ai,setAi]=useState(null);
@@ -136,6 +152,7 @@ function App(){
  const[classificationErrors,setClassificationErrors]=useState({});
  const[classificationError,setClassificationError]=useState('');
  const[dashboardStats,setDashboardStats]=useState(null);
+ const[dashboardState,setDashboardState]=useState('loading');
  const[auditRows,setAuditRows]=useState([]);
  const[auditState,setAuditState]=useState('idle');
  const[auditFrom,setAuditFrom]=useState('');
@@ -164,8 +181,40 @@ function App(){
  useEffect(()=>{try{window.sessionStorage.setItem('efps-crm-active-page',page);window.sessionStorage.setItem('efps-crm-privacy-mode',privacyMode?'masked':'revealed')}catch{}},[page,privacyMode]);
  useEffect(()=>{const on=()=>setOnline(true),off=()=>setOnline(false);window.addEventListener('online',on);window.addEventListener('offline',off);return()=>{window.removeEventListener('online',on);window.removeEventListener('offline',off)}},[]);
  const apiFetch=(url,options={})=>fetch(url,{...options,credentials:'include'}).then(r=>{if(r.status===401){setAuthenticated(false);setAuthReady(true)}return r});
- const signIn=async e=>{e.preventDefault();setAuthBusy(true);setAuthError('');try{const r=await fetch('/api/auth/login',{method:'POST',credentials:'include',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:e.currentTarget.username.value,password:e.currentTarget.password.value})});const d=await r.json().catch(()=>({}));if(!r.ok)throw Error(d.error||'Sign-in failed');setAuthenticated(true);setOperator(d.user||'');setPage('Dashboard')}catch(err){setAuthError(err.message)}finally{setAuthBusy(false)}};
- const signOut=async()=>{try{await fetch('/api/auth/logout',{method:'POST',credentials:'include'})}finally{setAuthenticated(false);setOperator('');setSelectedId(null);setWorkspace(null)}};
+ function navigateRoute(route,{replace=false}={}){
+  const next=route?.notFound?{page:'Not Found',leadId:null,tab:'Overview',notFound:true}:{page:route?.page||'Dashboard',leadId:route?.leadId??null,tab:route?.tab||'Overview',notFound:false};
+  if(!next.notFound){
+   const path=buildCrmPath(next);
+   if(window.location.pathname!==path)window.history[replace?'replaceState':'pushState']({crmUiRoute:true},'',path);
+  }
+  setRouteNotFound(next.notFound);
+  setPage(next.page);
+  setSelectedId(next.leadId);
+  setTab(next.tab);
+  setWorkspace(previous=>previous?.lead?.id===next.leadId?previous:null);
+  setActionError('');
+ }
+ useEffect(()=>{
+  if(initialRoute.notFound)return;
+  const path=buildCrmPath(initialRoute);
+  if(window.location.pathname!==path)window.history.replaceState({crmUiRoute:true},'',path);
+ },[]);
+ useEffect(()=>{
+  const onPopState=()=>{
+   const next=parseCrmPath(window.location.pathname);
+   setRouteNotFound(next.notFound);
+   setPage(next.page);
+   setSelectedId(next.leadId);
+   setTab(next.tab);
+   setWorkspace(previous=>previous?.lead?.id===next.leadId?previous:null);
+   setActionError('');
+  };
+  window.addEventListener('popstate',onPopState);
+  return()=>window.removeEventListener('popstate',onPopState);
+ },[]);
+ useEffect(()=>{const timeout=setTimeout(()=>setDebouncedQuery(query),220);return()=>clearTimeout(timeout)},[query]);
+ const signIn=async e=>{e.preventDefault();setAuthBusy(true);setAuthError('');try{const r=await fetch('/api/auth/login',{method:'POST',credentials:'include',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:e.currentTarget.username.value,password:e.currentTarget.password.value})});const d=await r.json().catch(()=>({}));if(!r.ok)throw Error(d.error||'Sign-in failed');setAuthenticated(true);setOperator(d.user||'')}catch(err){setAuthError(err.message)}finally{setAuthBusy(false)}};
+ const signOut=async()=>{try{await fetch('/api/auth/logout',{method:'POST',credentials:'include'})}finally{navigateRoute({page:'Dashboard'},{replace:true});setAuthenticated(false);setOperator('')}};
  const togglePrivacy=()=>setPrivacyMode(v=>!v);
  const exportCurrentSource=async()=>{if(!online)return;setActionError('');try{const r=await apiFetch('/api/db/export?source_number='+encodeURIComponent(sourceFilter));if(!r.ok){const d=await r.json().catch(()=>({}));throw Error(d.error||'Export unavailable')}const blob=await r.blob();const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='easyfind-crm-export.csv';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),0)}catch(e){setActionError(e?.message||'Export unavailable')}};
  const setAuditRange=(from,to,preset='custom')=>{setAuditFrom(from||'');setAuditTo(to||'');setAuditRangePreset(preset);setAuditOffset(0);setLeadAuditOffset(0)};
@@ -177,15 +226,13 @@ function App(){
  useEffect(()=>{if(authenticated&&page==='Activity')loadAudit()},[authenticated,page,refreshToken,auditFrom,auditTo,auditOffset]);
  useEffect(()=>{if(authenticated&&selectedId&&tab==='Activity & History')loadLeadAudit()},[authenticated,selectedId,tab,refreshToken,auditFrom,auditTo,leadAuditOffset]);
 
- useEffect(()=>{try{window.sessionStorage.setItem('efps-crm-active-page',page)}catch{}},[page]);
-
  useEffect(()=>{
   let active=true;
   if(!authenticated)return()=>{active=false};
   async function load(){
    setLoading(true);setError('');
    try{
-    const r=await apiFetch('/api/db/leads?limit=100&offset='+offset+'&source_number='+encodeURIComponent(sourceFilter)+'&lead_status='+encodeURIComponent(leadStatusFilter)+'&lead_sort='+encodeURIComponent(leadSort)+'&lead_search='+encodeURIComponent(query.trim()),{cache:'no-store',credentials:'include'});
+    const r=await apiFetch('/api/db/leads?limit=100&offset='+offset+'&source_number='+encodeURIComponent(sourceFilter)+'&lead_status='+encodeURIComponent(leadStatusFilter)+'&lead_sort='+encodeURIComponent(leadSort)+'&lead_search='+encodeURIComponent(debouncedQuery.trim()),{cache:'no-store',credentials:'include'});
     if(!r.ok)throw Error('Live CRM records unavailable');
     const d=await r.json();
     if(!active)return;
@@ -196,7 +243,7 @@ function App(){
   }
   load();
   return()=>{active=false};
- },[authenticated,offset,sourceFilter,leadStatusFilter,leadSort,query,refreshToken]);
+ },[authenticated,offset,sourceFilter,leadStatusFilter,leadSort,debouncedQuery,refreshToken]);
 
  useEffect(()=>{
   let active=true;
@@ -210,7 +257,8 @@ function App(){
  useEffect(()=>{
   let active=true;
   if(!authenticated)return()=>{active=false};
-  apiFetch('/api/db/stats?source_number='+encodeURIComponent(sourceFilter),{cache:'no-store',credentials:'include'}).then(async r=>{if(!r.ok)throw Error('Dashboard stats unavailable');return r.json()}).then(d=>{if(active)setDashboardStats(d)}).catch(()=>{if(active)setDashboardStats(null)});
+  setDashboardState('loading');
+  apiFetch('/api/db/stats?source_number='+encodeURIComponent(sourceFilter),{cache:'no-store',credentials:'include'}).then(async r=>{if(!r.ok)throw Error('Dashboard stats unavailable');return r.json()}).then(d=>{if(active){setDashboardStats(d);setDashboardState('ready')}}).catch(()=>{if(active){setDashboardStats(null);setDashboardState('unavailable')}});
   return()=>{active=false};
  },[authenticated,sourceFilter,refreshToken]);
 
@@ -277,7 +325,7 @@ function App(){
 
  const visibleLeads=useMemo(()=>leads,[leads]);
 
- function openLead(id){setSelectedId(id);setTab('Overview');setPage('Leads Inbox')}
+ function openLead(id){navigateRoute({page:'Leads Inbox',leadId:id,tab:'Overview'})}
  async function toggleArchive(){
   if(!selectedId||!online||archiveState==='saving')return;
   const archived=workspace?.lead?.status==='Archived';
@@ -285,7 +333,7 @@ function App(){
   setArchiveState('saving');
   try{const r=await apiFetch('/api/db/leads/'+encodeURIComponent(selectedId)+'/'+(archived?'restore':'archive'),{method:'POST'});const d=await r.json().catch(()=>({}));if(!r.ok)throw Error(d.error||'Lead action failed');setActionError('');setArchiveState(archived?'restored':'archived');setWorkspace(prev=>prev?{...prev,lead:d}:prev);refresh()}catch(e){setActionError(e?.message||'Lead action failed');setArchiveState('error')}finally{setTimeout(()=>setArchiveState(''),2500)}
  }
- function backToInbox(){setSelectedId(null);setWorkspace(null);setSelectedDraftId(null);setTab('Overview');setPage('Leads Inbox')}
+ function backToInbox(){setSelectedDraftId(null);navigateRoute({page:'Leads Inbox'})}
  function refresh(){setRefreshToken(v=>v+1)}
  function classifyContact(id,classification){setClassificationDrafts(prev=>({...prev,[id]:classification}));setClassificationErrors(prev=>{const next={...prev};delete next[id];return next})}
  async function saveClassification(row){const classification=classificationDrafts[row.id];if(!classification||classification==='pending'||classification===row.classification_code)return;setClassificationSaving(prev=>({...prev,[row.id]:true}));setClassificationErrors(prev=>{const next={...prev};delete next[row.id];return next});try{const r=await apiFetch('/api/db/classifications/'+row.id,{method:'POST',credentials:'include',headers:{'Content-Type':'application/json'},body:JSON.stringify({classification,source:'operator'})});const d=await r.json().catch(()=>({}));if(!r.ok)throw Error(d.error||('Classification update failed (HTTP '+r.status+')'));refresh()}catch(e){setClassificationErrors(prev=>({...prev,[row.id]:e.message||'Classification update failed'}))}finally{setClassificationSaving(prev=>{const next={...prev};delete next[row.id];return next})}}
@@ -349,15 +397,16 @@ function App(){
  if(!authReady)return <div className="auth-shell"><div className="auth-card"><div className="brand"><span className="brandmark">EF</span><span>EasyFind<small>PRIVATE CRM</small></span></div><p>Checking operator session…</p></div></div>;
  if(!authenticated)return <div className="auth-shell"><form className="auth-card" onSubmit={signIn}><div className="brand"><span className="brandmark">EF</span><span>EasyFind<small>PRIVATE CRM</small></span></div><h1>Operator sign in</h1><p>Customer data is not loaded before authentication succeeds.</p><label>Username<input name="username" autoComplete="username" required/></label><label>Password<input name="password" autoComplete="current-password" type="password" required/></label>{authError&&<div className="notice">{authError}</div>}<button type="submit" className="primary auth-submit" disabled={authBusy}>{authBusy?'Signing in…':'Sign in'}</button><small className="muted">8-hour inactivity timeout · 12-hour maximum session</small></form></div>;
  return <div className="app">
+  <a className="skip-link" href="#main-content">Skip to main content</a>
   <aside className="sidebar">
    <div className="brand"><span className="brandmark">EF</span><span>EasyFind<small>LEADS WORKSPACE</small></span></div>
-   <nav>{MENU.map(([name,Icon])=><button type="button" aria-current={page===name?'page':undefined} className={page===name?'nav active':'nav'} key={name} onClick={()=>{setActionError('');setPage(name);if(name!=='Leads Inbox')setSelectedId(null)}}><Icon size={19}/>{name}</button>)}</nav>
+   <nav aria-label="Primary navigation">{MENU.map(([name,Icon])=><button type="button" aria-current={page===name?'page':undefined} className={page===name?'nav active':'nav'} key={name} onClick={()=>navigateRoute({page:name})}><Icon size={19}/>{name}</button>)}</nav>
    <div className="sidebottom"><CheckCircle2 size={16}/> Production CRM<br/><small>Live source: {SOURCE_NUMBER}</small></div>
   </aside>
-  <main className="main">
+  <main className="main" id="main-content" tabIndex={-1}>
    <header className="top">
     <div className="top-title">{selectedId&&<button className="header-back" onClick={backToInbox} type="button"><ChevronLeft size={17}/> Leads Inbox</button>}<div><strong>{selectedId?'Lead Workspace':page}</strong><small>EasyFind Property Solutions / CRM</small></div></div>
-    <div className="topright"><span className="chip green">● Production data</span><span className={"chip "+(realtimeState==='live'?'green':'')}>Realtime: {realtimeState}</span><span className="chip source">{SOURCE_NUMBER}</span><button className="privacy-toggle" type="button" onClick={togglePrivacy}><ShieldCheck size={15}/> Privacy: {privacyMode?'Masked':'Revealed'}</button><span className={"chip "+(online?'green':'red')}>{online?'Online':'Offline'}</span><button className="icon-action" type="button" onClick={signOut} title="Sign out"><LogOut size={15}/></button><span className="avatar">{operator?operator.slice(0,2).toUpperCase():'ZH'}</span></div>
+    <div className="topright"><span className={'chip '+(error?'red':'green')} role="status">{error?'CRM data unavailable':'Production data'}</span><span className={"chip "+(realtimeState==='live'?'green':'')}>Realtime: {realtimeState}</span><span className="chip source">{SOURCE_NUMBER}</span><button className="privacy-toggle" type="button" onClick={togglePrivacy}><ShieldCheck size={15}/> Privacy: {privacyMode?'Masked':'Revealed'}</button><span className={"chip "+(online?'green':'red')}>{online?'Online':'Offline'}</span><button className="icon-action" type="button" onClick={signOut} title="Sign out"><LogOut size={15}/></button><span className="avatar">{operator?operator.slice(0,2).toUpperCase():'ZH'}</span></div>
    </header>
    <div className="content">{actionError&&<div className="notice action-error" role="alert"><b>Action failed:</b> {actionError} <button type="button" onClick={()=>setActionError('')}>Dismiss</button></div>}{!online&&<div className="offline-banner"><WifiOff size={15}/> Offline. Reading the current UI is allowed; writes and exports are disabled until the connection returns.</div>}
 
@@ -394,9 +443,9 @@ function App(){
       <div className="heading"><div><h1>{page==='Dashboard'?'CRM Dashboard':'Leads Inbox'}</h1><p>Live production records across the verified WhatsApp source numbers.</p></div><div className="headcontrols"><label className="inline-field">Lead source <select value={sourceFilter} onChange={e=>{setSourceFilter(e.target.value);setOffset(0)}}>{SOURCE_NUMBERS.map(n=><option key={n} value={n}>{n}</option>)}</select></label><button type="button" className="primary" onClick={refresh}><RefreshCw size={14}/> Refresh</button></div></div>
       {error&&<div className="notice">Live CRM unavailable. {error}</div>}
       {page==='Dashboard'&&realtimeState==='error'&&<div className="notice">Realtime connection error: {realtimeError||'channel subscription failed'}. Live webhook ingestion is independent and continues server-side.</div>}
-      {page==='Dashboard'&&<><div className="stats"><button type="button" className="stat stat-link" onClick={()=>{setPage('Leads Inbox');setOffset(0)}}><small>CRM leads</small><b>{dashboardStats?.qualifiedClassificationCount??0}</b><span>Actually qualified · Open Leads Inbox</span></button><button type="button" className="stat stat-link" onClick={()=>{setPage('Contact Classification');setClassificationFilter('not_pushed')}}><small>Waiting for classification</small><b>{dashboardStats?.notPushedClassificationCount??0}</b><span>Contacts waiting for an operator decision</span></button><button type="button" className="stat stat-link" onClick={()=>setPage('Inventory')}><small>Total available inventory</small><b>{dashboardStats?.availableInventoryCount??0}</b><span>Available properties · Open Inventory</span></button><button type="button" className="stat stat-link" onClick={()=>document.getElementById('today-followups')?.scrollIntoView({behavior:'smooth',block:'start'})}><small>Follow-ups</small><b>{dashboardStats?.followupTodayCount??0}</b><span>Today · {dashboardStats?.overdueFollowupCount??0} overdue · View actions below</span></button></div><div className="panel daily-actions" id="today-followups"><div className="daily-actions-head"><div><h3>Today's follow-ups</h3><p>Only the next actions that need your attention.</p></div>{dashboardStats?.webhookErrorCount>0&&<span className="chip red">{dashboardStats.webhookErrorCount} webhook errors</span>}</div>{(dashboardStats?.nextFollowups||[]).length?dashboardStats.nextFollowups.map(f=><button type="button" className="followup-row" key={f.id} onClick={()=>openLead(f.lead_id)}><span className="followup-time">{new Date(f.due_at).toLocaleString([], {day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'})}</span><span><b>{f.display_name||f.normalized_phone||'Lead'}</b><small>{f.note||'Follow-up due'}</small></span><span className="chip">Open</span></button>):<div className="empty">No open follow-ups are scheduled. New activity will appear here when a follow-up is created.</div>}</div></>}
+      {page==='Dashboard'&&<><div className="stats"><button type="button" className="stat stat-link" onClick={()=>navigateRoute({page:'Leads Inbox'})}><small>CRM leads</small><b>{dashboardStats?.qualifiedClassificationCount??0}</b><span>Actually qualified · Open Leads Inbox</span></button><button type="button" className="stat stat-link" onClick={()=>{navigateRoute({page:'Contact Classification'});setClassificationFilter('not_pushed')}}><small>Waiting for classification</small><b>{dashboardStats?.notPushedClassificationCount??0}</b><span>Contacts waiting for an operator decision</span></button><button type="button" className="stat stat-link" onClick={()=>navigateRoute({page:'Inventory'})}><small>Total available inventory</small><b>{dashboardStats?.availableInventoryCount??0}</b><span>Available properties · Open Inventory</span></button><button type="button" className="stat stat-link" onClick={()=>document.getElementById('today-followups')?.scrollIntoView({behavior:'smooth',block:'start'})}><small>Follow-ups</small><b>{dashboardStats?.followupTodayCount??0}</b><span>Today · {dashboardStats?.overdueFollowupCount??0} overdue · View actions below</span></button></div><div className="panel daily-actions" id="today-followups"><div className="daily-actions-head"><div><h3>Today's follow-ups</h3><p>Only the next actions that need your attention.</p></div>{dashboardStats?.webhookErrorCount>0&&<span className="chip red">{dashboardStats.webhookErrorCount} webhook errors</span>}</div>{(dashboardStats?.nextFollowups||[]).length?dashboardStats.nextFollowups.map(f=><button type="button" className="followup-row" key={f.id} onClick={()=>openLead(f.lead_id)}><span className="followup-time">{new Date(f.due_at).toLocaleString([], {day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'})}</span><span><b>{f.display_name||f.normalized_phone||'Lead'}</b><small>{f.note||'Follow-up due'}</small></span><span className="chip">Open</span></button>):<div className="empty">No open follow-ups are scheduled. New activity will appear here when a follow-up is created.</div>}</div></>}
       {page==='Leads Inbox'&&<div className="status-summary-grid" aria-label="Lead status counts">
-       {LEAD_STATUSES.map(status=>{const count=Number(dashboardStats?.leadStatusCounts?.find(x=>x.status===status)?.count||0);const active=leadStatusFilter===status;return <button key={status} type="button" className={'status-summary-card '+(active?'active':'')} onClick={()=>{setPage('Leads Inbox');setLeadStatusFilter(status);setOffset(0)}}><span>{LEAD_STATUS_LABELS[status]||status}</span><b>{count}</b><small>Open {LEAD_STATUS_LABELS[status]||status}</small></button>})}
+       {LEAD_STATUSES.map(status=>{const count=Number(dashboardStats?.leadStatusCounts?.find(x=>x.status===status)?.count||0);const active=leadStatusFilter===status;return <button key={status} type="button" className={'status-summary-card '+(active?'active':'')} onClick={()=>{navigateRoute({page:'Leads Inbox'});setLeadStatusFilter(status);setOffset(0)}}><span>{LEAD_STATUS_LABELS[status]||status}</span><b>{count}</b><small>Open {LEAD_STATUS_LABELS[status]||status}</small></button>})}
       </div>}
       <div className="panel leadlist-production">
        <div className="production-toolbar"><label className="search"><Search size={16}/><input value={query} onChange={e=>{setQuery(e.target.value);setOffset(0)}} placeholder="Search name or phone" aria-label="Search live leads"/></label><label>Lead status <select value={leadStatusFilter} onChange={e=>{setLeadStatusFilter(e.target.value);setOffset(0)}}><option value="">All statuses</option>{LEAD_STATUSES.map(s=><option key={s} value={s}>{LEAD_STATUS_LABELS[s]||s}</option>)}</select></label><label>Lead source <select value={sourceFilter} onChange={e=>{setSourceFilter(e.target.value);setOffset(0)}}>{SOURCE_NUMBERS.map(n=><option key={n} value={n}>{n}</option>)}</select></label><label>Sort leads <select value={leadSort} onChange={e=>{setLeadSort(e.target.value);setOffset(0)}} aria-label="Sort leads">{LEAD_SORT_OPTIONS.map(([value,label])=><option key={value} value={value}>{label}</option>)}</select></label><span>{total} leads</span></div>
