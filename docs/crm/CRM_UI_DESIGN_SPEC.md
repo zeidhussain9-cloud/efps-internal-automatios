@@ -325,3 +325,12 @@ The AI & Drafts workspace now shows provider/model/fallback provenance, source m
 ## 2026-10-01 — Final implementation verification
 
 The UI implementation corresponding to this specification is production-live on crm-ui-dashboard. The final hardening release has passed build, 78/78 automated tests, and 1/1 browser regression. Search/pagination, inventory sorting and KPI filtering, draft/follow-up actions, error/empty states, Cloudinary fallback handling, and lead-workspace lifecycle controls are covered by the verified release. Production webhook reconciliation and AI persistence are live against real Supabase data. All 24 CRM audit items are GREEN.
+
+## 2026-10-02 — Lead Workspace and audit-history closure
+
+- Lead Workspace no longer displays the redundant “Actual lead” badge.
+- The priority chip is labeled Priority · <value> and its source is crm_leads.priority; the UI exposes that source through the control label/title rather than presenting an unexplained value.
+- Requirements are rendered as a structured normalized table. Database-defined enum fields use controlled dropdowns; BHK and preferred-location fields provide current inventory values as datalist suggestions while preserving custom-value entry.
+- Conversation property boundaries are evidence-based. A stored supported property URL creates a property-reference section; only messages explicitly replying to that source-message ID are grouped into it. Other messages remain in General conversation rather than being inferred into a property.
+- Dashboard inventory KPI is Total available inventory, sourced from crm_inventory_snapshot rows with listing_state='Available' and deleted_at IS NULL.
+- Global Activity is CRM-wide and reads all crm_activity events, including lead-scoped events. Lead Workspace Activity & History reads the same event table with lead_id scoping. Both support date ranges and pagination.
