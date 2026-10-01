@@ -183,3 +183,7 @@ Repository reconciliation is maintained separately from the Render deployment pa
 
 ## 2026-10-01 — CRM Render/AWS runtime checkpoint
 Production CRM service srv-darsv560tbcc73cu4ip0 is on crm-ui-dashboard; the current deployment commit is recorded in the final checkpoint below. Bedrock region/model presence and database connectivity were verified at startup; AWS credentials are Render secrets.
+
+## 2026-10-01 — AI runtime fallback
+
+Render production Bedrock settings now include `AWS_BEDROCK_FALLBACK_MODEL_ID=au.anthropic.claude-sonnet-4-6`. Runtime order is Claude Opus 4.6 AU → Claude Sonnet 4.6 AU → Ollama `gpt-oss:20b`. AI run and draft provenance are persisted. AWS documents the Sonnet 4.6 AU geo inference profile as routing within Australia/New Zealand destinations. 

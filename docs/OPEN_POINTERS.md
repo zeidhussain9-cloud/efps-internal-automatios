@@ -130,3 +130,7 @@ Current CRM production is live on srv-darsv560tbcc73cu4ip0 at commit b61b4f7f686
 ## 2026-10-01 — AI workspace follow-up
 
 The saved-draft visibility defect is fixed in the source tree: persisted drafts are independently rendered and selectable after reload, with provider/model provenance. Migration 16 is live. The next production verification should exercise a real AI run through Render and confirm a new draft records `aws-bedrock` plus `au.anthropic.claude-opus-4-6-v1`; existing verified drafts are Ollama-era.
+
+## 2026-10-01 — Approved AI improvements completed
+
+Completed: stale-draft detection; model/provider provenance; draft evidence; deterministic pre-send grounding check; explicit AI outcome tracking; and explicit fallback-chain visibility. Incremental/delta message analysis remains deferred by operator decision. The Bedrock fallback is Claude Sonnet 4.6 using the AU geo inference profile, with Ollama retained as the final fallback.

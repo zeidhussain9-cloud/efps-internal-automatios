@@ -134,3 +134,11 @@ Production provider order is AWS Bedrock Claude Opus 4.6 followed by Ollama gpt-
 ## 2026-10-01 — Current draft provenance/runtime checkpoint
 
 Production migration 16 adds AI provenance to `crm_drafts`: `ai_run_id`, `ai_provider`, and `model_name`. Render continues to use Bedrock Claude Opus 4.6 as primary and Ollama gpt-oss:20b as fallback. AWS credentials are currently stored as Render secrets using the operator-approved temporary broad identity; least-privilege credential rotation remains an explicit hardening item.
+
+## 2026-10-01 — Bedrock fallback and AI operator controls
+
+The production Bedrock chain is now **Claude Opus 4.6 (`au.anthropic.claude-opus-4-6-v1`) → Claude Sonnet 4.6 (`au.anthropic.claude-sonnet-4-6`) → Ollama `gpt-oss:20b`**. The Sonnet fallback was selected after a direct tone audition against the tested lead: it produced a concise, accountable re-engagement draft without unsupported inventory claims, and its AU inference profile preserves the existing Australia/NZ geographic routing. Claude Opus 4.5 was also directly invokable through the global profile and produced a strong draft, but AWS documents no AU geo profile for Opus 4.5, so it is not used as the production fallback for this CRM path. AWS documents the Opus 4.6 and Sonnet 4.6 AU profiles and model capabilities.
+
+The Render service now has `AWS_BEDROCK_FALLBACK_MODEL_ID=au.anthropic.claude-sonnet-4-6`. AI run provenance records provider, exact model, fallback source and fallback reason. Draft provenance records the AI run, provider/model, source message IDs and evidence summary.
+
+The operator AI workspace now also implements: stale-draft detection when newer CRM activity exists; evidence visibility on drafts; a deterministic pre-send grounding check that blocks stale drafts, unresolved placeholders and unsupported inventory claims; explicit `Mark sent` outcome recording after WhatsApp is opened; and AI-run fallback visibility. Automatic WhatsApp sending remains disabled.

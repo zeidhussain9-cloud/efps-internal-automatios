@@ -143,3 +143,7 @@ The `crm-ui-dashboard` branch deploys a separate authenticated Render CRM. `src/
 The CRM production AI path is now lead-context based rather than fixture based. `src/ollama-adapter.mjs` receives the complete chronological message history for the selected lead together with the normalized requirement profile, field evidence, operator notes, prior AI runs, per-lead cursor and message timing. Root `steering.md` supplies the dedicated EFPS CRM model instructions. The browser never supplies the model's system instruction or substitutes its own conversation history.
 
 The AI output is advisory and durable: requirement proposals are accepted/rejected by an operator, accepted changes update the normalized requirement profile and evidence, and generated replies are stored as versioned drafts. WhatsApp sending remains an explicit operator action.
+
+## 2026-10-01 — Current AI generation chain
+
+The current production AI provider chain is Bedrock Claude Opus 4.6 (`au.anthropic.claude-opus-4-6-v1`) → Bedrock Claude Sonnet 4.6 (`au.anthropic.claude-sonnet-4-6`) → Ollama `gpt-oss:20b`. Drafts retain provider/model provenance and source-message evidence. Stale drafts are detected from newer CRM messages, and the operator must pass the deterministic pre-send grounding check before opening WhatsApp. Incremental/delta message analysis remains intentionally deferred.

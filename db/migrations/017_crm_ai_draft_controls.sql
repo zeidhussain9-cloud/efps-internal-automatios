@@ -1,0 +1,12 @@
+BEGIN;
+ALTER TABLE public.crm_ai_runs ADD COLUMN IF NOT EXISTS provider text NOT NULL DEFAULT 'unknown';
+ALTER TABLE public.crm_ai_runs ADD COLUMN IF NOT EXISTS fallback_from text;
+ALTER TABLE public.crm_ai_runs ADD COLUMN IF NOT EXISTS fallback_reason text;
+ALTER TABLE public.crm_drafts ADD COLUMN IF NOT EXISTS evidence_message_ids bigint[] NOT NULL DEFAULT '{}';
+ALTER TABLE public.crm_drafts ADD COLUMN IF NOT EXISTS evidence_summary text NOT NULL DEFAULT '';
+ALTER TABLE public.crm_drafts ADD COLUMN IF NOT EXISTS sent_at timestamptz;
+CREATE INDEX IF NOT EXISTS crm_ai_runs_provider_idx ON public.crm_ai_runs(provider);
+UPDATE public.crm_ai_runs SET provider=CASE WHEN model_name LIKE 'au.%' OR model_name LIKE 'global.%' OR model_name LIKE 'anthropic.%' THEN 'aws-bedrock' WHEN model_name='gpt-oss:20b' THEN 'ollama' ELSE provider END WHERE provider='unknown';
+UPDATE public.crm_drafts d SET evidence_message_ids=COALESCE((SELECT array_agg(DISTINCT (e->>'message_id')::bigint) FILTER (WHERE e->>'message_id' ~ '^[0-9]+$') FROM jsonb_array_elements(r.proposal->'evidence') e),'{}'), evidence_summary=COALESCE((SELECT string_agg(DISTINCT e->>'body', ' | ') FROM jsonb_array_elements(r.proposal->'evidence') e WHERE e->>'body' IS NOT NULL),'') FROM public.crm_ai_runs r WHERE r.id=d.ai_run_id;
+INSERT INTO public.crm_schema_migrations(version) VALUES(17) ON CONFLICT DO NOTHING;
+COMMIT;
