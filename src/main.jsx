@@ -91,13 +91,6 @@ class AppErrorBoundary extends Component{
  render(){if(this.state.hasError)return <div className="app-error-shell"><div className="auth-card"><h1>CRM workspace error</h1><p>The lead workspace hit a display error. Your saved CRM/AI data is not deleted. Reload the workspace to continue.</p><button className="primary" type="button" onClick={()=>window.location.reload()}>Reload CRM</button></div></div>;return this.props.children}
 }
 
-class AppErrorBoundary extends Component{
- static getDerivedStateFromError(){return{hasError:true}}
- constructor(props){super(props);this.state={hasError:false}}
- componentDidCatch(error){console.error('CRM UI render error',error)}
- render(){if(this.state.hasError)return <div className="app-error-shell"><div className="auth-card"><h1>CRM workspace error</h1><p>The CRM workspace hit a display error. Saved CRM and AI data was not deleted.</p><button className="primary" type="button" onClick={()=>window.location.reload()}>Reload CRM</button></div></div>;return this.props.children}
-}
-
 function App(){
  const[initialRoute]=useState(()=>{
   const route=parseCrmPath(window.location.pathname);
