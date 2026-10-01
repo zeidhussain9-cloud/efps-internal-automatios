@@ -32,12 +32,12 @@ This is the latest repository/production checkpoint. Older dated sections in mai
 ## Authoritative current closure — 2026-10-02
 
 Evidence snapshot after final verification:
-- crm-ui-dashboard commit: 22f73f966889e2707def2d60571ae0e0ce0a2bb9
-- crm-ui-dashboard tree: 4ba9f920167f2bc893b9a1a38aab18162a10650c
-- main reconciliation commit: 2827e90cf1fa2099b3520ff5c06be33e7a8d12c0
-- main tree: 4ba9f920167f2bc893b9a1a38aab18162a10650c
+- crm-ui-dashboard commit: 555bad10e976ee5e810103a66916f461c2da53dc
+- crm-ui-dashboard tree: b1b815ebedcdb9d9972da337761e7b805503094c
+- main reconciliation commit: 0d979634bf971f93a60414c0a57a37f83b7ba245
+- main tree: b1b815ebedcdb9d9972da337761e7b805503094c
 - tree(main) == tree(crm-ui-dashboard): TRUE
-- Render deployment: dep-davau7jm8hqs73bqsuug, status LIVE, commit 22f73f966889e2707def2d60571ae0e0ce0a2bb9
+- Render deployment: dep-davb0teq1p3s73d2kbo0, status LIVE, commit 555bad10e976ee5e810103a66916f461c2da53dc
 - Production health: GET /health = HTTP 200, {"ok":true}
 - Supabase current snapshot: 186 leads, 6,881 messages, 476 webhook events, 313 classifications, 186 requirement rows, 196 AI runs, 196 drafts, 88 active inventory rows, 71 Available inventory rows, and 1,189 crm_activity events.
 - Webhook event counts are 476 total in the current snapshot; detailed processing-state reconciliation is not restated here unless freshly queried.
