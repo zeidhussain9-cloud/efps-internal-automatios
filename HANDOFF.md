@@ -1,6 +1,19 @@
 
 # Current verified handoff — 2026-10-01
 
+## Unreleased Inventory/UI hardening in crm-ui-dashboard
+
+The safe working tree includes an Inventory release that makes all four inventory KPI cards clickable filters, adds validated inventory sorting via the inventory_sort query contract (Latest, Oldest, rent low/high, BHK low/high, Locality A–Z), and hardens Cloudinary/source media handling. Media values are normalized across arrays, direct URLs, object records, JSON strings, and delimited strings; card images lazy-load with explicit failure/retry states.
+
+The release also hardens operator interactions: buttons declare their intended type, navigation exposes active state, offline writes/exports are disabled, failed durable actions surface a visible error, and failed lead field writes refresh from the server rather than leaving an optimistic value.
+
+Production data audit during this work: 88 active Housing mirror rows; 83 have non-empty Cloudinary image URL arrays and 5 do not; sampled production Cloudinary URLs returned HTTP 200 image/jpeg. No database data was modified by the UI hardening.
+
+Validation: npm run build PASS; npm test PASS (74/74); npm run test:browser PASS (1/1). Main checkout was not modified; work is isolated to the crm-ui-dashboard clone.
+
+
+## Previous release metadata
+
 **Canonical branch:** `crm-ui-dashboard`**Commit:** `da13083f6cb1f3c78ec3f4df661c515d43f556fa`**Tree:** `f36a5ccb4bae742e83603b09bee59d01595ecf00`**Main reconciliation:** `692bdcbbab51752b8eb7d4927921d1cfc4830de7`, identical tree.**Render:** `easyfind-crm-d01-d05`, deployment `dep-dav55km0tbcc73eelat0`, **live**.**Production source:** `+919148338801`.**Current Supabase:** 186 leads; 307 classifications (20 pending, 186 promoted); 6,853 messages; 436 webhook events (436 processed, 0 received, 0 processing, 0 failed); 196 AI runs; 196 drafts; 186 AI cursors; 88 active inventory rows; 1,333 inventory sync records.**Schedulers:** webhook reconciliation every minute; inventory reconciliation every five minutes; both active.**Tests:** build PASS; 71/71 automated tests PASS; browser 1/1 PASS.**P1–P5:** closed and production-verified; see `docs/audits/PRODUCTION_LIVE_WEBHOOK_AND_INVENTORY_AUDIT_2026-10-01.md` and `docs/crm/CRM_CURRENT_VERIFIED_STATE.md`.
 
 Historical dated sections below remain evidence snapshots and must not be interpreted as the current checkpoint.

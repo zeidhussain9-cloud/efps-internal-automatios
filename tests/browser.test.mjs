@@ -19,7 +19,6 @@ test('production CRM browser journey uses only live-record surfaces',async()=>{
   assert.equal(await waitForServer(),true,'server starts');
   browser=await chromium.launch({headless:true});
   const page=await browser.newPage();
-
   await page.route('**/api/db/leads*',route=>route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({
    leads:[{id:'LIVE-1',display_name:'Live lead',normalized_phone:'+919000000001',status:'New',lead_type:'New',tenant_type:'Not specified',priority:'Medium',classification:'Qualified Lead',requirements:{bhk:'2 BHK',locality:'Harlur',budget:50000},updated_at:'2026-09-30T00:00:00Z',contacted_at:'2026-08-26T07:30:00.000Z',last_message_direction:'Incoming',last_message_at:'2026-09-30T16:26:15.000Z',source_number:'+919148338801'}],
    total:228,sourceTotals:{'+919148338801':228}
@@ -29,7 +28,15 @@ test('production CRM browser journey uses only live-record surfaces',async()=>{
    sourceNumber:'+919148338801',leadCount:228,liveLeadCount:3,pendingClassificationCount:4,webhookErrorCount:0,leadStatusCounts:[{status:'New',count:12},{status:'Active Follow-up',count:40},{status:'Waiting on Customer',count:18},{status:'Waiting on Us',count:10},{status:'Nurture',count:30},{status:'Dormant',count:25},{status:'Converted',count:8},{status:'Lost',count:15},{status:'On Hold',count:20},{status:'Out of Coverage Area',count:50}],supportedSourceNumbers:['+919148338801','+917975102130','+919902024973']
   })}));
 
-  await page.route('**/api/inventory/overview*',route=>route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({rows:[],latestSync:null})}));
+  await page.route('https://res.cloudinary.com/**',route=>route.fulfill({status:200,contentType:'image/svg+xml',body:'<svg xmlns="http://www.w3.org/2000/svg" width="320" height="220"><rect width="320" height="220" fill="#dce8f0"/></svg>'}));
+  await page.route('**/api/inventory/overview*',route=>route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({
+   rows:[
+    {listing_id:'INV-3',locality:'Sarjapur',society_name:'Society 3',bhk:'3 BHK',monthly_rent:70000,furnishing:'Fully Furnished',listing_state:'Available',pet_friendly:'No',cloudinary_image_urls:['https://res.cloudinary.com/test/properties/INV-3/photo_1.jpg'],source_record:{onboarded_on:'30 Sep 2026, 8:00 AM',city:'Bengaluru'},last_synced_at:'2026-10-01T12:45:01Z'},
+    {listing_id:'INV-1',locality:'Bellandur',society_name:'Society 1',bhk:'1 BHK',monthly_rent:22000,furnishing:'Semi Furnished',listing_state:'Rented Out',pet_friendly:'Yes',cloudinary_image_urls:[],source_record:{onboarded_on:'25 Sep 2026, 8:00 AM',city:'Bengaluru'},last_synced_at:'2026-10-01T12:45:01Z'},
+    {listing_id:'INV-2',locality:'Harlur',society_name:'Society 2',bhk:'2 BHK',monthly_rent:45000,furnishing:'Unfurnished',listing_state:'Available',pet_friendly:'Unknown',cloudinary_image_urls:['https://res.cloudinary.com/test/properties/INV-2/photo_1.jpg'],source_record:{onboarded_on:'28 Sep 2026, 8:00 AM',city:'Bengaluru'},last_synced_at:'2026-10-01T12:45:01Z'}
+   ],
+   latestSync:{created_at:'2026-10-01T12:45:01Z',row_count:88,changed_count:0,removed_count:0}
+  })}));
 
   await page.route('**/api/db/leads/*/workspace*',route=>route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({
    lead:{id:'LIVE-1',display_name:'Live lead',normalized_phone:'+919000000001',status:'New',lead_type:'New',tenant_type:'Not specified',priority:'Medium',classification:'Qualified Lead',requirements:{bhk:'2 BHK',locality:'Harlur',budget:50000},operator_notes:''},
@@ -50,6 +57,32 @@ test('production CRM browser journey uses only live-record surfaces',async()=>{
 
   await page.getByText('Production data').waitFor();
   await page.getByText('228 leads').waitFor();
+
+  await page.getByRole('button',{name:'Inventory',exact:true}).click();
+  await page.getByRole('heading',{name:'Property inventory'}).waitFor();
+  assert.equal(await page.getByRole('button',{name:/Total properties/}).count(),1);
+  assert.equal(await page.getByRole('button',{name:/Available/}).count(),1);
+  assert.equal(await page.getByRole('button',{name:/Rented out/}).count(),1);
+  assert.equal(await page.getByRole('button',{name:/With photos/}).count(),1);
+  await page.getByRole('button',{name:/Available/}).click();
+  await page.getByText('2 properties',{exact:true}).waitFor();
+  assert.equal(await page.locator('.inventory-card').count(),2);
+  await page.getByRole('button',{name:/With photos/}).click();
+  await page.getByText('2 properties',{exact:true}).waitFor();
+  assert.equal(await page.locator('.inventory-card').count(),2);
+  assert.equal(await page.locator('.inventory-card img').count(),2);
+  await page.getByRole('button',{name:'Total properties'}).click();
+  const oldestRequest=page.waitForRequest(request=>{
+   try{return request.url().includes('/api/inventory/overview')&&new URL(request.url()).searchParams.get('inventory_sort')==='oldest'}catch{return false}
+  });
+  await page.getByLabel('Sort inventory').selectOption('oldest');
+  await oldestRequest;
+  await page.locator('.inventory-card').first().getByText(/INV-1/).waitFor();
+  await page.getByRole('button',{name:'Total properties'}).click();
+  await page.getByRole('button',{name:/View property/}).first().click();
+  await page.getByRole('dialog',{name:'Property details'}).waitFor();
+  await page.getByRole('button',{name:/Close/}).click();
+
   await page.getByRole('button',{name:'Leads Inbox',exact:true}).click();
   await page.getByLabel('Sort leads').waitFor();
   const activeFollowupSummary=page.getByRole('button',{name:/^Active Follow-up.*40/});

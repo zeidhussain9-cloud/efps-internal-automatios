@@ -6,6 +6,7 @@ import {authorized,accessMode} from './src/server-auth.mjs';
 import {getRequestPrincipal,loginWithPassword,revokeRequestSession,sessionCookie,clearSessionCookie,sameOrigin,sessionPolicy} from './src/server-session.mjs';
 import {analyzeRealLead} from './src/ollama-adapter.mjs';
 import {createCrmRepository} from './src/crm-repository.mjs';
+import {normalizeInventorySort,sortInventoryRows} from './src/inventory-logic.mjs';
 import {createCrmClassificationRepository} from './src/crm-classification-repository.mjs';
 import {draftPreflight} from './src/draft-preflight.mjs';
 import {startupDatabaseCheck} from './src/crm-startup-check.mjs';
@@ -176,7 +177,12 @@ createServer(async(req,res)=>{
   if(p==='/api/inventory/overview'){
    if(process.env.CRM_DB_READ_ENABLED!=='true'||!process.env.DATABASE_URL||mode!=='protected'){res.writeHead(404,security);return res.end('Inventory unavailable');}
    if(req.method!=='GET'){res.writeHead(405,security);return res.end('Method not allowed');}
-   const repo=createCrmRepository();try{const data=await repo.inventoryOverview();res.writeHead(200,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify(data))}finally{await repo.close()}
+   const sortRaw=new URL(req.url,'http://localhost').searchParams.get('inventory_sort')||'latest';
+   const sort=normalizeInventorySort(sortRaw);
+   if(sortRaw!==sort){res.writeHead(400,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify({error:'Invalid inventory sort',allowed:['latest','oldest','rent_asc','rent_desc','bhk_asc','bhk_desc','locality_asc']}));}
+   const repo=createCrmRepository();
+   try{const data=await repo.inventoryOverview();data.rows=sortInventoryRows(data.rows,sort);data.sort=sort;res.writeHead(200,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify(data))}
+   finally{await repo.close()}
   }
   if(p==='/api/inventory/matches'){
    if(process.env.CRM_DB_READ_ENABLED!=='true'||!process.env.DATABASE_URL||mode!=='protected'){res.writeHead(404,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify({error:'Inventory database disabled'}));}

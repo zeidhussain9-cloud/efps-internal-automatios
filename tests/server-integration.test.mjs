@@ -26,6 +26,17 @@ test('write gate does not shadow GET lead routes',async()=>{
 });
 
 
+
+test('inventory sort query rejects unknown modes before database access',async()=>{
+ const{proc,base}=await start({CRM_BASIC_AUTH_USERNAME:'pilot',CRM_BASIC_AUTH_PASSWORD:'fictional-secret',CRM_DB_READ_ENABLED:'true',DATABASE_URL:'postgresql://invalid:invalid@127.0.0.1:1/postgres'});
+ try{
+  const auth='Basic '+Buffer.from('pilot:fictional-secret').toString('base64');
+  const response=await fetch(base+'/api/inventory/overview?inventory_sort=surprise',{headers:{Authorization:auth}});
+  assert.equal(response.status,400);
+  assert.deepEqual(await response.json(),{error:'Invalid inventory sort',allowed:['latest','oldest','rent_asc','rent_desc','bhk_asc','bhk_desc','locality_asc']});
+ }finally{proc.kill()}
+});
+
 test('Render no longer accepts WhatsApp webhook writes',async()=>{const{proc,base}=await start({CRM_BASIC_AUTH_USERNAME:'pilot',CRM_BASIC_AUTH_PASSWORD:'fictional-secret'});try{const auth='Basic '+Buffer.from('pilot:fictional-secret').toString('base64');const response=await fetch(base+'/api/webhooks/whatsapp',{method:'POST',headers:{Authorization:auth,'Content-Type':'application/json'},body:'{}'});assert.equal(response.status,405)}finally{proc.kill()}});
 
 test('operator session login, logout and cross-origin protection',async()=>{

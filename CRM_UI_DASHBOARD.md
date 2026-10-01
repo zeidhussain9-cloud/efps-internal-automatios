@@ -1,6 +1,19 @@
 # EasyFind CRM UI Dashboard — Single Working Home
 
-## Current verified repository state — 2026-10-01
+## Unreleased production hardening — 2026-10-01
+
+The current crm-ui-dashboard working tree contains the next Inventory hardening release. The four Inventory KPIs are actionable filters rather than static counters: Total properties clears inventory filters, Available filters to available rows, Rented out filters to rented rows, and With photos filters to rows with source media.
+
+Inventory sorting is now a validated request contract through inventory_sort, with latest, oldest, rent_asc, rent_desc, bhk_asc, bhk_desc, and locality_asc. The UI keeps the selected sort visible and the client has a deterministic fallback using the same sort contract. Unknown sort values are rejected with HTTP 400 before database access.
+
+Cloudinary/source media handling now accepts direct URLs, arrays, object media records, JSON-encoded arrays/objects, and comma/newline/pipe-delimited source values. Inventory cards lazy-load images, show explicit unavailable-media states, support retry, and never fabricate photos. The current live Housing mirror has 88 active rows, 83 with source media URLs and 5 without; direct production Cloudinary URL checks returned HTTP 200 image responses for sampled records.
+
+Operator controls were hardened across the shell and lead workspace: interactive buttons now declare their action type, navigation exposes the active page state, offline writes/exports remain disabled, failed lead/requirements/AI/draft/export actions surface a visible error, and failed lead field updates trigger a fresh server read instead of leaving an optimistic local value.
+
+Validation for this working tree: npm run build PASS; npm test PASS (74/74); npm run test:browser PASS (1/1).
+
+
+## Previous verified repository checkpoint — 2026-10-01
 
 This section is the current checkpoint for maintained documentation. Dated audit sections below remain historical evidence and are not silently rewritten.
 
@@ -75,7 +88,7 @@ The P1–P5 hardening release added regression coverage for webhook promotion li
 
 **Leads:** `docs/audits/LEADS_EXTRACTION_SOURCE_OF_TRUTH_AUDIT.md` + the local SQLite dataset produced by that extraction.
 
-**Inventory:** the verified Housing Listings contract/audit used to define D05. Live inventory integration comes later.
+**Inventory:** the live Housing_Listings contract is mirrored into `crm_inventory_snapshot` and consumed by the protected Inventory workspace; reconciliation remains scheduler-driven and the UI presents no fallback inventory.
 
 **Design:** Figma — https://www.figma.com/design/PBiMGsVQ0fVpSf39WwNmKb
 
