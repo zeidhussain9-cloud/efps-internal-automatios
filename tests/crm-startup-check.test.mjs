@@ -3,8 +3,8 @@ import assert from 'node:assert/strict';
 import {configurationStatus,startupDatabaseCheck} from '../src/crm-startup-check.mjs';
 import {connectionStringShape} from '../src/crm-repository.mjs';
 test('reports presence only, not credential contents',()=>{
- const f=configurationStatus({DATABASE_URL:'postgres://private',CRM_BASIC_AUTH_USERNAME:'operator',CRM_BASIC_AUTH_PASSWORD:'private-password',CRM_DB_READ_ENABLED:'true',OLLAMA_HOST:'https://private',OLLAMA_MODEL:'model'});
- assert.equal(f.databaseUrlPresent,true);assert.equal(f.authConfigured,true);assert.equal(f.databaseReadOptIn,true);assert.equal(f.databaseWriteOptIn,false);assert.equal(f.databaseTlsCaPresent,false);assert.equal(f.ollamaModelPresent,true);
+ const f=configurationStatus({DATABASE_URL:'postgres://private',CRM_BASIC_AUTH_USERNAME:'operator',CRM_BASIC_AUTH_PASSWORD:'private-password',CRM_DB_READ_ENABLED:'true',OLLAMA_HOST:'https://private',OLLAMA_MODEL:'model',AWS_REGION:'ap-southeast-2',AWS_BEDROCK_MODEL_ID:'au.anthropic.claude-opus-4-6-v1'});
+ assert.equal(f.databaseUrlPresent,true);assert.equal(f.authConfigured,true);assert.equal(f.databaseReadOptIn,true);assert.equal(f.databaseWriteOptIn,false);assert.equal(f.databaseTlsCaPresent,false);assert.equal(f.ollamaModelPresent,true);assert.equal(f.bedrockRegionPresent,true);assert.equal(f.bedrockModelPresent,true);
  assert.ok(!JSON.stringify(f).includes('private'));
 });
 test('startup probe connects without leaking secrets',async()=>{

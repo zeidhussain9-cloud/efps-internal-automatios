@@ -1,4 +1,5 @@
 import React,{useEffect,useMemo,useState} from 'react';
+import {Component} from 'react';
 import {createRoot} from 'react-dom/client';
 import {createClient} from '@supabase/supabase-js';
 import {LayoutDashboard,Inbox,Building2,Settings,Search,ChevronLeft,BrainCircuit,CheckCircle2,RefreshCw,ShieldCheck,LogOut,Download,Archive,RotateCcw,Activity as ActivityIcon,WifiOff} from 'lucide-react';
@@ -68,6 +69,13 @@ function LeadCard({lead,onClick,privacyMode}){
  </button>;
 }
 
+class AppErrorBoundary extends Component{
+ static getDerivedStateFromError(){return{hasError:true}}
+ constructor(props){super(props);this.state={hasError:false}}
+ componentDidCatch(error){console.error('CRM UI render error',error)}
+ render(){if(this.state.hasError)return <div className="app-error-shell"><div className="auth-card"><h1>CRM workspace error</h1><p>The lead workspace hit a display error. Your saved CRM/AI data is not deleted. Reload the workspace to continue.</p><button className="primary" type="button" onClick={()=>window.location.reload()}>Reload CRM</button></div></div>;return this.props.children}
+}
+
 function App(){
  const[authReady,setAuthReady]=useState(false);
  const[authenticated,setAuthenticated]=useState(false);
@@ -118,6 +126,7 @@ function App(){
  const[requirementsState,setRequirementsState]=useState('idle');
  const[draftBody,setDraftBody]=useState('');
  const[draftState,setDraftState]=useState('idle');
+ const[aiError,setAiError]=useState('');
 
  useEffect(()=>{let active=true;fetch('/api/auth/session',{cache:'no-store',credentials:'include'}).then(async r=>{const d=await r.json().catch(()=>({}));if(!r.ok)throw Error('Authentication unavailable');return d}).then(d=>{if(active){setAuthenticated(Boolean(d.authenticated));setOperator(d.user||'');setAuthReady(true)}}).catch(e=>{if(active){setAuthError(e.message||'Authentication unavailable');setAuthReady(true)}});return()=>{active=false}},[authenticated]);
  useEffect(()=>{try{window.sessionStorage.setItem('efps-crm-active-page',page);window.sessionStorage.setItem('efps-crm-privacy-mode',privacyMode?'masked':'revealed')}catch{}},[page,privacyMode]);
@@ -193,7 +202,7 @@ function App(){
     if(!r.ok)throw Error('Lead workspace unavailable');
     const data=await r.json();
     if(!active)return;
-    setWorkspace(data);setLeadStatus(data.lead?.lead_type||'New');setTenantType(data.lead?.tenant_type||'Not specified');setRequirementsDraft(requirementProfile(data.requirement_profile));setWorkspaceState('ready');
+    setWorkspace(data);setLeadStatus(data.lead?.lead_type||'New');setTenantType(data.lead?.tenant_type||'Not specified');setRequirementsDraft(requirementProfile(data.requirement_profile));setDraftBody(data.drafts?.[0]?.body||'');setAiError('');setWorkspaceState('ready');
     const req=requirementProfile(data.requirement_profile);
     const bhkMatch=String(req.bhk||'').match(/\d+/);
     const bhk=bhkMatch?bhkMatch[0]:'';
@@ -251,12 +260,35 @@ function App(){
   try{const profile={...requirementsDraft,preferred_locations:String(requirementsDraft.preferred_locations||'').split(',').map(x=>x.trim()).filter(Boolean),preferred_amenities:String(requirementsDraft.preferred_amenities||'').split(',').map(x=>x.trim()).filter(Boolean)};const r=await apiFetch('/api/db/leads/'+encodeURIComponent(workspace.lead.id)+'/requirements',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({profile})});const d=await r.json().catch(()=>({}));if(!r.ok)throw Error(d.error||'Requirements update failed');setRequirementsDraft(requirementProfile(d));setRequirementsState('saved');setRefreshToken(v=>v+1);setTimeout(()=>setRequirementsState('idle'),1500)}catch(e){setRequirementsState('error')}}
  async function runAi(){
   if(!workspace?.lead?.id)return;
-  setAiState('running');setAi(null);
-  try{const r=await apiFetch('/api/ai/analyze-real',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({leadId:workspace.lead.id})});const d=await r.json().catch(()=>({}));if(!r.ok)throw Error(d.error||'Real AI unavailable');setAi(d);if(d.draft?.body)setDraftBody(d.draft.body);setWorkspace(prev=>prev?{...prev,ai_runs:[d.run,...(prev.ai_runs||[])],drafts:d.draft?[d.draft,...(prev.drafts||[])]:prev.drafts}:prev);setAiState('ready')}catch(e){setAiState('unavailable')}}
+  setAiState('running');setAi(null);setAiError('');
+  try{
+   const r=await apiFetch('/api/ai/analyze-real',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({leadId:workspace.lead.id})});
+   const d=await r.json().catch(()=>({}));
+   if(!r.ok)throw Error(d.error||'Real AI unavailable');
+   if(!d.run||!d.proposal)throw Error('AI returned an incomplete result');
+   setAi(d);
+   if(typeof d.draft?.body==='string')setDraftBody(d.draft.body);
+   setWorkspace(prev=>prev?{...prev,ai_runs:d.run?[d.run,...(prev.ai_runs||[])]:prev.ai_runs,drafts:d.draft?[d.draft,...(prev.drafts||[])]:prev.drafts}:prev);
+   setAiState('ready');
+  }catch(e){
+   setAiError(e?.message||'Real AI unavailable');
+   setAiState('unavailable');
+  }
+ }
  async function acceptAiRequirements(runId){const r=await apiFetch('/api/ai/runs/'+encodeURIComponent(runId)+'/accept',{method:'POST'});if(!r.ok)return;setRefreshToken(v=>v+1)}
  async function rejectAiRequirements(runId){const r=await apiFetch('/api/ai/runs/'+encodeURIComponent(runId)+'/reject',{method:'POST'});if(!r.ok)return;setRefreshToken(v=>v+1)}
  async function saveDraftVersion(){if(!workspace?.lead?.id||!draftBody.trim())return;setDraftState('saving');try{const r=await apiFetch('/api/db/leads/'+encodeURIComponent(workspace.lead.id)+'/drafts',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({body:draftBody})});if(!r.ok)throw Error();const d=await r.json();setWorkspace(prev=>prev?{...prev,drafts:[d,...(prev.drafts||[])]}:prev);setDraftState('saved');setTimeout(()=>setDraftState('idle'),1200)}catch{setDraftState('error')}}
- async function markDraft(id,status){const r=await apiFetch('/api/drafts/'+encodeURIComponent(id)+'/status',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({status})});if(r.ok)setRefreshToken(v=>v+1)}
+ async function markDraft(id,status){
+  const r=await apiFetch('/api/drafts/'+encodeURIComponent(id)+'/status',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({status})});
+  if(r.ok)setRefreshToken(v=>v+1);
+ }
+ function openDraftInWhatsApp(){
+  const phone=String(workspace?.lead?.normalized_phone||'').replace(/\D/g,'');
+  if(!phone)return;
+  window.open('https://wa.me/'+phone,'_blank','noopener,noreferrer');
+  const draft=workspace?.drafts?.[0];
+  if(draft?.id)markDraft(draft.id,'opened');
+ }
 
  const filteredMatches=matches;
  if(!authReady)return <div className="auth-shell"><div className="auth-card"><div className="brand"><span className="brandmark">EF</span><span>EasyFind<small>PRIVATE CRM</small></span></div><p>Checking operator session…</p></div></div>;
@@ -290,8 +322,17 @@ function App(){
        {tab==='Conversation'&&(workspace.messages.length?<div className="conversation">{workspace.messages.map(m=><div className={'bubble '+(m.direction==='Outgoing'?'out':'')} key={m.id}><small>{m.direction} · {new Date(m.message_at).toLocaleString()} · {m.sender_name||m.source_number}</small><p>{privacyMode?maskMessage():(m.body||'['+m.message_type+']')}</p>{(m.media_urls||m.media_filenames)?.length>0&&<small>Media attached</small>}</div>)}</div>:<div className="empty">No imported conversation for this lead. Historical message import is separate from the 228-lead import.</div>)}
        {tab==='Requirements'&&<div className="requirements-section"><div className="notice">Editable normalized requirement profile. These fields are the authoritative CRM profile used for inventory matching; legacy JSON is retained only as a compatibility mirror.</div><div className="requirements-table-wrap"><table className="requirements-table"><thead><tr><th>Requirement</th><th>Current value</th><th>Purpose</th></tr></thead><tbody>{REQUIREMENT_FIELDS.map(([key,label,type])=>{const value=requirementsDraft?.[key]??'';const options=key==='tenant_type'?TENANT_TYPES:key==='pets'?['Yes','No','Unknown']:key==='veg_nonveg'?['Veg','Non-Veg','No Preference','Unknown']:key==='furnishing'?['Fully Furnished','Semi Furnished','Unfurnished','Any','Unknown']:key==='parking'?['Required','Not Required','Any','Unknown']:[];return <tr key={key}><td><b>{label}</b></td><td>{type==='textarea'?<textarea value={value} onChange={e=>setRequirementsDraft({...requirementsDraft,[key]:e.target.value})}/>:type==='select'?<select value={value} onChange={e=>setRequirementsDraft({...requirementsDraft,[key]:e.target.value})}>{options.map(o=><option key={o} value={o}>{o}</option>)}</select>:<input type={type} value={value} onChange={e=>setRequirementsDraft({...requirementsDraft,[key]:e.target.value})}/>}</td><td className="muted">{['bhk','budget','preferred_locations','move_in_date','pets','furnishing','parking','property_type','tenant_type'].includes(key)?'Inventory / qualification signal':'Conversation context'}</td></tr>})}</tbody></table></div><div className="requirements-actions"><button className="primary" disabled={!online||requirementsState==='saving'} onClick={saveRequirements}>{requirementsState==='saving'?'Saving…':requirementsState==='saved'?'Saved':'Save requirements'}</button>{requirementsState==='error'&&<span className="error">Requirement update failed.</span>}</div><div className="inner"><h3>Requirement evidence</h3>{workspace.requirement_evidence?.length?workspace.requirement_evidence.map(e=><div className="event" key={e.id}><CheckCircle2 size={16}/><div><b>{e.field_name}: {JSON.stringify(e.value?.value??e.value)}</b><small>Message #{e.source_message_id||'operator'} · {e.actor} · {formatLeadDate(e.recorded_at)}</small></div></div>):<div className="empty">No field-level evidence has been accepted yet.</div>}</div></div>}
        {tab==='Property Matches'&&<>{matchState==='loading'&&<div className="empty">Matching against current Supabase inventory…</div>}{matchState==='insufficient'&&<div className="empty">No structured BHK, budget or locality is stored for this lead, so no inventory match is inferred.</div>}{matchState==='unavailable'&&<div className="empty">Live inventory matching is unavailable.</div>}{matchState==='ready'&&(filteredMatches.length?<div className="properties">{filteredMatches.map(p=><article className="property" key={p.listing_id}><div className="photo-fallback">{(p.cloudinary_image_urls||[]).length?<img src={p.cloudinary_image_urls[0]} alt={'Property '+p.listing_id}/>:<span>No property images available</span>}</div><div className="rowtop"><b>{p.bhk} · {p.locality}</b><span className="chip green">{p.listing_state}</span></div><p className="price">{money(p.monthly_rent)} <small>/ month</small></p><p>{p.furnishing||'Furnishing not recorded'} · Pets: {p.pet_friendly||'Not recorded'}</p><small>{p.listing_id} · {p.society_name||'Society not recorded'}</small></article>)}</div>:<div className="empty">No live inventory matches were returned.</div>)}</>}
-       {tab==='AI & Drafts'&&<div className="ai-section"><div className="notice">Production AI reviews the complete chronological conversation, requirement profile, evidence, prior AI runs and timing. It can propose requirement changes and draft a WhatsApp reply; it never sends a message or applies a requirement change without operator acceptance.</div><div className="ai-toolbar"><div><h3><BrainCircuit size={18}/> Lead AI workspace</h3><p className="muted">Conversation: {workspace.messages.length} messages · AI runs: {workspace.ai_runs?.length||0} · Draft versions: {workspace.drafts?.length||0}</p></div><button className="primary" disabled={aiState==='running'||!online} onClick={runAi}>{aiState==='running'?'Analyzing full history…':'Run AI analysis'}</button></div>{aiState==='unavailable'&&<div className="notice">AI analysis failed. No fallback or fabricated result is shown.</div>}{ai?.proposal&&<div className="ai-grid"><div className="inner"><h3>AI evidence & timeline</h3><p>{ai.proposal.summary}</p><pre className="jsonview">{JSON.stringify(ai.proposal.timeline,null,2)}</pre><h4>Requirement changes proposed</h4>{ai.proposal.requirement_updates?.length?ai.proposal.requirement_updates.map((u,i)=><div className="ai-evidence" key={i}><b>{u.field}: {String(u.value)}</b><small>{u.evidence||'Evidence linked to conversation.'} · messages: {(u.source_message_ids||[]).join(', ')}</small></div>):<div className="empty">No requirement changes proposed.</div>}{ai.run?.status==='proposed'&&ai.proposal.requirement_updates?.length>0&&<div className="requirements-actions"><button className="primary" onClick={()=>acceptAiRequirements(ai.run.id)}>Accept requirement changes</button><button className="secondary" onClick={()=>rejectAiRequirements(ai.run.id)}>Reject</button></div>}<h4>Suggested lead status</h4><div className="chip">{ai.proposal.lead_status_suggestion?.status||'No change suggested'}</div><p>{ai.proposal.lead_status_suggestion?.reason||''}</p></div><div className="inner"><h3>Reply draft</h3><textarea className="draft-editor" value={draftBody} onChange={e=>setDraftBody(e.target.value)} placeholder="AI draft appears here after analysis."/><div className="requirements-actions"><button className="primary" disabled={!draftBody.trim()} onClick={saveDraftVersion}>Save draft edit</button>{workspace.drafts?.[0]&&<><button className="secondary" onClick={()=>markDraft(workspace.drafts[0].id,'opened')}>Open WhatsApp</button><button className="secondary" onClick={()=>navigator.clipboard?.writeText(draftBody)}>Copy</button></>}</div><h4>Draft history</h4>{workspace.drafts?.length?workspace.drafts.map(d=><div className="event" key={d.id}><CheckCircle2 size={16}/><div><b>v{d.version} · {d.status}</b><small>{formatLeadDate(d.created_at)}</small><p>{d.body}</p></div></div>):<div className="empty">No drafts saved.</div>}</div></div>}<div className="inner"><h3>Saved AI run history</h3>{workspace.ai_runs?.length?workspace.ai_runs.map(r=><div className="event" key={r.id}><BrainCircuit size={16}/><div><b>{r.model_name} · {r.status}</b><small>{formatLeadDate(r.created_at)}{r.decided_at?' · decided '+formatLeadDate(r.decided_at):''}</small></div></div>):<div className="empty">No AI runs yet.</div>}</div></div>}
-       {tab==='Activity & History'&&<>{workspace.followups?.length?<div className="inner"><h3>Follow-ups</h3>{workspace.followups.map(f=><div className="event" key={f.id}><CheckCircle2 size={17}/><div><b>{f.completed_at?'Completed':'Scheduled'}</b><small>{f.due_at?new Date(f.due_at).toLocaleString():''} · {f.note||'No note recorded'}</small></div></div>)}</div>:<div className="notice">No follow-up records are stored for this lead.</div>}{workspace.activity.length?workspace.activity.map(a=><div className="event" key={a.id}><CheckCircle2 size={17}/><div><b>{a.action}</b><small>{a.occurred_at?new Date(a.occurred_at).toLocaleString():''} · {a.actor}</small></div></div>):<div className="empty">No activity recorded for this lead.</div>}</>}
+       {tab==='AI & Drafts'&&<div className="ai-section">
+        <div className="notice">Production AI reviews the complete chronological conversation, requirement profile, evidence, prior AI runs and timing. It can propose requirement changes and draft a WhatsApp reply; it never sends a message or applies a requirement change without operator acceptance.</div>
+        <div className="ai-toolbar"><div><h3><BrainCircuit size={18}/> Lead AI workspace</h3><p className="muted">Conversation: {workspace.messages.length} messages · AI runs: {workspace.ai_runs?.length||0} · Draft versions: {workspace.drafts?.length||0}</p></div><button className="primary" disabled={aiState==='running'||!online} onClick={runAi}>{aiState==='running'?'Analyzing full history…':'Run AI analysis'}</button></div>
+        {aiState==='unavailable'&&<div className="notice">AI analysis failed. {aiError||'No fallback or fabricated result is shown.'}</div>}
+        {ai?.proposal&&<div className="ai-grid">
+         <div className="inner"><h3>AI evidence & timeline</h3><p>{ai.proposal.summary}</p><pre className="jsonview">{JSON.stringify(ai.proposal.timeline,null,2)}</pre><h4>Requirement changes proposed</h4>{ai.proposal.requirement_updates?.length?ai.proposal.requirement_updates.map((u,i)=><div className="ai-evidence" key={i}><b>{u.field}: {String(u.value)}</b><small>{u.evidence||'Evidence linked to conversation.'} · messages: {(u.source_message_ids||[]).join(', ')}</small></div>):<div className="empty">No requirement changes proposed.</div>}{ai.run?.status==='proposed'&&ai.proposal.requirement_updates?.length>0&&<div className="requirements-actions"><button className="primary" onClick={()=>acceptAiRequirements(ai.run.id)}>Accept requirement changes</button><button className="secondary" onClick={()=>rejectAiRequirements(ai.run.id)}>Reject</button></div>}<h4>Suggested lead status</h4><div className="chip">{ai.proposal.lead_status_suggestion?.status||'No change suggested'}</div><p>{ai.proposal.lead_status_suggestion?.reason||''}</p></div>
+         <div className="inner"><h3>Reply draft</h3><textarea className="draft-editor" value={draftBody} onChange={e=>setDraftBody(e.target.value)} placeholder="AI draft appears here after analysis."/><div className="requirements-actions"><button className="primary" disabled={!draftBody.trim()||draftState==='saving'} onClick={saveDraftVersion}>{draftState==='saving'?'Saving…':draftState==='saved'?'Saved':'Save draft edit'}</button>{workspace.drafts?.[0]&&<><button className="secondary" onClick={openDraftInWhatsApp}>Open WhatsApp</button><button className="secondary" onClick={()=>navigator.clipboard?.writeText(draftBody)}>Copy</button></>}{draftState==='error'&&<span className="error">Draft save failed.</span>}</div></div>
+        </div>}
+        <div className="inner"><h3>Draft workspace</h3>{workspace.drafts?.length?<div className="draft-list">{workspace.drafts.map(d=><button type="button" className="draft-row" key={d.id} onClick={()=>setDraftBody(String(d.body||''))}><div><b>v{d.version} · {d.status}</b><small>{formatLeadDate(d.created_at)}</small></div><span>View / edit</span></button>)}</div>:<div className="empty">No drafts saved.</div>}</div>
+        <div className="inner"><h3>Saved AI run history</h3>{workspace.ai_runs?.length?workspace.ai_runs.map(r=><div className="event" key={r.id}><BrainCircuit size={16}/><div><b>{r.model_name} · {r.status}</b><small>{formatLeadDate(r.created_at)}{r.decided_at?' · decided '+formatLeadDate(r.decided_at):''}</small></div></div>):<div className="empty">No AI runs yet.</div>}</div>
+       </div>}       {tab==='Activity & History'&&<>{workspace.followups?.length?<div className="inner"><h3>Follow-ups</h3>{workspace.followups.map(f=><div className="event" key={f.id}><CheckCircle2 size={17}/><div><b>{f.completed_at?'Completed':'Scheduled'}</b><small>{f.due_at?new Date(f.due_at).toLocaleString():''} · {f.note||'No note recorded'}</small></div></div>)}</div>:<div className="notice">No follow-up records are stored for this lead.</div>}{workspace.activity.length?workspace.activity.map(a=><div className="event" key={a.id}><CheckCircle2 size={17}/><div><b>{a.action}</b><small>{a.occurred_at?new Date(a.occurred_at).toLocaleString():''} · {a.actor}</small></div></div>):<div className="empty">No activity recorded for this lead.</div>}</>}
       </div>
      </section>}
     {(page==='Dashboard'||page==='Leads Inbox')&&!selectedId&&<section>
@@ -312,4 +353,4 @@ function App(){
  </div>
 }
 
-createRoot(document.getElementById('root')).render(<App/>);
+createRoot(document.getElementById('root')).render(<AppErrorBoundary><App/></AppErrorBoundary>);

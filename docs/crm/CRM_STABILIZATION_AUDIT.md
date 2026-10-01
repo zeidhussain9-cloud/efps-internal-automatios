@@ -41,4 +41,7 @@ Do not call this stage finished until code tests, end-to-end browser tests, depl
 
 ## Superseding checkpoint — 2026-09-27
 
-The initial provider-unavailable and unauthenticated states above are historical. Render authenticated hosted Ollama `gpt-oss:20b` and received a five-key fictional response at 2026-09-26 21:25:38 UTC. The CRM adapter now reads dedicated compact root `steering.md`; model input remains fictional-only and operator-reviewed. Durable production workflows, full synthetic evaluation, isolated restore and D06–D08 remain open.
+The initial provider-unavailable and unauthenticated states above are historical. Render authenticated hosted Ollama `gpt-oss:20b` and received a five-key fictional response at 2026-09-26 21:25:38 UTC. The CRM adapter now reads dedicated compact root `steering.md`; That fictional-only statement is historical pilot evidence; current production uses complete real CRM lead context with operator review. Durable production workflows, full synthetic evaluation, isolated restore and D06–D08 remain open.
+
+## Superseding production checkpoint — 2026-10-01
+Historical stabilization evidence is superseded by the current live CRM UI path: Bedrock Claude Opus 4.6 primary, Ollama fallback, normalized requirements, durable AI runs/drafts and full-history analysis.

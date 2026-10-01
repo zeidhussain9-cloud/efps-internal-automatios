@@ -96,7 +96,7 @@ When a deterministic pointer is resolved, update this document and the affected 
 
 ## CRM gates — updated 2026-09-27
 
-Hosted Ollama authentication and one fictional response are **verified**; these are no longer connectivity blockers. Remaining: representative fictional model-evaluation coverage, durable authenticated operator sessions, independent encrypted Supabase backup and isolated restore, stable-ID reconciliation of 735 leads / 23,454 conversations / 966 events against the curated subset, D06–D08 approvals, final credential rotation and controlled real-data import. Keep `CRM_REAL_DATA_ENABLED` and `CRM_DB_WRITE_ENABLED` disabled. Optional startup model smoke should be disabled after acceptance to avoid repeat inference costs. These CRM gates do not change Inventory Phase-1 business rules.
+Hosted Ollama authentication and one fictional response are **verified**; these are no longer connectivity blockers. Remaining: representative fictional model-evaluation coverage, durable authenticated operator sessions, independent encrypted Supabase backup and isolated restore, stable-ID reconciliation of 735 leads / 23,454 conversations / 966 events against the curated subset, D06–D08 approvals, final credential rotation and controlled real-data import. Historical gate language; superseded on 2026-10-01 for the current CRM UI production path. Optional startup model smoke should be disabled after acceptance to avoid repeat inference costs. These CRM gates do not change Inventory Phase-1 business rules.
 
 
 ## Current CRM override — 2026-09-30\nThe older gate wording above is historical. The current production CRM source is +919148338801, reconciled Supabase data is live, and contact classification writes use CRM_CLASSIFICATION_WRITE_ENABLED with protected access. Remaining hardening items do not disable the current classification workflow.\n
@@ -123,3 +123,6 @@ The repository also contains older/historical planning checkboxes in the master 
 ## 2026-10-01 production AI closure update
 
 The former synthetic-only AI/live-data gate is superseded for the current CRM path. Production AI and database writes are enabled on Render service `srv-darsv560tbcc73cu4ip0`, and the production implementation uses complete lead history with normalized requirements, evidence, per-lead cursors, durable AI runs and versioned drafts. Remaining independent hardening items are encrypted backup/isolated restore, final credential rotation, and D08 visual/design handoff. Automatic WhatsApp sending remains disabled.
+
+## 2026-10-01 — Current production checkpoint
+Current CRM production is live on srv-darsv560tbcc73cu4ip0 at commit b61b4f7f686957c194094acec8638d7db602ec15. Remaining hardening: encrypted backup/restore proof, least-privilege AWS credential rotation, D08 handoff, incremental delta analysis and field-level AI proposal editing.

@@ -82,3 +82,6 @@ Lead Workspace and Lead Inbox support the compact status **OOC** (`Out of Covera
 Defined coverage currently includes HSR Layout, Kudlu Gate, Bellandur, Sarjapur Road, Whitefield, Hoodi, Mahadevapura, Marathahalli, ITPL, Varthur, Kasavanahalli, Harlur, Panathur, Koramangala (limited), Yemalur, Bommanahalli (selective), and Old Airport Road (selective).
 
 The status is stored in `crm_leads.lead_type`. The current implementation does not automatically adjudicate free-text locations; that requires a separately verified geographic rule because some listed areas are selective.
+
+## 2026-10-01 — Current live checkpoint
+Production: easyfind-crm-d01-d05 (srv-darsv560tbcc73cu4ip0), live commit b61b4f7f686957c194094acec8638d7db602ec15. Bedrock Claude Opus 4.6 (au.anthropic.claude-opus-4-6-v1) is primary; Ollama gpt-oss:20b is fallback. Render startup verified Bedrock configuration presence and Supabase connectivity.
