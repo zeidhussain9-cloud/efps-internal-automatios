@@ -1,6 +1,6 @@
 # CRM PostgreSQL deployment gate
 
-**Status (2026-09-26):** Supabase Free project `easyfind-crm` provisioned in Efps, Mumbai (`ap-south-1`), project ref `qttcutwzehtskfcwxkwj`. Schema applied and verified; no customer records imported. Render remains a synthetic/empty-database preview. At 18:55 UTC the Render startup diagnostic confirmed the Supabase session-pooler endpoint, server-only CA, Basic Auth and the DB `SELECT 1` probe successfully.
+**Historical status (2026-09-26):** Supabase Free project `easyfind-crm` was provisioned and verified as an empty-database pre-production environment. This document is retained as migration-gate evidence. It is superseded for current runtime status by the 2026-10-01 CRM production checkpoint: source-scoped real CRM data is live in Supabase and the operator classification/promotion path is active.
 
 ## Completed
 - Nine PostgreSQL tables exist with RLS enabled. No anon/authenticated policies or table grants; database access is intended only through the protected server.
@@ -9,7 +9,7 @@
 - Parameterized server-side read repository and gated `GET /api/db/status`, `GET /api/db/leads?limit=50` and `GET /api/db/leads/:id` implemented. All require `CRM_DB_READ_ENABLED=true`, `DATABASE_URL` and both Basic Auth credentials; they return 404 while disabled. Read endpoints remain server-only and protected. The production React UI now calls the classification and lead read routes; classification writes use the separate CRM_CLASSIFICATION_WRITE_ENABLED gate.
 - Source Mac SQLite remains untouched. The original 735 leads/23,454 conversation rows and separately curated 308 leads/6,064 message subset still require reconciliation.
 
-## Remaining gates
+## Historical remaining gates — superseded by current production closure
 1. [x] Repair and verify the existing server-only Render→Supabase connection; endpoint class is `supabase_session_pooler_ipv4`, the Supabase CA is configured server-side, and `SELECT 1` succeeds. Keep the connection string out of source, browser and logs.
 2. [x] Confirm the Render deploy and GitHub CI test results. [ ] Test the authenticated database routes against the empty schema with operator credentials.
 3. Implement durable audited CRUD, provider-event inbox and deduplication, incremental AI cursors, human-override evidence and recovery. D06–D08 remain unapproved.
@@ -31,7 +31,7 @@ Slack automation remains the sole writer of `Housing_Listings`; CRM inventory is
 ### Historical startup checkpoint — superseded (17:26 UTC)
 The 17:26 UTC absence observations are retained only as history. They are not current configuration guidance.
 
-### Latest verified runtime checkpoint — 2026-09-26 18:55 UTC
+### Historical runtime checkpoint — 2026-09-26 18:55 UTC
 Render startup reports databaseUrlPresent=true, databaseReadOptIn=true, databaseTlsCaPresent=true, authConfigured=true, authIncomplete=false, ollamaEndpointPresent=true, ollamaModelPresent=true, sheetsCredentialPresent=false, sheetsIdPresent=true and liveDataEnabled=false. The Supabase project qttcutwzehtskfcwxkwj was independently confirmed ACTIVE_HEALTHY and SQL succeeded; nine public CRM tables exist. Render classifies the endpoint as `supabase_session_pooler_ipv4` and the startup DB probe reports `connected`. The database remains empty of customer rows. Do not expose secret values or enable live customer data.
 
 
@@ -42,11 +42,11 @@ Render startup reports databaseUrlPresent=true, databaseReadOptIn=true, database
 - [ ] Authenticated application-level DB route verification remains to be exercised with operator credentials; this is separate from startup connectivity.
 
 
-## Durability v2 verification — 2026-09-27
+## Historical durability v2 verification — 2026-09-27
 - [x] Migration 002 applied to Supabase and recorded in crm_schema_migrations (versions 1, 2).
 - [x] Five new tables verified: crm_provider_events, crm_ai_cursors, crm_requirement_evidence, crm_idempotency_keys and crm_property_media.
 - [x] Append-only triggers verified for messages, activity, requirement evidence and property actions; lead updated_at trigger present.
 - [x] Post-migration counts: zero leads, messages, provider events and requirement evidence. No customer data imported.
 - [x] GitHub Actions #116 passed build, unit/integration tests and Chromium browser journey.
-- [ ] Verify authenticated application-level read routes, test transaction-safe writes against an isolated test database, and independently restore an encrypted backup before any production write enablement.
-- [ ] Keep the broad CRM_DB_WRITE_ENABLED gate separate; production contact classification writes use the narrower CRM_CLASSIFICATION_WRITE_ENABLED gate after the historical reconciliation and protected-auth gates are satisfied.
+- [x] Authenticated production application routes and transaction-safe writes are now covered by the current CRM integration/browser tests. [ ] Independent encrypted backup + isolated restore proof remains open as a separate production hardening item.
+- [x] The broad `CRM_DB_WRITE_ENABLED` gate remains separate from the narrower `CRM_CLASSIFICATION_WRITE_ENABLED` production classification gate; the latter is the current audited write path.

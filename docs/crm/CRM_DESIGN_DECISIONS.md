@@ -121,12 +121,12 @@
 
 **D01–D07 are approved/resolved. D08 remains unresolved.**
 
-Approval is a design state only. No live customer/inventory connection or production write is implied.
+Approval is a design state only. D06/D07 production controls are tracked separately; D08 remains a design/handoff gate. Current CRM production data and operator classification writes are documented in the current runtime checkpoint.
 
 
 ## Implementation checkpoint — 2026-09-26 (not additional design approval)
 
-Supabase Free `easyfind-crm` has been provisioned in Mumbai with nine server-only, RLS-enabled tables. The backend now contains a disabled-by-default, authenticated, read-only PostgreSQL pilot API. This does **not** resolve or approve D06–D08, enable live webhook ingestion, authorize customer-data import, or constitute production authentication approval. Historical SQLite reconciliation, verified backups/restoration and synthetic integration tests remain prerequisites.
+**Historical 2026-09-26 provisioning checkpoint:** Supabase Free `easyfind-crm` was provisioned with nine server-only, RLS-enabled tables and a read-only pilot API. That paragraph describes the pre-production gate and is superseded by the later D06/D07 resolution and current production checkpoint. The current production path is source-scoped, authenticated and persisted in Supabase; independent backup/restore remains open and D08 remains unresolved.
 
 ## D09 — Simple contact qualification workflow — APPROVED 2026-09-30
 

@@ -66,7 +66,7 @@ The existing Slack automation alone creates and updates the Housing Listings She
 
 ### Phase 2 — Prototype implementation
 - [x] Initial synthetic D01–D05 React dashboard deployed (feature-completion pending).
-- [x] Synthetic preview Basic Auth credentials detected on Render at 17:41 UTC; production session architecture remains pending.
+- [x] Historical checkpoint: synthetic preview Basic Auth credentials were detected on Render at 17:41 UTC; the production session architecture was pending at that time and is now resolved by D07.
 - [x] Deterministic synthetic inbox/source/search/queue/priority sorting logic, with unit tests.
 - [x] Initial lead workspace tab navigation.
 - [x] Editable synthetic requirements: BHK, locality, budget, furnishing, move-in, pets, parking, occupancy, notes and priority (session-only).
@@ -94,14 +94,14 @@ The existing Slack automation alone creates and updates the Housing Listings She
 - [ ] Controlled CRM synchronization.
 - [ ] Property-share tracking against real customer data.
 
-### Phase 2A — Stabilization and synthetic model pilot — ACTIVE
+### Phase 2A — Stabilization and synthetic model pilot — HISTORICAL / SUPERSEDED
 - [x] Deploy initial synthetic React prototype on Render from `crm-ui-dashboard`.
 - [x] User visually approved initial D01–D05 interface.
 - [x] Record baseline audit and cleanup gates in `CRM_STABILIZATION_AUDIT.md`.
 - [x] Implement synthetic Activity, Settings, follow-ups, inventory search/no-image fallback and per-lead pin/exclude state.\n- [ ] Complete production D01–D05: secure auth, durable lead history, real verified inventory media, AI and advanced workflows.
 - [x] Extract reusable tested domain logic for queue filtering, matching, validation and follow-ups; add unit tests and CI.\n- [ ] Finish UI component refactor and browser end-to-end tests.
 - [ ] Identify genuinely stale CRM files before any deletion.
-- [x] Synthetic browser persistence, schema-version/corruption recovery, requirements validation and optional server-side Basic Auth gate implemented.\n- [x] Verify CI and access behavior: protected routes, fail-closed auth, hardened headers and Render health behavior covered by tests.\n- [ ] Replace pilot Basic Auth with reviewed production session authentication; backup/restore proof remains pending. Render preview uses browser-only fictional persistence.
+- [x] Historical synthetic browser persistence, schema-version/corruption recovery, requirements validation and optional server-side Basic Auth gate implemented.\n- [x] Historical CI/access behavior checks covered protected routes, fail-closed auth, hardened headers and Render health behavior.\n- [x] D07 production session authentication superseded the pilot Basic Auth gate; independent encrypted backup/restore proof remains a current hardening item.
 - [x] Add first fictional seed fixtures with known expected extraction outcomes and basic fixture tests (not yet representative of raw-data distributions).
 - [ ] Inspect authorized local raw extraction and generate fictional representative fixtures with expected results.
 - [x] Implement gated server-side Ollama adapter and mocked unit tests using only fictional fixture IDs; human Accept/Reject UI added.\n- [x] Verify Ollama endpoint/model presence without disclosing or overwriting secrets; Render startup confirms both variables are present.\n- [ ] Enable and run a real synthetic model request after the pilot access controls are approved.
@@ -123,22 +123,24 @@ The existing Slack automation alone creates and updates the Housing Listings She
 
 ## 6. Implementation gate
 
-The production CRM UI is deployed and using reconciled real data for `+919148338801`. D06–D08 and later source onboarding remain separate future work; they do not gate the current one-number production flow.
+The production CRM UI is deployed and using reconciled real data for `+919148338801`. D06 and D07 are resolved. D08 remains open. OOC (`Out of Coverage Area`) is implemented as a Layer-2 lead status; automatic geographic assignment remains pending a deterministic coverage rule. Independent encrypted backup + isolated restore proof remains open. These items do not disable the current one-number production flow.
+
+**Historical-checkpoint rule:** sections dated before 2026-10-01 retain their original migration/pilot checklists as evidence. Their unchecked items and pre-production statements are not current blockers unless repeated in the authoritative closure section at the end of this document.
 
 
-## Latest verification checkpoint
+## Historical verification checkpoint — superseded
 - Fixed CI dependency installation: no committed package lockfile exists yet, so CI now uses `npm install` rather than `npm ci` and avoids lockfile-dependent caching.
 - Added real HTTP security integration tests for protected content, disabled AI, incomplete access credentials and rejected methods/routes.
 - The latest Render deployment and GitHub Actions browser run must be verified before declaring this stage complete. No Render credential values were read or changed.
 - Existing Ollama credentials should be inspected by name/presence only at the credential-configuration stage; Sheets service-account JSON must be supplied through Render server-only environment configuration, not the repository.
 
 
-## Production persistence preparation — latest
+## Historical production persistence preparation checkpoint — superseded
 - [x] Operator accepted deployed synthetic UI after manually navigating and checking it.
 - [x] Added PostgreSQL v1 schema for CRM-owned leads, source numbers, stable-ID-deduplicated conversations, follow-ups, append-only activity, AI proposals, versioned drafts and per-lead property actions. No editable inventory tables.
 - [x] Added explicit opt-in migration command, tests and three-source historical deduplication planning; migration is **not** automatically invoked by deployment.
 - [x] Verified the Render workspace currently has **no PostgreSQL instance**.
-- [x] Supabase `easyfind-crm` provisioned as the sole hosted CRM database; no Render PostgreSQL instance is needed. Render uses the Supabase IPv4 session pooler with server-only CA verification; the startup `SELECT 1` probe connected successfully at 2026-09-26 18:55 UTC. Real data remains disabled. Backup/restore requirements remain open.
+- [x] Historical 2026-09-26 Supabase provisioning checkpoint: the pre-production database was initially empty. This is historical evidence; current production data is source-scoped in Supabase as recorded in the authoritative 2026-10-01 closure.
 - [ ] Implement durable authenticated production CRUD, transaction-safe audited edits and import dry-run; run full synthetic database integration tests.
 - [ ] Reconcile 735/23,454 original extraction against curated 308/6,064 subset before importing any real records.
 - [x] Verify latest CI unit, HTTP and Chromium results separately from user-approved browser appearance: GitHub Actions `CRM synthetic CI` run #81 passed build, all 45 unit/integration tests and Chromium browser journey 1/1.
@@ -146,7 +148,7 @@ The production CRM UI is deployed and using reconciled real data for `+919148338
 See `CRM_DATABASE_MIGRATION_GATE.md`.
 
 
-## Supabase Free — provisioned 2026-09-26
+## Historical Supabase provisioning checkpoint — 2026-09-26
 - [x] Created `easyfind-crm` in Efps, Mumbai (`ap-south-1`), project ref `qttcutwzehtskfcwxkwj`; Supabase confirmed $0/month project creation cost.
 - [x] Applied server-only CRM core migration: nine RLS-enabled tables; revoked anon/authenticated grants; no browser-facing policies.
 - [x] Added three missing foreign-key indexes and committed matching schema migrations.
@@ -158,15 +160,15 @@ See `CRM_DATABASE_MIGRATION_GATE.md`.
 - [x] Store inventory media as Cloudinary references only; PostgreSQL stores external media references, never media bytes.
 
 
-## 2026-09-26 — Read-only database integration checkpoint
+## Historical — 2026-09-26 read-only database integration checkpoint
 - [x] Added `src/crm-repository.mjs` with parameterized PostgreSQL health/list/get operations and repository tests.
 - [x] Added server-only `/api/db/status`, `/api/db/leads`, `/api/db/leads/:id` routes, gated by `CRM_DB_READ_ENABLED=true`, `DATABASE_URL` and configured Basic Auth; no database write routes.
 - [x] Reconciled the database migration gate and canonical data model docs with the provisioned Supabase state.
 - [x] Independently verify the new Render deployment and CI, and securely connect Render to Supabase.\n- [ ] Run authenticated application-level DB route checks against the empty schema.
-- [ ] Implement full durable CRUD/event/AI-evidence model and restore-tested backups before real customer import. D06–D08 remain unresolved.
+- [x] Durable server CRUD/event/retry path is implemented and used by the current production lead workflow. Independent encrypted backup/restore proof remains a separate current hardening item; D06/D07 are resolved and D08 remains open.
 
 
-## 2026-09-26 — Render credential validation checkpoint
+## Historical — 2026-09-26 Render credential validation checkpoint
 - [x] Added startup-only credential-presence and database-connectivity checks without printing secret values, plus unit tests.
 - [x] Sanitized Render startup at 17:41 UTC: DATABASE_URL, DB read opt-in, Basic Auth and Ollama endpoint/model present; database connection failed. Sheets expected-name flags false, not proof that the user's raw JSON credential or hardcoded ID is absent.
 - [x] Do not infer correctness from a variable being present alone: startup now checks protected access configuration and the DB handshake. `CRM_REAL_DATA_ENABLED` remains disabled; no live customer data has been imported.
@@ -224,7 +226,7 @@ Historical branch-reconciliation note superseded on 2026-09-30: `crm-ui-dashboar
 - [x] Added durable `crm_webhook_events` activity/audit storage with provider-message idempotency and received/processing/processed/failed states.
 - [x] New source-phone activity is held in `crm_contact_classifications` with `pending` status and preserved `crm_messages`; it does not create a `crm_leads` row until an operator selects Qualified Lead. Existing promoted contacts continue to append to their lead.
 - [x] Removed CRM intake tables and Render intake routes. There is no separate new-contact staging model.
-- [x] Historical SQLite evidence remains 5,286 messages; current Supabase production state is 141 source-linked leads and 6,561 messages for `+919148338801`.
+- [x] Historical SQLite evidence remains 5,286 messages; current Supabase production state is 186 source-linked leads and 6,621 messages for `+919148338801`.
 - [x] Workspace message ordering is chronological by provider `message_at`, with source/provider identity preserved separately.
 - [x] Added sanitized Supabase Realtime broadcast after message insertion so the UI refreshes live without polling WhAPI or polling the CRM workspace.
 - [x] Removed the Render-side WhatsApp ingestion route; the old CRM WhatsApp environment gate remains disabled.
@@ -242,7 +244,7 @@ Historical branch-reconciliation note superseded on 2026-09-30: `crm-ui-dashboar
 - [x] Dashboard now reports CRM lead count, waiting-to-be-classified count, live-WhAPI-qualified-lead count and webhook error count for the selected source. It no longer presents a hardcoded historical message count as the live lead metric.
 - [x] Realtime diagnostics now surface the actual channel error alongside the connection state instead of only showing `Realtime: error`.
 - [x] Applied production migration `20260930145131` (`crm_lead_status_tenant_type_and_webhook_gate_reconciliation`) and verified `crm_leads.tenant_type` plus the reconciled no-auto-lead webhook processor in Supabase.
-- [x] Current production evidence after this migration: 141 source-linked `crm_leads`, 287 source classifications for `+919148338801`, 58 pending classifications, 6,561 current `crm_messages`, and 28 persisted webhook events (13 processed, 15 received).
+- [x] Current production evidence at the 2026-10-01 verified checkpoint: 186 source-linked `crm_leads`, 289 source classifications for `+919148338801`, 2 pending classifications, 6,621 current `crm_messages`, and 73 persisted webhook events (73 processed, 0 received, 0 failed).
 - [x] Local production build, all 62 unit/integration tests, and the Playwright browser journey pass. The browser journey now covers the live-record surface, Lead Status/Tenant Type controls and persisted-update API path.
 
 ## 2026-09-30 — CRM daily workflow resolved
@@ -276,3 +278,17 @@ The default queue order is latest message first. Operators can switch to Custome
 Added Layer-2 CRM lead status `Out of Coverage Area`, displayed as **OOC**. It is used for leads whose requested property area is outside the approved service footprint. Current service areas: HSR Layout, Kudlu Gate, Bellandur, Sarjapur Road, Whitefield, Hoodi, Mahadevapura, Marathahalli, ITPL, Varthur, Kasavanahalli, Harlur, Panathur, Koramangala (limited), Yemalur, Bommanahalli (selective), and Old Airport Road (selective).
 
 Automatic OOC assignment is not enabled from free-text locality. A deterministic geographic coverage contract must be approved before automated assignment.
+
+## 2026-10-01 — Authoritative current repository/runtime closure
+
+This section supersedes older dated migration/pilot checkpoints for current-state reporting.
+
+- Production Render deployment: `d28046266239cd889ad14f87a61a92742383305e` / `dep-dauq8hg473hc739ve530` — live.
+- Production source: `+919148338801`.
+- Supabase: 186 source-linked leads, 289 classifications, 2 pending classifications, 186 promoted classifications, 6,621 messages.
+- Webhook state: 73 persisted events, all 73 processed, 0 received, 0 failed; active `crm_webhook_reconcile_1m` runs every minute.
+- D06: resolved. D07: resolved. Browser E2E: GitHub Actions #309 succeeded.
+- OOC: `Out of Coverage Area`, displayed as `OOC`, is implemented as a Layer-2 lead status. Automatic geographic assignment is intentionally pending a deterministic coverage rule because the approved service area includes selective areas.
+- D08 final visual/design-system handoff remains open.
+- Independent encrypted backup artifact + isolated restore proof remains open.
+- `crm-ui-dashboard` tree SHA and `main` tree SHA are both `47aebad57612ab147af43372f6f1e19f197d374c` at the current repository checkpoint.

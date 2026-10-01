@@ -1,12 +1,12 @@
 ## Current production audit — 2026-10-01 (post-reconciliation)
 
-Verified live state: Render `easyfind-crm-d01-d05` / `srv-darsv560tbcc73cu4ip0`, branch `crm-ui-dashboard`, deploy `dep-daum9vi1a91c739kcfhg`, commit `866dd78b594032eadff9f2a771cb170e7b41aded`. Supabase source `+919148338801`: 185 source-linked leads, 288 classifications, 13 pending, 2 explicitly unqualified/excluded, 185 promoted, and 6,594 CRM messages. All 46 webhook events are now processed; 0 remain `received`; 0 failed. The 33-event operational backlog has therefore been reconciled. Browser Realtime is notification-only and CSP allows the exact Supabase HTTPS/WSS origin. RLS is enabled on all CRM tables and `anon`/`authenticated` have no SELECT privilege. Render reports Basic Auth configured and database connectivity connected.
+Verified live state: Render `easyfind-crm-d01-d05` / `srv-darsv560tbcc73cu4ip0`, branch `crm-ui-dashboard`, deploy `dep-dauq8hg473hc739ve530`, commit `d28046266239cd889ad14f87a61a92742383305e`. Supabase source `+919148338801`: 186 source-linked leads, 289 classifications, 2 pending, 186 promoted, and 6,621 CRM messages. All 73 webhook events are processed; 0 remain `received`; 0 failed. Automatic reconciliation is active. Browser Realtime is notification-only and CSP allows the exact Supabase HTTPS/WSS origin. RLS is enabled on all CRM tables and `anon`/`authenticated` have no SELECT privilege.
 
 ## Current production checkpoint — 2026-10-01
 
 - Source in scope: `+919148338801`.
-- Supabase current state: 185 source-linked leads, 288 classifications, 13 pending classifications, 6,561 messages.
-- `crm_webhook_events`: 46 rows for the source; 13 processed, 33 received, 0 failed. The 33 received events are a live operational reconciliation backlog, not historical backfill evidence.
+- Supabase current state: 186 source-linked leads, 289 classifications, 2 pending classifications, 6,621 messages.
+- `crm_webhook_events`: 73 rows for the source; 73 processed, 0 received, 0 failed. Automatic reconciliation is active; there is no current received-event backlog.
 - The historical 5,286-message SQLite archive remains historical source evidence and is not the current CRM message count.
 - Do not initiate another WhAPI historical API extraction as part of ordinary reconciliation. Live discovery of new contacts is through the webhook boundary and `crm_contact_classifications`.
 - Browser Supabase Realtime is only a notification/refresh mechanism; server-side webhook ingestion and the CRM database are independent of it.
@@ -71,11 +71,11 @@ Processing states are `received`, `processing`, `processed`, and `failed`. A pro
 
 Current verified source population:
 
-- **185 source-linked CRM leads** currently persisted in production
-- **288 current classifications** for `+919148338801`, with 13 pending and 185 qualified.
-- **6,561 current CRM messages**; the **5,286-message SQLite archive** remains historical evidence.
+- **186 source-linked CRM leads** currently persisted in production
+- **289 current classifications** for `+919148338801`, with 2 pending and 186 promoted.
+- **6,621 current CRM messages**; the **5,286-message SQLite archive** remains historical evidence.
 - **0 intake contacts**; the intake tables were removed from the CRM live model
-- **46 persisted webhook events** at the current audit checkpoint (13 processed, 33 received, 0 failed)
+- **73 persisted webhook events** at the 2026-10-01 verified checkpoint (73 processed, 0 received, 0 failed)
 
 ## UI live updates
 

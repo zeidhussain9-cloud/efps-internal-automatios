@@ -1,14 +1,14 @@
 ## Current production audit — 2026-10-01 (post-reconciliation)
 
-Verified live state: Render `easyfind-crm-d01-d05` / `srv-darsv560tbcc73cu4ip0`, branch `crm-ui-dashboard`, deploy `dep-daum9vi1a91c739kcfhg`, commit `866dd78b594032eadff9f2a771cb170e7b41aded`. Supabase source `+919148338801`: 185 source-linked leads, 288 classifications, 13 pending, 2 explicitly unqualified/excluded, 185 promoted, and 6,594 CRM messages. All 46 webhook events are now processed; 0 remain `received`; 0 failed. The 33-event operational backlog has therefore been reconciled. Browser Realtime is notification-only and CSP allows the exact Supabase HTTPS/WSS origin. RLS is enabled on all CRM tables and `anon`/`authenticated` have no SELECT privilege. Render reports Basic Auth configured and database connectivity connected.
+Verified live state: Render `easyfind-crm-d01-d05` / `srv-darsv560tbcc73cu4ip0`, branch `crm-ui-dashboard`, deploy `dep-dauq8hg473hc739ve530`, commit `d28046266239cd889ad14f87a61a92742383305e`. Supabase source `+919148338801`: 186 source-linked leads, 289 classifications, 2 pending, 186 promoted, and 6,621 CRM messages. All 73 webhook events are processed; 0 remain `received`; 0 failed. Automatic reconciliation is active. Browser Realtime is notification-only and CSP allows the exact Supabase HTTPS/WSS origin. RLS is enabled on all CRM tables and `anon`/`authenticated` have no SELECT privilege.
 
 ## Current production checkpoint — 2026-10-01
 
-Render service `easyfind-crm-d01-d05` (`srv-darsv560tbcc73cu4ip0`) deploys `crm-ui-dashboard`. Current deployed commit is `45dbab7b1ba92387e5e001f74929ad40c92be6a9` and the corresponding Render deploy is live. Supabase project `qttcutwzehtskfcwxkwj` is the CRM operational database.
+Render service `easyfind-crm-d01-d05` (`srv-darsv560tbcc73cu4ip0`) deploys `crm-ui-dashboard`. Current deployed commit is `d28046266239cd889ad14f87a61a92742383305e`, deployment `dep-dauq8hg473hc739ve530`, and the corresponding Render deploy is **live**. Supabase project `qttcutwzehtskfcwxkwj` is the CRM operational database.
 
 Current source: `+919148338801`. The other configured source numbers `+917975102130` and `+919902024973` are visible/selectable in the UI only and are not active production ingestion sources.
 
-Current production database state: 185 source-linked leads, 288 classifications, 13 pending classifications, 185 qualified classifications, 6,561 messages, and 46 webhook events (13 processed, 33 received, 0 failed). The 33 received events are an operational reconciliation backlog.
+Current production database state: 186 source-linked leads, 289 classifications, 2 pending classifications, 186 promoted classifications, 6,621 messages, and 73 webhook events (73 processed, 0 received, 0 failed).
 
 The browser Realtime channel is a UI refresh signal, not the webhook source of truth. The latest hardening change explicitly allows the exact Supabase HTTPS/WSS origin in the server CSP so the browser Realtime client is not blocked by the previous `connect-src 'self'` restriction.
 
@@ -19,16 +19,16 @@ The browser Realtime channel is a UI refresh signal, not the webhook source of t
 
 The CRM Render service is `easyfind-crm-d01-d05`, deployed only from `crm-ui-dashboard`. Do not configure the old leads UI or main branch. Keep secrets out of GitHub, the React bundle, chat transcripts and logs.
 
-## Current verified stage: synthetic-only with empty Supabase connection (2026-09-26 18:55 UTC)
+## Historical staged setup — superseded 2026-09-26
 
-The browser prototype contains fictional leads and properties. Its versioned browser storage survives reloads **on the same browser**; it is not a secure production database and does not synchronize across devices. Basic Auth was confirmed configured at the latest Render startup, but it is still a temporary pilot gate. Real customer records remain disabled pending the migration and security gates. If exactly one is set, the server fails closed.
+The browser prototype contains fictional leads and properties. Its versioned browser storage survives reloads **on the same browser**; it is not a secure production database and does not synchronize across devices. Basic Auth was the temporary authentication mechanism at this historical checkpoint; the current production UI uses the reviewed operator session flow. Real customer data is now active in the source-scoped Supabase CRM path. If exactly one is set, the server fails closed.
 
 | Variable | Purpose |
 | --- | --- |
 | `CRM_BASIC_AUTH_USERNAME` | Operator login name |
 | `CRM_BASIC_AUTH_PASSWORD` | Unique high-entropy operator password |
 
-The public `/health` endpoint reports only `{ "ok": true }`; it does not disclose access mode or configuration. Authentication is a temporary pilot gate, not the final production user/session architecture. Use HTTPS and do not reuse a password from another service.
+The public `/health` endpoint reports only `{ "ok": true }`; it does not disclose access mode or configuration. The historical Basic Auth gate described in this section is superseded by the current operator session architecture. Use HTTPS and do not reuse a password from another service.
 
 ## Ollama configuration — later gate
 
@@ -57,13 +57,13 @@ A read-only service-account adapter is implemented and disabled by default with 
 4. Authenticated access gate and Supabase connection are verified before any real data. Supabase `easyfind-crm` is the sole hosted CRM database; no Render PostgreSQL service is required. Render uses the IPv4-compatible session pooler URL on port 5432 with strict TLS verification via `DATABASE_SSL_CA`. Independent backup and restore testing remain required.
 5. Only then connect existing Ollama settings and read-only Sheets credentials, test with fictional data and separately approve real SQLite migration.
 
-No live WhAPI ingestion, automatic WhatsApp sending or live customer data is enabled by this document.
+At this historical checkpoint, live WhAPI ingestion and live customer data were not yet enabled. The current production path is documented in the 2026-10-01 checkpoint above; automatic WhatsApp sending remains disabled.
 
 ## Latest connection audit — 2026-09-26 18:55 UTC
 - Supabase project `qttcutwzehtskfcwxkwj` ACTIVE_HEALTHY; independent SQL query succeeded; nine public tables.
 - Render DATABASE_URL, CRM_DB_READ_ENABLED, Basic Auth, Ollama endpoint/model and `DATABASE_SSL_CA` present; database endpoint classified as the Supabase session pooler and the `SELECT 1` probe succeeds.
 - Google Sheets startup flags check only GOOGLE_SERVICE_ACCOUNT_JSON_BASE64 and HOUSING_SHEET_ID, not alternative raw JSON names or source-level hardcoding. Operator reports providing full JSON and hardcoded ID; verify mapping rather than requesting new secrets.
-- `CRM_REAL_DATA_ENABLED` remains false. Do not provision PostgreSQL on Render or import customer records until the remaining durable-auth, backup, historical-reconciliation and D06–D08 safety gates pass.
+- `CRM_REAL_DATA_ENABLED` is retained as a migration/import safety guard; its historical `false` state did not prevent the later source-scoped webhook/classification production path. Do not treat this variable alone as the current live-data status.
 
 
 ## 2026-09-26 canonical inventory contract verification
