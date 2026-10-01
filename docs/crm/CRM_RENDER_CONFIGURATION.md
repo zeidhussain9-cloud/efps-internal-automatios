@@ -1,14 +1,14 @@
 ## Current production audit — 2026-10-01 (post-reconciliation)
 
-Verified live state: Render `easyfind-crm-d01-d05` / `srv-darsv560tbcc73cu4ip0`, branch `crm-ui-dashboard`, deploy `dep-dauq8hg473hc739ve530`, commit `d28046266239cd889ad14f87a61a92742383305e`. Supabase source `+919148338801`: 186 source-linked leads, 289 classifications, 2 pending, 186 promoted, and 6,621 CRM messages. All 73 webhook events are processed; 0 remain `received`; 0 failed. Automatic reconciliation is active. Browser Realtime is notification-only and CSP allows the exact Supabase HTTPS/WSS origin. RLS is enabled on all CRM tables and `anon`/`authenticated` have no SELECT privilege.
+Verified live state — 2026-10-01 04:31 UTC: Render `easyfind-crm-d01-d05` / `srv-darsv560tbcc73cu4ip0`, branch `crm-ui-dashboard`, deploy `dep-dauu3j60tbcc73e5ceeg`, commit `a4798e2f3503a557208e0a15c67bf0f0035059a6`. Supabase source `+919148338801`: 186 source-linked leads, 292 classifications, 5 pending, 186 promoted, and 6,641 CRM messages. All 214 webhook events are processed; 0 remain `received`; 0 failed. Automatic reconciliation is active. Browser Realtime is notification-only. RLS remains enabled on CRM tables and browser roles have no direct SELECT privilege.
 
-## Current production checkpoint — 2026-10-01
+## Current production checkpoint — 2026-10-01 04:31 UTC
 
-Render service `easyfind-crm-d01-d05` (`srv-darsv560tbcc73cu4ip0`) deploys `crm-ui-dashboard`. Current deployed commit is `d28046266239cd889ad14f87a61a92742383305e`, deployment `dep-dauq8hg473hc739ve530`, and the corresponding Render deploy is **live**. Supabase project `qttcutwzehtskfcwxkwj` is the CRM operational database.
+Render service `easyfind-crm-d01-d05` (`srv-darsv560tbcc73cu4ip0`) deploys `crm-ui-dashboard`. Current deployed commit is `a4798e2f3503a557208e0a15c67bf0f0035059a6`, deployment `dep-dauu3j60tbcc73e5ceeg`, and the corresponding Render deploy is **live**. Supabase project `qttcutwzehtskfcwxkwj` is the CRM operational database.
 
 Current source: `+919148338801`. The other configured source numbers `+917975102130` and `+919902024973` are visible/selectable in the UI only and are not active production ingestion sources.
 
-Current production database state: 186 source-linked leads, 289 classifications, 2 pending classifications, 186 promoted classifications, 6,621 messages, and 73 webhook events (73 processed, 0 received, 0 failed).
+Current production database state: 186 source-linked leads, 292 classifications, 5 pending classifications, 186 promoted classifications, 6,641 messages, and 214 webhook events (214 processed, 0 received, 0 failed).
 
 The browser Realtime channel is a UI refresh signal, not the webhook source of truth. The latest hardening change explicitly allows the exact Supabase HTTPS/WSS origin in the server CSP so the browser Realtime client is not blocked by the previous `connect-src 'self'` restriction.
 

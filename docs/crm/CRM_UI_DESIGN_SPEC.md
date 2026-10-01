@@ -7,6 +7,14 @@
 **Canva visual reference:** https://canva.link/qmph6ij1o6lue57  
 **Data contract:** `CRM_DATA_MODEL.md`
 
+## Current UI implementation checkpoint — 2026-10-01
+
+The production Leads Inbox card intentionally shows only **Lead status** and **Source number** beneath the lead identity. The former priority/classification/contacted-date/last-message activity row is removed from this list surface.
+
+The Leads Inbox header provides one clickable summary block for every supported lead status (`New`, `Active Follow-up`, `Waiting on Customer`, `Waiting on Us`, `Nurture`, `Dormant`, `Converted`, `Lost`, `On Hold`, `Out of Coverage Area`). Each block shows the live count for the selected source and applies the corresponding server-side filter when clicked. Lead-status edits in Lead Workspace persist to `crm_leads.lead_type`; the inbox reloads from the database so the lead moves to its new status grouping.
+
+The AI Draft workspace displays provider/model provenance plus input tokens, output tokens, and estimated cost when the provider/model has a configured public rate. Complete chronological conversation context remains the AI source of truth.
+
 ## 1. Product shell
 
 Main navigation:
