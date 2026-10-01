@@ -254,3 +254,7 @@ The AI & Drafts tab is a per-lead operational workspace containing saved AI run 
 ## 2026-10-01 — Draft workspace correction
 
 The AI & Drafts tab now treats saved drafts as durable workspace state rather than transient AI-result state. Selecting a version loads its body into a persistent editor even after page reload. Each version displays provider and exact model identifier, and saved edits retain the selected draft's provenance.
+
+## 2026-10-01 — AI workspace hardening
+
+The AI & Drafts workspace now shows provider/model/fallback provenance, source message IDs, stale status, and a pre-send grounding check. Opening WhatsApp requires the deterministic check to pass; the operator can copy a draft and explicitly mark it sent after manual WhatsApp delivery. New CRM activity after draft generation marks the draft stale so it is not silently reused.

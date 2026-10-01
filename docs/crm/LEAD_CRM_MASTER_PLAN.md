@@ -301,3 +301,7 @@ Render service: `srv-darsv560tbcc73cu4ip0`, branch `crm-ui-dashboard`. Implement
 
 ## 2026-10-01 — Production AI provider and repository checkpoint
 Current production supersedes synthetic-only AI checkpoints. Bedrock Claude Opus 4.6 is primary and Ollama gpt-oss:20b fallback. Complete lead history and normalized requirements are supplied to AI; requirement changes are operator-approved and AI never auto-sends WhatsApp.
+
+## 2026-10-01 — AI generation controls
+
+Current AI generation order is Bedrock Claude Opus 4.6 → Bedrock Claude Sonnet 4.6 → Ollama fallback. Drafts are traceable to exact provider/model and source messages. Stale drafts are detected, unsupported inventory claims are blocked by a deterministic pre-send check, and operator outcomes can be recorded through copied/opened/sent states. Incremental/delta message analysis remains intentionally deferred; the current AI call continues to receive the complete conversation.

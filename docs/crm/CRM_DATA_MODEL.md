@@ -153,3 +153,7 @@ The production AI workspace also consumes `crm_ai_runs`, `crm_requirement_eviden
 ## 2026-10-01 — Draft AI provenance
 
 `crm_drafts` now stores `ai_run_id`, `ai_provider`, and `model_name` so every generated draft can be traced to the AI run/provider that produced it. Migration `016_crm_draft_ai_provenance.sql` is applied in production. Existing drafts were backfilled from their nearest preceding `crm_ai_runs` record; current verified state is 2 drafts, both from Ollama-era runs.
+
+## 2026-10-01 — AI provenance, evidence, outcomes and stale-draft controls
+
+`crm_ai_runs` now stores `provider`, `fallback_from`, and `fallback_reason`. `crm_drafts` now stores `ai_run_id`, `ai_provider`, `model_name`, `evidence_message_ids`, `evidence_summary`, and `sent_at`. Draft freshness is derived from whether newer CRM messages exist after draft creation. This supports model auditability, source evidence, stale-draft detection, and explicit operator outcome tracking without enabling automatic WhatsApp sending.

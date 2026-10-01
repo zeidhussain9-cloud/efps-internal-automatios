@@ -85,3 +85,7 @@ The status is stored in `crm_leads.lead_type`. The current implementation does n
 
 ## 2026-10-01 — Current live checkpoint
 Production: easyfind-crm-d01-d05 (srv-darsv560tbcc73cu4ip0). The current deployment commit is recorded in the final checkpoint below. Bedrock Claude Opus 4.6 (au.anthropic.claude-opus-4-6-v1) is primary; Ollama gpt-oss:20b is fallback. Render startup verified Bedrock configuration presence and Supabase connectivity.
+
+## 2026-10-01 — Current AI generation state
+
+AI provider chain: Bedrock Claude Opus 4.6 (`au.anthropic.claude-opus-4-6-v1`) → Bedrock Claude Sonnet 4.6 (`au.anthropic.claude-sonnet-4-6`) → Ollama `gpt-oss:20b`. Drafts display provider/model/fallback provenance and source-message evidence. Stale drafts are flagged, and the operator must pass a deterministic pre-send check before opening WhatsApp. Sending remains manual; `Mark sent` is an explicit operator audit action. Incremental message analysis remains deferred.
