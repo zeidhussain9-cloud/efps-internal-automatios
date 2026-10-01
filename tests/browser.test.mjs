@@ -30,7 +30,7 @@ test('production CRM browser journey uses only live-record surfaces',async()=>{
   })}));
 
   await page.route('**/api/db/stats*',route=>route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({
-   sourceNumber:'+919148338801',leadCount:228,liveLeadCount:3,pendingClassificationCount:4,notPushedClassificationCount:4,qualifiedClassificationCount:228,availableInventoryCount:2,webhookErrorCount:0,leadStatusCounts:[{status:'New',count:12},{status:'Active Follow-up',count:40},{status:'Waiting on Customer',count:18},{status:'Waiting on Us',count:10},{status:'Nurture',count:30},{status:'Dormant',count:25},{status:'Converted',count:8},{status:'Lost',count:15},{status:'On Hold',count:20},{status:'Out of Coverage Area',count:50}],supportedSourceNumbers:['+919148338801','+917975102130','+919902024973']
+   sourceNumber:'+919148338801',leadCount:228,liveLeadCount:3,pendingClassificationCount:4,notPushedClassificationCount:4,qualifiedClassificationCount:228,availableInventoryCount:2,webhookErrorCount:0,leadStatusCounts:[{status:'New',count:12},{status:'Active Follow-up',count:40},{status:'Waiting on Customer',count:18},{status:'Waiting on Us',count:10},{status:'Nurture',count:30},{status:'Dormant',count:25},{status:'Converted',count:8},{status:'Lost',count:15},{status:'On Hold',count:20},{status:'Out of Coverage Area',count:50}],followupTotal:12,followupHasMore:true,nextFollowups:Array.from({length:10},(_,i)=>({id:i+1,lead_id:'LIVE-1',due_at:`2026-10-02T0${i}:00:00Z`,note:`Follow-up ${i+1}`,display_name:`Live lead ${i+1}`,normalized_phone:'+919000000001'})),supportedSourceNumbers:['+919148338801','+917975102130','+919902024973']
   })}));
 
   await page.route('https://res.cloudinary.com/**',route=>route.fulfill({status:200,contentType:'image/svg+xml',body:'<svg xmlns="http://www.w3.org/2000/svg" width="320" height="220"><rect width="320" height="220" fill="#dce8f0"/></svg>'}));
@@ -76,6 +76,7 @@ test('production CRM browser journey uses only live-record surfaces',async()=>{
   await page.getByRole('button',{name:'Inventory',exact:true}).click();
   assert.equal(new URL(page.url()).pathname,'/inventory');
   await page.getByRole('heading',{name:'Property inventory'}).waitFor();
+  await page.getByRole('button',{name:/Total properties/}).waitFor();
   assert.equal(await page.getByRole('button',{name:/Total properties/}).count(),1);
   assert.equal(await page.getByRole('button',{name:/Available/}).count(),1);
   assert.equal(await page.getByRole('button',{name:/Rented out/}).count(),1);
@@ -83,6 +84,7 @@ test('production CRM browser journey uses only live-record surfaces',async()=>{
   await page.getByRole('button',{name:/Available/}).click();
   await page.getByText('2 properties',{exact:true}).waitFor();
   assert.equal(await page.locator('.inventory-card').count(),2);
+  assert.equal(await page.getByLabel('Inventory per page').inputValue(),'10');
   await page.getByRole('button',{name:/With photos/}).click();
   await page.getByText('2 properties',{exact:true}).waitFor();
   assert.equal(await page.locator('.inventory-card').count(),2);
@@ -98,13 +100,12 @@ test('production CRM browser journey uses only live-record surfaces',async()=>{
   await page.getByRole('button',{name:/View property/}).first().click();
   await page.getByRole('dialog',{name:'Property details'}).waitFor();
   await page.getByRole('button',{name:/Close/}).click();
-  const nextInventoryRequest=page.waitForRequest(request=>{
-   try{return request.url().includes('/api/inventory/overview')&&new URL(request.url()).searchParams.get('offset')==='24'}catch{return false}
-  });
+  await page.getByLabel('Inventory per page').selectOption('20');
+  const nextInventoryResponse=page.waitForResponse(response=>{try{const params=new URL(response.url()).searchParams;return response.url().includes('/api/inventory/overview')&&params.get('offset')==='20'&&params.get('limit')==='20'&&response.status()===200}catch{return false}});
   await page.getByRole('button',{name:'Next inventory page'}).click();
-  await nextInventoryRequest;
-  await page.getByText('Page 2 · 25–27 of 27',{exact:true}).waitFor();
-  assert.equal(await page.locator('.inventory-card').count(),3);
+  await nextInventoryResponse;
+  await page.getByText('Page 2 · 21–27 of 27',{exact:true}).waitFor();
+  assert.equal(await page.locator('.inventory-card').count(),7);
   const resetInventoryRequest=page.waitForRequest(request=>{
    try{const params=new URL(request.url()).searchParams;return request.url().includes('/api/inventory/overview')&&params.get('status')==='Available'&&params.get('offset')==='0'}catch{return false}
   });
@@ -118,21 +119,26 @@ test('production CRM browser journey uses only live-record surfaces',async()=>{
   const activeFollowupSummary=page.getByRole('button',{name:/^Active Follow-up.*40/});
   await activeFollowupSummary.waitFor();
   assert.equal(await page.locator('.lead-card-activity').count(),2);
-  assert.equal(await page.getByText('Classification',{exact:true}).count(),2);
-  assert.equal(await page.getByText('Qualified Lead',{exact:true}).count(),1);
-  assert.equal(await page.locator('.lead-card-classification strong').nth(1).textContent(),'Cold Inquiry');
-  assert.equal(await page.locator('.lead-card-classification-cold').count(),1,'cold classification uses a subtle semantic tone');
-  assert.equal(await page.getByText('Lead status · New',{exact:true}).count(),1);
-  assert.equal(await page.getByText('Lead status · Waiting on Customer',{exact:true}).count(),1);
+  assert.equal(await page.getByText('Classification',{exact:true}).count(),0);
+  assert.equal(await page.getByText('Qualified Lead',{exact:true}).count(),0);
+  assert.equal(await page.locator('.lead-card-status-panel').count(),2);
+  assert.equal(await page.locator('.lead-card-status-panel strong').nth(0).textContent(),'New');
+  assert.equal(await page.locator('.lead-card-status-panel strong').nth(1).textContent(),'Waiting on Customer');
+  assert.equal(await page.locator('.lead-card-status-panel').filter({hasText:'New'}).count(),1);
+  assert.equal(await page.locator('.lead-card-status-panel').filter({hasText:'Waiting on Customer'}).count(),1);
   assert.equal(await page.getByText('Source number · +919148338801',{exact:true}).count(),2);
   assert.equal(await page.getByText('Overdue follow-up · 1',{exact:true}).count(),1);
   assert.equal(await page.getByText(/financial risk|budget risk/i).count(),0,'no inferred financial-risk cue is shown');
   assert.equal(await page.getByText('Contacted date',{exact:true}).count(),2);
   assert.equal(await page.getByText('Last message sent by',{exact:true}).count(),2);
   assert.equal(await page.getByText('Last message date',{exact:true}).count(),2);
+  assert.equal(await page.getByLabel('Leads per page').inputValue(),'10');
+  const leadPageSizeRequest=page.waitForRequest(request=>{try{return request.url().includes('/api/db/leads')&&new URL(request.url()).searchParams.get('limit')==='20'}catch{return false}});
+  await page.getByLabel('Leads per page').selectOption('20');
+  await leadPageSizeRequest;
   assert.equal(await activeFollowupSummary.locator('b').textContent(),'40');
   await activeFollowupSummary.click();
-  await page.getByText('Lead status · New',{exact:true}).waitFor();
+  await page.locator('.lead-card-status-panel').filter({hasText:'New'}).waitFor();
 
   const sortRequest=page.waitForRequest(request=>{
    try{return request.url().includes('/api/db/leads')&&new URL(request.url()).searchParams.get('lead_sort')==='customer_waiting'}catch{return false}
@@ -184,6 +190,10 @@ test('production CRM browser journey uses only live-record surfaces',async()=>{
   assert.equal(new URL(page.url()).pathname,'/leads/LIVE-1/requirements');
   await page.getByText('Editable normalized requirement profile.',{exact:false}).waitFor();
   assert.equal(await page.locator('.requirements-table').count(),1);
+  assert.equal(await page.getByLabel('Requirements per page').inputValue(),'10');
+  assert.equal(await page.locator('.requirements-table tbody tr').count(),10);
+  await page.getByRole('button',{name:'Next',exact:true}).last().click();
+  assert.equal(await page.locator('.requirements-table tbody tr').count(),6);
 
   await page.getByRole('tab',{name:'Activity & History',exact:true}).click();
   assert.equal(new URL(page.url()).pathname,'/leads/LIVE-1/activity-history');
@@ -240,14 +250,14 @@ test('production CRM browser journey uses only live-record surfaces',async()=>{
   assert.ok(toolbarBox&&toolbarBox.width<=390,'lead controls fit the mobile viewport');
   const sortBox=await page.getByLabel('Sort leads').boundingBox();
   assert.ok(sortBox&&sortBox.width>0&&sortBox.width<=195,'sort control stays within its mobile column');
-  const activity=await page.locator('.lead-card-activity').boundingBox();
+  const activity=await page.locator('.lead-card-activity').first().boundingBox();
   assert.ok(activity&&activity.width<=390,'lead activity columns fit the mobile card');
   assert.equal(await page.getByLabel('Sort leads').locator('option').count(),5,'all lead sort modes remain available on mobile');
   await page.getByRole('button',{name:'Leads Inbox',exact:true}).click();
-  await page.getByText('Classification',{exact:true}).waitFor();
-  const identityBox=await page.locator('.lead-card-identity').boundingBox();
-  const classificationBox=await page.locator('.lead-card-classification').boundingBox();
-  assert.ok(identityBox&&classificationBox&&classificationBox.y>=identityBox.y+identityBox.height+6,'classification remains separate from lead identity on mobile');
+  await page.locator('.lead-card-status-panel').first().waitFor();
+  const identityBox=await page.locator('.lead-card-identity').first().boundingBox();
+  const statusBox=await page.locator('.lead-card-status-panel').first().boundingBox();
+  assert.ok(identityBox&&statusBox&&statusBox.y>=identityBox.y+identityBox.height+6,'lead status remains separated from lead identity on mobile');
   assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=document.documentElement.clientWidth),'lead cards do not create horizontal page overflow at 390px');
 
  }finally{await browser?.close();server.kill()}

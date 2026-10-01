@@ -372,3 +372,14 @@ Local verification for this checkpoint: npm run build PASS; npm test 79/79 PASS;
 ## 2026-10-02 final branch synchronization
 
 `main` and `crm-ui-dashboard` now point to the same commit and identical repository tree. Current synchronized commit: `ca396f09fbb12c6871a36c1ab4436390338c6f74`. The dashboard branch was fast-forwarded to the reconciled main commit; no force-push or history rewrite was used.
+
+
+## 2026-10-02 — Lead status + pagination production checkpoint
+
+The CRM UI feedback implementation is now verified on `crm-ui-dashboard` and deployed from that branch.
+
+Implemented: Lead cards present Lead Status instead of Classification, existing status colors are retained, card borders/separation are more visible, and compact 10/20/30 pagination is standardized across Leads, Inventory, Dashboard follow-ups, and Lead Workspace Requirements. Inventory pagination includes stale-response protection for rapid page-size/page changes.
+
+Evidence for the final implementation commit `a2a9598967153047919a84a53763656a4a8d1a71`: `npm run build` PASS; `npm test` 87/87 PASS; `npm run test:browser` 1/1 PASS; `git diff --check` PASS.
+
+Render: service `srv-darsv560tbcc73cu4ip0` / `easyfind-crm-d01-d05`; deployment `dep-davdufhh83ns73c0bd00` is LIVE for commit `a2a9598967153047919a84a53763656a4a8d1a71`. Live `/health` returned HTTP 200 and `{"ok":true}`. No webhook, Supabase schema, or production ingestion path was changed by this UI work.

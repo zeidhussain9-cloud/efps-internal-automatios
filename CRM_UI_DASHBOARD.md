@@ -281,3 +281,21 @@ The Leads Inbox now uses separated production cards with deliberate vertical rhy
 The Lead Workspace no longer renders the one-time bulk-import Priority field. `crm_leads.priority` remains stored for compatibility but is not presented as an operator-facing UI section.
 
 Global Audit Activity and Lead Workspace Activity & History now use the same production date-range control: a single labelled Date range dropdown with All activity, Today, Last 7 days, Last 30 days, This month, Previous month and Custom range. Custom range reveals From/To date fields only when selected. This replaces the previous row of ad-hoc action buttons and gives both audit scopes the same interaction model.
+
+
+## 2026-10-02 — Lead status and standardized list pagination
+
+Implemented and verified on `crm-ui-dashboard`:
+
+- Lead cards no longer display the Classification block; the prominent card block now displays the authoritative Lead Status while retaining the existing status color semantics.
+- Lead cards have stronger borders and deliberate card-to-card separation without increasing visual weight excessively.
+- Leads Inbox supports compact 10 / 20 / 30 page-size selection beside sorting, with server-side pagination and preserved search/filter/sort behavior.
+- Inventory supports the same compact 10 / 20 / 30 page-size control beside inventory sorting; pagination remains server-side and the previous bottom-only interaction is superseded by the list-control pattern.
+- Dashboard open follow-ups now use server-side pagination with the same compact 10 / 20 / 30 page-size pattern.
+- Lead Workspace Requirements uses compact pagination for the repeatable requirement-field list; the authoritative requirement values remain unchanged and editable.
+- Inventory pagination responses are guarded against stale responses during rapid page-size/page changes.
+- Browser regression coverage was updated for lead-status presentation, pagination page sizes, inventory paging, Requirements paging, and mobile layout.
+
+Verification on the final branch commit: `npm run build` PASS; `npm test` 87/87 PASS; `npm run test:browser` 1/1 PASS; `git diff --check` PASS.
+
+Render service `easyfind-crm-d01-d05` deployed commit `a2a9598967153047919a84a53763656a4a8d1a71` as deployment `dep-davdufhh83ns73c0bd00`; deployment status is LIVE and `GET /health` returns HTTP 200 with `{"ok":true}`. The production bundle contains the new pagination and Lead Status UI strings.

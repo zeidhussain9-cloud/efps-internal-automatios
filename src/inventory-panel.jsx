@@ -36,7 +36,7 @@ function PropertyMedia({property}){
  </div>
 }
 
-export default function InventoryPanel({data,state,refresh,query,setQuery,sort,setSort,filters,setFilters,offset,setOffset}){
+export default function InventoryPanel({data,state,refresh,query,setQuery,sort,setSort,filters,setFilters,offset,setOffset,pageSize,setPageSize}){
  const [selected,setSelected]=useState(null);
  const rows=data?.rows||[];
  const {status='All',bhk='All',locality='All',withPhotos=null}=filters||{};
@@ -47,7 +47,7 @@ export default function InventoryPanel({data,state,refresh,query,setQuery,sort,s
  const localities=facets.localities||[];
  const bhks=facets.bhks||[];
  const total=Number(data?.total)||0;
- const pageLimit=Number(data?.limit)||INVENTORY_PAGE_SIZE;
+ const pageLimit=Number(pageSize)||Number(data?.limit)||INVENTORY_PAGE_SIZE;
  const available=Number(summary?.available)||0;
  const rented=Number(summary?.rented)||0;
  const withImages=Number(summary?.withPhotos)||0;
@@ -82,6 +82,7 @@ export default function InventoryPanel({data,state,refresh,query,setQuery,sort,s
      <label>BHK<select value={bhk} onChange={e=>setFilter('bhk',e.target.value)}><option>All</option>{bhks.map(v=><option key={v}>{v}</option>)}</select></label>
      <label>Locality<select value={locality} onChange={e=>setFilter('locality',e.target.value)}><option>All</option>{localities.map(v=><option key={v}>{v}</option>)}</select></label>
     <label>Sort inventory<select value={normalizeInventorySort(sort)} onChange={e=>setSort(normalizeInventorySort(e.target.value))}>{INVENTORY_SORT_OPTIONS.map(([value,label])=><option key={value} value={value}>{label}</option>)}</select></label>
+     <label className="list-page-size">Show <select value={pageLimit} onChange={e=>setPageSize(Number(e.target.value))} aria-label="Inventory per page">{[10,20,30].map(size=><option key={size} value={size}>{size}</option>)}</select></label>
    </div>
     {activeFilters&&<div className="inventory-filter-summary"><span>Filtered view · {total} properties</span><button type="button" onClick={resetFilters}>Clear filters</button></div>}
     <div className="inventory-results"><strong>{total} properties</strong><span>Sorted by {inventorySortLabel(sort)}</span></div>
