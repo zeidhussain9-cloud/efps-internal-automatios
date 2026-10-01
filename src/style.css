@@ -684,3 +684,17 @@ button:disabled{opacity:.45;cursor:not-allowed}
 }
 
 .lead-card-classification-qualified{background:#edf6ee;border-color:#d9e9db;border-left-color:#88aa8e;color:#4d7252}.lead-card-classification-qualified strong{color:#4d7252}.lead-card-classification-cold{background:#f1f4f7;border-color:#dce3e8;border-left-color:#9aaab5;color:#657681}.lead-card-classification-cold strong{color:#596b76}
+
+/* Compact list pagination and lead-card separation */
+.list-page-size{display:flex;align-items:center;gap:6px!important;white-space:nowrap}
+.list-page-size select,.list-pagination-compact select{border:1px solid #d5e0e8;border-radius:7px;background:#fff;color:#31536b;padding:6px 8px;font-size:11px;min-width:52px}
+.list-pagination-compact{display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap;margin-top:10px;padding:8px 0;color:#718497;font-size:11px}
+.list-pagination-compact button{border:1px solid #d9e3eb;border-radius:7px;background:#fff;color:#315d7e;padding:6px 9px;font-size:11px}
+.list-pagination-compact button:disabled{opacity:.45}
+.lead-card{border:1px solid #d6e1e9;border-radius:13px;margin:10px 10px 0;width:calc(100% - 20px);box-shadow:0 1px 3px #17365508}
+.lead-card-status-panel{display:flex;align-items:baseline;gap:10px;max-width:100%;margin-top:11px;padding:9px 11px;border:1px solid #dce9ed;border-left:3px solid #8baeb9;border-radius:8px;background:#f1f7f7}
+.lead-card-status-panel small{flex:0 0 auto;color:#6f8991;font-size:9px;font-weight:750;letter-spacing:.07em;text-transform:uppercase}
+.lead-card-status-panel strong{min-width:0;color:#315f6b;font-size:13px;line-height:1.35;font-weight:750;overflow-wrap:anywhere}
+.lead-card-meta-minimal{margin-bottom:2px}
+.requirements-pagination{justify-content:flex-start;border-top:1px solid #edf1f5;margin-top:10px;padding-top:10px}
+@media(max-width:600px){.lead-card{margin:8px 5px 0;width:calc(100% - 10px);padding:15px 17px}.lead-card-status-panel{align-items:flex-start;flex-direction:column;gap:3px;margin-top:10px;padding:8px 10px}.list-pagination-compact{font-size:10px}.list-page-size{font-size:10px}}
