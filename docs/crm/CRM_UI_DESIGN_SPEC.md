@@ -335,3 +335,5 @@ The UI implementation corresponding to this specification is production-live on 
 - Conversation property boundaries are evidence-based. A stored supported property URL creates a property-reference section; only messages explicitly replying to that source-message ID are grouped into it. Other messages remain in General conversation rather than being inferred into a property.
 - Dashboard inventory KPI is Total available inventory, sourced from crm_inventory_snapshot rows with listing_state='Available' and deleted_at IS NULL.
 - Global Activity is CRM-wide and reads all crm_activity events, including lead-scoped events. Lead Workspace Activity & History reads the same event table with lead_id scoping. Both support date ranges and pagination.
+
+- Audit rows display a presentation-only event category derived from the persisted action so operators can distinguish Lead, Message, Classification, Requirements, AI, Follow-up, Inventory, Webhook and System/Operator activity without changing stored event semantics.

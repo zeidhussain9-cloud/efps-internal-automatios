@@ -167,6 +167,7 @@ test('production CRM browser journey uses only live-record surfaces',async()=>{
   await page.getByRole('button',{name:'Activity',exact:true}).click();
   await page.getByText('All CRM activity across leads',{exact:false}).waitFor();
   await page.getByText('lead.updated',{exact:true}).waitFor();
+  await page.getByText('Lead',{exact:true}).last().waitFor();
 
 
   // Exercise the compact/tablet viewport used by mobile browsers that expose a wider layout viewport.

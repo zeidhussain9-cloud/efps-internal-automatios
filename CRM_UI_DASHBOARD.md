@@ -242,3 +242,7 @@ Conversation property grouping is evidence-based: explicit property URLs from su
 Audit Activity is now CRM-wide: it reads all `crm_activity` rows rather than only rows with `lead_id IS NULL`, supports date ranges and pagination, and displays the lead ID when an event is lead-scoped. Lead Workspace Activity & History uses the same `crm_activity` table with a `lead_id` filter, so the two views differ by scope rather than by event storage. Date filters support all activity, this month, previous month, last 30 days and custom ranges.
 
 These changes are locally verified on `crm-ui-dashboard` with the repository test suite and browser regression before deployment.
+
+## 2026-10-02 — Audit event categories
+
+Global and lead-scoped audit rows now display a derived category label (Lead, Message, Classification, Requirements, AI, Follow-up, Inventory, Webhook, or System / Operator) alongside the persisted action. The category is presentation-only and does not alter the underlying audit record.
