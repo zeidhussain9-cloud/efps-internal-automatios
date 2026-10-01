@@ -18,7 +18,7 @@ Evidence snapshot after final verification:
 - AI/drafts: 196/196 draft→AI-run lead mappings valid; stale evidence references = 0; invalid cursor lead links = 0
 - Inventory: 88 active rows; 71 Available; 17 Rented Out; invalid media-array rows = 0
 - Cloudinary: 829/829 distinct production URLs returned HTTP 200 with image/* content-type using direct HEAD checks from the production-machine network path
-- Tests: npm run build PASS; npm test 76/76 PASS; npm run test:browser 1/1 PASS
+- Tests: npm run build PASS; npm test 78/78 PASS; npm run test:browser 1/1 PASS
 - Supabase Edge Function whapi-crm-webhook: ACTIVE version 8
 - Legacy AWS webhook/handler files: no changes in the CRM hardening commit range
 - 24-item audit status: GREEN / VERIFIED
@@ -77,7 +77,7 @@ This is the latest repository/production checkpoint. Older dated sections in mai
 - **Inventory:** 88 active rows = 71 Available + 17 Rented Out; 1,377 sync runs; latest sync recorded 88 rows / 0 changed / 0 removed; inventory-change rows = 0.
 - **Cloudinary:** 829/829 distinct production URLs returned HTTP 200 with `image/*` content-type by direct HEAD checks from the production-machine network path.
 - **AI integrity:** draft→AI-run lead mismatch = 0; stale evidence references = 0; invalid cursor lead links = 0.
-- **Tests:** `npm run build` PASS; `npm test` 76/76 PASS; `npm run test:browser` 1/1 PASS.
+- **Tests:** `npm run build` PASS; `npm test` 78/78 PASS; `npm run test:browser` 1/1 PASS.
 - **Supabase Edge Function:** `whapi-crm-webhook` ACTIVE v8.
 - **AWS legacy webhook:** no changes in the audited CRM hardening range.
 - **24-item CRM audit:** GREEN / VERIFIED.
@@ -111,7 +111,7 @@ Housing_Listings A:AV
 
 ### Test-history checkpoint
 
-The P1–P5 hardening release added regression coverage for webhook promotion linkage, reserved AU/AV exclusion, and disposable inventory create/edit/delete history. The final repository verification was 71/71 automated tests, browser 1/1, and production build PASS. Historical earlier test counts in dated handoff/audit sections are retained as historical checkpoints.
+The P1–P5 hardening release added regression coverage for webhook promotion linkage, reserved AU/AV exclusion, and disposable inventory create/edit/delete history. The final repository verification was 78/78 automated tests, browser 1/1, and production build PASS. Historical earlier test counts in dated handoff/audit sections are retained as historical checkpoints.
 
 
 
@@ -245,6 +245,6 @@ The earlier Cloudinary/idempotency/deployment/tree reconciliation pointers are s
 - Webhook: 456/456 processed, zero pending/failed, zero duplicate provider IDs/fingerprints; authenticated replay returned already_processed with no row-count change.
 - Cloudinary: 829/829 distinct URLs returned successful fl_getinfo metadata; zero timeouts/failures.
 - Production: Render commit 1c196577fc414be52c8fc889b3886f11e0e9da5d, deployment dep-dav82h3m8hqs7399j4ug, live; health HTTP 200.
-- Tests: build PASS; 76/76 tests PASS; browser 1/1 PASS.
+- Tests: build PASS; 78/78 tests PASS; browser 1/1 PASS.
 - Trees: origin/main tree == origin/crm-ui-dashboard tree == 375a701d907830a04ddd5f6d517f982ea729ed68.
 - 24/24 CRM audit items: GREEN.
