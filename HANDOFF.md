@@ -1,33 +1,37 @@
 
 
-## Authoritative current closure — 2026-10-01
+## Authoritative current verified state — 2026-10-01 21:55 IST
 
-Evidence snapshot after final verification:
-- crm-ui-dashboard commit: 252dad9e029d9c3d3ee8bd93be20c171f4099602
-- crm-ui-dashboard tree: 375a701d907830a04ddd5f6d517f982ea729ed68
-- main reconciliation commit: 918a9b9d1f010c144b400b01d23bad26ee061fb9
-- main tree: 375a701d907830a04ddd5f6d517f982ea729ed68
-- tree(main) == tree(crm-ui-dashboard): TRUE
-- Render deployment: dep-dav71e0473hc73ahrnm0, status LIVE, commit 252dad9
-- Production health: GET /health = HTTP 200, {"ok":true}
-- Supabase: 186 leads, 6,870 messages, 465 webhook events, 310 classifications, 186 requirements, 196 AI runs, 196 drafts, 186 cursors, 88 active inventory rows
-- Webhook events: 465/465 processed; 0 received; 0 processing; 0 failed
-- Message reconciliation: 6,870 total = 4,806 lead-linked + 2,064 classified non-lead; unreconciled = 0
-- Historical classification population: 228/228 source="historical_extract"; 140/140 qualified mappings resolve to promoted leads
-- Requirements: 186/186 lead rows have requirement rows; orphan/missing = 0
-- AI/drafts: 196/196 draft→AI-run lead mappings valid; stale evidence references = 0; invalid cursor lead links = 0
-- Inventory: 88 active rows; 71 Available; 17 Rented Out; invalid media-array rows = 0
-- Cloudinary: 829/829 distinct production URLs returned HTTP 200 with image/* content-type using direct HEAD checks from the production-machine network path
-- Tests: npm run build PASS; npm test 76/76 PASS; npm run test:browser 1/1 PASS
-- Supabase Edge Function whapi-crm-webhook: ACTIVE version 8
-- Legacy AWS webhook/handler files: no changes in the CRM hardening commit range
-- 24-item audit status: GREEN / VERIFIED
+This is the latest repository/production checkpoint. Older dated sections in maintained documents are historical evidence and must not be interpreted as current state.
 
-Historical dated checkpoints below remain historical evidence; this block is the current source of truth.
+- **CRM deployment branch:** `crm-ui-dashboard`
+- **CRM commit:** `1c196577fc414be52c8fc889b3886f11e0e9da5d`
+- **CRM tree:** `908b635b2b7b04bdf3515934de2769393e282c34`
+- **main:** `b2fbf366021852aedd4bf0ec66484ad421fb5662`
+- **main tree:** `908b635b2b7b04bdf3515934de2769393e282c34`
+- **Tree equality:** `tree(main) == tree(crm-ui-dashboard)` = **TRUE**
+- **Render:** `easyfind-crm-d01-d05` / `srv-darsv560tbcc73cu4ip0`
+- **Live Render deployment:** `dep-dav82h3m8hqs7399j4ug` = **LIVE**
+- **Live Render commit:** `1c196577fc414be52c8fc889b3886f11e0e9da5d`
+- **Production health:** `GET /health` = HTTP 200, `{"ok":true}`
+- **Production WhatsApp source:** `+919148338801`
+- **Supabase:** 186 leads; 6,870 messages; 465 webhook events; 310 classifications; 186 requirements; 196 AI runs; 196 drafts; 186 AI cursors; 88 active inventory rows.
+- **Classification status:** 186 promoted; 88 classified; 23 pending; 13 excluded = 310 total.
+- **Webhook status:** 465 processed; 0 received; 0 processing; 0 failed.
+- **Message reconciliation:** 6,870 total = 4,806 lead-linked + 2,064 classified non-lead; unreconciled = 0.
+- **Historical classification population:** 228 historical records; 140 qualified mappings.
+- **Inventory:** 88 active rows = 71 Available + 17 Rented Out; 1,377 sync runs; latest sync recorded 88 rows / 0 changed / 0 removed; inventory-change rows = 0.
+- **Cloudinary:** 829/829 distinct production URLs returned HTTP 200 with `image/*` content-type by direct HEAD checks from the production-machine network path.
+- **AI integrity:** draft→AI-run lead mismatch = 0; stale evidence references = 0; invalid cursor lead links = 0.
+- **Tests:** `npm run build` PASS; `npm test` 76/76 PASS; `npm run test:browser` 1/1 PASS.
+- **Supabase Edge Function:** `whapi-crm-webhook` ACTIVE v8.
+- **AWS legacy webhook:** no changes in the audited CRM hardening range.
+- **24-item CRM audit:** GREEN / VERIFIED.
+
 
 # Current verified handoff — 2026-10-01
 
-> **Authoritative audit update:** `docs/audits/CRM_FULL_AUDIT_2026-10-01.md` supersedes the earlier checkpoint numbers below. Current evidence: 186 leads, 6,859 messages, 454 webhook events, 309 classifications, 196 AI runs, 196 drafts, 186 AI cursors, and 88 active inventory rows. Local validation is **76/76** automated tests and **1/1** browser regression. Cloudinary audit is not fully green: 719 completed image responses, 110 timeouts, 1 non-image response across 829 distinct URLs.
+> Historical checkpoint: the earlier audit snapshot is retained below for evidence. The authoritative current state is the 2026-10-01 21:55 IST checkpoint at the top of this file.
 
 ## Unreleased Inventory/UI hardening in crm-ui-dashboard
 
@@ -42,7 +46,7 @@ Validation: npm run build PASS; npm test PASS (74/74); npm run test:browser PASS
 
 ## Previous release metadata
 
-**Canonical branch:** `crm-ui-dashboard`**Commit:** `da13083f6cb1f3c78ec3f4df661c515d43f556fa`**Tree:** `f36a5ccb4bae742e83603b09bee59d01595ecf00`**Main reconciliation:** `692bdcbbab51752b8eb7d4927921d1cfc4830de7`, identical tree.**Render:** `easyfind-crm-d01-d05`, deployment `dep-dav55km0tbcc73eelat0`, **live**.**Production source:** `+919148338801`.**Current Supabase:** 186 leads; 309 classifications (20 pending, 186 promoted); 6,853 messages; 436 webhook events (436 processed, 0 received, 0 processing, 0 failed); 196 AI runs; 196 drafts; 186 AI cursors; 88 active inventory rows; 1,333 inventory sync records.**Schedulers:** webhook reconciliation every minute; inventory reconciliation every five minutes; both active.**Tests:** build PASS; 71/71 automated tests PASS; browser 1/1 PASS.**P1–P5:** closed and production-verified; see `docs/audits/PRODUCTION_LIVE_WEBHOOK_AND_INVENTORY_AUDIT_2026-10-01.md` and `docs/crm/CRM_CURRENT_VERIFIED_STATE.md`.
+Historical release metadata is retained below; see the authoritative current-state block above.
 
 Historical dated sections below remain evidence snapshots and must not be interpreted as the current checkpoint.
 
@@ -55,7 +59,7 @@ Historical checkpoint retained below.
 
 ## Current production checkpoint — 2026-10-01
 
-Render `easyfind-crm-d01-d05` is live from the synchronized `crm-ui-dashboard` release. Supabase source `+919148338801` currently has 186 leads, 309 classifications, 20 pending classifications, 186 promoted classifications, 6,853 messages, and 436 webhook events, all 436 processed with 0 received, 0 processing, and 0 failed.
+Historical production checkpoint retained below; see the authoritative current-state block above.
 
 The Leads Inbox card surface is simplified to lead status + source number. The inbox header exposes live clickable counts for all lead statuses and clicking a status applies the server-side filter. AI draft runs persist provider usage metrics (input/output/total tokens and estimated USD cost where pricing is known) alongside model/provider provenance. Complete conversation history remains authoritative; incremental/delta analysis is intentionally not implemented.
 
@@ -268,14 +272,14 @@ The approved six AI improvements are implemented: stale-draft detection; provena
 
 ## 2026-10-01 — Final verified checkpoint after AI hardening
 
-- `crm-ui-dashboard` final verified commit: `da13083f6cb1f3c78ec3f4df661c515d43f556fa`.
+- Historical release metadata; see the authoritative current-state block at the top of this file.
 - `crm-ui-dashboard` final tree: `7bce9e42ccd4efa9d14d85bbba8767961943aab0`.
 - Render service `srv-darsv560tbcc73cu4ip0` is live from that commit; deployment `dep-dautgos9v7es73bnc44g` reached `live` and startup/database connectivity were verified.
-- `main` final reconciliation commit: `692bdcbbab51752b8eb7d4927921d1cfc4830de7`.
+- Historical reconciliation metadata; current main is b2fbf366021852aedd4bf0ec66484ad421fb5662.
 - `main` tree equals `crm-ui-dashboard` tree: `7bce9e42ccd4efa9d14d85bbba8767961943aab0`.
 - Local `crm-ui-dashboard` checkout equals `origin/crm-ui-dashboard` at `c19e36c...` and is clean.
 - Production migration 17 is applied. Current database counts: 3 AI runs (2 Ollama, 1 Bedrock), 3 drafts, all 3 with source evidence; no `confirmed_sent` outcomes yet.
-- Automated verification: `npm run build` passes; `npm test` passes 71/71; `npm run test:browser` passes 1/1.
+- Historical test checkpoint; current verification is build PASS, 76/76 automated tests, browser 1/1.
 - GitHub combined-status API currently reports no status contexts for the final CRM/main commits; repository verification therefore relies on the local test suite, Git tree equality, Render deployment logs, health endpoint, and Supabase migration/data verification.
 
 ## 2026-10-01 — Bedrock SDK security update
@@ -284,4 +288,4 @@ Render's build surfaced dependency advisories through the newly added AWS Bedroc
 
 ## Final 24-item CRM closure — 2026-10-01
 
-The previous Cloudinary timeout and final deployment/tree items are closed. Evidence: 829/829 distinct Cloudinary URLs returned successful fl_getinfo metadata with zero timeouts; authenticated production replay of webhook event 5912 returned already_processed with no count change; Render deployment dep-dav71e0473hc73ahrnm0 for 252dad9e029d9c3d3ee8bd93be20c171f4099602 is live; /health is HTTP 200; build is PASS; tests are 76/76; browser is 1/1; remote main/crm-ui-dashboard trees are identical. Current DB has 186 leads, 6,861 messages, 309 classifications, 196 AI runs/drafts, 456 processed webhook events, and 88 active inventory rows. 24/24 audit items GREEN.
+Final current-state evidence is maintained in the authoritative block at the top of this file; current Cloudinary result is 829/829 successful direct HEAD checks.
