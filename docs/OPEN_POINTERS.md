@@ -1,17 +1,18 @@
 ## Current production closure — 2026-10-01
 
-Verified after the automatic webhook reconciliation hardening:
+Verified in the 2026-10-01 production-live audit:
 
-- Render service: `easyfind-crm-d01-d05` (`srv-darsv560tbcc73cu4ip0`), branch `crm-ui-dashboard`.
-- Current deploy: `dep-daumf68473hc739qdkd0`, commit `56e8f17216102fadc801a6f84470783160ca38dc`.
 - Production source: `+919148338801`; `+917975102130` and `+919902024973` remain UI-visible but inactive.
-- Current CRM state: 185 leads, 288 classifications, 13 pending, 2 explicitly unqualified, 185 promoted, 6,620 messages.
-- Webhook state: 72 persisted events, 72 processed, 0 received, 0 failed.
-- Automatic reconciliation is now a production database job: `crm_webhook_reconcile_1m`, every minute, calling `crm_reconcile_received_webhooks()`. A live cron execution succeeded and processed an event.
-- Manual webhook reconciliation is no longer an operating requirement.
-- The three Contact Classification queues are implemented: Not pushed to CRM, Qualified lead pushed to CRM, and Unqualified leads.
-- Independent backup/restore remains the only item requiring external provisioning/approval; the repository's encrypted backup and approval-gated restore tooling is already implemented.
+- Webhook state: **419** persisted `crm_webhook_events`, **419 processed**, **0 received**, **0 processing**, **0 failed**.
+- Live customer-number reconciliation: **27** distinct phones, **27/27** classified, **0** duplicate classification-per-phone groups, **0** phones mapped to multiple promoted leads.
+- Lead/message integrity: **0** promoted messages missing their lead; **0** source/provider/message-ID reconciliation mismatches; **0** duplicate provider-event or source-message-ID groups.
+- A known historical denormalization remains: **13** pre-promotion webhook rows retain `crm_webhook_events.lead_id=NULL` while their preserved `crm_messages.lead_id` is now correct.
+- Housing inventory: **88** active listing IDs in the live `Housing_Listings` Sheet and **88** active CRM inventory rows. The live Sheet A:AT operational hash aggregate exactly matches the active Supabase inventory hash aggregate.
+- Inventory cron: **1,333/1,333** executions succeeded, **0 failed** through `2026-10-01 11:55:00 UTC`; latest live reconciliation returned **88 rows / 0 changed / 0 removed**.
+- Current live Sheet observation: AU `source_group` is blank on all active rows; AV `inventory_locked` contains `Yes` on **43/88** active rows. AV is reserved outside the CRM A:AT mirror and its ownership/cleanup remains unresolved.
+- Historical inventory sync records capture row counts/hashes but not prior field-level versions, so exact past Sheet edits cannot be reconstructed retrospectively.
 
+The full evidence is recorded in `docs/audits/PRODUCTION_LIVE_WEBHOOK_AND_INVENTORY_AUDIT_2026-10-01.md`.
 
 # Open Pointers
 
@@ -22,7 +23,7 @@ Webhook reconciliation is now automatic via the production cron job. The 72-even
 ## Deferred external/runtime verification
 
 - Slack app installation, bot membership, command registration, endpoint deployment, signature verification in the target runtime, and live API probe.
-- Exact `inventory_locked` live Sheet control vocabulary.
+- `inventory_locked` live Sheet vocabulary is now verified as blank or `Yes`; 43 of 88 active rows currently contain `Yes`. Ownership/cleanup remains unresolved.
 - Google Maps network resolution after deterministic URL extraction.
 - WhAPI live transport verification, including whether the observed diagnostic-required `User-Agent: EFPS-Inventory-1.0` should become part of the canonical client transport contract.
 - Production deployment identity, final endpoint URLs, Lambda environment/secret injection, and DynamoDB `efps-sessions` availability for the Stage-1 runtime adapter.

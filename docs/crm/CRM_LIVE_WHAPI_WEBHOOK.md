@@ -1,3 +1,19 @@
+# Current production audit — 2026-10-01
+
+This addendum supersedes older numeric checkpoints in this document for current operational state.
+
+- Audit window: first persisted production event **2026-09-30 15:51:11.11684 UTC** through **2026-10-01 11:42:45.50938 UTC** for source `+919148338801`.
+- `crm_webhook_events`: **419** persisted events; **419 processed**, **0 received**, **0 processing**, **0 failed**.
+- **288** persisted events contain a normalized personal phone and all **288** link to a `crm_messages` row.
+- **27** distinct live customer phones were observed; **27/27** have a classification record; 23 classifications were first seen during this live window and 4 pre-existed.
+- No duplicate classification rows per source+phone, no phones mapped to multiple promoted leads, no live phones with duplicate CRM leads, and no promoted message is missing its lead.
+- Provider/event integrity checks found **0** duplicate event-fingerprint groups, **0** duplicate provider-event-ID groups, and **0** duplicate source-message-ID groups.
+- **131** outgoing phone-null events have WhatsApp group JIDs (`@g.us`) and no personal JIDs; these are correctly outside personal lead reconciliation.
+- **13** historical webhook rows retain `crm_webhook_events.lead_id=NULL` even though their preserved `crm_messages.lead_id` is now populated. These are pre-promotion events; the promotion transaction backfills messages but does not backfill the original event row. This is a denormalization gap, not a message/lead routing failure.
+- The active Supabase Edge Function is `whapi-crm-webhook`, version **6**.
+
+For the full evidence set, see `docs/audits/PRODUCTION_LIVE_WEBHOOK_AND_INVENTORY_AUDIT_2026-10-01.md`.
+
 ## Current production audit — 2026-10-01 (post-reconciliation)
 
 Verified live state: Render `easyfind-crm-d01-d05` / `srv-darsv560tbcc73cu4ip0`, branch `crm-ui-dashboard`, deploy `dep-dauq8hg473hc739ve530`, commit `d28046266239cd889ad14f87a61a92742383305e`. Supabase source `+919148338801`: 186 source-linked leads, 289 classifications, 2 pending, 186 promoted, and 6,621 CRM messages. All 73 webhook events are processed; 0 remain `received`; 0 failed. Automatic reconciliation is active. Browser Realtime is notification-only and CSP allows the exact Supabase HTTPS/WSS origin. RLS is enabled on all CRM tables and `anon`/`authenticated` have no SELECT privilege.
