@@ -130,3 +130,16 @@ See `docs/crm/CRM_LIVE_WHAPI_WEBHOOK.md` for the complete live architecture, eve
 ## Classification write fix — 2026-09-30
 
 A single operator test on contact `+919216063368` produced the definitive Render diagnostic: PostgreSQL `42P18`, `could not determine data type of parameter $5`, at the `insert lead` stage. The failing parameter was the source number passed into `jsonb_build_object()` during new-lead creation. The consolidated fix explicitly casts that parameter to `text`. Local build and the full 62-test suite passed before deployment. Render deployment `dep-daum4rtg1s2s73cntsv0` is live from commit `45dbab7b1ba92387e5e001f74929ad40c92be6a9`. The subsequent operator retry succeeded.
+
+## 2026-10-02 — Final recovered-candidate audit record
+
+- Candidate branch: `crm-ui-feedback-polish-2026-10-02`
+- Candidate HEAD: `1241b062dfbc7a96b139ec0a7f68d68f43baab51e`
+- Production/dashboard baseline: `97b43a7d158eb8b3cd773ed3febb45c4f8a52540`
+- Pull request: #60 — CRM UI feedback polish
+- Replit-only workspace artifacts removed before promotion.
+- Production dependency manifest and lockfile restored to the verified baseline.
+- Recovered implementation includes classification visibility/tone, overdue follow-up attention, inventory filtering/sorting/pagination, stale-response guards, classification pagination reset, and browser/server regression coverage.
+- No production merge, Render deployment, database mutation, schema migration, or webhook/integration change has been performed from this candidate.
+- Automated build/test evidence for this exact candidate is still pending; do not mark the candidate production-verified until `npm run build`, `npm test`, and `npm run test:browser` are observed passing.
+- `main` and `crm-ui-dashboard` remain unchanged from the verified production baseline until that evidence gate is satisfied.
