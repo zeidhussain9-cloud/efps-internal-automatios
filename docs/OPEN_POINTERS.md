@@ -1,3 +1,20 @@
+## Authoritative unified AI verification — 2026-10-02
+
+This checkpoint supersedes older dated “current” or “authoritative” blocks below. Those older blocks remain historical evidence.
+
+- **Implementation branch:** `crm-ui-dashboard`
+- **Verified unified-AI persistence fix:** commit `8de4efcecd3a36db091ee1b199e285c6d4d01966`
+- **Production Render:** service `easyfind-crm-d01-d05` is live on deployment `dep-davk03rm8hqs73c4uij0` for the unified-AI branch.
+- **Automated verification:** GitHub Actions runs `36968795847` (CRM synthetic CI) and `36968795795` (CRM UI Verification) both completed successfully for commit `8de4efcecd3a36db091ee1b199e285c6d4d01966`.
+- **Scheduler:** Supabase job `crm_ai_scheduler_6h` is active on schedule `0 */6 * * *` and invokes `public.crm_invoke_ai_scheduler()` against the protected Render scheduler endpoint.
+- **Live scheduler proof:** run `24144acd-a9ed-4c7e-a6fc-c0350a4ad9e7` completed with 4 leads selected, 4 AI analyses completed, 0 AI failures.
+- **Live AI persistence:** current database has 200 AI runs total, including 4 scheduled runs from the verified cycle; all 4 scheduled runs persisted with no error code and 4 scheduled drafts were created.
+- **Traceability:** the 4 scheduled runs contain checkpoint message IDs and idempotency keys; duplicate scheduled idempotency keys = 0.
+- **Checkpointing:** the latest verified scheduler cycle advanced evaluation checkpoints for the selected leads only; failed AI attempts do not advance the checkpoint.
+- **Status safety:** model status recommendations remain evidence-backed and controlled by the deterministic/status-policy layer; high-consequence states are review-gated.
+- **Production boundary:** WhatsApp/WhAPI ingestion, reconciliation, Supabase persistence, classification/promotion, inventory sync, authentication, privacy, audit, archive/restore, and exports remain preserved.
+- **Repository reconciliation:** after documentation normalization, `main` must be reconciled to the verified CRM tree without rewriting or force-pushing `main`.
+
 ## Authoritative current repository state — 2026-10-02
 
 - **CRM implementation branch:** `crm-ui-dashboard`
