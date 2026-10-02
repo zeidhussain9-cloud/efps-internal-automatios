@@ -13,7 +13,7 @@ This checkpoint supersedes older dated “current” or “authoritative” bloc
 - **Checkpointing:** the latest verified scheduler cycle advanced evaluation checkpoints for the selected leads only; failed AI attempts do not advance the checkpoint.
 - **Status safety:** model status recommendations remain evidence-backed and controlled by the deterministic/status-policy layer; high-consequence states are review-gated.
 - **Production boundary:** WhatsApp/WhAPI ingestion, reconciliation, Supabase persistence, classification/promotion, inventory sync, authentication, privacy, audit, archive/restore, and exports remain preserved.
-- **Repository reconciliation:** after documentation normalization, `main` must be reconciled to the verified CRM tree without rewriting or force-pushing `main`.
+- **Repository reconciliation:** completed. `main` commit `0b7edf41ee007cbdc5292fe23cdb61ce74691e73` and `crm-ui-dashboard` currently share tree `1078aeaa3d296335fc43f3a01dfc3735e9bd5b2a`; no force-push or history rewrite was used.
 
 ## Authoritative current repository state — 2026-10-02
 
