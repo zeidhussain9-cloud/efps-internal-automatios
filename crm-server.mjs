@@ -4,7 +4,7 @@ import {readFile,stat} from 'node:fs/promises';
 import {join,extname,resolve} from 'node:path';
 import {authorized,accessMode} from './src/server-auth.mjs';
 import {getRequestPrincipal,loginWithPassword,revokeRequestSession,sessionCookie,clearSessionCookie,sameOrigin,sessionPolicy} from './src/server-session.mjs';
-import {analyzeRealLead} from './src/ollama-adapter.mjs';
+import {runLeadAnalysis,runAiSchedulerBatch} from './src/crm-ai-orchestrator.mjs';
 import {createCrmRepository} from './src/crm-repository.mjs';
 import {buildInventoryPage,INVENTORY_PAGE_SIZE,normalizeInventorySort} from './src/inventory-logic.mjs';
 import {imageUrls} from './src/crm-logic.mjs';
@@ -19,6 +19,20 @@ createServer(async(req,res)=>{
  try{
   const p=decodeURIComponent(new URL(req.url,'http://localhost').pathname);
   if(p==='/health'){res.writeHead(200,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify({ok:true}));}
+  if(p==='/api/internal/ai/scheduler'&&req.method==='POST'){
+   if(process.env.CRM_AI_SCHEDULER_ENABLED!=='true'||!process.env.CRM_AI_SCHEDULER_SECRET){res.writeHead(404,security);return res.end('AI scheduler disabled');}
+   const ts=String(req.headers['x-efps-cron-timestamp']||'');const provided=String(req.headers['x-efps-cron-signature']||'');
+   let body={};try{body=await readJsonBody(req,4096)}catch{res.writeHead(400,security);return res.end('Invalid scheduler request');}
+   if(body.invocation_source!=='scheduled_6h'||!Number.isInteger(Number(body.limit))||Number(body.limit)<1||Number(body.limit)>4){res.writeHead(400,security);return res.end('Invalid scheduler request');}
+   if(!/^\d+$/.test(ts)||Math.abs(Date.now()-Number(ts)*1000)>300000||!/^[a-f0-9]{64}$/i.test(provided)){res.writeHead(401,security);return res.end('Invalid scheduler authentication');}
+   const canonical=JSON.stringify({invocation_source:'scheduled_6h',limit:Number(body.limit)});const expected=createHmac('sha256',process.env.CRM_AI_SCHEDULER_SECRET).update(ts+'.'+canonical).digest('hex');
+   if(expected.length!==provided.length||!timingSafeEqual(Buffer.from(expected),Buffer.from(provided.toLowerCase()))){res.writeHead(401,security);return res.end('Invalid scheduler authentication');}
+   const repo=createCrmRepository();
+   try{const result=await repo.withAiSchedulerLock(()=>runAiSchedulerBatch({repo,limit:Number(body.limit),sourceNumber:'+919148338801',env:process.env}));if(result?.locked===false){res.writeHead(409,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify({ok:false,error:'AI scheduler already running'}));}const payload=result?.result||result;res.writeHead(200,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify({ok:true,...payload}));}
+   catch(e){res.writeHead(500,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify({ok:false,error:'AI scheduler failed'}));}
+   finally{await repo.close()}
+  }
+
   if(p==='/api/internal/inventory/sync'&&req.method==='POST'){
    if(process.env.CRM_INVENTORY_SYNC_ENABLED!=='true'||!process.env.CRM_INVENTORY_SYNC_SECRET){res.writeHead(404,security);return res.end('Inventory sync disabled');}
    const ts=String(req.headers['x-efps-inventory-timestamp']||'');const provided=String(req.headers['x-efps-inventory-signature']||'');
@@ -212,16 +226,15 @@ createServer(async(req,res)=>{
   if(p==='/api/ai/analyze-real'&&req.method==='POST'){
    if(mode!=='protected'||process.env.CRM_REAL_AI_ENABLED!=='true'||process.env.CRM_DB_WRITE_ENABLED!=='true'){res.writeHead(403,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify({error:'Real AI production mode is not enabled'}));}
    const repo=createCrmRepository();
-   try{
-    const body=await readJsonBody(req,8192);const id=String(body.leadId||'');const workspace=await repo.getLeadWorkspace(id);
-    if(!workspace.lead){res.writeHead(404,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify({error:'Lead not found'}));}
-    const result=await analyzeRealLead({lead:workspace.lead,requirements:workspace.requirement_profile,messages:workspace.messages,aiHistory:workspace.ai_runs,cursor:workspace.ai_cursor,evidence:workspace.requirement_evidence,env:process.env});
-    const run=await repo.saveAiRun({leadId:id,modelName:result.model,provider:result.provider,fallbackFrom:result.fallbackFrom||null,fallbackReason:result.fallbackReason||null,proposal:result.proposal,usage:result.usage||{}});await repo.appendActivity({leadId:id,actor:principal.user,action:'ai.run.created',details:{run_id:run.id,provider:run.provider,model_name:run.model_name,input_tokens:run.input_tokens,output_tokens:run.output_tokens,total_tokens:run.total_tokens}});
-    const last=workspace.messages.at(-1);if(last)await repo.setAiCursor({leadId:id,sourceNumber:workspace.sources[0]?.source_number||'+919148338801',lastMessageId:last.id,lastMessageAt:last.message_at});
-    const resolveMessageRef=ref=>{const key=String(ref??'').trim();if(!key)return null;const match=workspace.messages.find(m=>String(m.id)===key||String(m.source_message_id||m.provider_message_id||'')===key);return match?.id??null;};
-    let draft=null;if(typeof result.proposal.reply_draft==='string'&&result.proposal.reply_draft.trim()){const rawEvidence=[...(Array.isArray(result.proposal.evidence)?result.proposal.evidence.map(x=>x?.message_id):[]),...(Array.isArray(result.proposal.requirement_updates)?result.proposal.requirement_updates.flatMap(x=>Array.isArray(x?.source_message_ids)?x.source_message_ids:[]):[])];const evidenceIds=[...new Set(rawEvidence.map(resolveMessageRef).filter(Number.isInteger))];draft=await repo.saveDraft({leadId:id,body:result.proposal.reply_draft,actor:principal.user,aiRunId:run.id,aiProvider:result.provider,modelName:result.model,evidenceMessageIds:evidenceIds,evidenceSummary:Array.isArray(result.proposal.evidence)?result.proposal.evidence.map(x=>String(x?.body||'')).filter(Boolean).slice(0,3).join(' | '):''});}
-    res.writeHead(200,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify({...result,run,draft}));
-   }catch(e){res.writeHead(422,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify({error:e.message==='Request too large'?'Request too large':'Real AI request failed'}));}
+   try{const body=await readJsonBody(req,8192);const id=String(body.leadId||'');const result=await runLeadAnalysis({repo,leadId:id,invocationSource:'ui_manual',actor:principal.user,env:process.env,applyStatus:false});if(!result?.run){res.writeHead(422,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify({error:'AI returned no persisted run'}));}res.writeHead(200,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify(result));}
+   catch(e){res.writeHead(e.message==='Lead not found'?404:422,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify({error:e.message==='Request too large'?'Request too large':'Real AI request failed'}));}
+   finally{await repo.close()}
+  }
+
+  if(/^\/api\/ai\/runs\/[^/]+\/status\/(accept|reject)$/.test(p)&&req.method==='POST'){
+   const match=p.match(/^\/api\/ai\/runs\/([^/]+)\/status\/(accept|reject)$/);const runId=decodeURIComponent(match[1]);const action=match[2];const repo=createCrmRepository();
+   try{const result=action==='accept'?await repo.applyAiStatus({id:runId,actor:principal.user,automatic:false}):await repo.rejectAiStatus({id:runId,actor:principal.user});res.writeHead(200,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify(result));}
+   catch(err){res.writeHead(422,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify({error:err.message||'AI status decision failed'}));}
    finally{await repo.close()}
   }
 
