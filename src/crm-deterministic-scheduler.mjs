@@ -22,7 +22,7 @@ export function createDeterministicScheduler({connectionString=process.env.DATAB
    if(!locked)return{locked:false,run_id:null,status:'skipped',reason:'scheduler_already_running'};
    await client.query('INSERT INTO crm_deterministic_scheduler_runs(id,invocation_source,status,details) VALUES($1,$2,$3,$4::jsonb)',[runId,dryRun?'dry_run':'scheduled_1h',dryRun?'dry_run':'running',JSON.stringify({source_number:SOURCE_NUMBER,batch_limit:limit,rule_version:DETERMINISTIC_RULE_VERSION,no_ai:true})]);
    const candidates=await classifications.listDeterministicCandidates({sourceNumber:SOURCE_NUMBER,limit});
-   const counts={candidates_considered:candidates.length,qualified_count:0,unqualified_count:0,pending_count:0,skipped_count:0,failed_count:0};
+   const counts={candidates_considered:candidates.length,qualified_count:0,unqualified_count:0,pending_count:0,skipped_count:0,failed_count:0};const failureCodes={};
    for(const candidate of candidates){
     try{
      const contact=await classifications.getDeterministicContact({id:candidate.id,sourceNumber:SOURCE_NUMBER});
@@ -52,14 +52,14 @@ export function createDeterministicScheduler({connectionString=process.env.DATAB
      }
      await classifications.appendDeterministicAudit({classificationId:candidate.id,phone:candidate.phone,decision,runId});
     }catch(error){
-     counts.failed_count++;
+     counts.failed_count++;const code=String(error?.code||error?.name||'ERROR');failureCodes[code]=(failureCodes[code]||0)+1;
      if(!dryRun)await classifications.appendDeterministicAudit({classificationId:candidate.id,phone:candidate.phone,decision:{outcome:'failed',classification_code:'pending',rule_id:'SYSTEM-ERROR',rule_version:DETERMINISTIC_RULE_VERSION,reason:'Deterministic evaluation failed; contact remains unchanged.',evidence_message_ids:[],evidence_webhook_event_ids:[],signals:[]},runId});
     }
    }
    const status=counts.failed_count?'partial':'completed';
-   if(dryRun)await client.query('UPDATE crm_deterministic_scheduler_runs SET status=$1,completed_at=now(),candidates_considered=$2,qualified_count=$3,unqualified_count=$4,pending_count=$5,skipped_count=$6,failed_count=$7,details=details||$8::jsonb WHERE id=$9',['dry_run',counts.candidates_considered,counts.qualified_count,counts.unqualified_count,counts.pending_count,counts.skipped_count,counts.failed_count,JSON.stringify({dry_run:true}),runId]);
+   if(dryRun)await client.query('UPDATE crm_deterministic_scheduler_runs SET status=$1,completed_at=now(),candidates_considered=$2,qualified_count=$3,unqualified_count=$4,pending_count=$5,skipped_count=$6,failed_count=$7,details=details||$8::jsonb WHERE id=$9',['dry_run',counts.candidates_considered,counts.qualified_count,counts.unqualified_count,counts.pending_count,counts.skipped_count,counts.failed_count,JSON.stringify({dry_run:true,failure_codes:failureCodes}),runId]);
    else await client.query('UPDATE crm_deterministic_scheduler_runs SET status=$1,completed_at=now(),candidates_considered=$2,qualified_count=$3,unqualified_count=$4,pending_count=$5,skipped_count=$6,failed_count=$7 WHERE id=$8',[status,counts.candidates_considered,counts.qualified_count,counts.unqualified_count,counts.pending_count,counts.skipped_count,counts.failed_count,runId]);
-   return{locked:true,run_id:runId,status,candidates_considered:counts.candidates_considered,qualified_count:counts.qualified_count,unqualified_count:counts.unqualified_count,pending_count:counts.pending_count,skipped_count:counts.skipped_count,failed_count:counts.failed_count,dry_run:dryRun,rule_version:DETERMINISTIC_RULE_VERSION,no_ai:true};
+   return{locked:true,run_id:runId,status,candidates_considered:counts.candidates_considered,qualified_count:counts.qualified_count,unqualified_count:counts.unqualified_count,pending_count:counts.pending_count,skipped_count:counts.skipped_count,failed_count:counts.failed_count,failure_codes:failureCodes,dry_run:dryRun,rule_version:DETERMINISTIC_RULE_VERSION,no_ai:true};
   }catch(error){
    if(locked)await client.query('UPDATE crm_deterministic_scheduler_runs SET status=$1,completed_at=now(),error_summary=$2 WHERE id=$3',['failed','scheduler_failed',runId]).catch(()=>{});
    throw error;
