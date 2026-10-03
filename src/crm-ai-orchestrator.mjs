@@ -4,7 +4,6 @@ const INTERNAL_ACTOR='system:ai-scheduler';
 function checkpointKey({leadId,latestMessageId=null,latestMessageAt=null,source,reason=''}){return source==='scheduled_6h'?`scheduled_6h:${leadId}:${latestMessageId??'none'}:${latestMessageAt??'none'}:${reason}`:null}
 export async function runLeadAnalysis({repo,leadId,invocationSource='ui_manual',actor='local-operator',env=process.env,now=new Date(),applyStatus=true,analyze=analyzeRealLead}={}){
  const workspace=await repo.getLeadWorkspace(leadId);if(!workspace.lead)throw Error('Lead not found');const signals=evaluationSignals({workspace,now});
- if(invocationSource==='scheduled_6h'&&signals.reason==='no_meaningful_change')return{leadId,invocation_source:'scheduled_6h',skipped:true,skip_reason:'no_meaningful_change',signals};
  if(invocationSource==='scheduled_6h'){
   const coverage=coverageDecision({lead:workspace.lead,requirements:workspace.requirement_profile});
   if(coverage.action==='auto_apply'&&coverage.status){
@@ -13,6 +12,7 @@ export async function runLeadAnalysis({repo,leadId,invocationSource='ui_manual',
     await repo.setAiEvaluationCursor({leadId,sourceNumber:workspace.sources[0]?.source_number||'+919148338801',lastMessageId:signals.latestMessageId,lastMessageAt:signals.latestMessageAt,evaluatedAt:now});
     return{leadId,invocation_source:'scheduled_6h',skipped_ai:true,deterministic_status:updated?.lead_type||coverage.status,evidence:coverage.evidence,reason:coverage.reason};
   }
+  if(coverage.action!=='auto_apply'&&signals.reason==='no_meaningful_change')return{leadId,invocation_source:'scheduled_6h',skipped:true,skip_reason:'no_meaningful_change',signals};
   if(signals.hasNewMessage){
     const d=deterministicStatus({lead:workspace.lead,messages:workspace.messages});
     if(d.action==='auto_apply'&&d.status){
