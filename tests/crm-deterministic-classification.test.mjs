@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {classifyDeterministically,DETERMINISTIC_RULE_VERSION} from '../src/crm-deterministic-classifier.mjs';
+import {normalizeDisplayName} from '../src/crm-classification-repository.mjs';
 
 const msg=(id,direction,body)=>({id,direction,body,message_at:`2026-10-03T10:00:0${id}Z`});
 
@@ -84,6 +85,14 @@ test('live-pattern facebook property link plus customer interest qualifies',()=>
 test('live-pattern send me rental request qualifies',()=>{
  const r=classifyDeterministically({messages:[msg(1,'Incoming','Send me rental 1 or 2bhk near helios business park.') ]});
  assert.equal(r.classification_code,'qualified_lead');
+});
+
+test('display name validation accepts stored human names and rejects placeholders',()=>{
+ assert.equal(normalizeDisplayName('Nikita Srivastava'),'Nikita Srivastava');
+ assert.equal(normalizeDisplayName('ray avishek'),'ray avishek');
+ assert.equal(normalizeDisplayName('You'),null);
+ assert.equal(normalizeDisplayName('😘'),null);
+ assert.equal(normalizeDisplayName('.'),null);
 });
 
 test('phone number does not become budget evidence',()=>{
