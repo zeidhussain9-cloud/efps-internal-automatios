@@ -1,59 +1,32 @@
 # EasyFind CRM — Canonical Data Model
 
-## Authoritative current verified state — 2026-10-01 21:55 IST
+## Authoritative current verified state — 2026-10-03 20:26 IST
 
-This is the latest repository/production checkpoint. Older dated sections in maintained documents are historical evidence and must not be interpreted as current state.
+Older dated checkpoints below are historical evidence and are not current-state declarations.
 
-- **CRM deployment branch:** `crm-ui-dashboard`
-- **CRM commit:** `1c196577fc414be52c8fc889b3886f11e0e9da5d`
-- **CRM tree:** `908b635b2b7b04bdf3515934de2769393e282c34`
-- **main:** `b2fbf366021852aedd4bf0ec66484ad421fb5662`
-- **main tree:** `908b635b2b7b04bdf3515934de2769393e282c34`
-- **Tree equality:** `tree(main) == tree(crm-ui-dashboard)` = **TRUE**
-- **Render:** `easyfind-crm-d01-d05` / `srv-darsv560tbcc73cu4ip0`
-- **Live Render deployment:** `dep-dav82h3m8hqs7399j4ug` = **LIVE**
-- **Live Render commit:** `1c196577fc414be52c8fc889b3886f11e0e9da5d`
-- **Production health:** `GET /health` = HTTP 200, `{"ok":true}`
-- **Production WhatsApp source:** `+919148338801`
-- **Supabase:** 186 leads; 6,870 messages; 465 webhook events; 310 classifications; 186 requirements; 196 AI runs; 196 drafts; 186 AI cursors; 88 active inventory rows.
-- **Classification status:** 186 promoted; 88 classified; 23 pending; 13 excluded = 310 total.
-- **Webhook status:** 465 processed; 0 received; 0 processing; 0 failed.
-- **Message reconciliation:** 6,870 total = 4,806 lead-linked + 2,064 classified non-lead; unreconciled = 0.
-- **Historical classification population:** 228 historical records; 140 qualified mappings.
-- **Inventory:** 88 active rows = 71 Available + 17 Rented Out; 1,377 sync runs; latest sync recorded 88 rows / 0 changed / 0 removed; inventory-change rows = 0.
-- **Cloudinary:** 829/829 distinct production URLs returned HTTP 200 with `image/*` content-type by direct HEAD checks from the production-machine network path.
-- **AI integrity:** draft→AI-run lead mismatch = 0; stale evidence references = 0; invalid cursor lead links = 0.
-- **Tests:** `npm run build` PASS; `npm test` 78/78 PASS; `npm run test:browser` 1/1 PASS.
-- **Supabase Edge Function:** `whapi-crm-webhook` ACTIVE v8.
-- **AWS legacy webhook:** no changes in the audited CRM hardening range.
-- **24-item CRM audit:** GREEN / VERIFIED.
+- Deployment branch: crm-ui-dashboard
+- Render: easyfind-crm-d01-d05 / srv-darsv560tbcc73cu4ip0
+- Supabase: qttcutwzehtskfcwxkwj
+- Production source: +919148338801
+- Current snapshot: 228 leads; 7,746 messages; 1,471 webhook events; 277 AI runs; 214 drafts; 354 classifications; 88 active inventory listings.
+- Classification status: 228 promoted; 88 classified; 27 excluded; 11 pending.
+- Group Message: 14 source contacts are currently group_message / excluded based on persisted webhook chat_id values ending in @g.us.
 
 ### Current operational flow
 
-```text
 WhAPI +919148338801
   -> crm_webhook_events (persist + deduplicate)
-  -> webhook processor/reconciler
+  -> deterministic group gate when chat_id ends with @g.us
+       -> Group Message / excluded for pending contacts
+       -> otherwise pending classification
   -> crm_messages + classification registry
   -> operator classification update
        -> non-qualified: remains outside CRM leads
        -> Qualified Lead: audited promotion transaction
-            -> crm_leads + preserved messages
-            -> webhook event lead linkage reconciled
 
-CRM lead workspace
-  -> complete chronological conversation + normalized requirements + evidence + notes + prior AI runs + cursor
-  -> Bedrock primary / Sonnet fallback / Ollama fallback
-  -> persisted crm_ai_runs + crm_drafts + provenance
-  -> operator review/edit/pre-send grounding
-  -> manual WhatsApp action only; no automatic send
+### Classification contract
 
-Housing_Listings A:AV
-  -> CRM reads operational A:AT only
-  -> 88-row operational mirror in crm_inventory_snapshot
-  -> five-minute reconciliation
-  -> crm_inventory_sync_changes records future field-level changes
-```
+The first-class contact classification codes include group_message with label Group Message. It is an Unqualified classification and does not create a crm_leads row. The webhook rule preserves group chat ID/name in evidence and writes an audit activity record.
 
 ### Test-history checkpoint
 
