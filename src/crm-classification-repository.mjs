@@ -3,6 +3,7 @@ import {createCrmRepository,normalizeConnectionString} from './crm-repository.mj
 
 const SOURCE_NUMBERS=['+919148338801','+917975102130','+919902024973'];
 const SOURCE_NUMBER=SOURCE_NUMBERS[0];
+export const normalizeDisplayName=value=>{const v=String(value??'').replace(/\s+/g,' ').trim();if(!v||/^(?:you|easyfind(?: property solutions)?)$/i.test(v)||!/[A-Za-z]/.test(v)||v.replace(/[^A-Za-z]/g,'').length<3)return null;return v};
 
 export function createCrmClassificationRepository({connectionString=process.env.DATABASE_URL,sslCa=process.env.DATABASE_SSL_CA}={}){
  if(!connectionString)throw Error('DATABASE_URL required');
@@ -78,16 +79,18 @@ export function createCrmClassificationRepository({connectionString=process.env.
      return{status:'excluded',classification:code,lead_id:null};
     }
 
+    const nameRow=(await c.query("SELECT trim(sender_name) AS name FROM crm_messages WHERE classification_id=$1 AND direction='Incoming' AND sender_name IS NOT NULL AND trim(sender_name)<>'' ORDER BY message_at DESC,id DESC LIMIT 1",[id])).rows[0];
+    const contactName=normalizeDisplayName(nameRow?.name);
     let lead=(await c.query('SELECT l.* FROM crm_leads l JOIN crm_lead_sources s ON s.lead_id=l.id WHERE s.source_number=$1 AND s.source_contact_id=$2 LIMIT 1 FOR UPDATE OF l',[SOURCE_NUMBER,row.phone])).rows[0];
     if(!lead){
      const leadId='L-LIVE-'+(await c.query("SELECT substr(encode(digest($1||chr(124)||$2,'sha256'),'hex'),1,20) AS h",[SOURCE_NUMBER,row.phone])).rows[0].h;
      await c.query(`INSERT INTO crm_leads(id,display_name,normalized_phone,status,priority,classification,classification_id,lead_type,requirements,operator_notes,auto_qualified)
        VALUES($1,$2,$3,'New','Medium','Qualified Lead',$4,'New',jsonb_build_object('provenance','whatsapp_classification','source_number',$5::text),$6,$7)
-       ON CONFLICT(id) DO NOTHING`,[leadId,null,row.phone,id,SOURCE_NUMBER,'Classified by '+actor,Boolean(autoQualified)]);
+       ON CONFLICT(id) DO NOTHING`,[leadId,contactName,row.phone,id,SOURCE_NUMBER,'Classified by '+actor,Boolean(autoQualified)]);
      await c.query('INSERT INTO crm_lead_sources(lead_id,source_number,source_contact_id) VALUES($1,$2,$3) ON CONFLICT DO NOTHING',[leadId,SOURCE_NUMBER,row.phone]);
      lead=(await c.query('SELECT * FROM crm_leads WHERE id=$1 FOR UPDATE',[leadId])).rows[0];
     }else{
-     await c.query('UPDATE crm_leads SET classification=\'Qualified Lead\',classification_id=$1,auto_qualified=$2,updated_at=now() WHERE id=$3',[id,Boolean(autoQualified),lead.id]);
+     await c.query('UPDATE crm_leads SET classification=\'Qualified Lead\',classification_id=$1,auto_qualified=$2,display_name=CASE WHEN (display_name IS NULL OR btrim(display_name)=\'\') THEN $3 ELSE display_name END,updated_at=now() WHERE id=$4',[id,Boolean(autoQualified),contactName,lead.id]);
     }
     await c.query(`UPDATE crm_contact_classifications
       SET classification_code='qualified_lead',classification_label='Qualified Lead',classification_source=$1,confidence=$2,status='promoted',classified_at=now(),promoted_at=coalesce(promoted_at,now()),lead_id=$3,
