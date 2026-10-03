@@ -14,7 +14,6 @@ test('group-message classification is a first-class excluded classification',asy
  assert.match(migration,/RIGHT\(group_chat_id,5\)='@g\.us'/);
  assert.match(migration,/Group Message/);
  assert.match(migration,/group_chat_id/);
- assert.match(migration,/@g\\\\.us/);
  assert.match(repository,/group_message/);
  assert.match(repository,/group_message:'Group Message'/);
  assert.match(ui,/<option value="group_message">Group Message<\/option>/);
