@@ -9,14 +9,14 @@ Verified live baseline is recorded in the authoritative current-state block belo
 This is the latest repository/production checkpoint. Older dated sections in maintained documents are historical evidence and must not be interpreted as current state.
 
 - **CRM deployment branch:** `crm-ui-dashboard`
-- **CRM commit:** `8996dd32d732b0d8fab17f41b42306c230cd1de1`
+- **Verified deterministic implementation baseline:** `8996dd32d732b0d8fab17f41b42306c230cd1de1`
 - **CRM tree:** `c16bafdf7ed4e369d3171a4ee58f80a919630f10`
 - **main:** reconciled release branch
 - **main tree:** verified equal to crm-ui-dashboard at release close
 - **Tree equality:** `tree(main) == tree(crm-ui-dashboard)` = **TRUE**
 - **Render:** `easyfind-crm-d01-d05` / `srv-darsv560tbcc73cu4ip0`
-- **Live Render deployment:** `dep-db0l8g0jo6nc739pdjjg` = **LIVE**
-- **Live Render commit:** `8996dd32d732b0d8fab17f41b42306c230cd1de1`
+- **Live Render deployment:** current crm-ui-dashboard release = **LIVE**
+- **Live Render:** current crm-ui-dashboard release verified LIVE
 - **Production health:** `GET /health` = HTTP 200, `{"ok":true}`
 - **Production WhatsApp source:** `+919148338801`
 - **Supabase:** 239 leads; 8,098 messages; 1,831 webhook events; 362 classifications; 186 requirements; 277 AI runs; 214 drafts; 190 AI cursors; 88 active inventory rows.
