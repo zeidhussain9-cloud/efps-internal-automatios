@@ -1,6 +1,6 @@
 # EFPS CRM — Render Configuration
 
-> Verified 2026-10-03 20:26 IST. Older candidate/deployment statements below are historical and superseded.
+> Verified 2026-10-04 00:49 IST. Older candidate/deployment statements below are historical and superseded.
 
 ## Production service
 
@@ -14,7 +14,7 @@
 - Webhook ingress is Supabase-first and durable; Render is not the WhatsApp webhook persistence boundary.
 - Pending WhatsApp group messages are routed to group_message / Group Message / Unqualified before CRM lead promotion can occur.
 - Inventory sync endpoint is signed and invoked by Supabase cron.
-- AI scheduler endpoint is HMAC-protected and invoked by Supabase cron.
+- AI scheduler endpoint remains HMAC-protected and separate. The deterministic scheduler endpoint uses a dedicated secret and is invoked hourly by Supabase cron job crm_deterministic_scheduler_1h.
 - Automatic WhatsApp sending remains disabled; drafts require operator review and pre-send grounding.
 
 ## Release verification

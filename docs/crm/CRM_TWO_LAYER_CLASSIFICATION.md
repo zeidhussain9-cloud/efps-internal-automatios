@@ -37,31 +37,31 @@ On `crm-ui-feedback-polish-2026-10-02`, a promoted CRM lead may display its pers
 
 The Contact Classification queue remains the source of operator decisions. “Cold Inquiry” is shown only when present in stored classification data; lead age, message age, budget, and AI output do not create cold-lead or financial-risk labels. An overdue attention cue is derived only from an incomplete stored follow-up whose due time has passed. These are display-only changes and do not alter the promotion transaction or classification registry.
 
-## Authoritative current verified state — 2026-10-01 21:55 IST
+## Authoritative current verified state — 2026-10-04 00:49 IST
 
 This is the latest repository/production checkpoint. Older dated sections in maintained documents are historical evidence and must not be interpreted as current state.
 
 - **CRM deployment branch:** `crm-ui-dashboard`
-- **CRM commit:** `1c196577fc414be52c8fc889b3886f11e0e9da5d`
-- **CRM tree:** `908b635b2b7b04bdf3515934de2769393e282c34`
+- **CRM commit:** `8996dd32d732b0d8fab17f41b42306c230cd1de1`
+- **CRM tree:** `c16bafdf7ed4e369d3171a4ee58f80a919630f10`
 - **main:** `b2fbf366021852aedd4bf0ec66484ad421fb5662`
-- **main tree:** `908b635b2b7b04bdf3515934de2769393e282c34`
+- **main tree:** `c16bafdf7ed4e369d3171a4ee58f80a919630f10`
 - **Tree equality:** `tree(main) == tree(crm-ui-dashboard)` = **TRUE**
 - **Render:** `easyfind-crm-d01-d05` / `srv-darsv560tbcc73cu4ip0`
-- **Live Render deployment:** `dep-dav82h3m8hqs7399j4ug` = **LIVE**
-- **Live Render commit:** `1c196577fc414be52c8fc889b3886f11e0e9da5d`
+- **Live Render deployment:** `dep-db0l8g0jo6nc739pdjjg` = **LIVE**
+- **Live Render commit:** `8996dd32d732b0d8fab17f41b42306c230cd1de1`
 - **Production health:** `GET /health` = HTTP 200, `{"ok":true}`
 - **Production WhatsApp source:** `+919148338801`
-- **Supabase:** 186 leads; 6,870 messages; 465 webhook events; 310 classifications; 186 requirements; 196 AI runs; 196 drafts; 186 AI cursors; 88 active inventory rows.
-- **Classification status:** 186 promoted; 88 classified; 23 pending; 13 excluded = 310 total.
-- **Webhook status:** 465 processed; 0 received; 0 processing; 0 failed.
-- **Message reconciliation:** 6,870 total = 4,806 lead-linked + 2,064 classified non-lead; unreconciled = 0.
+- **Supabase:** 239 leads; 8,098 messages; 1,831 webhook events; 362 classifications; 186 requirements; 277 AI runs; 214 drafts; 190 AI cursors; 88 active inventory rows.
+- **Classification status:** 239 promoted; 88 classified; 32 excluded; 3 pending = 362 total.
+- **Webhook status:** 1,831 processed; 0 received; 0 processing; 0 failed.
+- **Message reconciliation:** 8,098 total = 6,047 lead-linked + 2,051 classified non-lead; unreconciled = 0.
 - **Historical classification population:** 228 historical records; 140 qualified mappings.
 - **Inventory:** 88 active rows = 71 Available + 17 Rented Out; 1,377 sync runs; latest sync recorded 88 rows / 0 changed / 0 removed; inventory-change rows = 0.
 - **Cloudinary:** 829/829 distinct production URLs returned HTTP 200 with `image/*` content-type by direct HEAD checks from the production-machine network path.
 - **AI integrity:** draft→AI-run lead mismatch = 0; stale evidence references = 0; invalid cursor lead links = 0.
-- **Tests:** `npm run build` PASS; `npm test` 78/78 PASS; `npm run test:browser` 1/1 PASS.
-- **Supabase Edge Function:** `whapi-crm-webhook` ACTIVE v8.
+- **Tests:** `npm run build` PASS; `npm test` 120/120 PASS; `npm run test:browser` 1/1 PASS.
+- **Supabase Edge Function:** `whapi-crm-webhook` ACTIVE v9.
 - **AWS legacy webhook:** no changes in the audited CRM hardening range.
 - **24-item CRM audit:** GREEN / VERIFIED.
 
@@ -115,7 +115,7 @@ The 2026-09-30 production failure was PostgreSQL `42P18` in the new-lead insert.
 2. The Supabase Edge Function authenticates the callback and persists the callback in `crm_webhook_events`.
 3. The webhook event is not rejected because the contact is unknown or non-qualified.
 4. Message events with a resolvable phone are reconciled into `crm_contact_classifications`.
-5. Contact classification is Layer 1: Qualified Lead; Personal / Family; Agent / Partner; Business; Promotion / Marketing; Vendor / Supplier; Internal; Cold Inquiry; Property Listing Sent; Unknown / Pending.
+5. Contact classification is Layer 1: Qualified Lead; Personal / Family; Agent / Partner; Business; Promotion / Marketing; Vendor / Supplier; Internal; Cold Inquiry; Property Listing Sent (legacy historical only); Unknown / Pending.
 6. Only Qualified Lead is eligible to create/promote a `crm_leads` record.
 7. `crm_leads.lead_type` is Layer 2 and describes the operational state of an already-qualified lead.
 8. Qualified live messages are appended to `crm_messages` using provider message identity and original message timestamp.
@@ -137,3 +137,15 @@ The historical SQLite archive remains source evidence. It must not be reclassifi
 ## Inventory
 
 Inventory sender/source routing is outside this CRM classification path and remains unchanged.
+
+## Deterministic classification engine — current verified
+
+- Deterministic classification is active for source +919148338801; it does not call AI.
+- New WhatsApp messages remain attached to the same crm_contact_classifications record while a contact is pending; conversation history accumulates in crm_messages and webhook evidence remains in crm_webhook_events.
+- The scheduler runs hourly at 0 * * * * through Supabase Cron job crm_deterministic_scheduler_1h.
+- Qualification requires customer-originated intent plus property/requirement evidence. Outbound property messages alone cannot qualify a contact.
+- Known operator-confirmed Internal, Personal/Family, Agent/Partner, Vendor/Supplier and Group Message exclusions remain protected.
+- New automatic decisions are Qualified Lead or an approved Unqualified classification. Property Listing Sent is legacy/historical only and is never generated by the deterministic engine.
+- Insufficient evidence remains Waiting for Classification and is reevaluated when new conversation evidence arrives.
+- Deterministically qualified leads persist auto_qualified=true and display AUTO QUALIFIED on the lead card.
+- Every deterministic evaluation records rule version, evidence message/event IDs, reason and audit provenance.

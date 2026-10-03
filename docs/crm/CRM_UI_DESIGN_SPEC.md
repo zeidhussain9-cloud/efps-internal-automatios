@@ -12,7 +12,7 @@ The Contact Classification UI treats Group Message as a first-class Unqualified 
 
 ## Lead presentation
 
-Lead cards expose operational Lead Status separately from Contact Classification. Status colors remain secondary to the text label. Customer identity uses persisted display name/phone data; no classification or risk state is inferred from age, budget or message volume.
+Lead cards expose operational Lead Status separately from Contact Classification. Status colors remain secondary to the text label. Deterministically qualified leads additionally expose the persisted AUTO QUALIFIED provenance tag; this is not a Lead Status or Contact Classification. Customer identity uses persisted display name/phone data; no classification or risk state is inferred from age, budget or message volume.
 
 ## Inventory presentation
 

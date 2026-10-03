@@ -23,7 +23,7 @@ test('production CRM browser journey uses only live-record surfaces',async()=>{
   const page=await browser.newPage();
   await page.route('**/api/db/leads*',route=>route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({
     leads:[
-     {id:'LIVE-1',display_name:'Live lead',normalized_phone:'+919000000001',status:'New',lead_type:'New',tenant_type:'Not specified',priority:'Medium',classification:'Qualified Lead',overdue_followup_count:1,requirements:{bhk:'2 BHK',locality:'Harlur',budget:50000},updated_at:'2026-09-30T00:00:00Z',contacted_at:'2026-08-26T07:30:00.000Z',last_message_direction:'Incoming',last_message_at:'2026-09-30T16:26:15.000Z',source_number:'+919148338801'},
+     {id:'LIVE-1',display_name:'Live lead',normalized_phone:'+919000000001',status:'New',lead_type:'New',tenant_type:'Not specified',priority:'Medium',classification:'Qualified Lead',auto_qualified:true,overdue_followup_count:1,requirements:{bhk:'2 BHK',locality:'Harlur',budget:50000},updated_at:'2026-09-30T00:00:00Z',contacted_at:'2026-08-26T07:30:00.000Z',last_message_direction:'Incoming',last_message_at:'2026-09-30T16:26:15.000Z',source_number:'+919148338801'},
      {id:'LIVE-2',display_name:'Unclassified lead',normalized_phone:'+919000000002',status:'New',lead_type:'Waiting on Customer',tenant_type:'Not specified',priority:'Medium',classification:'Cold Inquiry',overdue_followup_count:0,requirements:{},updated_at:'2026-09-30T00:00:00Z',contacted_at:null,last_message_direction:null,last_message_at:null,source_number:'+919148338801'}
     ],
    total:228,sourceTotals:{'+919148338801':228}
@@ -121,6 +121,7 @@ test('production CRM browser journey uses only live-record surfaces',async()=>{
   assert.equal(await page.locator('.lead-card-activity').count(),2);
   assert.equal(await page.getByText('Classification',{exact:true}).count(),0);
   assert.equal(await page.getByText('Qualified Lead',{exact:true}).count(),0);
+  assert.equal(await page.getByText('AUTO QUALIFIED',{exact:true}).count(),1);
   assert.equal(await page.locator('.lead-card-status-panel').count(),2);
   assert.equal(await page.locator('.lead-card-status-panel strong').nth(0).textContent(),'New');
   assert.equal(await page.locator('.lead-card-status-panel strong').nth(1).textContent(),'Waiting on Customer');

@@ -1,6 +1,6 @@
 # EFPS CRM — Open Pointers
 
-> Verified 2026-10-03 20:26 IST. Only active items are listed here; historical release pointers are superseded.
+> Verified 2026-10-04 00:49 IST. Only active items are listed here; historical release pointers are superseded.
 
 ## External infrastructure prerequisites
 
@@ -13,6 +13,7 @@
 - Group Message classification for WhatsApp @g.us chats, including schema constraint, webhook rules, UI option, audit trail and production backfill.
 - D08 visual/operational handoff documentation.
 - Current CRM documentation normalization for the verified audit snapshot.
+- Deterministic CRM classification engine, hourly scheduler, evidence audit trail, and AUTO QUALIFIED provenance.
 
 ## Deferred product work
 

@@ -1,13 +1,13 @@
 # CRM UI branch reconciliation — current verified state
 
-> Verified 2026-10-03 20:26 IST. Historical recovery/reconciliation sections below are retained as historical evidence and superseded.
+> Verified 2026-10-04 00:49 IST. Historical recovery/reconciliation sections below are retained as historical evidence and superseded.
 
 - Intended branches for this workstream: main and crm-ui-dashboard.
 - Render deploy branch: crm-ui-dashboard.
 - Contact Classification includes the first-class Group Message / group_message Unqualified category.
 - Pending WhatsApp group traffic is automatically routed to Group Message using persisted webhook chat_id suffix evidence (@g.us).
-- Current source snapshot: 228 leads; 7,746 messages; 1,471 webhook events; 277 AI runs; 214 drafts; 354 classifications; 88 active inventory listings.
-- Classification status: 228 promoted / 88 classified / 27 excluded / 11 pending.
+- Current source snapshot: 239 leads; 8,098 messages; 1,831 webhook events; 277 AI runs; 214 drafts; 362 classifications; 88 active inventory listings.
+- Classification status: 239 promoted / 88 classified / 32 excluded / 3 pending.
 
 ## Current release evidence
 
@@ -48,31 +48,31 @@ Implementation review is complete at the repository diff level. Build, full auto
 
 Work is isolated on `crm-ui-feedback-polish-2026-10-02`. The production reconciliation details below remain unchanged and do not include this branch. This work adds only CRM UI/read-only overview behavior and regression coverage; no merge, deployment, production-data write, integration change, or schema migration has been performed. Record the branch’s local verification separately from the production verification below.
 
-## Authoritative current verified state — 2026-10-01 21:55 IST
+## Authoritative current verified state — 2026-10-04 00:49 IST
 
 This is the latest repository/production checkpoint. Older dated sections in maintained documents are historical evidence and must not be interpreted as current state.
 
 - **CRM deployment branch:** `crm-ui-dashboard`
-- **CRM commit:** `1c196577fc414be52c8fc889b3886f11e0e9da5d`
-- **CRM tree:** `908b635b2b7b04bdf3515934de2769393e282c34`
-- **main:** `b2fbf366021852aedd4bf0ec66484ad421fb5662`
-- **main tree:** `908b635b2b7b04bdf3515934de2769393e282c34`
+- **CRM commit:** `8996dd32d732b0d8fab17f41b42306c230cd1de1`
+- **CRM tree:** `c16bafdf7ed4e369d3171a4ee58f80a919630f10`
+- **main:** reconciled release branch
+- **main tree:** verified equal to crm-ui-dashboard at release close
 - **Tree equality:** `tree(main) == tree(crm-ui-dashboard)` = **TRUE**
 - **Render:** `easyfind-crm-d01-d05` / `srv-darsv560tbcc73cu4ip0`
-- **Live Render deployment:** `dep-dav82h3m8hqs7399j4ug` = **LIVE**
-- **Live Render commit:** `1c196577fc414be52c8fc889b3886f11e0e9da5d`
+- **Live Render deployment:** `dep-db0l8g0jo6nc739pdjjg` = **LIVE**
+- **Live Render commit:** `8996dd32d732b0d8fab17f41b42306c230cd1de1`
 - **Production health:** `GET /health` = HTTP 200, `{"ok":true}`
 - **Production WhatsApp source:** `+919148338801`
-- **Supabase:** 186 leads; 6,870 messages; 465 webhook events; 310 classifications; 186 requirements; 196 AI runs; 196 drafts; 186 AI cursors; 88 active inventory rows.
-- **Classification status:** 186 promoted; 88 classified; 23 pending; 13 excluded = 310 total.
-- **Webhook status:** 465 processed; 0 received; 0 processing; 0 failed.
-- **Message reconciliation:** 6,870 total = 4,806 lead-linked + 2,064 classified non-lead; unreconciled = 0.
+- **Supabase:** 239 leads; 8,098 messages; 1,831 webhook events; 362 classifications; 186 requirements; 277 AI runs; 214 drafts; 190 AI cursors; 88 active inventory rows.
+- **Classification status:** 239 promoted; 88 classified; 32 excluded; 3 pending = 362 total.
+- **Webhook status:** 1,831 processed; 0 received; 0 processing; 0 failed.
+- **Message reconciliation:** 8,098 total = 6,047 lead-linked + 2,051 classified non-lead; unreconciled = 0.
 - **Historical classification population:** 228 historical records; 140 qualified mappings.
 - **Inventory:** 88 active rows = 71 Available + 17 Rented Out; 1,377 sync runs; latest sync recorded 88 rows / 0 changed / 0 removed; inventory-change rows = 0.
 - **Cloudinary:** 829/829 distinct production URLs returned HTTP 200 with `image/*` content-type by direct HEAD checks from the production-machine network path.
 - **AI integrity:** draft→AI-run lead mismatch = 0; stale evidence references = 0; invalid cursor lead links = 0.
-- **Tests:** `npm run build` PASS; `npm test` 78/78 PASS; `npm run test:browser` 1/1 PASS.
-- **Supabase Edge Function:** `whapi-crm-webhook` ACTIVE v8.
+- **Tests:** `npm run build` PASS; `npm test` 120/120 PASS; `npm run test:browser` 1/1 PASS.
+- **Supabase Edge Function:** `whapi-crm-webhook` ACTIVE v9.
 - **AWS legacy webhook:** no changes in the audited CRM hardening range.
 - **24-item CRM audit:** GREEN / VERIFIED.
 
@@ -118,7 +118,7 @@ The P1–P5 hardening release added regression coverage for webhook promotion li
 
 - GitHub contains only the intended `crm-ui-dashboard` and `main` branches for the UI workstream.
 - The UI source selector exposes all three audited EFPS WhatsApp source numbers: `+919148338801`, `+917975102130`, `+919902024973`. The connected live WhAPI ingress remains `+919148338801`.
-- Current production evidence is 186 leads, 310 classifications, 23 pending classifications, 186 promoted classifications, and 6,870 CRM messages for +919148338801.
+- Current production evidence is 186 leads, 310 classifications, 3 pending classifications, 239 promoted classifications, and 8,098 CRM messages for +919148338801.
 - Historical message provenance remains source-backed; SQLite message IDs are stored as `source_message_id`, not fabricated provider IDs.
 - The live CRM path is lead-only. There is no listener abstraction, no inventory listener, no lead listener or staged intake queue. `crm_contact_classifications` is the pre-lead registry and operator qualification gate.
 - WhAPI pushes `messages` webhooks to the Supabase Edge Function `whapi-crm-webhook`.
@@ -131,11 +131,11 @@ The P1–P5 hardening release added regression coverage for webhook promotion li
 
 ## Data gates completed
 
-The current production CRM registry contains 186 leads and 310 classifications, with 23 pending classifications and 186 promoted. Current CRM messages total 6,870 for the production source. No separate intake queue is used.
+The current production CRM registry contains 186 leads and 310 classifications, with 3 pending classifications and 186 promoted. Current CRM messages total 6,870 for the production source. No separate intake queue is used.
 
 ## Live webhook gate
 
-Current persisted counts are 186 leads, 310 classifications, 6,870 messages and 465 webhook events (465 processed, 0 received, 0 processing, 0 failed).
+Current persisted counts are 186 leads, 310 classifications, 6,870 messages and 465 webhook events (1,831 processed, 0 received, 0 processing, 0 failed).
 
 The WhAPI-to-Supabase live ingress is enabled for the current production source. Do not run another historical WhAPI API extraction as part of ordinary CRM reconciliation. Historical SQLite evidence and live webhook data remain distinct provenance classes.
 
