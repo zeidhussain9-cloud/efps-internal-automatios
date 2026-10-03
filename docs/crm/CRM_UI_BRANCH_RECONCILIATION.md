@@ -17,7 +17,7 @@ The release record reports the crm-ui-dashboard commit SHA, tree SHA, CI result,
 
 ### 2026-10-02 — Replit feedback branch recovery and line-by-line audit checkpoint
 
-The isolated branch `crm-ui-feedback-polish-2026-10-02` was recovered after the Replit workspace exhausted its credits. The branch is based directly on production checkpoint `97b43a7d158eb8b3cd773ed3febb45c4f8a52540` and contains the recovered UI/inventory implementation plus regression coverage.
+Historical recovery record: the former isolated branch `crm-ui-feedback-polish-2026-10-02` was recovered after the Replit workspace exhausted its credits. The branch is based directly on production checkpoint `97b43a7d158eb8b3cd773ed3febb45c4f8a52540` and contains the recovered UI/inventory implementation plus regression coverage.
 
 ### Audited implementation extracted for verification
 
@@ -44,23 +44,23 @@ Implementation review is complete at the repository diff level. Build, full auto
 
 # CRM UI branch reconciliation
 
-## Unreleased feedback branch — not reconciled or deployed
+## Historical feedback branch record — reconciled and retired
 
-Work is isolated on `crm-ui-feedback-polish-2026-10-02`. The production reconciliation details below remain unchanged and do not include this branch. This work adds only CRM UI/read-only overview behavior and regression coverage; no merge, deployment, production-data write, integration change, or schema migration has been performed. Record the branch’s local verification separately from the production verification below.
+Historical work was isolated on the former `crm-ui-feedback-polish-2026-10-02` branch. The production reconciliation details below remain unchanged and do not include this branch. This work adds only CRM UI/read-only overview behavior and regression coverage; no merge, deployment, production-data write, integration change, or schema migration has been performed. Record the branch’s local verification separately from the production verification below.
 
-## Authoritative current verified state — 2026-10-04 00:49 IST
+## Authoritative current verified state — 2026-10-04 01:19 IST
 
 This is the latest repository/production checkpoint. Older dated sections in maintained documents are historical evidence and must not be interpreted as current state.
 
 - **CRM deployment branch:** `crm-ui-dashboard`
-- **CRM commit:** `8996dd32d732b0d8fab17f41b42306c230cd1de1`
-- **CRM tree:** `c16bafdf7ed4e369d3171a4ee58f80a919630f10`
+- **CRM commit:** `5b86f40666e467c3ca8350ff24c9fb2a966afe8e`
+- **CRM tree:** `3fb6f74f5335428faf9afae8e05d47e536a9b413`
 - **main:** reconciled release branch
-- **main tree:** verified equal to crm-ui-dashboard at release close
+- **main:** `0b93f7f25fa579a6b366b74e731bbe328be414de`
 - **Tree equality:** `tree(main) == tree(crm-ui-dashboard)` = **TRUE**
 - **Render:** `easyfind-crm-d01-d05` / `srv-darsv560tbcc73cu4ip0`
 - **Live Render deployment:** current crm-ui-dashboard release = **LIVE**
-- **Live Render commit:** `8996dd32d732b0d8fab17f41b42306c230cd1de1`
+- **Live Render commit:** current crm-ui-dashboard release
 - **Production health:** `GET /health` = HTTP 200, `{"ok":true}`
 - **Production WhatsApp source:** `+919148338801`
 - **Supabase:** 239 leads; 8,098 messages; 1,831 webhook events; 362 classifications; 186 requirements; 277 AI runs; 214 drafts; 190 AI cursors; 88 active inventory rows.
@@ -68,7 +68,7 @@ This is the latest repository/production checkpoint. Older dated sections in mai
 - **Webhook status:** 1,831 processed; 0 received; 0 processing; 0 failed.
 - **Message reconciliation:** 8,098 total = 6,047 lead-linked + 2,051 classified non-lead; unreconciled = 0.
 - **Historical classification population:** 228 historical records; 140 qualified mappings.
-- **Inventory:** 88 active rows = 71 Available + 17 Rented Out; 1,377 sync runs; latest sync recorded 88 rows / 0 changed / 0 removed; inventory-change rows = 0.
+- **Inventory:** 88 active rows = 71 Available + 17 Rented Out; 1,996 sync runs; latest sync recorded 88 rows / 0 changed / 0 removed; inventory-change rows = 0.
 - **Cloudinary:** 829/829 distinct production URLs returned HTTP 200 with `image/*` content-type by direct HEAD checks from the production-machine network path.
 - **AI integrity:** draft→AI-run lead mismatch = 0; stale evidence references = 0; invalid cursor lead links = 0.
 - **Tests:** `npm run build` PASS; `npm test` 120/120 PASS; `npm run test:browser` 1/1 PASS.
@@ -105,7 +105,7 @@ Housing_Listings A:AV
 
 ### Test-history checkpoint
 
-The P1–P5 hardening release added regression coverage for webhook promotion linkage, reserved AU/AV exclusion, and disposable inventory create/edit/delete history. The final repository verification was 71/71 automated tests, browser 1/1, and production build PASS. Historical earlier test counts in dated handoff/audit sections are retained as historical checkpoints.
+The P1–P5 hardening release added regression coverage for webhook promotion linkage, reserved AU/AV exclusion, and disposable inventory create/edit/delete history. The final repository verification is 120/120 automated tests, browser 1/1, and production build PASS. Historical earlier test counts in dated handoff/audit sections are retained as historical checkpoints.
 
 
 
