@@ -10,6 +10,14 @@ The CRM production path is live on crm-ui-dashboard at Render service easyfind-c
 
 Webhook durability and reconciliation, classification/promotion, normalized requirements, operator audit history, inventory snapshot synchronization, AI persistence, scheduler checkpointing, draft provenance, authentication/privacy controls, archive/restore and exports are implemented and operational. The contact-classification layer includes the first-class Group Message / group_message category under Unqualified leads.
 
+## AI scheduler — intentionally paused
+
+- `crm_ai_scheduler_6h` is **paused** as of 2026-10-04.
+- Its implementation and `crm_invoke_ai_scheduler()` function remain in the repository and database.
+- The pg_cron trigger has been removed, so no recurring AI scheduler execution is currently scheduled.
+- The deterministic classification scheduler remains active independently at `0 * * * *`.
+- Reactivation requires an explicit operational decision and a new scheduler activation.
+
 ## Deterministic classification engine — current verified
 
 - Deterministic classification is active for source +919148338801; it does not call AI.

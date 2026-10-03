@@ -32,6 +32,14 @@ After runtime verification of this release:
 4. Reconcile the verified tree into `main`.
 5. Verify both branch trees are identical.
 
+## AI scheduler — intentionally paused
+
+- `crm_ai_scheduler_6h` is **paused** as of 2026-10-04.
+- Its implementation and `crm_invoke_ai_scheduler()` function remain in the repository and database.
+- The pg_cron trigger has been removed, so no recurring AI scheduler execution is currently scheduled.
+- The deterministic classification scheduler remains active independently at `0 * * * *`.
+- Reactivation requires an explicit operational decision and a new scheduler activation.
+
 ## Deterministic classification engine — current verified
 
 - Deterministic classification is active for source +919148338801; it does not call AI.

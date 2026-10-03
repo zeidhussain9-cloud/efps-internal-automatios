@@ -79,10 +79,10 @@ This is the canonical registry for external systems and verified resource identi
 
 - Render service: `easyfind-crm-d01-d05` (`srv-darsv560tbcc73cu4ip0`)
 - Deployment branch: `crm-ui-dashboard`
-- Latest live commit: 8996dd32d732b0d8fab17f41b42306c230cd1de1
-- Live deployment: dep-db0l8g0jo6nc739pdjjg
+- Latest deterministic implementation baseline: 8996dd32d732b0d8fab17f41b42306c230cd1de1; current release is documented by the canonical verified-state file.
+- Live deployment: current crm-ui-dashboard release verified LIVE in Render
 - Production source: `+919148338801`
-- Supabase baseline: 186 leads, 310 classifications, 3 pending classifications, 6,870 messages, 465 webhook events (1,831 processed, 0 received, 0 processing, 0 failed).
+- Supabase baseline: 239 leads, 362 classifications, 3 pending classifications, 8,098 messages, 1,831 webhook events (1,831 processed, 0 received, 0 processing, 0 failed).
 - `main` is repository-reconciled to the same tree; Render remains on `crm-ui-dashboard`.
 
 ## Historical CRM prototype deployment target

@@ -1,8 +1,8 @@
 # EFPS CRM — Database Migration / Production Gate
 
-> **Current verified state: 2026-10-03 18:04 IST (12:34 UTC).**
+> **Current verified state: 2026-10-04 01:19 IST (19:49 UTC).**
 
-The historical pre-production migration gates are closed for the current CRM deployment. Production schema migrations through the unified AI scheduler are applied.
+The historical pre-production migration gates are closed for the current CRM deployment. Production schema migrations through the unified AI scheduler are applied. The AI scheduler trigger is intentionally paused as of 2026-10-04; its implementation remains installed but no recurring pg_cron job is active.
 
 ## Active production invariants
 

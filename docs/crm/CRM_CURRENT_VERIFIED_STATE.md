@@ -1,6 +1,6 @@
 # EFPS CRM — Current Verified State
 
-> Verified 2026-10-04 00:49 IST against repository, Supabase production, Render and browser/test evidence. Older dated audit documents remain historical evidence.
+> Verified 2026-10-04 01:19 IST against repository, Supabase production, Render and browser/test evidence. Older dated audit documents remain historical evidence.
 
 ## Runtime baseline
 
@@ -38,12 +38,14 @@
 
 ## Scheduler
 
-- Supabase Cron job: crm_deterministic_scheduler_1h
-- Schedule: 0 * * * *
-- Advisory lock prevents overlapping runs.
-- Latest dry-run: 9 considered / 6 qualified / 3 pending / 0 failures.
-- Latest production activation run: 9 considered / 6 qualified / 0 unqualified / 3 pending / 0 failures.
-- AI runs triggered by deterministic activation: 0.
+| Process | Schedule | State |
+|---|---|---|
+| `crm_webhook_reconcile_1m` | every minute | Active |
+| `crm_inventory_sheet_reconcile_5m` | every 5 minutes | Active |
+| `crm_deterministic_scheduler_1h` | every hour at :00 | Active |
+| `crm_ai_scheduler_6h` | every 6 hours at :00 | **Paused** |
+
+The AI scheduler implementation remains installed, but its pg_cron trigger is intentionally absent. Reactivation requires an explicit operational decision.
 
 ## Current deterministic results
 
@@ -76,3 +78,11 @@ Remaining pending contacts after the verified activation run:
 ## Repository release condition — completed
 
 The verified crm-ui-dashboard tree has been reconciled into main without history rewriting. tree(main) == tree(crm-ui-dashboard) is verified, and GitHub contains only main and crm-ui-dashboard.
+
+## AI scheduler — intentionally paused
+
+- `crm_ai_scheduler_6h` is **paused** as of 2026-10-04.
+- Its implementation and `crm_invoke_ai_scheduler()` function remain in the repository and database.
+- The pg_cron trigger has been removed, so no recurring AI scheduler execution is currently scheduled.
+- The deterministic classification scheduler remains active independently at `0 * * * *`.
+- Reactivation requires an explicit operational decision and a new scheduler activation.
