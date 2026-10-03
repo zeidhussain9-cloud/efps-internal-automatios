@@ -22,13 +22,12 @@ createServer(async(req,res)=>{
   if(p==='/health'){res.writeHead(200,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify({ok:true}));}
   if(p==='/api/internal/deterministic/scheduler'&&req.method==='POST'){
    if(process.env.CRM_DETERMINISTIC_SCHEDULER_ENABLED!=='true'||!process.env.CRM_DETERMINISTIC_SCHEDULER_SECRET){res.writeHead(404,security);return res.end('Deterministic scheduler disabled');}
-   const ts=String(req.headers['x-efps-deterministic-timestamp']||'');const provided=String(req.headers['x-efps-deterministic-signature']||'');
+   const provided=String(req.headers['x-efps-deterministic-secret']||'');
    let body={};try{body=await readJsonBody(req,4096)}catch{res.writeHead(400,security);return res.end('Invalid scheduler request');}
    const limit=Number(body.limit??500),dryRun=body.dry_run===true;
    if(body.invocation_source!=='scheduled_1h'||!Number.isInteger(limit)||limit<1||limit>500){res.writeHead(400,security);return res.end('Invalid scheduler request');}
-   if(!/^\\d+$/.test(ts)||Math.abs(Date.now()-Number(ts)*1000)>300000||!/^[a-f0-9]{64}$/i.test(provided)){res.writeHead(401,security);return res.end('Invalid scheduler authentication');}
-   const canonical=JSON.stringify({invocation_source:'scheduled_1h',limit,dry_run:dryRun});const expected=createHmac('sha256',process.env.CRM_DETERMINISTIC_SCHEDULER_SECRET).update(ts+'.'+canonical).digest('hex');
-   if(expected.length!==provided.length||!timingSafeEqual(Buffer.from(expected),Buffer.from(provided.toLowerCase()))){res.writeHead(401,security);return res.end('Invalid scheduler authentication');}
+   const expected=String(process.env.CRM_DETERMINISTIC_SCHEDULER_SECRET||'');
+   if(!expected||provided.length!==expected.length||!timingSafeEqual(Buffer.from(expected),Buffer.from(provided))){res.writeHead(401,security);return res.end('Invalid scheduler authentication');}
    const scheduler=createDeterministicScheduler();
    try{const result=await scheduler.run({dryRun,limit});if(result.locked===false){res.writeHead(409,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify({ok:false,...result}));}res.writeHead(200,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify({ok:true,...result}));}
    catch(e){res.writeHead(500,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify({ok:false,error:'Deterministic scheduler failed'}));}

@@ -28,18 +28,11 @@ BEGIN
     RAISE EXCEPTION 'Deterministic scheduler secrets are not configured';
   END IF;
 
-  timestamp_text := extract(epoch FROM clock_timestamp())::bigint::text;
-  signature_text := encode(
-    extensions.hmac(timestamp_text||'.'||body_text,secret_value,'sha256'),
-    'hex'
-  );
-
   SELECT net.http_post(
     url:=rtrim(endpoint,'/')||'/api/internal/deterministic/scheduler',
     headers:=jsonb_build_object(
       'Content-Type','application/json',
-      'X-EFPS-DETERMINISTIC-TIMESTAMP',timestamp_text,
-      'X-EFPS-DETERMINISTIC-SIGNATURE',signature_text
+      'X-EFPS-DETERMINISTIC-SECRET',secret_value
     ),
     body:=body_text::jsonb,
     timeout_milliseconds:=300000
