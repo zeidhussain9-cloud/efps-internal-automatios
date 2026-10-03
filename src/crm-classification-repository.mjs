@@ -21,7 +21,7 @@ export function createCrmClassificationRepository({connectionString=process.env.
       return {classifications:r.rows,total:n.rows[0].total};
     },
     async classify({id,code,source='operator',confidence=null,actor='operator'}){
-      const allowed=new Set(['qualified_lead','personal_family','agent_partner','business','promotion','vendor_supplier','internal','cold_inquiry','property_listing_sent','unknown']);
+      const allowed=new Set(['qualified_lead','personal_family','agent_partner','business','promotion','vendor_supplier','internal','cold_inquiry','property_listing_sent','group_message','unknown']);
       if(!allowed.has(code))throw Error('Invalid classification');
       return withTx(async c=>{
         const row=(await c.query('SELECT * FROM crm_contact_classifications WHERE id=$1 AND source_number=$2 FOR UPDATE',[id,SOURCE_NUMBER])).rows[0];
@@ -36,6 +36,7 @@ export function createCrmClassificationRepository({connectionString=process.env.
           internal:'Internal',
           cold_inquiry:'Cold Inquiry',
           property_listing_sent:'Property Listing Sent',
+          group_message:'Group Message',
           unknown:'Unknown'
         };
         const label=labels[code];

@@ -1,4 +1,21 @@
-## 2026-10-02 — Replit feedback branch recovery and line-by-line audit checkpoint
+# CRM UI branch reconciliation — current verified state
+
+> Verified 2026-10-03 20:26 IST. Historical recovery/reconciliation sections below are retained as historical evidence and superseded.
+
+- Intended branches for this workstream: main and crm-ui-dashboard.
+- Render deploy branch: crm-ui-dashboard.
+- Contact Classification includes the first-class Group Message / group_message Unqualified category.
+- Pending WhatsApp group traffic is automatically routed to Group Message using persisted webhook chat_id suffix evidence (@g.us).
+- Current source snapshot: 228 leads; 7,746 messages; 1,471 webhook events; 277 AI runs; 214 drafts; 354 classifications; 88 active inventory listings.
+- Classification status: 228 promoted / 88 classified / 27 excluded / 11 pending.
+
+## Current release evidence
+
+The release record reports the crm-ui-dashboard commit SHA, tree SHA, CI result, Render deployment ID, Supabase Edge Function version, Supabase migration version, and final equality of main and crm-ui-dashboard trees.
+
+## Historical evidence
+
+### 2026-10-02 — Replit feedback branch recovery and line-by-line audit checkpoint
 
 The isolated branch `crm-ui-feedback-polish-2026-10-02` was recovered after the Replit workspace exhausted its credits. The branch is based directly on production checkpoint `97b43a7d158eb8b3cd773ed3febb45c4f8a52540` and contains the recovered UI/inventory implementation plus regression coverage.
 
