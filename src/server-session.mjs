@@ -8,9 +8,29 @@ const COOKIE_MAX_AGE=Math.floor(MAX_MS/1000);
 const sessions=new Map();
 const failures=new Map();
 
-const prune=()=>{const t=Date.now();for(const [token,s] of sessions){if(t-s.lastSeenAt>IDLE_MS||t-s.issuedAt>MAX_MS)sessions.delete(token)}for(const [key,v] of failures){if(t-v.startedAt>10*60*1000)failures.delete(key)}};
+/** Max failed password attempts per client before temporary lockout. */
+export const LOGIN_FAILURE_LIMIT=5;
+/** Sliding window (ms) for counting failed sign-in attempts. */
+export const LOGIN_FAILURE_WINDOW_MS=10*60*1000;
+
+const prune=()=>{
+  const t=Date.now();
+  for(const [token,s] of sessions){
+    if(t-s.lastSeenAt>IDLE_MS||t-s.issuedAt>MAX_MS)sessions.delete(token);
+  }
+  for(const [key,v] of failures){
+    if(t-v.startedAt>LOGIN_FAILURE_WINDOW_MS)failures.delete(key);
+  }
+};
 const clientKey=req=>String(req.headers['x-forwarded-for']||req.headers['x-real-ip']||'unknown').split(',')[0].trim();
-const parseCookies=req=>{const out={};for(const part of String(req.headers.cookie||'').split(';')){const i=part.indexOf('=');if(i>0)out[part.slice(0,i).trim()]=decodeURIComponent(part.slice(i+1).trim())}return out};
+const parseCookies=req=>{
+  const out={};
+  for(const part of String(req.headers.cookie||'').split(';')){
+    const i=part.indexOf('=');
+    if(i>0)out[part.slice(0,i).trim()]=decodeURIComponent(part.slice(i+1).trim());
+  }
+  return out;
+};
 const secureCookie=req=>String(req.headers['x-forwarded-proto']||'').split(',')[0].trim()==='https';
 
 export function sameOrigin(req){
@@ -23,22 +43,56 @@ export function getRequestPrincipal(req,env){
   prune();
   const token=parseCookies(req)[COOKIE_NAME];
   const s=token?sessions.get(token):null;
-  if(s){const t=Date.now();if(t-s.lastSeenAt<=IDLE_MS&&t-s.issuedAt<=MAX_MS){s.lastSeenAt=t;return{user:s.username,via:'session'}}sessions.delete(token)}
-  if(authorized(String(req.headers.authorization||''),env.CRM_BASIC_AUTH_USERNAME,env.CRM_BASIC_AUTH_PASSWORD))return{user:env.CRM_BASIC_AUTH_USERNAME,via:'basic'};
+  if(s){
+    const t=Date.now();
+    if(t-s.lastSeenAt<=IDLE_MS&&t-s.issuedAt<=MAX_MS){
+      s.lastSeenAt=t;
+      return{user:s.username,via:'session'};
+    }
+    sessions.delete(token);
+  }
+  if(authorized(String(req.headers.authorization||''),env.CRM_BASIC_AUTH_USERNAME,env.CRM_BASIC_AUTH_PASSWORD)){
+    return{user:env.CRM_BASIC_AUTH_USERNAME,via:'basic'};
+  }
   return null;
 }
 export function loginWithPassword(req,{username,password,env}){
-  prune();const key=clientKey(req);const failed=failures.get(key);
-  if(failed&&Date.now()-failed.startedAt<10*60*1000&&failed.count>=5)return{ok:false,status:429,error:'Too many sign-in attempts. Try again later.'};
-  const basic=typeof username==='string'&&typeof password==='string'&&username&&password?'Basic '+Buffer.from(username+':'+password).toString('base64'):'';
+  prune();
+  const key=clientKey(req);
+  const failed=failures.get(key);
+  if(failed&&Date.now()-failed.startedAt<LOGIN_FAILURE_WINDOW_MS&&failed.count>=LOGIN_FAILURE_LIMIT){
+    return{ok:false,status:429,error:'Too many sign-in attempts. Try again later.'};
+  }
+  const basic=typeof username==='string'&&typeof password==='string'&&username&&password
+    ?'Basic '+Buffer.from(username+':'+password).toString('base64')
+    :'';
   if(!authorized(basic,env.CRM_BASIC_AUTH_USERNAME,env.CRM_BASIC_AUTH_PASSWORD)){
-    const v=failed&&Date.now()-failed.startedAt<10*60*1000?failed:{startedAt:Date.now(),count:0};v.count++;failures.set(key,v);
+    const v=failed&&Date.now()-failed.startedAt<LOGIN_FAILURE_WINDOW_MS
+      ?failed
+      :{startedAt:Date.now(),count:0};
+    v.count++;
+    failures.set(key,v);
     return{ok:false,status:401,error:'Invalid operator credentials.'};
   }
-  failures.delete(key);const token=randomBytes(32).toString('base64url');const t=Date.now();sessions.set(token,{username,issuedAt:t,lastSeenAt:t});
+  failures.delete(key);
+  const token=randomBytes(32).toString('base64url');
+  const t=Date.now();
+  sessions.set(token,{username,issuedAt:t,lastSeenAt:t});
   return{ok:true,status:200,user:username,token};
 }
-export function revokeRequestSession(req){const token=parseCookies(req)[COOKIE_NAME];if(token)sessions.delete(token)}
-export function sessionCookie(token,req){return COOKIE_NAME+'='+encodeURIComponent(token)+'; Path=/; HttpOnly; SameSite=Lax; Max-Age='+COOKIE_MAX_AGE+(secureCookie(req)?'; Secure':'')}
-export function clearSessionCookie(req){return COOKIE_NAME+'=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0; Expires=Thu, 01 Jan 1970 00:00:00 GMT'+(secureCookie(req)?'; Secure':'')}
+/** Test/support helper: clear in-memory auth state (sessions + failure counters). */
+export function resetAuthStateForTests(){
+  sessions.clear();
+  failures.clear();
+}
+export function revokeRequestSession(req){
+  const token=parseCookies(req)[COOKIE_NAME];
+  if(token)sessions.delete(token);
+}
+export function sessionCookie(token,req){
+  return COOKIE_NAME+'='+encodeURIComponent(token)+'; Path=/; HttpOnly; SameSite=Lax; Max-Age='+COOKIE_MAX_AGE+(secureCookie(req)?'; Secure':'');
+}
+export function clearSessionCookie(req){
+  return COOKIE_NAME+'=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0; Expires=Thu, 01 Jan 1970 00:00:00 GMT'+(secureCookie(req)?'; Secure':'');
+}
 export function sessionPolicy(){return{idleMinutes:480,maxHours:12}}
