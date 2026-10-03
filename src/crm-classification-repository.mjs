@@ -33,22 +33,22 @@ export function createCrmClassificationRepository({connectionString=process.env.
   },
 
   async getDeterministicContact({id,sourceNumber=SOURCE_NUMBER}={}){
-   if(!Number.isInteger(id)||id<1||!SOURCE_NUMBERS.includes(sourceNumber))throw Error('Invalid deterministic contact');
+   const contactId=Number(id);if(!Number.isInteger(contactId)||contactId<1||!SOURCE_NUMBERS.includes(sourceNumber))throw Error('Invalid deterministic contact');
    const [classification,messages,events]=await Promise.all([
-    db.query('SELECT * FROM crm_contact_classifications WHERE id=$1 AND source_number=$2',[id,sourceNumber]),
-    db.query('SELECT id,classification_id,source_number,provider_message_id,source_message_id,direction,message_type,body,sender_name,replied_to_source_message_id,message_at FROM crm_messages WHERE classification_id=$1 ORDER BY message_at ASC,id ASC',[id]),
-    db.query('SELECT id,provider_event_id,direction,message_type,payload,message_at FROM crm_webhook_events WHERE source_number=$1 AND phone=(SELECT phone FROM crm_contact_classifications WHERE id=$2) ORDER BY message_at ASC,id ASC',[sourceNumber,id])
+    db.query('SELECT * FROM crm_contact_classifications WHERE id=$1 AND source_number=$2',[contactId,sourceNumber]),
+    db.query('SELECT id,classification_id,source_number,provider_message_id,source_message_id,direction,message_type,body,sender_name,replied_to_source_message_id,message_at FROM crm_messages WHERE classification_id=$1 ORDER BY message_at ASC,id ASC',[contactId]),
+    db.query('SELECT id,provider_event_id,direction,message_type,payload,message_at FROM crm_webhook_events WHERE source_number=$1 AND phone=(SELECT phone FROM crm_contact_classifications WHERE id=$2) ORDER BY message_at ASC,id ASC',[sourceNumber,contactId])
    ]);
    return{classification:classification.rows[0]||null,messages:messages.rows,webhookEvents:events.rows};
   },
 
   async markDeterministicEvaluation({id,latestMessageId=null,latestMessageAt=null,decision,ruleVersion}={}){
-   if(!Number.isInteger(id)||id<1)throw Error('Invalid deterministic evaluation');
+   const contactId=Number(id);if(!Number.isInteger(contactId)||contactId<1)throw Error('Invalid deterministic evaluation');
    const evidence={deterministic:{rule_id:decision?.rule_id||'PENDING-01-INSUFFICIENT',rule_version:ruleVersion||null,reason:decision?.reason||'',signals:decision?.signals||[],evidence_message_ids:decision?.evidence_message_ids||[],evidence_webhook_event_ids:decision?.evidence_webhook_event_ids||[],evaluated_at:new Date().toISOString()}};
    const r=await db.query(`UPDATE crm_contact_classifications
      SET deterministic_last_evaluated_at=now(),deterministic_last_evaluated_message_id=$1,deterministic_last_evaluated_message_at=$2,deterministic_rule_version=$3,
          evidence=COALESCE(evidence,'{}'::jsonb)||$4::jsonb
-     WHERE id=$5 RETURNING id,status,classification_code,deterministic_last_evaluated_at`,[latestMessageId,latestMessageAt,ruleVersion,JSON.stringify(evidence),id]);
+     WHERE id=$5 RETURNING id,status,classification_code,deterministic_last_evaluated_at`,[latestMessageId,latestMessageAt,ruleVersion,JSON.stringify(evidence),contactId]);
    return r.rows[0]||null;
   },
 
