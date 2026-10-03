@@ -32,4 +32,29 @@ export function statusDecision({lead,statusSuggestion}={}){
  const autoSafe=SAFE_AUTO_STATUSES.has(suggestion.status)&&suggestion.confidence!==null&&suggestion.confidence>=0.85&&!suggestion.needs_review&&suggestion.evidence_message_ids.length>0;
  return{...suggestion,action:autoSafe?'auto_apply':'review_required'};
 }
-export const AI_STATUS_POLICY={VALID_STATUSES,SAFE_AUTO_STATUSES,HIGH_CONSEQUENCE_STATUSES};
+export const COVERAGE_AREAS=new Set(['HSR Layout','Kudlu Gate','Bellandur','Sarjapur Road','Whitefield','Hoodi','Mahadevapura','Marathahalli','ITPL','Varthur','Kasavanahalli','Harlur','Panathur','Yemalur','Old Airport Road']);
+const SELECTIVE_COVERAGE_AREAS=new Set(['Koramangala','Bommanahalli']);
+const OUT_OF_COVERAGE_AREAS=new Set(['Jayanagar','BTM Layout','JP Nagar','Electronic City','Carmelaram','Parappana Agrahara','Viman Nagar','Ulsoor','Fraser Town','Jeevanbhima Nagar']);
+const COVERAGE_ALIASES=new Map([
+ ['hsr','HSR Layout'],['haralur','Harlur'],['harlur','Harlur'],['kudlu','Kudlu Gate'],['marathalli','Marathahalli'],
+ ['yemlur','Yemalur'],['mahadevpura','Mahadevapura'],['brookefield','Whitefield'],['brookfield','Whitefield'],
+ ['old hal airport road','Old Airport Road'],['old airport road','Old Airport Road']
+]);
+function normalizeCoverageTerm(value=''){const raw=String(value??'').trim().replace(/\\s+/g,' ');if(!raw)return'';const key=raw.toLocaleLowerCase().replace(/[.]/g,'').trim();if(COVERAGE_ALIASES.has(key))return COVERAGE_ALIASES.get(key);for(const area of [...COVERAGE_AREAS,...SELECTIVE_COVERAGE_AREAS,...OUT_OF_COVERAGE_AREAS])if(area.toLocaleLowerCase()===key)return area;return raw;}
+function coverageDecision({lead,requirements={}}={}){
+ const current=String(lead?.lead_type||'');
+ if(HIGH_CONSEQUENCE_STATUSES.has(current))return{status:null,action:'review_required',reason:'Current status is a higher-consequence state and is not changed automatically.',coverage:'protected',evidence:[]};
+ const raw=Array.isArray(requirements?.preferred_locations)?requirements.preferred_locations:[];
+ const terms=[...new Set(raw.flatMap(v=>String(v??'').split(/[,;|/]+/).map(x=>x.trim()).filter(Boolean).map(normalizeCoverageTerm)))];
+ if(!terms.length)return{status:null,action:'no_change',reason:'No structured preferred location is stored; coverage is not inferred.',coverage:'unknown',evidence:[]};
+ const hasSelective=terms.some(t=>SELECTIVE_COVERAGE_AREAS.has(t));
+ const knownIn=terms.filter(t=>COVERAGE_AREAS.has(t));
+ const knownOut=terms.filter(t=>OUT_OF_COVERAGE_AREAS.has(t));
+ const unknown=terms.filter(t=>!COVERAGE_AREAS.has(t)&&!SELECTIVE_COVERAGE_AREAS.has(t)&&!OUT_OF_COVERAGE_AREAS.has(t));
+ if(hasSelective)return{status:null,action:'review_required',reason:'A selective service area is requested; automatic geographic assignment is not deterministic for this location.',coverage:'selective',evidence:terms};
+ if(knownOut.length&&knownIn.length)return{status:null,action:'review_required',reason:'Requested locations span both in-coverage and out-of-coverage areas; operator review is required.',coverage:'mixed',evidence:terms};
+ if(knownOut.length&&!knownIn.length&&!unknown.length)return{status:'Out of Coverage Area',action:current==='Out of Coverage Area'?'no_change':'auto_apply',reason:'All requested preferred locations exactly match the approved deterministic out-of-coverage vocabulary.',coverage:'out_of_coverage',evidence:knownOut};
+ if(knownIn.length&&!knownOut.length&&!unknown.length)return{status:null,action:'no_change',reason:'All requested preferred locations exactly match the approved in-coverage vocabulary.',coverage:'in_coverage',evidence:knownIn};
+ return{status:null,action:'review_required',reason:'Preferred locations include terms outside the controlled coverage vocabulary; coverage is not inferred from free text.',coverage:'unknown',evidence:terms};
+}
+export const AI_STATUS_POLICY={VALID_STATUSES,SAFE_AUTO_STATUSES,HIGH_CONSEQUENCE_STATUSES,COVERAGE_AREAS,SELECTIVE_COVERAGE_AREAS,OUT_OF_COVERAGE_AREAS,coverageDecision};
