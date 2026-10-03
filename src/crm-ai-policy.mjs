@@ -33,7 +33,7 @@ export function statusDecision({lead,statusSuggestion}={}){
  return{...suggestion,action:autoSafe?'auto_apply':'review_required'};
 }
 export const COVERAGE_AREAS=new Set(['HSR Layout','Kudlu Gate','Bellandur','Sarjapur Road','Whitefield','Hoodi','Mahadevapura','Marathahalli','ITPL','Varthur','Kasavanahalli','Harlur','Panathur','Yemalur','Old Airport Road']);
-const SELECTIVE_COVERAGE_AREAS=new Set(['Koramangala','Bommanahalli']);
+const SELECTIVE_COVERAGE_AREAS=new Set(['Koramangala','Bommanahalli','Old Airport Road']);
 const OUT_OF_COVERAGE_AREAS=new Set(['Jayanagar','BTM Layout','JP Nagar','Electronic City','Carmelaram','Parappana Agrahara','Viman Nagar','Ulsoor','Fraser Town','Jeevanbhima Nagar']);
 const COVERAGE_ALIASES=new Map([
  ['hsr','HSR Layout'],['haralur','Harlur'],['harlur','Harlur'],['kudlu','Kudlu Gate'],['marathalli','Marathahalli'],
@@ -41,7 +41,7 @@ const COVERAGE_ALIASES=new Map([
  ['old hal airport road','Old Airport Road'],['old airport road','Old Airport Road']
 ]);
 function normalizeCoverageTerm(value=''){const raw=String(value??'').trim().replace(/\\s+/g,' ');if(!raw)return'';const key=raw.toLocaleLowerCase().replace(/[.]/g,'').trim();if(COVERAGE_ALIASES.has(key))return COVERAGE_ALIASES.get(key);for(const area of [...COVERAGE_AREAS,...SELECTIVE_COVERAGE_AREAS,...OUT_OF_COVERAGE_AREAS])if(area.toLocaleLowerCase()===key)return area;return raw;}
-function coverageDecision({lead,requirements={}}={}){
+export function coverageDecision({lead,requirements={}}={}){
  const current=String(lead?.lead_type||'');
  if(HIGH_CONSEQUENCE_STATUSES.has(current))return{status:null,action:'review_required',reason:'Current status is a higher-consequence state and is not changed automatically.',coverage:'protected',evidence:[]};
  const raw=Array.isArray(requirements?.preferred_locations)?requirements.preferred_locations:[];
