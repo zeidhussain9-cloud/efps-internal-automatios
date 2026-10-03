@@ -80,7 +80,7 @@ function LeadCard({lead,onClick,privacyMode}){
  const status=lead.lead_type||'';
  const overdueFollowups=Number(lead.overdue_followup_count)||0;
  return <button className="lead-card" onClick={onClick} type="button">
-  <div className="lead-card-main"><div className="lead-card-identity"><b>{title}</b>{lead.display_name&&<span className="lead-card-phone">{displayPhone}</span>}</div></div>
+  <div className="lead-card-main"><div className="lead-card-identity"><b>{title}</b>{lead.display_name&&<span className="lead-card-phone">{displayPhone}</span>}</div>{lead.auto_qualified&&<span className="auto-qualified-tag">AUTO QUALIFIED</span>}</div>
   <div className={'lead-card-status-panel lead-card-status-'+(LEAD_STATUS_TONES[status]||'neutral')}><small>Lead status</small><strong>{LEAD_STATUS_LABELS[status]||status||'Not recorded'}</strong></div>
   <div className="lead-card-meta lead-card-meta-minimal"><span>Source number · {lead.source_number||SOURCE_NUMBER}</span>{overdueFollowups>0&&<span className="lead-card-attention"><Clock3 size={13} aria-hidden="true"/>Overdue follow-up · {overdueFollowups}</span>}</div>
   <div className="lead-card-activity" aria-label="Lead conversation activity">
