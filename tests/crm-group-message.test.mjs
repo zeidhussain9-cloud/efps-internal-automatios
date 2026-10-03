@@ -11,7 +11,7 @@ test('group-message classification is a first-class excluded classification',asy
   read('src/main.jsx'),
   read('supabase/functions/whapi-crm-webhook/index.ts')
  ]);
- assert.match(migration,/group_message/);
+ assert.match(migration,/RIGHT\(group_chat_id,5\)='@g\.us'/);
  assert.match(migration,/Group Message/);
  assert.match(migration,/group_chat_id/);
  assert.match(migration,/@g\\\\.us/);
