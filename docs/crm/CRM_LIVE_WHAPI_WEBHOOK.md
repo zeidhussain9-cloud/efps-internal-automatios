@@ -1,31 +1,29 @@
-# Current production audit — 2026-10-01
+# CRM live WhAPI webhook — current verified state
 
-## Authoritative current verified state — 2026-10-01 21:55 IST
+> Verified 2026-10-04 00:49 IST. Earlier dated event-count blocks remain historical evidence and are superseded.
 
-This is the latest repository/production checkpoint. Older dated sections in maintained documents are historical evidence and must not be interpreted as current state.
+## Current production identity
 
-- **CRM deployment branch:** `crm-ui-dashboard`
-- **Repository state:** `crm-ui-dashboard` is reconciled with `main`; their current trees are identical.
-- **Tree equality:** `tree(main) == tree(crm-ui-dashboard)` = **TRUE**
-- **Render:** `easyfind-crm-d01-d05` / `srv-darsv560tbcc73cu4ip0`
-- **Live Render deployment:** `dep-dav82h3m8hqs7399j4ug` = **LIVE**
-- **Live Render commit:** `1c196577fc414be52c8fc889b3886f11e0e9da5d`
-- **Production health:** `GET /health` = HTTP 200, `{"ok":true}`
-- **Production WhatsApp source:** `+919148338801`
-- **Supabase:** 186 leads; 6,870 messages; 465 webhook events; 310 classifications; 186 requirements; 196 AI runs; 196 drafts; 186 AI cursors; 88 active inventory rows.
-- **Classification status:** 186 promoted; 88 classified; 23 pending; 13 excluded = 310 total.
-- **Webhook status:** 465 processed; 0 received; 0 processing; 0 failed.
-- **Message reconciliation:** 6,870 total = 4,806 lead-linked + 2,064 classified non-lead; unreconciled = 0.
-- **Historical classification population:** 228 historical records; 140 qualified mappings.
-- **Inventory:** 88 active rows = 71 Available + 17 Rented Out; 1,377 sync runs; latest sync recorded 88 rows / 0 changed / 0 removed; inventory-change rows = 0.
-- **Cloudinary:** 829/829 distinct production URLs returned HTTP 200 with `image/*` content-type by direct HEAD checks from the production-machine network path.
-- **AI integrity:** draft→AI-run lead mismatch = 0; stale evidence references = 0; invalid cursor lead links = 0.
-- **Tests:** `npm run build` PASS; `npm test` 78/78 PASS; `npm run test:browser` 1/1 PASS.
-- **Supabase Edge Function:** `whapi-crm-webhook` ACTIVE v8.
-- **AWS legacy webhook:** no changes in the audited CRM hardening range.
-- **24-item CRM audit:** GREEN / VERIFIED.
+- Production source: +919148338801
+- Render service: easyfind-crm-d01-d05 / srv-darsv560tbcc73cu4ip0
+- Repository branch: crm-ui-dashboard
+- Supabase project: qttcutwzehtskfcwxkwj
+- Current database snapshot: 239 leads; 8,098 messages; 1,831 webhook events; 277 AI runs; 214 drafts; 362 classifications; 88 active inventory listings.
+- Classification status: 239 promoted / 88 classified / 32 excluded / 3 pending
 
-### Current operational flow
+## Canonical flow
+
+WhAPI -> crm_webhook_events (durable first write) -> webhook classification/reconciliation -> crm_messages + crm_contact_classifications -> operator-qualified promotion into crm_leads.
+
+## Group Message gate
+
+A persisted webhook payload with chat_id ending in @g.us is a deterministic group-chat signal. When the associated contact classification is still pending, the system assigns classification_code=group_message, label=Group Message, classification_source=webhook_rule, and status=excluded. Group chat ID/name and rule provenance are preserved in evidence, and the automatic classification is written to CRM audit activity.
+
+This behavior exists in both the deployed Supabase Edge Function whapi-crm-webhook and the canonical SQL reconciliation function. Promoted leads are preserved; already operator-classified records are not overwritten.
+
+Production backfill verified 14 pending source contacts with persisted @g.us events; all 14 are now Group Message / excluded and outside the Leads Inbox.
+
+## Current operational flow
 
 ```text
 WhAPI +919148338801
@@ -79,7 +77,7 @@ See the authoritative current-state block at the top of this document for the cu
 ## Current production checkpoint — 2026-10-01
 
 - Source in scope: `+919148338801`.
-- Supabase current state: 186 leads, 310 classifications, 23 pending classifications, 186 promoted classifications, 6,870 messages.
+- Supabase current state: 239 leads, 362 classifications, 3 pending classifications, 239 promoted classifications, 8,098 messages.
 - `crm_webhook_events`: 73 rows for the source; 73 processed, 0 received, 0 failed. Automatic reconciliation is active; there is no current received-event backlog.
 - The historical 5,286-message SQLite archive remains historical source evidence and is not the current CRM message count.
 - Do not initiate another WhAPI historical API extraction as part of ordinary reconciliation. Live discovery of new contacts is through the webhook boundary and `crm_contact_classifications`.
@@ -143,13 +141,13 @@ Processing states are `received`, `processing`, `processed`, and `failed`. A pro
 
 `crm_messages.message_at` is the provider message timestamp. The workspace query orders messages by `message_at ASC, id ASC`, so imported history and new webhook activity appear in chronological order. The original SQLite message identity remains in `source_message_id`; WhAPI provider IDs use `provider_message_id`.
 
-Current verified source population:
+Historical source population at the 2026-10-01 checkpoint:
 
-- **186 source-linked CRM leads** currently persisted in production
-- **310 current classifications** for `+919148338801`, with 23 pending and 186 promoted.
-- 6,870 current CRM messages; the 5,286-message SQLite archive remains historical evidence.
-- **0 intake contacts**; the intake tables were removed from the CRM live model
-- **73 persisted webhook events** at the 2026-10-01 verified checkpoint (73 processed, 0 received, 0 failed)
+- 186 source-linked CRM leads at that historical checkpoint.
+- 310 classifications for +919148338801 at that historical checkpoint.
+- 6,870 CRM messages at that historical checkpoint; the SQLite archive remains historical evidence.
+- 0 intake contacts; the intake tables were removed from the CRM live model.
+- 73 persisted webhook events at the 2026-10-01 checkpoint (73 processed, 0 received, 0 failed).
 
 ## UI live updates
 
@@ -180,3 +178,15 @@ The CRM webhook only records WhatsApp activity. It never calls a WhAPI send endp
 ## Operator classification UI — 2026-09-30
 
 Webhook ingestion and operator qualification remain separate stages. Incoming contacts are preserved first. The UI exposes one Contact Classification screen with two sub-tabs: Waiting for classification and Qualified lead pushed to CRM. Non-qualified classifications remain outside CRM; Qualified Lead is the only promotion path. The explicit Update action waits for the server transaction to succeed before the UI moves the contact between queues.
+
+## Deterministic classification engine — current verified
+
+- Deterministic classification is active for source +919148338801; it does not call AI.
+- New WhatsApp messages remain attached to the same crm_contact_classifications record while a contact is pending; conversation history accumulates in crm_messages and webhook evidence remains in crm_webhook_events.
+- The scheduler runs hourly at 0 * * * * through Supabase Cron job crm_deterministic_scheduler_1h.
+- Qualification requires customer-originated intent plus property/requirement evidence. Outbound property messages alone cannot qualify a contact.
+- Known operator-confirmed Internal, Personal/Family, Agent/Partner, Vendor/Supplier and Group Message exclusions remain protected.
+- New automatic decisions are Qualified Lead or an approved Unqualified classification. Property Listing Sent is legacy/historical only and is never generated by the deterministic engine.
+- Insufficient evidence remains Waiting for Classification and is reevaluated when new conversation evidence arrives.
+- Deterministically qualified leads persist auto_qualified=true and display AUTO QUALIFIED on the lead card.
+- Every deterministic evaluation records rule version, evidence message/event IDs, reason and audit provenance.

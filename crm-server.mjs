@@ -9,6 +9,7 @@ import {createCrmRepository} from './src/crm-repository.mjs';
 import {buildInventoryPage,INVENTORY_PAGE_SIZE,normalizeInventorySort} from './src/inventory-logic.mjs';
 import {imageUrls} from './src/crm-logic.mjs';
 import {createCrmClassificationRepository} from './src/crm-classification-repository.mjs';
+import {createDeterministicScheduler} from './src/crm-deterministic-scheduler.mjs';
 import {draftPreflight} from './src/draft-preflight.mjs';
 import {startupDatabaseCheck} from './src/crm-startup-check.mjs';
 const root=resolve('dist');
@@ -19,6 +20,19 @@ createServer(async(req,res)=>{
  try{
   const p=decodeURIComponent(new URL(req.url,'http://localhost').pathname);
   if(p==='/health'){res.writeHead(200,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify({ok:true}));}
+  if(p==='/api/internal/deterministic/scheduler'&&req.method==='POST'){
+   if(process.env.CRM_DETERMINISTIC_SCHEDULER_ENABLED!=='true'||!process.env.CRM_DETERMINISTIC_SCHEDULER_SECRET){res.writeHead(404,security);return res.end('Deterministic scheduler disabled');}
+   const provided=String(req.headers['x-efps-deterministic-secret']||'');
+   let body={};try{body=await readJsonBody(req,4096)}catch{res.writeHead(400,security);return res.end('Invalid scheduler request');}
+   const limit=Number(body.limit??500),dryRun=body.dry_run===true;
+   if(body.invocation_source!=='scheduled_1h'||!Number.isInteger(limit)||limit<1||limit>500){res.writeHead(400,security);return res.end('Invalid scheduler request');}
+   const expected=String(process.env.CRM_DETERMINISTIC_SCHEDULER_SECRET||'');
+   if(!expected||provided.length!==expected.length||!timingSafeEqual(Buffer.from(expected),Buffer.from(provided))){res.writeHead(401,security);return res.end('Invalid scheduler authentication');}
+   const scheduler=createDeterministicScheduler();
+   try{const result=await scheduler.run({dryRun,limit});if(result.locked===false){res.writeHead(409,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify({ok:false,...result}));}res.writeHead(200,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify({ok:true,...result}));}
+   catch(e){res.writeHead(500,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify({ok:false,error:'Deterministic scheduler failed'}));}
+   finally{await scheduler.close()}
+  }
   if(p==='/api/internal/ai/scheduler'&&req.method==='POST'){
    if(process.env.CRM_AI_SCHEDULER_ENABLED!=='true'||!process.env.CRM_AI_SCHEDULER_SECRET){res.writeHead(404,security);return res.end('AI scheduler disabled');}
    const ts=String(req.headers['x-efps-cron-timestamp']||'');const provided=String(req.headers['x-efps-cron-signature']||'');
