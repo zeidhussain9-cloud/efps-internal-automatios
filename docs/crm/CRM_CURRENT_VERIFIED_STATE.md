@@ -5,10 +5,9 @@
 ## Runtime baseline
 
 - Production branch: crm-ui-dashboard
-- Production implementation commit: 8996dd32d732b0d8fab17f41b42306c230cd1de1
-- Verified implementation tree before final documentation reconciliation: c16bafdf7ed4e369d3171a4ee58f80a919630f10
+- Verified deterministic implementation baseline: 8996dd32d732b0d8fab17f41b42306c230cd1de1
 - Render service: srv-darsv560tbcc73cu4ip0
-- Live Render deployment for the verified implementation: dep-db0l8g0jo6nc739pdjjg
+- Current crm-ui-dashboard release: verified LIVE
 - Production source: +919148338801
 - Supabase project: qttcutwzehtskfcwxkwj
 - Supabase Edge Function: whapi-crm-webhook ACTIVE v9
@@ -74,6 +73,6 @@ Remaining pending contacts after the verified activation run:
 - Deterministic classifications generated as property_listing_sent: 0
 - AI runs created by deterministic activation: 0
 
-## Repository release condition
+## Repository release condition — completed
 
-The final release requires the verified crm-ui-dashboard tree to be reconciled into main with no history rewrite and with tree(main) == tree(crm-ui-dashboard). Only main and crm-ui-dashboard may remain as repository branches.
+The verified crm-ui-dashboard tree has been reconciled into main without history rewriting. tree(main) == tree(crm-ui-dashboard) is verified, and GitHub contains only main and crm-ui-dashboard.
