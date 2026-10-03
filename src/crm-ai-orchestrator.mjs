@@ -8,22 +8,22 @@ export async function runLeadAnalysis({repo,leadId,invocationSource='ui_manual',
  if(invocationSource==='scheduled_6h'){
   const coverage=coverageDecision({lead:workspace.lead,requirements:workspace.requirement_profile});
   if(coverage.action==='auto_apply'&&coverage.status){
-   const updated=await repo.updateLead({id:leadId,leadType:coverage.status,actor:INTERNAL_ACTOR});
-   await repo.appendActivity({leadId,actor:INTERNAL_ACTOR,action:'ai.status.coverage_applied',details:{from_status:workspace.lead.lead_type||null,to_status:coverage.status,evidence:coverage.evidence,reason:coverage.reason,invocation_source:'scheduled_6h'}});
-   await repo.setAiEvaluationCursor({leadId,sourceNumber:workspace.sources[0]?.source_number||'+919148338801',lastMessageId:signals.latestMessageId,lastMessageAt:signals.latestMessageAt,evaluatedAt:now});
-   return{leadId,invocation_source:'scheduled_6h',skipped_ai:true,deterministic_status:updated?.lead_type||coverage.status,evidence:coverage.evidence,reason:coverage.reason};
+    const updated=await repo.updateLead({id:leadId,leadType:coverage.status,actor:INTERNAL_ACTOR});
+    await repo.appendActivity({leadId,actor:INTERNAL_ACTOR,action:'ai.status.coverage_applied',details:{from_status:workspace.lead.lead_type||null,to_status:coverage.status,evidence:coverage.evidence,reason:coverage.reason,invocation_source:'scheduled_6h'}});
+    await repo.setAiEvaluationCursor({leadId,sourceNumber:workspace.sources[0]?.source_number||'+919148338801',lastMessageId:signals.latestMessageId,lastMessageAt:signals.latestMessageAt,evaluatedAt:now});
+    return{leadId,invocation_source:'scheduled_6h',skipped_ai:true,deterministic_status:updated?.lead_type||coverage.status,evidence:coverage.evidence,reason:coverage.reason};
   }
   if(signals.hasNewMessage){
-   const d=deterministicStatus({lead:workspace.lead,messages:workspace.messages});
-   if(d.action==='auto_apply'&&d.status){
-    const updated=await repo.updateLead({id:leadId,leadType:d.status,actor:INTERNAL_ACTOR});
-    await repo.appendActivity({leadId,actor:INTERNAL_ACTOR,action:'ai.status.deterministic_applied',details:{from_status:workspace.lead.lead_type||null,to_status:d.status,evidence_message_ids:d.evidence_message_ids,reason:d.reason,invocation_source:'scheduled_6h'}});
-    await repo.setAiEvaluationCursor({leadId,sourceNumber:workspace.sources[0]?.source_number||'+919148338801',lastMessageId:signals.latestMessageId,lastMessageAt:signals.latestMessageAt,evaluatedAt:now});
-    return{leadId,invocation_source:'scheduled_6h',skipped_ai:true,deterministic_status:updated?.lead_type||d.status,evidence_message_ids:d.evidence_message_ids,reason:d.reason};
-   }
+    const d=deterministicStatus({lead:workspace.lead,messages:workspace.messages});
+    if(d.action==='auto_apply'&&d.status){
+      const updated=await repo.updateLead({id:leadId,leadType:d.status,actor:INTERNAL_ACTOR});
+      await repo.appendActivity({leadId,actor:INTERNAL_ACTOR,action:'ai.status.deterministic_applied',details:{from_status:workspace.lead.lead_type||null,to_status:d.status,evidence_message_ids:d.evidence_message_ids,reason:d.reason,invocation_source:'scheduled_6h'}});
+      await repo.setAiEvaluationCursor({leadId,sourceNumber:workspace.sources[0]?.source_number||'+919148338801',lastMessageId:signals.latestMessageId,lastMessageAt:signals.latestMessageAt,evaluatedAt:now});
+      return{leadId,invocation_source:'scheduled_6h',skipped_ai:true,deterministic_status:updated?.lead_type||d.status,evidence_message_ids:d.evidence_message_ids,reason:d.reason};
+    }
   }
 }
-const key=checkpointKey({leadId,latestMessageId:signals.latestMessageId,latestMessageAt:signals.latestMessageAt,source:invocationSource,reason:signals.reason});
+ const key=checkpointKey({leadId,latestMessageId:signals.latestMessageId,latestMessageAt:signals.latestMessageAt,source:invocationSource,reason:signals.reason});
  if(key){const existing=await repo.findAiRunByIdempotencyKey(key);if(existing){if(existing.status!=='failed'&&signals.latestMessageId){await repo.setAiCursor({leadId,sourceNumber:workspace.sources[0]?.source_number||'+919148338801',lastMessageId:signals.latestMessageId,lastMessageAt:signals.latestMessageAt});await repo.setAiEvaluationCursor({leadId,sourceNumber:workspace.sources[0]?.source_number||'+919148338801',lastMessageId:signals.latestMessageId,lastMessageAt:signals.latestMessageAt,evaluatedAt:now});}return{leadId,invocation_source:'scheduled_6h',skipped:true,skip_reason:'idempotent_existing_run',run:existing};}}
  let result;try{result=await analyze({lead:workspace.lead,requirements:workspace.requirement_profile,messages:workspace.messages,aiHistory:workspace.ai_runs,cursor:workspace.ai_cursor,evidence:workspace.requirement_evidence,env});}catch(error){await repo.saveAiRun({leadId,modelName:'unresolved',provider:'unavailable',proposal:{},status:'failed',errorCode:'ai_execution_failed',invocationSource,checkpointMessageId:signals.latestMessageId,checkpointMessageAt:signals.latestMessageAt,eligibilityReason:signals.reason,statusAction:'review_required'});await repo.appendActivity({leadId,actor:invocationSource==='scheduled_6h'?INTERNAL_ACTOR:actor,action:'ai.run.failed',details:{invocation_source:invocationSource,error_code:'ai_execution_failed',checkpoint_message_id:signals.latestMessageId}});throw error;}
  const suggestion=normalizeStatusSuggestion(result.proposal?.lead_status_suggestion), decision=statusDecision({lead:workspace.lead,statusSuggestion:suggestion}), run=await repo.saveAiRun({leadId,modelName:result.model,provider:result.provider,fallbackFrom:result.fallbackFrom||null,fallbackReason:result.fallbackReason||null,proposal:{...result.proposal,lead_status_suggestion:suggestion},usage:result.usage||{},invocationSource,checkpointMessageId:signals.latestMessageId,checkpointMessageAt:signals.latestMessageAt,eligibilityReason:signals.reason,idempotencyKey:key,statusAction:decision.action});
