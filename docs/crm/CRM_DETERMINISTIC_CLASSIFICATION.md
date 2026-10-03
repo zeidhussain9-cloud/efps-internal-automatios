@@ -1,6 +1,6 @@
 # CRM Deterministic Classification Engine
 
-> Verified 2026-10-04 00:49 IST against production Supabase and the live Render release.
+> Verified 2026-10-04 01:19 IST against production Supabase and the live Render release.
 
 ## Purpose
 
@@ -75,3 +75,11 @@ A deterministic Qualified Lead is persisted with classification_source=determini
 ## Legacy classification note
 
 Existing historical property_listing_sent rows remain historical CRM data. The new deterministic engine does not create that classification.
+
+## AI scheduler — intentionally paused
+
+- `crm_ai_scheduler_6h` is **paused** as of 2026-10-04.
+- Its implementation and `crm_invoke_ai_scheduler()` function remain in the repository and database.
+- The pg_cron trigger has been removed, so no recurring AI scheduler execution is currently scheduled.
+- The deterministic classification scheduler remains active independently at `0 * * * *`.
+- Reactivation requires an explicit operational decision and a new scheduler activation.

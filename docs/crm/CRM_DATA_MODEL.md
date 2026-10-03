@@ -41,7 +41,7 @@ The P1–P5 hardening release added regression coverage for webhook promotion li
 ## Current production checkpoint — 2026-10-01
 
 - Render `easyfind-crm-d01-d05` is live from the synchronized `crm-ui-dashboard` release.
-- Source-linked leads: 186; classifications: 310; pending classifications: 23; promoted classifications: 186; CRM messages: 6,870.
+- Source-linked leads: 239; classifications: 362; pending classifications: 3; promoted classifications: 239; CRM messages: 8,098.
 - Webhook events: 436 total, 436 processed, 0 received, 0 processing, 0 failed.
 - `crm_ai_runs` now includes `input_tokens`, `output_tokens`, `total_tokens`, `estimated_cost_usd`, and `pricing_source`. These are populated from provider usage when available and are retained with the AI run used to create the draft.
 
@@ -52,7 +52,7 @@ The P1–P5 hardening release added regression coverage for webhook promotion li
 - Contact classifications: 289
 - Pending classifications: 2
 - Promoted classifications: 186
-- Current CRM messages: 6,870
+- Current CRM messages: 8,098
 - Webhook events: 73 (73 processed, 0 received, 0 failed)
 - Historical SQLite message archive: 5,286; this remains historical evidence and is not the current live message count.
 - The Contact Classification UI is operator-gated and uses explicit Update actions.
@@ -198,6 +198,14 @@ The production AI workspace also consumes `crm_ai_runs`, `crm_requirement_eviden
 ## 2026-10-01 — AI provenance, evidence, outcomes and stale-draft controls
 
 `crm_ai_runs` now stores `provider`, `fallback_from`, and `fallback_reason`. `crm_drafts` now stores `ai_run_id`, `ai_provider`, `model_name`, `evidence_message_ids`, `evidence_summary`, and `sent_at`. Draft freshness is derived from whether newer CRM messages exist after draft creation. This supports model auditability, source evidence, stale-draft detection, and explicit operator outcome tracking without enabling automatic WhatsApp sending.
+
+## AI scheduler — intentionally paused
+
+- `crm_ai_scheduler_6h` is **paused** as of 2026-10-04.
+- Its implementation and `crm_invoke_ai_scheduler()` function remain in the repository and database.
+- The pg_cron trigger has been removed, so no recurring AI scheduler execution is currently scheduled.
+- The deterministic classification scheduler remains active independently at `0 * * * *`.
+- Reactivation requires an explicit operational decision and a new scheduler activation.
 
 ## Deterministic classification engine — current verified
 

@@ -60,6 +60,14 @@ The CRM browser regression is fixed and D07 is resolved on `crm-ui-dashboard`. D
 
 The CRM AI workspace is now production-enabled on Render service `srv-darsv560tbcc73cu4ip0`. It analyzes the complete stored conversation and lead context rather than fictional fixtures. Requirements are normalized and editable in the Lead Workspace. AI proposals include evidence-backed requirement changes, timeline/context analysis, a suggested lead status, and a versioned reply draft. The AI does not automatically send WhatsApp messages.
 
+## AI scheduler — intentionally paused
+
+- `crm_ai_scheduler_6h` is **paused** as of 2026-10-04.
+- Its implementation and `crm_invoke_ai_scheduler()` function remain in the repository and database.
+- The pg_cron trigger has been removed, so no recurring AI scheduler execution is currently scheduled.
+- The deterministic classification scheduler remains active independently at `0 * * * *`.
+- Reactivation requires an explicit operational decision and a new scheduler activation.
+
 ## Deterministic classification engine — current verified
 
 - Deterministic classification is active for source +919148338801; it does not call AI.

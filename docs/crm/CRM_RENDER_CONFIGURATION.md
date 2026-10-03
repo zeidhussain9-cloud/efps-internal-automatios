@@ -24,3 +24,11 @@ A candidate is not production-live until Render reports the candidate SHA live a
 ## External credential hardening
 
 AWS least-privilege rotation requires authorized AWS IAM administration. Do not mark the rotation complete based only on repository configuration.
+
+## AI scheduler — intentionally paused
+
+- `crm_ai_scheduler_6h` is **paused** as of 2026-10-04.
+- Its implementation and `crm_invoke_ai_scheduler()` function remain in the repository and database.
+- The pg_cron trigger has been removed, so no recurring AI scheduler execution is currently scheduled.
+- The deterministic classification scheduler remains active independently at `0 * * * *`.
+- Reactivation requires an explicit operational decision and a new scheduler activation.

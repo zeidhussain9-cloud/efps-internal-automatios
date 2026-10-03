@@ -59,7 +59,7 @@ This is the latest repository/production checkpoint. Older dated sections in mai
 - **main tree:** verified equal to crm-ui-dashboard at release close
 - **Tree equality:** `tree(main) == tree(crm-ui-dashboard)` = **TRUE**
 - **Render:** `easyfind-crm-d01-d05` / `srv-darsv560tbcc73cu4ip0`
-- **Live Render deployment:** `dep-db0l8g0jo6nc739pdjjg` = **LIVE**
+- **Live Render deployment:** current crm-ui-dashboard release = **LIVE**
 - **Live Render commit:** `8996dd32d732b0d8fab17f41b42306c230cd1de1`
 - **Production health:** `GET /health` = HTTP 200, `{"ok":true}`
 - **Production WhatsApp source:** `+919148338801`
@@ -118,7 +118,7 @@ The P1–P5 hardening release added regression coverage for webhook promotion li
 
 - GitHub contains only the intended `crm-ui-dashboard` and `main` branches for the UI workstream.
 - The UI source selector exposes all three audited EFPS WhatsApp source numbers: `+919148338801`, `+917975102130`, `+919902024973`. The connected live WhAPI ingress remains `+919148338801`.
-- Current production evidence is 186 leads, 310 classifications, 3 pending classifications, 239 promoted classifications, and 8,098 CRM messages for +919148338801.
+- Current production evidence is 239 leads, 362 classifications, 3 pending classifications, 239 promoted classifications, and 8,098 CRM messages for +919148338801.
 - Historical message provenance remains source-backed; SQLite message IDs are stored as `source_message_id`, not fabricated provider IDs.
 - The live CRM path is lead-only. There is no listener abstraction, no inventory listener, no lead listener or staged intake queue. `crm_contact_classifications` is the pre-lead registry and operator qualification gate.
 - WhAPI pushes `messages` webhooks to the Supabase Edge Function `whapi-crm-webhook`.
@@ -131,11 +131,11 @@ The P1–P5 hardening release added regression coverage for webhook promotion li
 
 ## Data gates completed
 
-The current production CRM registry contains 186 leads and 310 classifications, with 3 pending classifications and 186 promoted. Current CRM messages total 6,870 for the production source. No separate intake queue is used.
+The current production CRM registry contains 239 leads and 362 classifications, with 3 pending classifications and 239 promoted. Current CRM messages total 8,098 for the production source. No separate intake queue is used.
 
 ## Live webhook gate
 
-Current persisted counts are 186 leads, 310 classifications, 6,870 messages and 465 webhook events (1,831 processed, 0 received, 0 processing, 0 failed).
+Current persisted counts are 239 leads, 362 classifications, 8,098 messages and 1,831 webhook events (1,831 processed, 0 received, 0 processing, 0 failed).
 
 The WhAPI-to-Supabase live ingress is enabled for the current production source. Do not run another historical WhAPI API extraction as part of ordinary CRM reconciliation. Historical SQLite evidence and live webhook data remain distinct provenance classes.
 

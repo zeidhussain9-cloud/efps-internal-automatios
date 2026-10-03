@@ -179,6 +179,14 @@ The CRM webhook only records WhatsApp activity. It never calls a WhAPI send endp
 
 Webhook ingestion and operator qualification remain separate stages. Incoming contacts are preserved first. The UI exposes one Contact Classification screen with two sub-tabs: Waiting for classification and Qualified lead pushed to CRM. Non-qualified classifications remain outside CRM; Qualified Lead is the only promotion path. The explicit Update action waits for the server transaction to succeed before the UI moves the contact between queues.
 
+## AI scheduler — intentionally paused
+
+- `crm_ai_scheduler_6h` is **paused** as of 2026-10-04.
+- Its implementation and `crm_invoke_ai_scheduler()` function remain in the repository and database.
+- The pg_cron trigger has been removed, so no recurring AI scheduler execution is currently scheduled.
+- The deterministic classification scheduler remains active independently at `0 * * * *`.
+- Reactivation requires an explicit operational decision and a new scheduler activation.
+
 ## Deterministic classification engine — current verified
 
 - Deterministic classification is active for source +919148338801; it does not call AI.
