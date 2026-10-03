@@ -5,13 +5,14 @@ import {readFile} from 'node:fs/promises';
 const read=path=>readFile(new URL('../'+path,import.meta.url),'utf8');
 
 test('group-message classification is a first-class excluded classification',async()=>{
- const [migration,repository,ui,webhook]=await Promise.all([
+ const [migration,suffixFix,repository,ui,webhook]=await Promise.all([
   read('db/migrations/20261003150000_crm_group_message_classification_gate.sql'),
+  read('db/migrations/20261003150001_crm_group_message_suffix_fix.sql'),
   read('src/crm-classification-repository.mjs'),
   read('src/main.jsx'),
   read('supabase/functions/whapi-crm-webhook/index.ts')
  ]);
- assert.match(migration,/RIGHT\(group_chat_id,5\)='@g\.us'/);
+ assert.match(suffixFix,/RIGHT\(group_chat_id,5\)='@g\.us'/);
  assert.match(migration,/Group Message/);
  assert.match(migration,/group_chat_id/);
  assert.match(repository,/group_message/);
