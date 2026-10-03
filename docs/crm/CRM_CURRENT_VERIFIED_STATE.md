@@ -1,71 +1,43 @@
-# EFPS CRM — Current Verified Production State
+# EFPS CRM — Current Verified State
 
-> **Authoritative snapshot:** 2026-10-03 18:04 IST (12:34 UTC). This page contains the current operational state only. Older evidence belongs in dated audit documents and must not be read as current status.
+> Verified 2026-10-03 18:35 IST. Repository candidate: `dd7ba3e94293181c620825433e5f2be8a71e91ff`.
 
-## Repository and deployment
+## Runtime baseline
 
 - Production branch: `crm-ui-dashboard`
-- Current implementation commit: `e375c1f811e962e140caba2c964fb05cd94ab02a`
-- Current tree: `7f9527ae9c26850f93d13d389f94b2b45b87447a`
+- Current verified tree: `1bf9ebe11ed463a492fd131d69b1334ea6ab82a8`
 - Render service: `srv-darsv560tbcc73cu4ip0`
-- Production URL: https://easyfind-crm-d01-d05.onrender.com
 - Production source: `+919148338801`
-- Supabase project: `qttcutwzehtskfcwxkwj`
+- Supabase: `qttcutwzehtskfcwxkwj`
 
-The repository requirement `tree(main) == tree(crm-ui-dashboard)` must be re-verified after every release. This release has not yet been reconciled into `main`; reconciliation is performed only after production deployment and runtime verification.
+## Database audit snapshot — 2026-10-03 12:34 UTC
 
-## Live data snapshot
+- 186 leads
+- 7,573 CRM messages
+- 1,256 persisted webhook events
+- 214 AI runs / 214 drafts
+- 88 active inventory listings
+- 1,905 inventory sync runs
 
-- Leads: **186**
-- CRM messages: **7573**
-- Persisted webhook events: **1256**
-- AI runs: **214**
-- AI drafts: **214**
-- Active inventory listings: **88**
-- Inventory sync runs: **1905**
+## Post-deployment process evidence
 
-## Production safeguards
+- Webhooks: 729/729 processed; 0 failed; 0 pending; 0 event/message mismatches; 0 event/lead mismatches; 0 duplicate provider keys/fingerprints.
+- Inventory: 372 sync runs; every audited run was 88 rows / 0 changed / 0 removed; 0 change-ledger rows since deployment.
+- AI scheduler: 6 cycles; 24 leads selected; 14 AI runs completed; 3 deterministic updates; 0 AI failures; 0 scheduler failures; 14 drafts.
 
-- WhAPI events are durably persisted and deduplicated at the webhook boundary.
-- The one-minute webhook reconciliation job is active.
-- The five-minute Housing inventory reconciliation job is active.
-- The six-hour AI scheduler is active.
-- Scheduled AI runs use per-lead checkpoints and idempotency keys.
-- Automatic WhatsApp sending remains disabled; outbound messaging is operator-controlled.
-- High-consequence AI status changes remain review-gated.
+## Repository verification
 
-## Hardening closure
+- `npm run build`: PASS
+- `npm test`: 102/102 PASS
+- `npm run test:browser`: 1/1 PASS
+- GitHub Actions: both CRM Synthetic CI and CRM UI Verification PASS on `dd7ba3e`.
 
-### Closed in this release
+## Hardening state
 
-- Deterministic OOC assignment: only an exact, controlled out-of-coverage location set can auto-apply `Out of Coverage Area`. Selective, mixed, or unknown locations remain review-required.
-- D08 documentation handoff: current UI architecture, operator-control boundaries, evidence model, inventory boundary, and production verification contract are documented in the current CRM documentation set.
-- Current-status documentation: key CRM operational documents are being normalized to this snapshot and volatile historical claims are being removed from current-status sections.
+- OOC deterministic policy: implemented and regression-tested, but awaiting production deployment/runtime verification.
+- D08 handoff: documented.
+- Independent encrypted backup + isolated restore: external prerequisite, not yet evidenced.
+- AWS least-privilege credential rotation: external IAM prerequisite, not yet evidenced.
+- Automatic WhatsApp sending: disabled.
 
-### External infrastructure prerequisites
-
-These cannot be truthfully marked complete from the connected repository/Render/Supabase interfaces alone:
-
-- Independent encrypted backup artifact plus restore into a separately provisioned target. The repository already contains encrypted `pg_dump`/`pg_restore` tooling; the missing production evidence is an independently owned durable destination and an isolated restore target.
-- AWS least-privilege credential rotation. The application uses the AWS SDK default credential chain, but creating/replacing the production IAM identity requires an authorized AWS IAM environment. No AWS IAM management connection is available here.
-
-These are infrastructure provisioning tasks, not application-code defects.
-
-## Deferred product changes
-
-The following are intentionally not classified as production-hardening blockers:
-
-- Incremental/delta AI analysis optimization.
-- Field-level editing of AI-proposed requirement updates.
-
-They require separate product/UX acceptance and are not silently represented as production-complete.
-
-## Verification contract
-
-A release is current only when all of the following are evidenced:
-
-1. GitHub build/test/browser verification passes for the deployed commit.
-2. Render reports that same commit as live.
-3. Supabase scheduled jobs remain active and succeeding.
-4. Webhook, inventory, and AI integrity queries reconcile cleanly.
-5. `main` is reconciled to the same verified tree.
+Use this document as the only current CRM runtime snapshot. Dated audit reports are historical evidence.

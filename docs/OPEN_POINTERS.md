@@ -1,25 +1,25 @@
 # EFPS CRM — Open Pointers
 
-> **Verified 2026-10-03 18:04 IST (12:34 UTC).** This file contains only active items. Historical audit findings are retained in dated audit documents and are not duplicated here.
+> Verified 2026-10-03 18:35 IST. Only active items are listed here.
 
-## Completed
+## Release / runtime
 
-- Live WhAPI ingestion and automatic webhook reconciliation.
-- Lead/classification promotion and event/message/lead reconciliation.
-- Housing inventory five-minute reconciliation with hash-based snapshot comparison.
-- Six-hour AI scheduler with persistence, checkpointing, idempotency and draft provenance.
-- Deterministic `Out of Coverage Area` status assignment using the controlled coverage policy introduced in `e375c1f811e962e140caba2c964fb05cd94ab02a`.
-- D08 visual/interaction handoff documentation.
-- Current production documentation normalization.
+- Deploy and runtime-verify the `dd7ba3e` CRM hardening candidate on Render. Do not call OOC automation production-live until the deployed commit is independently verified.
 
 ## External infrastructure prerequisites
 
-- Independent encrypted backup artifact and isolated restore proof: repository backup/restore tooling exists, but a separate durable storage target and isolated restore target must be provisioned in authorized infrastructure.
-- AWS least-privilege credential rotation: requires authorized AWS IAM provisioning/rotation; no AWS IAM management connection is available through the current project tools.
+- Independent encrypted backup artifact and isolated restore proof: repository backup/restore tooling and tests exist, but a separate durable backup destination and isolated restore target still require authorized infrastructure.
+- AWS least-privilege IAM rotation: requires authorized AWS IAM administration and production secret rotation; no IAM-management connection is available through the current project tools.
+
+## Closed in repository
+
+- Deterministic OOC policy with controlled vocabulary and review gates.
+- D08 visual/operational handoff documentation.
+- Current CRM documentation normalization for the verified audit snapshot.
 
 ## Deferred product work
 
 - Incremental/delta AI analysis.
-- Field-level editing of AI-proposed requirement updates.
+- Field-level AI proposal editing.
 
-Do not re-open older dated gates as current blockers unless a new verification shows a regression.
+Do not reopen historical pre-production/import gates without new regression evidence.

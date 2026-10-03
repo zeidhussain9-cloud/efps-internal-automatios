@@ -1,27 +1,25 @@
 # EFPS CRM — Render Configuration
 
-> **Verified 2026-10-03 18:04 IST (12:34 UTC).**
+> Verified 2026-10-03 18:35 IST. The currently verified repository candidate is `dd7ba3e`; Render runtime verification for that candidate is pending deployment.
 
 ## Production service
 
 - Service: `srv-darsv560tbcc73cu4ip0`
 - URL: https://easyfind-crm-d01-d05.onrender.com
 - Branch: `crm-ui-dashboard`
-- Current release commit: `e375c1f811e962e140caba2c964fb05cd94ab02a`
-- Auto-deploy: enabled on commit
+- Current verified candidate: `dd7ba3e94293181c620825433e5f2be8a71e91ff`
 
 ## Runtime boundaries
 
-The service exposes the CRM UI, protected read/write routes, the signed AI scheduler endpoint, and the signed inventory-sync endpoint. Database credentials and AI provider credentials remain server-side secrets.
+- Webhook ingress is Supabase-first and durable; Render is not the WhatsApp webhook persistence boundary.
+- Inventory sync endpoint is signed and invoked by Supabase cron.
+- AI scheduler endpoint is HMAC-protected and invoked by Supabase cron.
+- Automatic WhatsApp sending remains disabled; drafts require operator review and pre-send grounding.
 
-Automatic WhatsApp sending is disabled. AI drafts must pass the deterministic pre-send grounding check and remain operator-controlled.
+## Release verification
 
-## Current scheduler configuration
+A candidate is not production-live until Render reports the candidate SHA live and the production health/process audit is rerun. This document must not contain an older SHA as the current live commit.
 
-- Webhook reconciliation: Supabase cron, every minute.
-- Inventory reconciliation: Supabase cron, every five minutes.
-- Unified AI scheduler: Supabase cron, every six hours.
+## External credential hardening
 
-## Credential hardening
-
-The application uses the AWS SDK credential chain. Production least-privilege IAM rotation is an external provisioning task and is not represented as complete until a new authorized AWS identity is configured and the old identity is retired.
+AWS least-privilege rotation requires authorized AWS IAM administration. Do not mark the rotation complete based only on repository configuration.
