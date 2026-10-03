@@ -1,10 +1,14 @@
 # EFPS CRM — UI Design & Operational Handoff
 
-> **Current verified snapshot: 2026-10-03 18:04 IST (12:34 UTC). This document is the D08 handoff baseline.**
+> Current verified snapshot: 2026-10-03 20:26 IST. Older dated checkpoints are historical evidence and superseded.
 
 ## Product structure
 
 The CRM presents Dashboard, Leads Inbox, Contact Classification, Inventory, AI & Drafts, and Audit views against a single protected production data path.
+
+## Contact Classification
+
+The Contact Classification UI treats Group Message as a first-class Unqualified classification. Its code is group_message. Pending contacts whose webhook payload chat_id ends in @g.us are automatically assigned Group Message by the webhook rule and therefore do not enter the Leads Inbox. The UI exposes the Group Message option for operator use where appropriate. Existing promoted leads are not demoted by the rule.
 
 ## Lead presentation
 

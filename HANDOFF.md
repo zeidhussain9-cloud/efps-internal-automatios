@@ -1,29 +1,27 @@
 # EFPS CRM — Handoff
 
-> **Current verified snapshot: 2026-10-03 18:04 IST (12:34 UTC).**
+> Current verified snapshot: 2026-10-03 20:26 IST. Older dated snapshots below are historical and superseded.
 
 ## Production
 
-- Render: `srv-darsv560tbcc73cu4ip0`
+- Render: srv-darsv560tbcc73cu4ip0
 - URL: https://easyfind-crm-d01-d05.onrender.com
-- Branch: `crm-ui-dashboard`
-- Release commit: `e375c1f811e962e140caba2c964fb05cd94ab02a`
-- Source number: `+919148338801`
-- Supabase: `qttcutwzehtskfcwxkwj`
+- Branch: crm-ui-dashboard
+- Source number: +919148338801
+- Supabase: qttcutwzehtskfcwxkwj
 
 ## Current data
 
-186 leads, 7,573 CRM messages, 1,256 persisted webhook events, 214 AI runs, 214 drafts and 88 active inventory listings were observed in the production database during the current audit.
+228 leads; 7,746 messages; 1,471 webhook events; 277 AI runs; 214 drafts; 354 classifications; 88 active inventory listings.
+Classification status: 228 promoted, 88 classified, 27 excluded, 11 pending.
 
 ## Runtime state
 
-Webhook reconciliation, inventory reconciliation and the six-hour AI scheduler are active. The current audit found no webhook failures, no pending webhook events, no inventory sync failures, and no scheduled AI failures. Scheduled AI executions persisted checkpoints, idempotency keys and drafts.
+Webhook reconciliation is live through the Supabase Edge Function. A WhatsApp chat_id ending in @g.us is a deterministic Group Message signal for pending contacts. Group Message records remain excluded from CRM leads, while promoted leads are preserved. Automatic WhatsApp sending remains disabled; AI output is operator-reviewed and outbound sending is manual.
 
 ## Hardening state
 
-Deterministic OOC assignment and D08 documentation are closed in the application/repository. Independent encrypted backup/isolated restore and AWS least-privilege credential rotation remain external infrastructure prerequisites because the necessary durable backup target, restore target and AWS IAM authorization are not available through the connected interfaces.
-
-Automatic WhatsApp sending remains disabled. AI output is operator-reviewed and outbound sending is manual.
+Deterministic OOC assignment and D08 documentation are closed. Group Message classification is implemented, schema-gated, audited, backfilled for current pending group contacts, and deployed to the webhook Edge Function. Independent encrypted backup/isolated restore and AWS least-privilege credential rotation remain external infrastructure prerequisites.
 
 ## Release procedure
 
