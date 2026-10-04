@@ -39,23 +39,6 @@ jobs:
       - name: Browser regression tests
         run: npm run test:browser
 
-  oidc-diagnostic:
-    name: OIDC claim diagnostic
-    if: github.event_name == 'push' && github.ref == 'refs/heads/crm-ui-dashboard'
-    needs: verify
-    permissions:
-      contents: read
-      id-token: write
-    runs-on: ubuntu-latest
-    steps:
-      - name: Request GitHub OIDC token
-        shell: bash
-        run: |
-          set -euo pipefail
-          token_json=$(curl -fsSL             -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN"             "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=efps-crm-source-audit")
-          token=$(node -e 'const x=JSON.parse(process.argv[1]); process.stdout.write(x.value)' "$token_json")
-          node -e 'const x=JSON.parse(Buffer.from(process.argv[1].split(".")[1],"base64url").toString("utf8")); console.log(JSON.stringify({iss:x.iss,aud:x.aud,repository:x.repository,ref:x.ref,workflow_ref:x.workflow_ref,repository_visibility:x.repository_visibility,ref_type:x.ref_type},null,2))' "$token"
-
   production-smoke:
     name: Production health smoke
     if: github.ref == 'refs/heads/crm-ui-dashboard'
