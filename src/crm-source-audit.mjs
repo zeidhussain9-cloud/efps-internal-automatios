@@ -39,7 +39,7 @@ async function crmSnapshot(){
     await client.query('BEGIN'); await client.query('SET TRANSACTION READ ONLY');
     const q=await client.query(`select
       (select count(*) from crm_webhook_events where provider='whapi') as webhook_total,
-      (select max(created_at) from crm_webhook_events where provider='whapi') as webhook_latest,
+      (select max(received_at) from crm_webhook_events where provider='whapi') as webhook_latest,
       (select count(*) from crm_webhook_events where provider='whapi' and processing_status='error') as webhook_errors,
       (select count(*) from crm_messages) as message_total,
       (select max(created_at) from crm_messages) as message_latest,
