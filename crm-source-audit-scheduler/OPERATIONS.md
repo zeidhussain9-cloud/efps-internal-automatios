@@ -13,7 +13,7 @@
 
 ## Security requirements
 
-- The scheduled workflow uses contents: read and retains id-token: write because the production MCP adapter still supports its fail-closed OIDC path; the runner's verified scheduled credential is CRM_SOURCE_AUDIT_TOKEN.
+- The scheduled workflow uses contents: read only; its verified credential is CRM_SOURCE_AUDIT_TOKEN.
 - Keep the MCP adapter read-only.
 - Do not put credentials in workflow YAML, scripts, logs or query parameters.
 - Do not broaden the MCP tool list to include send/write/deployment operations.
@@ -23,4 +23,4 @@
 
 For each production change, record the workflow commit SHA and corresponding successful workflow run.
 
-The schedule runner is independent of ChatGPT's scheduled tasks. GitHub Actions owns the recurring execution; Render owns the source adapters and production data access.
+The schedule runner is independent of ChatGPT scheduled tasks. GitHub Actions owns the recurring execution; Render owns the source adapters and production data access.

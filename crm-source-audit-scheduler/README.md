@@ -35,7 +35,7 @@ The runner performs no CRM writes, WhAPI sends, Sheet writes, classification cha
 
 The scheduled workflow uses the existing GitHub Actions secret CRM_SOURCE_AUDIT_TOKEN as a Bearer credential for the production read-only MCP endpoint.
 
-The MCP adapter also retains its fail-closed OIDC authorization implementation for authorized OIDC clients, but the scheduled workflow currently uses the configured static audit secret because this is the verified working production path.
+The scheduled workflow uses the configured static audit secret because this is the verified working production path. The MCP endpoint remains fail-closed and authenticated.
 
 No WhAPI API token is used as the MCP audit credential.
 
