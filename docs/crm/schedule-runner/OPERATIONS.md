@@ -2,18 +2,18 @@
 
 ## Verification sequence
 
-1. Confirm Render `/health` is healthy.
+1. Confirm Render /health is healthy.
 2. Confirm Render startup reports the MCP adapter enabled and the audit adapter credentials present.
-3. Run the GitHub Actions workflow manually with `workflow_dispatch`.
+3. Run the GitHub Actions workflow manually with workflow_dispatch.
 4. Confirm the workflow exits successfully and prints the source-audit JSON.
-5. Confirm the JSON contains successful WhAPI, Google Sheet and CRM persistence results.
-6. Confirm the workflow subsequently runs on its hourly schedule.
+5. Confirm the JSON contains successful WhAPI, Google Sheet, catalog and CRM persistence results.
+6. Confirm Sheet available count equals WhAPI product count.
+7. Confirm products-with-collections plus products-without-collections equals the WhAPI product count.
+8. Confirm the workflow subsequently runs on its hourly schedule.
 
 ## Security requirements
 
-- The scheduled workflow must retain `id-token: write` and `contents: read` only.
-- GitHub OIDC audience must remain `efps-crm-source-audit`.
-- The Render adapter must continue validating the exact repository and workflow ref.
+- The scheduled workflow uses contents: read and retains id-token: write because the production MCP adapter still supports its fail-closed OIDC path; the runner's verified scheduled credential is CRM_SOURCE_AUDIT_TOKEN.
 - Keep the MCP adapter read-only.
 - Do not put credentials in workflow YAML, scripts, logs or query parameters.
 - Do not broaden the MCP tool list to include send/write/deployment operations.
@@ -23,4 +23,4 @@
 
 For each production change, record the workflow commit SHA and corresponding successful workflow run.
 
-The schedule runner is independent of ChatGPT's ability to inject arbitrary authorization headers into a scheduled request. GitHub Actions owns the recurring execution and short-lived OIDC authentication; Render owns the source adapters and production data access.
+The schedule runner is independent of ChatGPT's scheduled tasks. GitHub Actions owns the recurring execution; Render owns the source adapters and production data access.

@@ -2,7 +2,7 @@ import {McpServer} from '@modelcontextprotocol/sdk/server/mcp.js';
 import {StreamableHTTPServerTransport} from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import {z} from 'zod/v4';
 import {timingSafeEqual,createPublicKey,verify as verifySignature} from 'node:crypto';
-import {sourceAuditSnapshot,whapiHealth,whapiRecentMessages,whapiMessage,housingSheetSnapshot} from './src/crm-source-audit.mjs';
+import {sourceAuditSnapshot,whapiHealth,whapiRecentMessages,whapiMessage,whapiCatalogAudit,housingSheetSnapshot} from './src/crm-source-audit.mjs';
 
 const TOKEN=String(process.env.CRM_SOURCE_AUDIT_TOKEN||'').trim();
 const enabled=process.env.CRM_SOURCE_AUDIT_MCP_ENABLED==='true';
@@ -68,10 +68,13 @@ function server(){
   s.registerTool('whapi_message',{description:'Read-only full WhAPI message lookup by provider message ID.',inputSchema:{id:z.string().min(1).max(256)}},async({id})=>{
     return {content:[{type:'text',text:JSON.stringify(await whapiMessage(id))}]};
   });
-  s.registerTool('google_housing_sheet_snapshot',{description:'Read-only canonical Housing_Listings Sheet snapshot.',inputSchema:{}},async()=>{
+  s.registerTool('whapi_catalog_audit',{description:'Read-only WhatsApp Business catalog product/collection reconciliation.',inputSchema:{}},async()=>{
+    return {content:[{type:'text',text:JSON.stringify(await whapiCatalogAudit())}]};
+  });
+  s.registerTool('google_housing_sheet_snapshot',{description:'Read-only canonical Housing_Listings Sheet snapshot including available inventory count.',inputSchema:{}},async()=>{
     return {content:[{type:'text',text:JSON.stringify(await housingSheetSnapshot())}]};
   });
-  s.registerTool('crm_source_audit_snapshot',{description:'Read-only cross-source snapshot for WhAPI, Google Sheet and CRM persistence.',inputSchema:{}},async()=>{
+  s.registerTool('crm_source_audit_snapshot',{description:'Read-only cross-source snapshot for WhAPI, Google Sheet, WhatsApp catalog and CRM persistence.',inputSchema:{}},async()=>{
     return {content:[{type:'text',text:JSON.stringify(await sourceAuditSnapshot())}]};
   });
   return s;
