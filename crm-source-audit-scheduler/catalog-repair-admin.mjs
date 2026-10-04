@@ -49,6 +49,6 @@ export async function handleCatalogRepair(req,res){
   }catch(error){
     console.error('Catalog repair failed',error?.message||error);
     res.writeHead(500,{'Content-Type':'application/json','Cache-Control':'no-store'});
-    return res.end(JSON.stringify({ok:false,error:'catalog repair failed'}));
+    return res.end(JSON.stringify({ok:false,error:'catalog repair failed',detail:String(error?.message||'unknown').slice(0,500)}));
   }
 }
