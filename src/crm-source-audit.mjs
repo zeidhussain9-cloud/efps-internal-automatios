@@ -14,7 +14,7 @@ async function fetchJson(path,query={}){
   try{
     const response=await fetch(url,{headers:{Authorization:`Bearer ${token}`,Accept:'application/json'},signal:controller.signal});
     const text=await response.text(); let body=null; try{body=text?JSON.parse(text):null}catch{}
-    if(!response.ok) throw new Error(`WhAPI HTTP ${response.status}`);
+    if(!response.ok) throw new Error(`WhAPI HTTP ${response.status}: ${String(text||'').slice(0,300)}`);
     return body;
   } finally {clearTimeout(timer);}
 }
