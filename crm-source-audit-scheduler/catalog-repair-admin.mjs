@@ -19,7 +19,8 @@ async function authorized(req){
     const header=decode(h),claims=decode(p);
     if(header.alg!=='RS256'||!header.kid)return false;
     const audienceOk=claims.aud===OIDC_AUDIENCE||(Array.isArray(claims.aud)&&claims.aud.includes(OIDC_AUDIENCE));
-    if(claims.iss!==OIDC_ISSUER||!audienceOk||claims.repository!==OIDC_REPOSITORY||claims.ref!==OIDC_REF||claims.sub!==`repo:${OIDC_REPOSITORY}:ref:${OIDC_REF}`)return false;
+    const subjectOk=typeof claims.sub==='string'&&claims.sub.startsWith('repo:')&&claims.sub.endsWith(':ref:'+OIDC_REF);
+    if(claims.iss!==OIDC_ISSUER||!audienceOk||claims.repository!==OIDC_REPOSITORY||claims.ref!==OIDC_REF||!subjectOk)return false;
     if(claims.workflow_ref!==OIDC_WORKFLOW_REF&&claims.job_workflow_ref!==OIDC_WORKFLOW_REF)return false;
     const now=Math.floor(Date.now()/1000);
     if(!Number.isInteger(claims.exp)||claims.exp<now-30)return false;
