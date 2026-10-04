@@ -1,0 +1,42 @@
+name: CRM Catalog Collection Repair
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Run the evidence-only repair plan without changing WhAPI'
+        required: true
+        default: true
+        type: boolean
+      confirm:
+        description: 'Required for a write: RECONCILE_56_59_63_64'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Get GitHub OIDC token
+        id: oidc
+        shell: bash
+        run: |
+          response="$(curl -fsSL -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=efps-crm-catalog-admin")"
+          echo "token=$(printf '%s' "$response" | jq -r '.value')" >> "$GITHUB_OUTPUT"
+
+      - name: Execute catalog repair plan
+        env:
+          OIDC_TOKEN: ${{ steps.oidc.outputs.token }}
+          DRY_RUN: ${{ inputs.dry_run }}
+          CONFIRM: ${{ inputs.confirm }}
+        run: |
+          curl --fail-with-body -sS -X POST \
+            -H "Authorization: Bearer $OIDC_TOKEN" \
+            -H "Content-Type: application/json" \
+            --data "{\"dry_run\":$DRY_RUN,\"confirm\":\"$CONFIRM\"}" \
+            https://easyfind-crm-d01-d05.onrender.com/mcp/catalog-repair

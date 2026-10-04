@@ -71,6 +71,60 @@ export async function whapiCatalogAudit(){
   return {ok:true,productCount:reconciled.productCount,productIds:[...new Set(products.items.map(product=>String(product?.id||'').trim()).filter(Boolean))],products:products.items.map(product=>({id:String(product?.id||'').trim(),retailerId:String(product?.product_retailer_id||product?.retailer_id||'').trim(),name:product?.name||null,description:product?.description||null,price:product?.price??null,currency:product?.currency||null,availability:product?.availability||null,url:product?.url||null,isHidden:product?.is_hidden??null,imageCount:Array.isArray(product?.images)?product.images.length:0,imageUrls:Array.isArray(product?.images)?product.images.map(x=>String(x?.url||x?.original_image_url||x?.image_url||x||'').trim()).filter(Boolean):[]})),collectionCount:collections.items.length,productsWithCollections:reconciled.productsWithCollections,productsWithoutCollections:reconciled.productsWithoutCollections,collectionDetails:collectionResults.map(c=>({id:c.id,name:c.name,productCount:c.productCount,productIds:c.products.map(p=>String(p?.id||'').trim()).filter(Boolean)})),complete:true,readOnly:true};
 }
 
+function normalizeCatalogCollectionName(value){return String(value??'').replace(/^\p{Extended_Pictographic}\uFE0F?\s*/u,'').replace(/^\p{Extended_Pictographic}\s*/u,'').replace(/\s+/g,' ').trim();}
+function deriveCatalogCollectionName(bhk){
+  const s=String(bhk||'').toUpperCase().replace(/\s+/g,'');
+  if(s.includes('1RK')||s.includes('1BHK'))return '1RK & 1BHK';
+  if(s.includes('2BHK'))return '2BHK';
+  if(s.includes('3BHK'))return '3BHK';
+  if(/4\+BHK|4BHK|5BHK|6BHK/.test(s))return '4+ BHK';
+  return null;
+}
+
+export async function repairCatalogCollections({dryRun=true}={}){
+  const sheet=await housingSheetSnapshot();
+  const catalog=await whapiCatalogAudit();
+  const rows=Array.isArray(sheet?.availableRows)?sheet.availableRows:[];
+  const products=Array.isArray(catalog?.products)?catalog.products:[];
+  const productById=new Map(products.map(product=>[String(product.id||'').trim(),product]).filter(([id])=>id));
+  const productByRetailer=new Map(products.map(product=>[String(product.retailerId||'').trim(),product]).filter(([id])=>id));
+  const collections=new Map((catalog.collectionDetails||[]).map(collection=>[normalizeCatalogCollectionName(collection.name),collection]).filter(([name])=>name));
+  const plan=new Map();
+  const unresolved=[];
+  for(const row of rows){
+    const expected=deriveCatalogCollectionName(row.bhk);
+    if(!expected){unresolved.push({listingId:row.listingId,reason:'BHK has no canonical collection'});continue;}
+    const collection=collections.get(expected);
+    if(!collection){unresolved.push({listingId:row.listingId,expected,reason:'canonical collection does not exist'});continue;}
+    const product=(row.metaCatalogId&&productById.get(String(row.metaCatalogId).trim()))||productByRetailer.get(row.listingId);
+    if(!product){unresolved.push({listingId:row.listingId,expected,reason:'catalog product not found'});continue;}
+    const productId=String(product.id||'').trim();
+    const existing=new Set((collection.productIds||[]).map(String));
+    if(!existing.has(productId)){
+      if(!plan.has(collection.id))plan.set(collection.id,{id:collection.id,name:collection.name,productIds:[]});
+      plan.get(collection.id).productIds.push(productId);
+    }
+  }
+  const additions=[...plan.values()].map(item=>({...item,productIds:[...new Set(item.productIds)]}));
+  const changedProducts=additions.reduce((n,item)=>n+item.productIds.length,0);
+  if(unresolved.length)return {ok:false,dryRun,unresolved,additions,changedProducts};
+  if(dryRun)return {ok:true,dryRun,unresolved:[],additions,changedProducts};
+  const results=[];
+  for(const item of additions){
+    const token=String(process.env.WHAPI_API_TOKEN||'').trim();
+    const url=WHAPI_BASE_URL+'/business/collections/'+encodeURIComponent(item.id);
+    const controller=new AbortController(); const timer=setTimeout(()=>controller.abort(),15000);
+    try{
+      const res=await fetch(url,{method:'PATCH',headers:{Authorization:'Bearer '+token,Accept:'application/json','Content-Type':'application/json'},body:JSON.stringify({add_products:item.productIds}),signal:controller.signal});
+      const text=await res.text(); let body=null; try{body=text?JSON.parse(text):null}catch{}
+      if(!res.ok)throw new Error('WhAPI HTTP '+res.status+': '+String(text||'').slice(0,300));
+      results.push({id:item.id,name:item.name,added:item.productIds.length,status:res.status,body});
+    }finally{clearTimeout(timer);}
+  }
+  const verified=await whapiCatalogAudit();
+  return {ok:true,dryRun:false,unresolved:[],additions,changedProducts,results,verified:{productsWithCollections:verified.productsWithCollections,productsWithoutCollections:verified.productsWithoutCollections,collectionDetails:verified.collectionDetails}};
+}
+
 function countField(rows,index){
   const counts={};
   for(const row of rows){
