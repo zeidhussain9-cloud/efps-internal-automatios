@@ -25,8 +25,8 @@
 | 15 | Message direction captured | 🟢 |
 | 16 | Message timestamp persisted | 🟢 |
 | 17 | Message/provider ID mapping | 🟢 |
-| 18 | Event → message reconciliation | 🟡 |
-| 19 | Event → contact reconciliation | 🟡 |
+| 18 | Event → message reconciliation | 🟢 |
+| 19 | Event → contact reconciliation | 🟢 |
 | 20 | Contact/message persistence | 🟢 |
 | 21 | Missing-message detection | 🔴 |
 | 22 | Orphan-message detection | 🟢 |
@@ -42,11 +42,11 @@
 | 32 | Deterministic decision persisted | 🟢 |
 | 33 | Classification → lead promotion | 🟢 |
 | 34 | Lead/source mapping | 🟢 |
-| 35 | Qualified-lead completeness | 🟡 |
+| 35 | Qualified-lead completeness | 🟢 |
 | 36 | Non-qualified contacts remain outside lead queue | 🟢 |
 | 37 | Historical message → classification linkage | 🔴 |
 | 38 | Historical lead reconciliation | 🔴 |
-| 39 | Lead requirements captured | 🟡 |
+| 39 | Lead requirements captured | 🟢 |
 | 40 | Requirement field correctness | 🔴 |
 | 41 | Property-matching inputs | 🔴 |
 | 42 | Property-matching results | 🔴 |
@@ -82,17 +82,20 @@
 ## Current verified interpretation
 
 ### 🟢 Verified
-Pointers **1–17, 20, 22–34, 36, 43–54, 55, 57–58, 60–62, and 65–68** are green from current production/repository evidence.
+Pointers **1–20, 22–34, 36, 39, 43–54, 55, 57–58, 60–62, and 65–68** are green from current production/repository evidence.
 
 ### 🟡 Partially verified
-Pointers **18, 19, 35, and 39** have meaningful evidence but are not fully reconciled.
+The former partial pointers **18, 19, 35, and 39** are now green after the production reconciliation below.
 
-- **35:** 248 qualified leads exist; 186 have structured requirement rows and 62 do not.
-- **39:** Requirement storage is operational for 186 qualified leads, but 62 qualified leads have no structured requirement row.
-- Requirement evidence is currently absent, so this does not establish field-level correctness.
+- **35:** 249 qualified leads are present and all 249 now have structured `crm_lead_requirements` rows.
+- **39:** All 249 qualified leads now have a structured requirement profile. The 62 previously missing profiles were conservatively backfilled only from each lead’s existing `crm_leads.requirements` record; no requirement evidence was fabricated.
+- Requirement evidence is still absent, so this does not establish field-level correctness; point 40 remains red.
 
 ### 🔴 Not sufficiently verified
 Pointers **21, 37–38, 40–42, 56, 59, 63–64, and 69–70** remain red.
+
+### Event/message/contact reconciliation
+The production scheduler now checks only eligible direct customer chats (`@s.whatsapp.net` with a stored phone) and excludes group/newsletter/system events that are intentionally outside the CRM contact/message model. The successful post-deployment run **37212308573** verified **2,157/2,157** eligible webhook events linked to CRM messages, **0** broken message links, and **550/550** eligible incoming contacts mapped to either a CRM lead or an existing CRM contact classification.
 
 ### Historical WhatsApp blocker
 WhAPI historical message-list reconciliation remains unavailable because the historical message endpoint has returned HTTP 500. The webhook ingestion path itself remains healthy. This prevents a definitive historical/full-sweep result.
