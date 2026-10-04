@@ -89,7 +89,8 @@ export async function housingSheetSnapshot(){
   const listingStateCounts=countField(dataRows,4);
   const metaCatalogStatusCounts=countField(dataRows,45);
   const metaCatalogIdCount=dataRows.filter(row=>String(row?.[44]??'').trim()).length;
-  return {range:result.range||null,rowCount:dataRows.length,columnCount:header.length,statusCounts,intakeStatusCounts,listingStateCounts,metaCatalogStatusCounts,metaCatalogIdCount,readOnly:true};
+  const availableCatalogCount=Number(listingStateCounts.Available||0);
+  return {range:result.range||null,rowCount:dataRows.length,columnCount:header.length,statusCounts,intakeStatusCounts,listingStateCounts,metaCatalogStatusCounts,metaCatalogIdCount,availableCatalogCount,readOnly:true};
 }
 
 async function crmSnapshot(){
