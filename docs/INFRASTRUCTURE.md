@@ -4,7 +4,7 @@ Verified live baseline is recorded in the authoritative current-state block belo
 
 # Infrastructure Registry
 
-## Authoritative current verified state — 2026-10-04 00:49 IST
+## Authoritative current verified state — 2026-10-05
 
 This is the latest repository/production checkpoint. Older dated sections in maintained documents are historical evidence and must not be interpreted as current state.
 
@@ -19,15 +19,15 @@ This is the latest repository/production checkpoint. Older dated sections in mai
 - **Live Render:** current crm-ui-dashboard release verified LIVE
 - **Production health:** `GET /health` = HTTP 200, `{"ok":true}`
 - **Production WhatsApp source:** `+919148338801`
-- **Supabase:** 239 leads; 8,098 messages; 1,831 webhook events; 362 classifications; 186 requirements; 277 AI runs; 214 drafts; 190 AI cursors; 88 active inventory rows.
-- **Classification status:** 239 promoted; 88 classified; 32 excluded; 3 pending = 362 total.
-- **Webhook status:** 1,831 processed; 0 received; 0 processing; 0 failed.
-- **Message reconciliation:** 8,098 total = 6,047 lead-linked + 2,051 classified non-lead; unreconciled = 0.
+- **Supabase:** 253 leads; 9,224 messages; 3,025 persisted WhAPI webhook events; 389 classifications; 253 normalized lead requirements; 277 AI runs; 214 drafts; 190 AI cursors; 88 inventory rows.
+- **Classification status:** 253 promoted; 88 classified; 40 excluded; 8 pending = 389 total.
+- **Webhook status:** 3,025 persisted webhook events; 0 failed processing records.
+- **Message reconciliation:** 9,224 total CRM messages; current reconciliation evidence is maintained by the source-audit scheduler.
 - **Historical classification population:** 228 historical records; 140 qualified mappings.
 - **Inventory:** 88 active rows = 71 Available + 17 Rented Out; 1,377 sync runs; latest sync recorded 88 rows / 0 changed / 0 removed; inventory-change rows = 0.
-- **Cloudinary:** 829/829 distinct production URLs returned HTTP 200 with `image/*` content-type by direct HEAD checks from the production-machine network path.
+- **Cloudinary:** 696 stored distinct production URLs returned HTTP 200 with `image/*` content-type by direct HEAD checks from the production-machine network path.
 - **AI integrity:** draft→AI-run lead mismatch = 0; stale evidence references = 0; invalid cursor lead links = 0.
-- **Tests:** `npm run build` PASS; `npm test` 120/120 PASS; `npm run test:browser` 1/1 PASS.
+- **Tests:** `npm run build` PASS; `npm test` 134/134 PASS; `npm run test:browser` 1/1 PASS.
 - **Supabase Edge Function:** `whapi-crm-webhook` ACTIVE v9.
 - **AWS legacy webhook:** no changes in the audited CRM hardening range.
 - **24-item CRM audit:** GREEN / VERIFIED.
@@ -82,7 +82,7 @@ This is the canonical registry for external systems and verified resource identi
 - Latest deterministic implementation baseline: 8996dd32d732b0d8fab17f41b42306c230cd1de1; current release is documented by the canonical verified-state file.
 - Live deployment: current crm-ui-dashboard release verified LIVE in Render
 - Production source: `+919148338801`
-- Supabase baseline: 239 leads, 362 classifications, 3 pending classifications, 8,098 messages, 1,831 webhook events (1,831 processed, 0 received, 0 processing, 0 failed).
+- Supabase baseline verified 2026-10-05: 253 leads, 389 classifications, 8 pending classifications, 9,224 messages, 3,025 persisted webhook events, 0 failed processing records.
 - `main` is repository-reconciled to the same tree; Render remains on `crm-ui-dashboard`.
 
 ## Historical CRM prototype deployment target
@@ -251,8 +251,8 @@ Render production Bedrock settings now include `AWS_BEDROCK_FALLBACK_MODEL_ID=au
 
 ## Final verified checkpoint — 2026-10-01
 
-Production Render service srv-darsv560tbcc73cu4ip0 is live on crm-ui-dashboard commit 1c196577fc414be52c8fc889b3886f11e0e9da5d. Health is HTTP 200. main tree equals 908b635b2b7b04bdf3515934de2769393e282c34.
+Production Render service srv-darsv560tbcc73cu4ip0 is live on crm-ui-dashboard commit 1982c7ea0a158ee0edcb00fad43e021876c13b9d (deploy dep-db1b2svf3r2c73brd6m0). Health is HTTP 200. Final main-tree equality is verified after the documentation release is reconciled into main.
 
 ## 2026-10-01 — Dependency security checkpoint
 
-The AWS Bedrock runtime SDK was upgraded to `3.1144.0` after Render exposed a critical transitive `fast-xml-parser` advisory in the previous dependency tree. Local production-dependency audit now reports zero vulnerabilities; the historical automated suite was 71/71; current automated suite is 78/78 and browser regression is 1/1.
+The AWS Bedrock runtime SDK was upgraded to `3.1144.0` after Render exposed a critical transitive `fast-xml-parser` advisory in the previous dependency tree. Local production-dependency audit now reports zero vulnerabilities; the historical automated suite was 71/71; current automated suite is 134/134 and browser regression is 1/1.

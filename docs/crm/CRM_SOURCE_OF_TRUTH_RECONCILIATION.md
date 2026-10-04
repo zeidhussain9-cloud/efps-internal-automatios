@@ -6,13 +6,13 @@ See the authoritative current-state block at the top of this document for the ve
 
 This document contains historical source-of-truth decisions below. The current operational CRM truth is now split by provenance: the audited local SQLite extraction remains the historical evidence set, while Supabase is the production operational store for the connected source `+919148338801`. Live WhAPI messages enter through the Supabase webhook boundary and are persisted in `crm_webhook_events` before downstream reconciliation.
 
-Current production baseline: 239 leads, 362 classifications, 3 pending classifications, 239 promoted, 8,098 messages, and 1,831 webhook events (1,831 processed, 0 received, 0 processing, 0 failed).
+Current production baseline: 253 leads, 389 classifications, 8 pending classifications, 253 promoted, 9,224 messages, and 3,025 persisted webhook events with 0 failed processing records.
 
 The older statements in this document that WhAPI was a future integration are historical and are superseded by this section.
 
 # EasyFind CRM — Source-of-Truth Reconciliation
 
-## Authoritative current verified state — 2026-10-04 00:49 IST
+## Authoritative current verified state — 2026-10-05
 
 This is the latest repository/production checkpoint. Older dated sections in maintained documents are historical evidence and must not be interpreted as current state.
 
@@ -27,15 +27,15 @@ This is the latest repository/production checkpoint. Older dated sections in mai
 - **Live Render:** current crm-ui-dashboard release verified LIVE
 - **Production health:** `GET /health` = HTTP 200, `{"ok":true}`
 - **Production WhatsApp source:** `+919148338801`
-- **Supabase:** 239 leads; 8,098 messages; 1,831 webhook events; 362 classifications; 186 requirements; 277 AI runs; 214 drafts; 190 AI cursors; 88 active inventory rows.
-- **Classification status:** 239 promoted; 88 classified; 32 excluded; 3 pending = 362 total.
-- **Webhook status:** 1,831 processed; 0 received; 0 processing; 0 failed.
-- **Message reconciliation:** 8,098 total = 6,047 lead-linked + 2,051 classified non-lead; unreconciled = 0.
+- **Supabase:** 253 leads; 9,224 messages; 3,025 persisted WhAPI webhook events; 389 classifications; 253 normalized lead requirements; 277 AI runs; 214 drafts; 190 AI cursors; 88 inventory rows.
+- **Classification status:** 253 promoted; 88 classified; 40 excluded; 8 pending = 389 total.
+- **Webhook status:** 3,025 persisted webhook events; 0 failed processing records.
+- **Message reconciliation:** 9,224 total CRM messages; current reconciliation evidence is maintained by the source-audit scheduler.
 - **Historical classification population:** 228 historical records; 140 qualified mappings.
 - **Inventory:** 88 active rows = 71 Available + 17 Rented Out; 1,377 sync runs; latest sync recorded 88 rows / 0 changed / 0 removed; inventory-change rows = 0.
-- **Cloudinary:** 829/829 distinct production URLs returned HTTP 200 with `image/*` content-type by direct HEAD checks from the production-machine network path.
+- **Cloudinary:** 696 stored distinct production URLs returned HTTP 200 with `image/*` content-type by direct HEAD checks from the production-machine network path.
 - **AI integrity:** draft→AI-run lead mismatch = 0; stale evidence references = 0; invalid cursor lead links = 0.
-- **Tests:** `npm run build` PASS; `npm test` 120/120 PASS; `npm run test:browser` 1/1 PASS.
+- **Tests:** `npm run build` PASS; `npm test` 134/134 PASS; `npm run test:browser` 1/1 PASS.
 - **Supabase Edge Function:** `whapi-crm-webhook` ACTIVE v9.
 - **AWS legacy webhook:** no changes in the audited CRM hardening range.
 - **24-item CRM audit:** GREEN / VERIFIED.

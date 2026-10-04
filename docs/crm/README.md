@@ -8,7 +8,7 @@ Older dated checkpoints below are historical evidence and are not current-state 
 - Render: easyfind-crm-d01-d05 / srv-darsv560tbcc73cu4ip0
 - Supabase: qttcutwzehtskfcwxkwj
 - Production source: +919148338801
-- Current snapshot: 239 leads; 8,098 messages; 1,831 webhook events; 277 AI runs; 214 drafts; 362 classifications; 88 active inventory listings.
+- Current snapshot: 253 leads; 9,224 messages; 3,025 persisted WhAPI webhook events; 277 AI runs; 214 drafts; 389 classifications; 88 inventory rows (71 Available / 17 Rented Out).
 - Classification status: 239 promoted; 88 classified; 32 excluded; 3 pending.
 - Group Message is a first-class Unqualified classification for pending webhook contacts whose chat_id ends in @g.us.
 - The group rule is implemented in both webhook execution paths, audited, and the 14 currently pending group-originated contacts have been backfilled.

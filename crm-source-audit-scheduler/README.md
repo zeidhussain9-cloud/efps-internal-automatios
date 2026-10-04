@@ -11,7 +11,7 @@ Each run is read-only and reconciles:
 - WhatsApp Business catalog products and collections
 - CRM/Supabase persistence
 
-Catalog reconciliation uses the Sheet's available inventory count as the expected catalog count, then reads WhAPI products and collections and reports:
+Catalog reconciliation historically used the Sheet's available inventory count as the expected catalog count and read WhAPI products/collections. As of the 2026-10-05 safety hardening, direct WhAPI API access is policy-disabled and non-catalog operations are hard-blocked. Therefore no current scheduler run may claim live WhAPI catalog reconciliation unless an independently authorized catalog source is explicitly enabled and verified.
 
 - Sheet available count
 - WhAPI product count

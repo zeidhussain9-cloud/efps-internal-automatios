@@ -2,9 +2,9 @@
 
 **Purpose:** Canonical checklist for the EFPS CRM Scheduler Reconcile Audit.
 
-**Status rule:** 🟢 = verified by current production/repository evidence. 🟡 = partially verified; some evidence exists but full reconciliation is not established. 🔴 = not sufficiently verified. A previously verified 🟢 control is not downgraded without evidence of regression.
+**Status rule:** 🟢 = verified by current production/repository evidence. 🟡 = partially verified; some evidence exists but full reconciliation is not established. 🔴 = not sufficiently verified.
 
-**Current evidence baseline:** 2026-10-05. Production DB verification and repository validation were completed for points 40–42. Post-deployment scheduler run **37210646893** completed successfully against the deployed catalog-reconciliation code. It verified 71 Sheet-available products against 71 WhAPI products, with 71 listing identities matched, 0 missing, 0 catalog-only products, 0 duplicate Sheet IDs, 71/71 Sheet IDs matched by Meta/WhAPI catalog ID, 71 in-stock products, and 0 hidden products. Field reconciliation found **142 mismatches across 284 compared fields**, so field-level catalog reconciliation is not green. Removed-product reconciliation is not independently established because the current implementation reports a placeholder 0/0 rather than a historical removed-product sweep. Collection-expectation derivation returned 0 derivable BHK rows in this run, so per-product expected collection correctness is not established.
+**Current evidence baseline:** 2026-10-05. The production WhAPI API safety hardening is deployed on Render commit 1982c7ea0a158ee0edcb00fad43e021876c13b9d. The shared WhAPI client defaults API access off, hard-blocks non-catalog API operations, and keeps webhook ingestion on as a separate boundary. Therefore the catalog points below are explicitly separated into the last verified external-catalog evidence and what can be verified without making a new WhAPI API request.
 
 | # | Area | Status |
 |---:|---|:---:|
@@ -58,18 +58,18 @@
 | 48 | Inventory sync execution result | 🟢 |
 | 49 | Inventory sync error detection | 🟢 |
 | 50 | Inventory availability state | 🟢 |
-| 51 | Sheet available count → expected catalog count | 🟢 |
-| 52 | Actual WhAPI catalog product count | 🟢 |
-| 53 | Sheet ↔ WhAPI catalog count reconciliation | 🟢 |
-| 54 | Catalog reconciliation completeness | 🟢 |
-| 55 | Catalog identity/listing-by-listing match | 🟢 |
+| 51 | Sheet available count → expected catalog count | 🟢* |
+| 52 | Actual WhAPI catalog product count | 🟢* |
+| 53 | Sheet ↔ WhAPI catalog count reconciliation | 🟢* |
+| 54 | Catalog reconciliation completeness | 🟢* |
+| 55 | Catalog identity/listing-by-listing match | 🟢* |
 | 56 | Catalog field-by-field match | 🔴 |
-| 57 | Catalog lifecycle/status reconciliation | 🟢 |
-| 58 | Catalog ID ↔ Sheet ID reconciliation | 🟢 |
+| 57 | Catalog lifecycle/status reconciliation | 🟢* |
+| 58 | Catalog ID ↔ Sheet ID reconciliation | 🟢* |
 | 59 | Catalog removed-product reconciliation | 🔴 |
-| 60 | Catalog missing-product detection | 🟢 |
-| 61 | Products assigned to collections | 🟢 |
-| 62 | Products without collections | 🟢 |
+| 60 | Catalog missing-product detection | 🟢* |
+| 61 | Products assigned to collections | 🟢* |
+| 62 | Products without collections | 🟢* |
 | 63 | Collection membership correctness per product | 🔴 |
 | 64 | Cloudinary/property-media reconciliation | 🔴 |
 | 65 | Deterministic classification run persistence | 🟢 |
@@ -82,51 +82,97 @@
 ## Current verified interpretation
 
 ### 🟢 Verified
-Pointers **1–20, 22–36, 39–55, 57–58, 60–62, 65–68, and 40–42** are green from current production/repository evidence.
 
-### 🟡 Partially verified
-There are no current partially verified pointers. The former partial pointers **18, 19, 35, and 39** are now green.
+Pointers 1–20, 22–36, 39–55, 57–58, 60–62, and 65–68 remain green from verified repository/production evidence. Points 40–42 are also green from production scheduler run 37225973017.
 
-- **35:** 253 promoted qualified leads are present and all 253 now have structured `crm_lead_requirements` rows.
-- **39:** All 253 promoted qualified leads now have a structured requirement profile. The historical profiles were backfilled only from existing `crm_leads.requirements` data; no requirement evidence was fabricated.
+The current production database verification on 2026-10-05 found:
+- 253 CRM leads.
+- 9,224 CRM messages.
+- 3,025 persisted WhAPI webhook events.
+- 0 webhook events with failed processing status.
+- 389 contact classifications: 253 promoted, 88 classified, 40 excluded, 8 pending.
+- 253 normalized lead requirement profiles.
+- 88 inventory rows: 71 Available, 17 Rented Out.
 
-### 🔴 Not sufficiently verified
-Pointers **21, 37–38, 56, 59, 63–64, and 69–70** remain red.
+The production Render service is live on the WhAPI safety hardening release:
+- Deploy: dep-db1b2svf3r2c73brd6m0
+- Commit: 1982c7ea0a158ee0edcb00fad43e021876c13b9d
+- Branch: crm-ui-dashboard
 
-### Event/message/contact reconciliation
-The production scheduler now checks only eligible direct customer chats (`@s.whatsapp.net` with a stored phone) and excludes group/newsletter/system events that are intentionally outside the CRM contact/message model. The successful post-deployment run **37212308573** verified **2,157/2,157** eligible webhook events linked to CRM messages, **0** broken message links, and **550/550** eligible incoming contacts mapped to either a CRM lead or an existing CRM contact classification.
+### Catalog evidence boundary
 
-### Historical WhatsApp blocker
-WhAPI historical message-list reconciliation remains unavailable because the historical message endpoint has returned HTTP 500. The webhook ingestion path itself remains healthy. This prevents a definitive historical/full-sweep result.
+The starred catalog controls (51–55, 57–58, 60–62) are green based on the last successful external-catalog audit evidence collected before the 2026-10-05 WhAPI API safety lock. They are not evidence that a new live WhAPI catalog read is currently permitted.
 
-### Catalog evidence from scheduler run 37210646893
-- Sheet available: **71**
-- WhAPI products: **71**
-- Listing identity matches: **71**
-- Missing products: **0**
-- Catalog-only products: **0**
-- Duplicate Sheet IDs: **0**
-- Sheet IDs matched by catalog ID: **71/71**
-- Products in stock: **71**
-- Hidden products: **0**
-- Compared fields: **284**
-- Field mismatches: **142**
-- Removed-product historical reconciliation: **not established**
-- Collection expectation derivable from BHK: **0** in this run
-- Products with collections: **35**
-- Products without collections: **36**
+The current architecture intentionally prevents accidental WhAPI API requests:
+- EFPS_WHAPI_API_ENABLED=false by default.
+- EFPS_WHAPI_CATALOG_WRITE_ENABLED=false by default.
+- EFPS_WHAPI_WEBHOOK_ENABLED=true by default.
+- Non-catalog WhAPI API operations are hard-blocked by the shared client.
+- The removed catalog-repair endpoint/workflow is not part of the current production path.
 
-The 142 field mismatches are actual evidence, not a software failure. The scheduler completed successfully and surfaced differences that must be reconciled before point 56 can be green.
+No current documentation may describe a WhAPI catalog read as a live operation unless an independently authorized catalog source is explicitly enabled and verified.
+
+### Last external catalog verification before the safety lock
+
+Scheduler run 37210646893 verified:
+- Sheet available products: 71
+- WhAPI products: 71
+- Listing identity matches: 71
+- Missing products: 0
+- Catalog-only products: 0
+- Duplicate Sheet IDs: 0
+- Sheet IDs matched by catalog ID: 71/71
+- Products in stock: 71
+- Hidden products: 0
+- Compared fields: 284
+- Field mismatches: 142
+
+Those results are retained as dated evidence. They are not presented as a current live WhAPI read after the safety lock.
+
+### Point 56 — Catalog field-by-field match
+
+**Red.** The last external catalog run reported field mismatches. A later code hardening pass improved semantic media comparison, but no new live WhAPI catalog run was performed after the API safety lock. Therefore point 56 is not greened.
+
+### Point 59 — Catalog removed-product reconciliation
+
+**Red.** No authoritative current external catalog history is available without making a WhAPI API request. Existing CRM inventory state alone does not prove historical external-catalog removal/reappearance reconciliation.
+
+### Point 63 — Collection membership correctness per product
+
+**Red.** A deterministic dry-run against the last available catalog snapshot identified 36 products without collection membership and an exact plan using existing collections:
+- 14 → 2BHK
+- 18 → 3BHK
+- 1 → 1RK & 1BHK
+- 3 → 4+ BHK
+
+No new collection names, removals, or unresolved rows were identified in that dry-run. The plan was not applied because the controlled WhAPI write path was subsequently removed and API access was explicitly hardened off. Therefore membership correctness is not claimed.
+
+### Point 64 — Cloudinary/property-media reconciliation
+
+**Red.** Production inventory evidence confirms 71/71 active listings have images, with 696/696 stored image URLs using the Cloudinary URL form and 0 malformed URLs. This establishes the stored source contract, but live URL reachability was not independently verified. Therefore point 64 remains red.
 
 ### Points 40–42 — current verified evidence
-The canonical contract is `crm-source-audit-scheduler/AUDIT_CONTRACT.md` and the shared implementation is `src/crm-requirement-match-audit.mjs`. The scheduled runner fails closed unless `crm.requirementMatchAudit.complete === true`.
 
-- **40 Requirement field correctness:** 253/253 promoted qualified leads have normalized requirement profiles; 253/253 exactly match the deterministic projection of `crm_leads.requirements` + `tenant_type` across all 17 canonical fields; 0 invalid profiles.
-- **41 Property-matching inputs:** 253/253 qualified leads produce valid deterministic BHK, budget, locality, furnishing and pet matcher inputs; 0 invalid inputs.
-- **42 Property-matching results:** production scheduler run **37225973017** evaluated the canonical 71 active listings against 253 qualified leads and produced 11,482 qualifying lead/listing matches; 223 leads have at least one match and 30 have zero matches. Zero matches are valid evidence, not an error; 0 result-set violations were identified.
-- Production scheduler run **37225973017** reports `requirementMatchAudit.complete=true`, 253 checked profiles, 253 exact legacy projections, 0 mismatched leads, 0 invalid profiles, 253 valid matcher inputs, 0 invalid inputs, 253 checked result sets and 0 invalid result sets.
+The canonical contract is crm-source-audit-scheduler/AUDIT_CONTRACT.md and the shared implementation is src/crm-requirement-match-audit.mjs.
 
-These checks do not fabricate `crm_requirement_evidence`. Evidence remains a separate provenance layer.
+Production scheduler run 37225973017 verified:
+- 40: 253/253 promoted qualified leads have normalized requirement profiles; 253/253 exactly match the deterministic projection; 0 invalid profiles.
+- 41: 253/253 qualified leads produce valid deterministic matcher inputs; 0 invalid inputs.
+- 42: 253/253 result sets were valid; 11,482 qualifying lead/listing matches were produced and 30 leads had zero matches. Zero matches are valid evidence.
+- No crm_requirement_evidence rows were fabricated by this reconciliation.
+
+### Historical WhatsApp blocker
+
+Historical WhAPI message-list reconciliation remains unavailable because the historical message-list endpoint previously returned HTTP 500. The current webhook path is independent of that historical API and remains operational. This prevents a definitive historical/full-sweep result.
+
+### 🔴 Not sufficiently verified
+
+Pointers 21, 37–38, 56, 59, 63–64, and 69–70 remain red.
+
+There are **no yellow pointers** in the current checklist. A control is either verified under the stated evidence boundary or explicitly left red.
 
 ### Final status
-**Points 40, 41 and 42 are green. The Scheduler Reconcile Audit remains not all-green because other red controls are still open.**
+
+**The Scheduler Reconcile Audit is not all-green.** The remaining red controls are evidence gaps, not failures that should be hidden by documentation or assumptions.
+
+The WhAPI safety hardening is intentionally preserved. Do not re-enable WhAPI catalog reads or writes merely to change checklist colors.

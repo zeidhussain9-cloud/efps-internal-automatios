@@ -1,6 +1,6 @@
 # EFPS CRM — Open Pointers
 
-> Verified 2026-10-04 00:49 IST. Only active items are listed here; historical release pointers are superseded.
+> Verified 2026-10-05. Only active items are listed here; historical release pointers are superseded.
 
 ## External infrastructure prerequisites
 

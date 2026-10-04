@@ -6,10 +6,10 @@
 
 - Production branch: crm-ui-dashboard
 - Production repository tree: verified against the current crm-ui-dashboard release
-- Current crm-ui-dashboard deployment: verified LIVE
-- main branch tree: identical to crm-ui-dashboard tree; equality verified 2026-10-05
+- Current crm-ui-dashboard deployment: Render deploy dep-db1b2svf3r2c73brd6m0 is LIVE from commit 1982c7ea0a158ee0edcb00fad43e021876c13b9d
+- main and crm-ui-dashboard are being reconciled after the WhAPI safety hardening; final tree equality is verified only after the release merge.
 - Render service: srv-darsv560tbcc73cu4ip0
-- Current crm-ui-dashboard release: verified LIVE
+- Current crm-ui-dashboard release: 1982c7ea0a158ee0edcb00fad43e021876c13b9d verified LIVE on Render
 - Production source: +919148338801
 - Supabase project: qttcutwzehtskfcwxkwj
 - Supabase Edge Function: whapi-crm-webhook ACTIVE v9
@@ -68,11 +68,12 @@ Remaining pending contacts after the verified activation run:
 
 ## Source audit adapter
 
-- Read-only MCP adapter implemented and deployed on Render.
-- Exposed tools: WhAPI health/recent message/full message read, canonical Housing_Listings snapshot, and cross-source CRM audit snapshot.
-- No write tools are exposed.
+- Read-only source-audit adapter remains implemented.
+- WhAPI API access is now policy-disabled by default in the shared client; non-catalog WhAPI operations are hard-blocked.
+- Webhook ingestion remains independent and is not disabled by this flag boundary.
+- The removed catalog-repair endpoint/workflow is not part of the current production architecture.
 - Google Sheet credential and Sheet ID are present in Render and the live 5-minute sync read 88 rows at 2026-10-04 09:10:02 UTC with 0 changes and 0 removals.
-- Render currently reports WHAPI_API_TOKEN absent and CRM_SOURCE_AUDIT_MCP_ENABLED/CRM_SOURCE_AUDIT_TOKEN absent. The /mcp endpoint therefore fails closed with HTTP 401 until those exact secrets are configured.
+- Render environment-variable values are not exposed by the current Render connector, so effective production flag values are not asserted from configuration inspection alone. The deployed code defaults EFPS_WHAPI_API_ENABLED=false, EFPS_WHAPI_CATALOG_WRITE_ENABLED=false, and EFPS_WHAPI_WEBHOOK_ENABLED=true.
 
 ## Verification
 
@@ -85,9 +86,9 @@ Remaining pending contacts after the verified activation run:
 - Deterministic classifications generated as property_listing_sent: 0
 - AI runs created by deterministic activation: 0
 
-## Repository release condition — completed
+## Repository release condition
 
-The verified crm-ui-dashboard tree has been reconciled into main without history rewriting. tree(main) == tree(crm-ui-dashboard) is verified, and GitHub contains only main and crm-ui-dashboard.
+The active branch set is limited to main and crm-ui-dashboard. The safety release is on crm-ui-dashboard; branch-tree equality is a release gate and is not claimed until the post-documentation reconciliation is verified.
 
 ## AI scheduler — intentionally paused
 
