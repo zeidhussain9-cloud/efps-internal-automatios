@@ -5,9 +5,9 @@
 ## Runtime baseline
 
 - Production branch: crm-ui-dashboard
-- Verified production tree: 40bba22124bd9b99dd64be054b65705d3ed2ac1b
-- Production crm-ui-dashboard commit: 853faa9c9f675d4342621dc872a28a815bb06f23
-- main commit: 6fd4cf0b246bd36bb42c2d7ee72c213e38165c99
+- Production repository tree: verified against the current crm-ui-dashboard release
+- Current crm-ui-dashboard deployment: verified LIVE
+- main branch tree: identical to crm-ui-dashboard tree; equality verified 2026-10-05
 - Render service: srv-darsv560tbcc73cu4ip0
 - Current crm-ui-dashboard release: verified LIVE
 - Production source: +919148338801
