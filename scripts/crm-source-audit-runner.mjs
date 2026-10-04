@@ -50,6 +50,6 @@ const failures=[];
 for(const [name,value] of Object.entries(payload)){
   if(value&&typeof value==='object'&&value.error) failures.push(`${name}: ${value.error}`);
 }
-if(failures.length) throw new Error('Source audit failures: '+failures.join('; '));
+if(failures.length) throw new Error('Source audit failures: '+failures.join('; ')+' | whapi='+JSON.stringify(payload.whapi));
 
 console.log(JSON.stringify({ok:true,checked_at:new Date().toISOString(),source_audit:payload},null,2));
