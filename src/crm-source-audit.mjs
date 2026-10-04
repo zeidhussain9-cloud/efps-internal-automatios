@@ -67,16 +67,7 @@ export async function whapiCatalogAudit(){
     collectionResults.push({id,name:detail?.name||collection?.name||null,productCount:collectionProducts.length,products:collectionProducts});
   }
   const reconciled=reconcileCatalogProducts(products.items,collectionResults);
-  return {
-    ok:true,
-    productCount:reconciled.productCount,
-    collectionCount:collections.items.length,
-    productsWithCollections:reconciled.productsWithCollections,
-    productsWithoutCollections:reconciled.productsWithoutCollections,
-    collectionDetails:collectionResults.map(({id,name,productCount})=>({id,name,productCount})),
-    complete:true,
-    readOnly:true
-  };
+  return {ok:true,productCount:reconciled.productCount,collectionCount:collections.items.length,productsWithCollections:reconciled.productsWithCollections,productsWithoutCollections:reconciled.productsWithoutCollections,collectionDetails:collectionResults.map(({id,name,productCount})=>({id,name,productCount})),complete:true,readOnly:true};
 }
 
 export async function housingSheetSnapshot(){
@@ -84,8 +75,13 @@ export async function housingSheetSnapshot(){
   const rows=Array.isArray(result.rows)?result.rows:[];
   const header=rows[0]||[];
   const dataRows=rows.slice(1).filter(row=>Array.isArray(row)&&String(row?.[0]??'').trim());
-  const availableCount=dataRows.filter(row=>String(row?.[1]??'').trim().toLowerCase()==='available').length;
-  return {range:result.range||null,rowCount:dataRows.length,columnCount:header.length,availableCatalogCount:availableCount,readOnly:true};
+  const statusCounts={};
+  for(const row of dataRows){
+    const status=String(row?.[1]??'').trim()||'(blank)';
+    statusCounts[status]=(statusCounts[status]||0)+1;
+  }
+  const availableCatalogCount=Object.entries(statusCounts).reduce((n,[status,count])=>n+(status.toLowerCase()==='available'?count:0),0);
+  return {range:result.range||null,rowCount:dataRows.length,columnCount:header.length,statusCounts,availableCatalogCount,readOnly:true};
 }
 
 async function crmSnapshot(){
