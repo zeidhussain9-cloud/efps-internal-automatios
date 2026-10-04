@@ -96,3 +96,9 @@ The verified crm-ui-dashboard tree has been reconciled into main without history
 - The pg_cron trigger has been removed, so no recurring AI scheduler execution is currently scheduled.
 - The deterministic classification scheduler remains active independently at `0 * * * *`.
 - Reactivation requires an explicit operational decision and a new scheduler activation.
+
+## Scheduler Reconcile Audit — current contract
+
+Points **40 Requirement field correctness**, **41 Property-matching inputs**, and **42 Property-matching results** are governed by the single canonical contract in `crm-source-audit-scheduler/AUDIT_CONTRACT.md` and the shared implementation in `src/crm-requirement-match-audit.mjs`. The scheduled runner fails closed unless the combined requirement/matching audit is complete. Do not duplicate or redefine these rules in this document.
+
+Current live population verified 2026-10-05: **253 promoted qualified leads**, **253 normalized requirement profiles**, **0 missing profiles**, and **71 active canonical inventory listings**. Requirement evidence remains a separate provenance layer and is not fabricated by this audit.

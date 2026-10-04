@@ -218,3 +218,9 @@ The production AI workspace also consumes `crm_ai_runs`, `crm_requirement_eviden
 - Insufficient evidence remains Waiting for Classification and is reevaluated when new conversation evidence arrives.
 - Deterministically qualified leads persist auto_qualified=true and display AUTO QUALIFIED on the lead card.
 - Every deterministic evaluation records rule version, evidence message/event IDs, reason and audit provenance.
+
+## Scheduler Reconcile Audit — current contract
+
+Points **40 Requirement field correctness**, **41 Property-matching inputs**, and **42 Property-matching results** are governed by the single canonical contract in `crm-source-audit-scheduler/AUDIT_CONTRACT.md` and the shared implementation in `src/crm-requirement-match-audit.mjs`. The scheduled runner fails closed unless the combined requirement/matching audit is complete. Do not duplicate or redefine these rules in this document.
+
+Current live population verified 2026-10-05: **253 promoted qualified leads**, **253 normalized requirement profiles**, **0 missing profiles**, and **71 active canonical inventory listings**. Requirement evidence remains a separate provenance layer and is not fabricated by this audit.

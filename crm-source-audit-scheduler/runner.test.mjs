@@ -25,7 +25,7 @@ test('schedule runner passes when Sheet and WhAPI catalog counts reconcile',asyn
     }));
     res.writeHead(200,{'Content-Type':'application/json'});
     if(body.method==='initialize') return res.end(JSON.stringify({jsonrpc:'2.0',id:body.id,result:{protocolVersion:'2025-11-25'}}));
-    if(body.method==='tools/call') return res.end(JSON.stringify({jsonrpc:'2.0',id:body.id,result:{content:[{type:'text',text:JSON.stringify({whapi:{ok:true},sheet:{ok:true,availableCatalogCount:71},catalog:{ok:true,complete:true,productCount:71,productsWithCollections:60,productsWithoutCollections:11},crm:{ok:true,eventReconciliation:{messageReconciled:true,contactReconciled:true}}})}]}}));
+    if(body.method==='tools/call') return res.end(JSON.stringify({jsonrpc:'2.0',id:body.id,result:{content:[{type:'text',text:JSON.stringify({whapi:{ok:true},sheet:{ok:true,availableCatalogCount:71},catalog:{ok:true,complete:true,productCount:71,productsWithCollections:60,productsWithoutCollections:11},crm:{ok:true,eventReconciliation:{messageReconciled:true,contactReconciled:true},requirementMatchAudit:{complete:true}}})}]}}));
     res.end(JSON.stringify({jsonrpc:'2.0',id:body.id,result:{}}));
   });
   await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
@@ -39,6 +39,7 @@ test('schedule runner passes when Sheet and WhAPI catalog counts reconcile',asyn
     assert.match(output.join(' '),/"ok": true/);
     assert.match(output.join(' '),/"whapi"/);
     assert.match(output.join(' '),/"matched": true/);
+    assert.match(output.join(' '),/"requirementMatchAudit"/);
   }finally{
     console.log=originalLog;
     await new Promise(resolve=>server.close(resolve));
@@ -59,7 +60,7 @@ test('schedule runner fails when Sheet and WhAPI catalog counts differ',async()=
     }));
     res.writeHead(200,{'Content-Type':'application/json'});
     if(body.method==='initialize') return res.end(JSON.stringify({jsonrpc:'2.0',id:body.id,result:{protocolVersion:'2025-11-25'}}));
-    return res.end(JSON.stringify({jsonrpc:'2.0',id:body.id,result:{content:[{type:'text',text:JSON.stringify({whapi:{ok:true},sheet:{ok:true,availableCatalogCount:71},catalog:{ok:true,complete:true,productCount:70,productsWithCollections:60,productsWithoutCollections:10},crm:{ok:true,eventReconciliation:{messageReconciled:true,contactReconciled:true}}})}]}}));
+    return res.end(JSON.stringify({jsonrpc:'2.0',id:body.id,result:{content:[{type:'text',text:JSON.stringify({whapi:{ok:true},sheet:{ok:true,availableCatalogCount:71},catalog:{ok:true,complete:true,productCount:70,productsWithCollections:60,productsWithoutCollections:10},crm:{ok:true,eventReconciliation:{messageReconciled:true,contactReconciled:true},requirementMatchAudit:{complete:true}}})}]}}));
   });
   await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
   const port=server.address().port;

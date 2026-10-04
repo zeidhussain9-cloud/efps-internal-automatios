@@ -54,6 +54,7 @@ for(const [name,value] of Object.entries(payload)){
 if(payload.catalog?.complete!==true) failures.push('catalog: incomplete catalog reconciliation');
 if(payload.crm?.eventReconciliation?.messageReconciled!==true) failures.push('crm event->message reconciliation incomplete');
 if(payload.crm?.eventReconciliation?.contactReconciled!==true) failures.push('crm event->contact reconciliation incomplete');
+if(payload.crm?.requirementMatchAudit?.complete!==true) failures.push('requirement/matching audit incomplete');
 if(payload.sheet?.availableCatalogCount!==undefined&&payload.catalog?.productCount!==undefined&&Number(payload.sheet.availableCatalogCount)!==Number(payload.catalog.productCount)){
   failures.push(`catalog count mismatch: Sheet available=${payload.sheet.availableCatalogCount}, WhAPI products=${payload.catalog.productCount}`);
 }

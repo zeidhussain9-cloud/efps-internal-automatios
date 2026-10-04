@@ -50,8 +50,9 @@ The runner exits non-zero when:
 - any source layer reports an error
 - the catalog reconciliation is incomplete
 - Sheet available count does not equal the WhAPI product count
+- the CRM requirement/matching audit is incomplete
 
-A successful run emits compact JSON evidence including collection assignment counts.
+A successful run emits compact JSON evidence including collection assignment counts and the Point 40–42 requirement/matching audit.
 
 ## Scope boundary
 

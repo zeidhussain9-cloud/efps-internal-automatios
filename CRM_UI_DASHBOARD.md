@@ -47,8 +47,8 @@ The dashboard uses the production Supabase CRM data path. Webhook events are dur
 
 ## Current database snapshot
 
-239 leads; 8,098 messages; 1,831 webhook events; 277 AI runs; 214 drafts; 362 classifications; 88 active inventory listings.
-Classification status for +919148338801: 239 promoted / 88 classified / 32 excluded / 3 pending.
+253 leads; 9,222 messages; 3,023 WhAPI webhook events; 277 AI runs; 214 drafts; 389 classifications; 71 active inventory listings.
+Classification status for +919148338801: 253 promoted / 88 classified / 40 excluded / 8 pending.
 
 ## Group Message classification
 
@@ -59,3 +59,9 @@ The same rule is implemented in the Supabase webhook Edge Function and canonical
 ## Release note
 
 This document is a point-in-time production statement. Do not copy its values into future documentation without re-verifying the live database and Render deployment.
+
+## Scheduler Reconcile Audit — current contract
+
+Points **40 Requirement field correctness**, **41 Property-matching inputs**, and **42 Property-matching results** are governed by the single canonical contract in `crm-source-audit-scheduler/AUDIT_CONTRACT.md` and the shared implementation in `src/crm-requirement-match-audit.mjs`. The scheduled runner fails closed unless the combined requirement/matching audit is complete. Do not duplicate or redefine these rules in this document.
+
+Current live population verified 2026-10-05: **253 promoted qualified leads**, **253 normalized requirement profiles**, **0 missing profiles**, and **71 active canonical inventory listings**. Requirement evidence remains a separate provenance layer and is not fabricated by this audit.
