@@ -29,6 +29,14 @@ jobs:
           response="$(curl -fsSL -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=efps-crm-catalog-admin")"
           echo "token=$(printf '%s' "$response" | jq -r '.value')" >> "$GITHUB_OUTPUT"
 
+      - name: Inspect OIDC claims
+        env:
+          OIDC_TOKEN: ${{ steps.oidc.outputs.token }}
+        shell: bash
+        run: |
+          payload="$(printf '%s' "$OIDC_TOKEN" | cut -d. -f2 | base64 -d 2>/dev/null)"
+          printf '%s' "$payload" | jq '{iss,aud,sub,workflow_ref,job_workflow_ref,repository,ref,ref_type}'
+
       - name: Execute catalog repair plan
         env:
           OIDC_TOKEN: ${{ steps.oidc.outputs.token }}
