@@ -6,7 +6,7 @@ test('schedule runner fails closed without its audit token',async()=>{
   const previous=process.env.CRM_SOURCE_AUDIT_TOKEN;
   delete process.env.CRM_SOURCE_AUDIT_TOKEN;
   await assert.rejects(
-    import('../scripts/crm-source-audit-runner.mjs?missing-token-test'),
+    import('./runner.mjs?missing-token-test'),
     /CRM_SOURCE_AUDIT_TOKEN is required/
   );
   if(previous===undefined) delete process.env.CRM_SOURCE_AUDIT_TOKEN;
@@ -35,7 +35,7 @@ test('schedule runner passes when Sheet and WhAPI catalog counts reconcile',asyn
   const originalLog=console.log;
   console.log=(...args)=>output.push(args.join(' '));
   try{
-    await import('../scripts/crm-source-audit-runner.mjs?happy-path-test');
+    await import('./runner.mjs?happy-path-test');
     assert.match(output.join(' '),/"ok": true/);
     assert.match(output.join(' '),/"whapi"/);
     assert.match(output.join(' '),/"matched": true/);
@@ -66,7 +66,7 @@ test('schedule runner fails when Sheet and WhAPI catalog counts differ',async()=
   process.env.CRM_SOURCE_AUDIT_URL=`http://127.0.0.1:${port}/mcp`;
   try{
     await assert.rejects(
-      import('../scripts/crm-source-audit-runner.mjs?mismatch-test'),
+      import('./runner.mjs?mismatch-test'),
       /catalog count mismatch: Sheet available=71, WhAPI products=70/
     );
   }finally{
