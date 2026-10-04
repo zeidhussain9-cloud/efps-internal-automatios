@@ -23,9 +23,9 @@ function parseMcpBody(body){
   const trimmed=body.trim();
   if(!trimmed) throw new Error('MCP returned an empty response');
   if(trimmed.startsWith('{')) return JSON.parse(trimmed);
-  const dataLines=trimmed.split(/\\r?\\n/).filter(line=>line.startsWith('data:')).map(line=>line.slice(5).trim()).filter(Boolean);
-  if(!dataLines.length) throw new Error('MCP response did not contain JSON data');
-  return JSON.parse(dataLines[dataLines.length-1]);
+  const matches=[...trimmed.matchAll(/(?:^|\\r?\\n)\\s*data:\\s*(\\{[\\s\\S]*?\\})(?=\\r?\\n|$)/g)];
+  if(matches.length) return JSON.parse(matches[matches.length-1][1]);
+  throw new Error('MCP response did not contain a JSON-RPC data event');
 }
 
 const init=await callMcp(1,'initialize',{
