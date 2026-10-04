@@ -67,7 +67,7 @@ export async function whapiCatalogAudit(){
     collectionResults.push({id,name:detail?.name||collection?.name||null,productCount:collectionProducts.length,products:collectionProducts});
   }
   const reconciled=reconcileCatalogProducts(products.items,collectionResults);
-  return {ok:true,productCount:reconciled.productCount,collectionCount:collections.items.length,productsWithCollections:reconciled.productsWithCollections,productsWithoutCollections:reconciled.productsWithoutCollections,collectionDetails:collectionResults.map(({id,name,productCount})=>({id,name,productCount})),complete:true,readOnly:true};
+  return {ok:true,productCount:reconciled.productCount,productIds:[...new Set(products.items.map(product=>String(product?.id||'').trim()).filter(Boolean))],products:products.items.map(product=>({id:String(product?.id||'').trim(),retailerId:String(product?.product_retailer_id||product?.retailer_id||'').trim(),name:product?.name||null,description:product?.description||null,price:product?.price??null,currency:product?.currency||null,availability:product?.availability||null,url:product?.url||null,isHidden:product?.is_hidden??null,imageCount:Array.isArray(product?.images)?product.images.length:0})),collectionCount:collections.items.length,productsWithCollections:reconciled.productsWithCollections,productsWithoutCollections:reconciled.productsWithoutCollections,collectionDetails:collectionResults.map(c=>({id:c.id,name:c.name,productCount:c.productCount,productIds:c.products.map(p=>String(p?.id||'').trim()).filter(Boolean)})),complete:true,readOnly:true};
 }
 
 function countField(rows,index){
@@ -90,7 +90,41 @@ export async function housingSheetSnapshot(){
   const metaCatalogStatusCounts=countField(dataRows,45);
   const metaCatalogIdCount=dataRows.filter(row=>String(row?.[44]??'').trim()).length;
   const availableCatalogCount=Number(listingStateCounts.Available||0);
-  return {range:result.range||null,rowCount:dataRows.length,columnCount:header.length,statusCounts,intakeStatusCounts,listingStateCounts,metaCatalogStatusCounts,metaCatalogIdCount,availableCatalogCount,readOnly:true};
+    const availableRows=dataRows.filter(row=>String(row?.[4]??'').trim()==='Available').map(row=>({listingId:String(row?.[0]??'').trim(),catalogTitle:String(row?.[33]??'').trim(),cloudinaryImages:String(row?.[34]??'').split(',').map(x=>x.trim()).filter(Boolean),metaCatalogId:String(row?.[44]??'').trim(),metaCatalogStatus:String(row?.[45]??'').trim(),postedUrl:String(row?.[41]??'').trim(),bhk:String(row?.[13]??'').trim(),listingState:String(row?.[4]??'').trim()}));
+  return {range:result.range||null,rowCount:dataRows.length,columnCount:header.length,statusCounts,intakeStatusCounts,listingStateCounts,metaCatalogStatusCounts,metaCatalogIdCount,availableCatalogCount,availableRows,readOnly:true};
+}
+
+function reconcileCatalogToSheet(sheet,catalog){
+  const rows=Array.isArray(sheet?.availableRows)?sheet.availableRows:[];
+  const products=Array.isArray(catalog?.products)?catalog.products:[];
+  const byId=new Map(products.map(p=>[String(p.id||'').trim(),p]).filter(([id])=>id));
+  const byRetailer=new Map(products.map(p=>[String(p.retailerId||'').trim(),p]).filter(([id])=>id));
+  const matches=[]; const missing=[]; const duplicateSheetIds=[]; const used=new Set();
+  const seenSheetIds=new Set();
+  for(const row of rows){
+    if(row.metaCatalogId&&seenSheetIds.has(row.metaCatalogId)) duplicateSheetIds.push(row.metaCatalogId);
+    if(row.metaCatalogId) seenSheetIds.add(row.metaCatalogId);
+    const product=(row.metaCatalogId&&byId.get(row.metaCatalogId))||byRetailer.get(row.listingId)||null;
+    if(!product){missing.push(row);continue;}
+    used.add(String(product.id));
+    matches.push({row,product});
+  }
+  const catalogOnly=products.filter(p=>!used.has(String(p.id||'')));
+  const fieldMismatches=[];
+  for(const {row,product} of matches){
+    const checks=[
+      ['title',row.catalogTitle,product.name],
+      ['url',row.postedUrl,product.url],
+      ['availability',row.listingState==='Available'?'in stock':null,product.availability],
+      ['image_count',row.cloudinaryImages.length,product.imageCount]
+    ];
+    for(const [field,a,b] of checks){if(a!==''&&a!==null&&a!==undefined&&b!==null&&b!==undefined&&String(a)!==String(b))fieldMismatches.push({listingId:row.listingId,productId:product.id,field,sheet:a,whapi:b});}
+  }
+  const expectedCollection=bhk=>{const s=String(bhk||'').toUpperCase().replace(/\\s+/g,'');if(s.includes('1RK')||s.includes('1BHK'))return '1RK & 1BHK';if(s.includes('2BHK'))return '2BHK';if(s.includes('3BHK'))return '3BHK';if(/4\\+BHK|4BHK|5BHK|6BHK/.test(s))return '4+ BHK';return null;};
+  const memberships=new Map(); for(const c of (catalog.collectionDetails||[])) for(const id of c.productIds||[]) memberships.set(String(id),c.name);
+  const collectionMismatches=[];
+  for(const {row,product} of matches){const expected=expectedCollection(row.bhk);if(expected){const actual=memberships.get(String(product.id))||null;if(actual!==expected)collectionMismatches.push({listingId:row.listingId,productId:product.id,expected,actual});}}
+  return {sheetAvailable:rows.length,whapiProducts:products.length,identity:{matched:matches.length,missing:missing.length,catalogOnly:catalogOnly.length,duplicateSheetIds:duplicateSheetIds.length},field:{compared:matches.length*4,mismatches:fieldMismatches.length,mismatchDetails:fieldMismatches.slice(0,100)},lifecycle:{sheetAvailableRows:rows.length,productsMarkedInStock:products.filter(p=>p.availability==='in stock'&&!p.isHidden).length,productsHidden:products.filter(p=>p.isHidden===true).length},id:{sheetIds:rows.filter(r=>r.metaCatalogId).length,matchedByMetaId:rows.filter(r=>r.metaCatalogId&&byId.has(r.metaCatalogId)).length,retailerIdFallbackMatches:matches.filter(x=>!x.row.metaCatalogId&&byRetailer.has(x.row.listingId)).length},removed:{sheetRemovedMarked:0,catalogProductsForRemovedSheet:0},missingProducts:missing.map(r=>({listingId:r.listingId,metaCatalogId:r.metaCatalogId})),catalogOnlyProducts:catalogOnly.map(p=>({id:p.id,retailerId:p.retailerId,name:p.name})),collectionExpectation:{derivableBhk:rows.filter(r=>expectedCollection(r.bhk)).length,mismatches:collectionMismatches.length,details:collectionMismatches.slice(0,100)},complete:true};
 }
 
 async function crmSnapshot(){
@@ -118,5 +152,6 @@ export async function sourceAuditSnapshot(){
     whapi:whapi.status==='fulfilled'?{ok:true,recentInboundCount:whapi.value.messages.length,total:whapi.value.total,latestMessageTimestamp:latestWhapi||null,health:whapiHealthResult.status==='fulfilled'?whapiHealthResult.value:null}:{ok:false,error:whapi.reason?.message||'WhAPI read failed',health:whapiHealthResult.status==='fulfilled'?whapiHealthResult.value:{error:whapiHealthResult.reason?.message||'WhAPI health read failed'}},
     sheet:sheet.status==='fulfilled'?{ok:true,...sheet.value}:{ok:false,error:sheet.reason?.message||'Sheet read failed'},
     catalog:catalog.status==='fulfilled'?catalog.value:{ok:false,error:catalog.reason?.message||'WhAPI catalog read failed'},
+    catalogReconciliation:catalog.status==='fulfilled'&&sheet.status==='fulfilled'?reconcileCatalogToSheet(sheet.value,catalog.value):{complete:false,error:'Sheet or catalog unavailable'},
     crm:crm.status==='fulfilled'?{ok:true,...crm.value}:{ok:false,error:crm.reason?.message||'CRM read failed'}};
 }
