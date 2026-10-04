@@ -42,7 +42,7 @@ async function crmSnapshot(){
       (select max(received_at) from crm_webhook_events where provider='whapi') as webhook_latest,
       (select count(*) from crm_webhook_events where provider='whapi' and processing_status='error') as webhook_errors,
       (select count(*) from crm_messages) as message_total,
-      (select max(created_at) from crm_messages) as message_latest,
+      (select max(message_at) from crm_messages) as message_latest,
       (select row_count from crm_inventory_sync_runs where source_kind='housing_sheet' order by created_at desc limit 1) as sheet_sync_rows,
       (select created_at from crm_inventory_sync_runs where source_kind='housing_sheet' order by created_at desc limit 1) as sheet_sync_latest`);
     await client.query('ROLLBACK'); return {...q.rows[0],source_number:SOURCE_NUMBER,readOnly:true};
