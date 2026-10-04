@@ -2,9 +2,9 @@
 
 **Purpose:** Canonical checklist for the EFPS CRM Scheduler Reconcile Audit.
 
-**Status rule:** 🟢 = currently verified by production/repository evidence. 🔴 = not yet fully verified by the live scheduler audit. A previously verified 🟢 control is not downgraded without evidence of regression.
+**Status rule:** 🟢 = verified by current production/repository evidence. 🟡 = partially verified; some evidence exists but full reconciliation is not established. 🔴 = not sufficiently verified. A previously verified 🟢 control is not downgraded without evidence of regression.
 
-**Current evidence baseline:** 2026-10-04. The latest catalog-reconciliation code commit `814fcad604a08a1a0aea9613ab861c559b94544d` is verified **LIVE** on Render. However, the enhanced catalog reconciliation has not yet been proven by a post-deployment successful scheduled audit run; therefore pointers 55–64 remain 🔴.
+**Current evidence baseline:** 2026-10-04. Post-deployment scheduler run **37210646893** completed successfully against the deployed catalog-reconciliation code. It verified 71 Sheet-available products against 71 WhAPI products, with 71 listing identities matched, 0 missing, 0 catalog-only products, 0 duplicate Sheet IDs, 71/71 Sheet IDs matched by Meta/WhAPI catalog ID, 71 in-stock products, and 0 hidden products. Field reconciliation found **142 mismatches across 284 compared fields**, so field-level catalog reconciliation is not green. Removed-product reconciliation is not independently established because the current implementation reports a placeholder 0/0 rather than a historical removed-product sweep. Collection-expectation derivation returned 0 derivable BHK rows in this run, so per-product expected collection correctness is not established.
 
 | # | Area | Status |
 |---:|---|:---:|
@@ -25,8 +25,8 @@
 | 15 | Message direction captured | 🟢 |
 | 16 | Message timestamp persisted | 🟢 |
 | 17 | Message/provider ID mapping | 🟢 |
-| 18 | Event → message reconciliation | 🔴 |
-| 19 | Event → contact reconciliation | 🔴 |
+| 18 | Event → message reconciliation | 🟡 |
+| 19 | Event → contact reconciliation | 🟡 |
 | 20 | Contact/message persistence | 🟢 |
 | 21 | Missing-message detection | 🔴 |
 | 22 | Orphan-message detection | 🟢 |
@@ -42,11 +42,11 @@
 | 32 | Deterministic decision persisted | 🟢 |
 | 33 | Classification → lead promotion | 🟢 |
 | 34 | Lead/source mapping | 🟢 |
-| 35 | Qualified-lead completeness | 🔴 |
+| 35 | Qualified-lead completeness | 🟡 |
 | 36 | Non-qualified contacts remain outside lead queue | 🟢 |
 | 37 | Historical message → classification linkage | 🔴 |
 | 38 | Historical lead reconciliation | 🔴 |
-| 39 | Lead requirements captured | 🔴 |
+| 39 | Lead requirements captured | 🟡 |
 | 40 | Requirement field correctness | 🔴 |
 | 41 | Property-matching inputs | 🔴 |
 | 42 | Property-matching results | 🔴 |
@@ -62,12 +62,12 @@
 | 52 | Actual WhAPI catalog product count | 🟢 |
 | 53 | Sheet ↔ WhAPI catalog count reconciliation | 🟢 |
 | 54 | Catalog reconciliation completeness | 🟢 |
-| 55 | Catalog identity/listing-by-listing match | 🔴 |
+| 55 | Catalog identity/listing-by-listing match | 🟢 |
 | 56 | Catalog field-by-field match | 🔴 |
-| 57 | Catalog lifecycle/status reconciliation | 🔴 |
-| 58 | Catalog ID ↔ Sheet ID reconciliation | 🔴 |
+| 57 | Catalog lifecycle/status reconciliation | 🟢 |
+| 58 | Catalog ID ↔ Sheet ID reconciliation | 🟢 |
 | 59 | Catalog removed-product reconciliation | 🔴 |
-| 60 | Catalog missing-product detection | 🔴 |
+| 60 | Catalog missing-product detection | 🟢 |
 | 61 | Products assigned to collections | 🟢 |
 | 62 | Products without collections | 🟢 |
 | 63 | Collection membership correctness per product | 🔴 |
@@ -82,18 +82,39 @@
 ## Current verified interpretation
 
 ### 🟢 Verified
-Pointers **1–17, 20, 22–34, 36, 43–54, 61–62, and 65–68** remain green from the established verified production/repository evidence.
+Pointers **1–17, 20, 22–34, 36, 43–54, 55, 57–58, 60–62, and 65–68** are green from current production/repository evidence.
 
-### 🔴 Not yet fully verified
-Pointers **18–19, 21, 35, 37–42, 55–60, 63–64, 69–70** remain red because the scheduler does not yet have sufficient live evidence to certify them as fully reconciled.
+### 🟡 Partially verified
+Pointers **18, 19, 35, and 39** have meaningful evidence but are not fully reconciled.
 
-### Important current blocker
-WhAPI historical message-list reconciliation remains unavailable because the WhAPI historical message endpoint was returning HTTP 500. The webhook ingestion path itself remains healthy. This prevents claiming a definitive historical/full-sweep green result.
+- **35:** 248 qualified leads exist; 186 have structured requirement rows and 62 do not.
+- **39:** Requirement storage is operational for 186 qualified leads, but 62 qualified leads have no structured requirement row.
+- Requirement evidence is currently absent, so this does not establish field-level correctness.
 
-### Catalog status
-The catalog reconciliation implementation is now deployed live at commit `814fcad604a08a1a0aea9613ab861c559b94544d`. The implementation covers identity, field, lifecycle, Sheet-ID, removed-product, missing-product, collection-membership, and media reconciliation. These controls remain 🔴 until a successful **post-deployment** scheduler audit produces and verifies the corresponding live results.
+### 🔴 Not sufficiently verified
+Pointers **21, 37–38, 40–42, 56, 59, 63–64, and 69–70** remain red.
+
+### Historical WhatsApp blocker
+WhAPI historical message-list reconciliation remains unavailable because the historical message endpoint has returned HTTP 500. The webhook ingestion path itself remains healthy. This prevents a definitive historical/full-sweep result.
+
+### Catalog evidence from scheduler run 37210646893
+- Sheet available: **71**
+- WhAPI products: **71**
+- Listing identity matches: **71**
+- Missing products: **0**
+- Catalog-only products: **0**
+- Duplicate Sheet IDs: **0**
+- Sheet IDs matched by catalog ID: **71/71**
+- Products in stock: **71**
+- Hidden products: **0**
+- Compared fields: **284**
+- Field mismatches: **142**
+- Removed-product historical reconciliation: **not established**
+- Collection expectation derivable from BHK: **0** in this run
+- Products with collections: **35**
+- Products without collections: **36**
+
+The 142 field mismatches are actual evidence, not a software failure. The scheduler completed successfully and surfaced differences that must be reconciled before point 56 can be green.
 
 ### Final status
-**The Scheduler Reconcile Audit is not yet all-green.**
-
-The checklist deliberately does **not** downgrade any previously verified green control because of the new work. Red means the control is not yet certified as fully reconciled by the current live scheduler evidence.
+**The Scheduler Reconcile Audit is not all-green.**
