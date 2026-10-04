@@ -5,8 +5,10 @@ const {Pool}=pg;
 
 const WHAPI_BASE_URL=(process.env.WHAPI_BASE_URL||'https://gate.whapi.cloud').replace(/\/$/,'');
 const SOURCE_NUMBER=process.env.CRM_WHATSAPP_SOURCE_NUMBER||'+919148338801';
+const WHAPI_API_ENABLED=process.env.EFPS_WHAPI_API_ENABLED==='true';
 
 async function fetchJson(path,query={}){
+  if(!WHAPI_API_ENABLED) throw new Error('WhAPI API traffic disabled by EFPS_WHAPI_API_ENABLED');
   const token=String(process.env.WHAPI_API_TOKEN||'').trim();
   if(!token) throw new Error('WHAPI_API_TOKEN is not configured');
   const url=new URL(WHAPI_BASE_URL+path);
@@ -81,55 +83,9 @@ function deriveCatalogCollectionName(bhk){
   return null;
 }
 
-export async function repairCatalogCollections({dryRun=true}={}){
-  const sheet=await housingSheetSnapshot();
-  const catalog=await whapiCatalogAudit();
-  const rows=Array.isArray(sheet?.availableRows)?sheet.availableRows:[];
-  const products=Array.isArray(catalog?.products)?catalog.products:[];
-  const productById=new Map(products.map(product=>[String(product.id||'').trim(),product]).filter(([id])=>id));
-  const productByRetailer=new Map(products.map(product=>[String(product.retailerId||'').trim(),product]).filter(([id])=>id));
-  const collections=new Map((catalog.collectionDetails||[]).map(collection=>[normalizeCatalogCollectionName(collection.name),collection]).filter(([name])=>name));
-  const plan=new Map();
-  const unresolved=[];
-  for(const row of rows){
-    const expected=deriveCatalogCollectionName(row.bhk);
-    if(!expected){unresolved.push({listingId:row.listingId,reason:'BHK has no canonical collection'});continue;}
-    const collection=collections.get(expected);
-    if(!collection){unresolved.push({listingId:row.listingId,expected,reason:'canonical collection does not exist'});continue;}
-    const product=(row.metaCatalogId&&productById.get(String(row.metaCatalogId).trim()))||productByRetailer.get(row.listingId);
-    if(!product){unresolved.push({listingId:row.listingId,expected,reason:'catalog product not found'});continue;}
-    const productId=String(product.id||'').trim();
-    const existing=new Set((collection.productIds||[]).map(String));
-    if(!existing.has(productId)){
-      if(!plan.has(collection.id))plan.set(collection.id,{id:collection.id,name:collection.name,productIds:[]});
-      plan.get(collection.id).productIds.push(productId);
-    }
-  }
-  const additions=[...plan.values()].map(item=>({...item,productIds:[...new Set(item.productIds)]}));
-  const changedProducts=additions.reduce((n,item)=>n+item.productIds.length,0);
-  if(unresolved.length)return {ok:false,dryRun,unresolved,additions,changedProducts};
-  if(dryRun)return {ok:true,dryRun,unresolved:[],additions,changedProducts};
-  const results=[];
-  for(const item of additions){
-    const token=String(process.env.WHAPI_API_TOKEN||'').trim();
-    let collectionId=item.id;
-    for(let offset=0;offset<item.productIds.length;offset+=5){
-      const productIds=item.productIds.slice(offset,offset+5);
-      const url=WHAPI_BASE_URL+'/business/collections/'+encodeURIComponent(collectionId);
-      const controller=new AbortController(); const timer=setTimeout(()=>controller.abort(),60000);
-      try{
-        const res=await fetch(url,{method:'PATCH',headers:{Authorization:'Bearer '+token,Accept:'application/json','Content-Type':'application/json'},body:JSON.stringify({add_products:productIds}),signal:controller.signal});
-        const text=await res.text(); let body=null; try{body=text?JSON.parse(text):null}catch{}
-        if(!res.ok)throw new Error('WhAPI HTTP '+res.status+': '+String(text||'').slice(0,300));
-        const nextId=String(body?.newCollectionId||body?.id||body?.collection?.id||'').trim();
-        if(nextId)collectionId=nextId;
-        results.push({id:item.id,collectionId:collectionId,name:item.name,added:productIds.length,status:res.status,body});
-      }finally{clearTimeout(timer);}
-    }
-  }
-  const verified=await whapiCatalogAudit();
-  return {ok:true,dryRun:false,unresolved:[],additions,changedProducts,results,verified:{productsWithCollections:verified.productsWithCollections,productsWithoutCollections:verified.productsWithoutCollections,collectionDetails:verified.collectionDetails}};
-}
+// Catalog collection mutation is intentionally not implemented in the CRM audit service.
+// Collection writes are reserved for the explicit catalog-creation workflow.
+// The audit service contains no catalog mutation path.
 
 function countField(rows,index){
   const counts={};
@@ -296,7 +252,7 @@ export async function sourceAuditSnapshot(){
   return {checkedAt:new Date().toISOString(),sourceNumber:SOURCE_NUMBER,
     whapi:whapi.status==='fulfilled'?{ok:true,recentInboundCount:whapi.value.messages.length,total:whapi.value.total,latestMessageTimestamp:latestWhapi||null,health:whapiHealthResult.status==='fulfilled'?whapiHealthResult.value:null}:{ok:false,degraded:true,error:whapi.reason?.message||'WhAPI read failed',health:whapiHealthResult.status==='fulfilled'?whapiHealthResult.value:{error:whapiHealthResult.reason?.message||'WhAPI health read failed'},knownLimitation:'WhAPI /messages/list currently returns HTTP 500; catalog and CRM audits remain independently evaluated'},
     sheet:sheet.status==='fulfilled'?{ok:true,...sheet.value}:{ok:false,error:sheet.reason?.message||'Sheet read failed'},
-    catalog:catalog.status==='fulfilled'?catalog.value:{ok:false,error:catalog.reason?.message||'WhAPI catalog read failed'},
-    catalogReconciliation:catalog.status==='fulfilled'&&sheet.status==='fulfilled'?reconcileCatalogToSheet(sheet.value,catalog.value):{complete:false,error:'Sheet or catalog unavailable'},
+    catalog:catalog.status==='fulfilled'?catalog.value:{ok:false,degraded:true,policyDisabled:!WHAPI_API_ENABLED,error:catalog.reason?.message||'WhAPI catalog read disabled'},
+    catalogReconciliation:WHAPI_API_ENABLED&&catalog.status==='fulfilled'&&sheet.status==='fulfilled'?reconcileCatalogToSheet(sheet.value,catalog.value):{complete:false,policyDisabled:!WHAPI_API_ENABLED,error:WHAPI_API_ENABLED?'Sheet or catalog unavailable':'WhAPI catalog API disabled by policy'},
     crm:crm.status==='fulfilled'?{ok:true,...crm.value}:{ok:false,error:crm.reason?.message||'CRM read failed'}};
 }
