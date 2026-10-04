@@ -34,8 +34,14 @@ jobs:
           OIDC_TOKEN: ${{ steps.oidc.outputs.token }}
         shell: bash
         run: |
-          payload="$(printf '%s' "$OIDC_TOKEN" | cut -d. -f2 | base64 -d 2>/dev/null)"
-          printf '%s' "$payload" | jq '{iss,aud,sub,workflow_ref,job_workflow_ref,repository,ref,ref_type}'
+          PAYLOAD="$OIDC_TOKEN" python3 - <<'PY'
+          import os,base64,json
+          token=os.environ["PAYLOAD"]
+          payload=token.split(".")[1]
+          payload += "=" * (-len(payload) % 4)
+          claims=json.loads(base64.urlsafe_b64decode(payload))
+          print(json.dumps({k:claims.get(k) for k in ["iss","aud","sub","workflow_ref","job_workflow_ref","repository","ref","ref_type"]},indent=2))
+          PY
 
       - name: Execute catalog repair plan
         env:
