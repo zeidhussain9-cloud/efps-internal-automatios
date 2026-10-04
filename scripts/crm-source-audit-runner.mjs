@@ -2,7 +2,8 @@ const MCP_URL=String(process.env.CRM_SOURCE_AUDIT_URL||'https://easyfind-crm-d01
 const TOKEN=String(process.env.CRM_SOURCE_AUDIT_TOKEN||'').trim();
 
 if(!TOKEN) throw new Error('CRM_SOURCE_AUDIT_TOKEN is required');
-if(!/^https:\/\//i.test(MCP_URL)) throw new Error('CRM_SOURCE_AUDIT_URL must use HTTPS');
+const parsedUrl=new URL(MCP_URL);
+if(parsedUrl.protocol!=='https:'&&!['localhost','127.0.0.1'].includes(parsedUrl.hostname)) throw new Error('CRM_SOURCE_AUDIT_URL must use HTTPS');
 
 async function callMcp(id,method,params={}){
   const response=await fetch(MCP_URL,{
@@ -50,6 +51,21 @@ const failures=[];
 for(const [name,value] of Object.entries(payload)){
   if(value&&typeof value==='object'&&value.error) failures.push(`${name}: ${value.error}`);
 }
-if(failures.length) throw new Error('Source audit failures: '+failures.join('; ')+' | whapi='+JSON.stringify(payload.whapi));
+if(payload.catalog?.complete!==true) failures.push('catalog: incomplete catalog reconciliation');
+if(payload.sheet?.availableCatalogCount!==undefined&&payload.catalog?.productCount!==undefined&&Number(payload.sheet.availableCatalogCount)!==Number(payload.catalog.productCount)){
+  failures.push(`catalog count mismatch: Sheet available=${payload.sheet.availableCatalogCount}, WhAPI products=${payload.catalog.productCount}`);
+}
+if(failures.length) throw new Error('Source audit failures: '+failures.join('; ')+' | whapi='+JSON.stringify(payload.whapi)+' | sheet='+JSON.stringify(payload.sheet)+' | catalog='+JSON.stringify(payload.catalog));
 
-console.log(JSON.stringify({ok:true,checked_at:new Date().toISOString(),source_audit:payload},null,2));
+console.log(JSON.stringify({
+  ok:true,
+  checked_at:new Date().toISOString(),
+  source_audit:payload,
+  catalog_reconciliation:{
+    sheet_available:Number(payload.sheet.availableCatalogCount),
+    whapi_products:Number(payload.catalog.productCount),
+    matched:Number(payload.sheet.availableCatalogCount)===Number(payload.catalog.productCount),
+    products_with_collections:Number(payload.catalog.productsWithCollections),
+    products_without_collections:Number(payload.catalog.productsWithoutCollections)
+  }
+},null,2));

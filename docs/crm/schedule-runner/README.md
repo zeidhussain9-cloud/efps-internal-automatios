@@ -2,56 +2,56 @@
 
 ## Purpose
 
-This runner provides the repository-owned scheduled execution path for the production CRM source audit.
+Repository-owned scheduled execution path for the production CRM source audit.
 
-It invokes the existing production read-only MCP adapter and requests only:
+Each run is read-only and reconciles:
 
-- WhAPI source reconciliation
-- canonical Google Housing Sheet snapshot
-- CRM/Supabase persistence snapshot
+- WhAPI channel/message source health
+- canonical Google Housing Sheet inventory
+- WhatsApp Business catalog products and collections
+- CRM/Supabase persistence
+
+Catalog reconciliation uses the Sheet's available inventory count as the expected catalog count, then reads WhAPI products and collections and reports:
+
+- Sheet available count
+- WhAPI product count
+- matched/mismatched state
+- products assigned to at least one collection
+- products with no collection assignment
 
 The runner performs no CRM writes, WhAPI sends, Sheet writes, classification changes, AI execution, or deployment actions.
 
 ## Runtime
 
-- Repository: `zeidhussain9-cloud/efps-internal-automatios`
-- Workflow: `.github/workflows/crm-source-audit-schedule.yml`
-- Production branch definition: `crm-ui-dashboard`
-- Production service: `https://easyfind-crm-d01-d05.onrender.com`
-- MCP endpoint: `POST /mcp`
-- Schedule: hourly at minute 7
-- Manual execution: GitHub Actions `workflow_dispatch`
+- Repository: zeidhussain9-cloud/efps-internal-automatios
+- Workflow: .github/workflows/crm-source-audit-schedule.yml
+- Production branch definition: crm-ui-dashboard
+- Production service: https://easyfind-crm-d01-d05.onrender.com
+- MCP endpoint: POST /mcp
+- Schedule: hourly at minute 7 UTC
+- Manual execution: GitHub Actions workflow_dispatch
 
 ## Authentication
 
-The scheduled workflow uses a short-lived GitHub Actions OIDC token with audience `efps-crm-source-audit`.
+The scheduled workflow uses the existing GitHub Actions secret CRM_SOURCE_AUDIT_TOKEN as a Bearer credential for the production read-only MCP endpoint.
 
-The production MCP adapter validates:
+The MCP adapter also retains its fail-closed OIDC authorization implementation for authorized OIDC clients, but the scheduled workflow currently uses the configured static audit secret because this is the verified working production path.
 
-- GitHub OIDC issuer
-- audience
-- exact repository
-- exact `main` workflow ref
-- public repository visibility
-- branch ref
-- token time bounds
-- GitHub signing key
-
-The existing `CRM_SOURCE_AUDIT_TOKEN` remains supported for authorized non-GitHub MCP clients. The schedule runner does not require a new static GitHub secret.
+No WhAPI API token is used as the MCP audit credential.
 
 ## Failure semantics
 
 The runner exits non-zero when:
 
-- the authentication token is missing
+- the audit credential is missing
 - the MCP endpoint is not HTTPS
-- the MCP request fails
-- MCP initialization fails
-- the source-audit tool returns an error
+- the MCP request or initialization fails
 - the source-audit payload is empty or invalid
-- any source layer reports an embedded error
+- any source layer reports an error
+- the catalog reconciliation is incomplete
+- Sheet available count does not equal the WhAPI product count
 
-A successful run emits a compact JSON evidence payload to the workflow log.
+A successful run emits compact JSON evidence including collection assignment counts.
 
 ## Scope boundary
 
