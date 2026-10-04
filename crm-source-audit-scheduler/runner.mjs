@@ -52,9 +52,9 @@ for(const [name,value] of Object.entries(payload)){
   if(value&&typeof value==='object'&&value.error&&!value.degraded) failures.push(`${name}: ${value.error}`);
 }
 if(payload.catalog?.complete!==true) failures.push('catalog: incomplete catalog reconciliation');
-if(payload.catalog?.field?.mismatches!==0) failures.push('catalog: field-by-field reconciliation incomplete');
-if(payload.catalog?.removed?.removedReconciled!==true) failures.push('catalog: removed-product reconciliation incomplete');
-if(payload.catalog?.collectionExpectation?.mismatches!==0) failures.push('catalog: collection membership reconciliation incomplete');
+if(payload.catalogReconciliation?.field?.mismatches!==0) failures.push('catalog: field-by-field reconciliation incomplete');
+if(payload.catalogReconciliation?.removed?.removedReconciled!==true) failures.push('catalog: removed-product reconciliation incomplete');
+if(payload.catalogReconciliation?.collectionExpectation?.mismatches!==0) failures.push('catalog: collection membership reconciliation incomplete');
 if(payload.crm?.mediaReconciliation?.complete!==true) failures.push('crm: Cloudinary media reconciliation incomplete');
 if(payload.crm?.eventReconciliation?.messageReconciled!==true) failures.push('crm event->message reconciliation incomplete');
 if(payload.crm?.eventReconciliation?.contactReconciled!==true) failures.push('crm event->contact reconciliation incomplete');
@@ -63,7 +63,7 @@ if(payload.sheet?.availableCatalogCount!==undefined&&payload.catalog?.productCou
   failures.push(`catalog count mismatch: Sheet available=${payload.sheet.availableCatalogCount}, WhAPI products=${payload.catalog.productCount}`);
 }
 if(failures.length){
-  const evidence={failures,sheet:{availableCatalogCount:payload.sheet?.availableCatalogCount,rowCount:payload.sheet?.rowCount,metaCatalogIdCount:payload.sheet?.metaCatalogIdCount,listingStateCounts:payload.sheet?.listingStateCounts,metaCatalogStatusCounts:payload.sheet?.metaCatalogStatusCounts},catalog:{productCount:payload.catalog?.productCount,identity:payload.catalog?.identity,field:payload.catalog?.field?{compared:payload.catalog.field.compared,mismatches:payload.catalog.field.mismatches,details:payload.catalog.field.mismatchDetails?.slice(0,10)}:null,removed:payload.catalog?.removed,collectionExpectation:payload.catalog?.collectionExpectation},media:payload.crm?.mediaReconciliation};
+  const evidence={failures,sheet:{availableCatalogCount:payload.sheet?.availableCatalogCount,rowCount:payload.sheet?.rowCount,metaCatalogIdCount:payload.sheet?.metaCatalogIdCount,listingStateCounts:payload.sheet?.listingStateCounts,metaCatalogStatusCounts:payload.sheet?.metaCatalogStatusCounts},catalog:{productCount:payload.catalog?.productCount},catalogReconciliation:{identity:payload.catalogReconciliation?.identity,field:payload.catalogReconciliation?.field?{compared:payload.catalogReconciliation.field.compared,mismatches:payload.catalogReconciliation.field.mismatches,details:payload.catalogReconciliation.field.mismatchDetails?.slice(0,10)}:null,removed:payload.catalogReconciliation?.removed,collectionExpectation:payload.catalogReconciliation?.collectionExpectation},media:payload.crm?.mediaReconciliation};
   console.error(JSON.stringify({source_audit_failure:evidence},null,2));
   throw new Error('Source audit failures: '+failures.join('; '));
 }
