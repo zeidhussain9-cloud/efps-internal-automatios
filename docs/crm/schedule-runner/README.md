@@ -2,11 +2,11 @@
 
 ## Purpose
 
-This runner provides the permanent scheduled execution path for the production CRM source audit.
+This runner provides the repository-owned scheduled execution path for the production CRM source audit.
 
 It invokes the existing production read-only MCP adapter and requests only:
 
-- WhAPI channel/recent-source reconciliation
+- WhAPI source reconciliation
 - canonical Google Housing Sheet snapshot
 - CRM/Supabase persistence snapshot
 
@@ -15,33 +15,35 @@ The runner performs no CRM writes, WhAPI sends, Sheet writes, classification cha
 ## Runtime
 
 - Repository: `zeidhussain9-cloud/efps-internal-automatios`
-- Production branch: `crm-ui-dashboard`
+- Workflow: `.github/workflows/crm-source-audit-schedule.yml`
+- Production branch definition: `crm-ui-dashboard`
 - Production service: `https://easyfind-crm-d01-d05.onrender.com`
 - MCP endpoint: `POST /mcp`
 - Schedule: hourly at minute 7
 - Manual execution: GitHub Actions `workflow_dispatch`
 
-The workflow is repository-owned at:
-
-`.github/workflows/crm-source-audit-schedule.yml`
-
-The executable runner is:
-
-`scripts/crm-source-audit-runner.mjs`
-
 ## Authentication
 
-The workflow supplies `CRM_SOURCE_AUDIT_TOKEN` from the GitHub Actions repository secret of the same name.
+The scheduled workflow uses a short-lived GitHub Actions OIDC token with audience `efps-crm-source-audit`.
 
-The secret is never committed, logged, or passed as a URL parameter.
+The production MCP adapter validates:
 
-The production MCP endpoint remains fail-closed when its audit token is absent or invalid.
+- GitHub OIDC issuer
+- audience
+- exact repository
+- exact `main` workflow ref
+- public repository visibility
+- branch ref
+- token time bounds
+- GitHub signing key
+
+The existing `CRM_SOURCE_AUDIT_TOKEN` remains supported for authorized non-GitHub MCP clients. The schedule runner does not require a new static GitHub secret.
 
 ## Failure semantics
 
 The runner exits non-zero when:
 
-- the token is missing
+- the authentication token is missing
 - the MCP endpoint is not HTTPS
 - the MCP request fails
 - MCP initialization fails
