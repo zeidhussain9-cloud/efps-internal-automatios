@@ -62,7 +62,11 @@ if(payload.crm?.requirementMatchAudit?.complete!==true) failures.push('requireme
 if(payload.sheet?.availableCatalogCount!==undefined&&payload.catalog?.productCount!==undefined&&Number(payload.sheet.availableCatalogCount)!==Number(payload.catalog.productCount)){
   failures.push(`catalog count mismatch: Sheet available=${payload.sheet.availableCatalogCount}, WhAPI products=${payload.catalog.productCount}`);
 }
-if(failures.length) throw new Error('Source audit failures: '+failures.join('; ')+' | whapi='+JSON.stringify(payload.whapi)+' | sheet='+JSON.stringify(payload.sheet)+' | catalog='+JSON.stringify(payload.catalog));
+if(failures.length){
+  const evidence={failures,sheet:{availableCatalogCount:payload.sheet?.availableCatalogCount,rowCount:payload.sheet?.rowCount,metaCatalogIdCount:payload.sheet?.metaCatalogIdCount,listingStateCounts:payload.sheet?.listingStateCounts,metaCatalogStatusCounts:payload.sheet?.metaCatalogStatusCounts},catalog:{productCount:payload.catalog?.productCount,identity:payload.catalog?.identity,field:payload.catalog?.field?{compared:payload.catalog.field.compared,mismatches:payload.catalog.field.mismatches,details:payload.catalog.field.mismatchDetails?.slice(0,10)}:null,removed:payload.catalog?.removed,collectionExpectation:payload.catalog?.collectionExpectation},media:payload.crm?.mediaReconciliation};
+  console.error(JSON.stringify({source_audit_failure:evidence},null,2));
+  throw new Error('Source audit failures: '+failures.join('; '));
+}
 
 console.log(JSON.stringify({
   ok:true,
