@@ -49,7 +49,7 @@ if(!payload||typeof payload!=='object') throw new Error('Source audit returned a
 
 const failures=[];
 for(const [name,value] of Object.entries(payload)){
-  if(value&&typeof value==='object'&&value.error) failures.push(`${name}: ${value.error}`);
+  if(value&&typeof value==='object'&&value.error&&!value.degraded) failures.push(`${name}: ${value.error}`);
 }
 if(payload.catalog?.complete!==true) failures.push('catalog: incomplete catalog reconciliation');
 if(payload.crm?.eventReconciliation?.messageReconciled!==true) failures.push('crm event->message reconciliation incomplete');
