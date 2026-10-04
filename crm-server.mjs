@@ -12,6 +12,7 @@ import {createCrmClassificationRepository} from './src/crm-classification-reposi
 import {createDeterministicScheduler} from './src/crm-deterministic-scheduler.mjs';
 import {draftPreflight} from './src/draft-preflight.mjs';
 import {startupDatabaseCheck} from './src/crm-startup-check.mjs';
+import {handleAuditMcp} from './audit-mcp-server.mjs';
 const root=resolve('dist');
 const mime={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.svg':'image/svg+xml','.png':'image/png','.ico':'image/x-icon'};
 async function readJsonBody(req,maxBytes=16384){let raw='';for await(const chunk of req){raw+=chunk;if(Buffer.byteLength(raw,'utf8')>maxBytes)throw Object.assign(Error('Request too large'),{statusCode:413})}if(!raw.trim())return{};try{const value=JSON.parse(raw);if(!value||typeof value!=='object'||Array.isArray(value))throw Error('JSON object required');return value}catch{throw Object.assign(Error('Invalid JSON body'),{statusCode:400})}}
@@ -20,6 +21,7 @@ createServer(async(req,res)=>{
  try{
   const p=decodeURIComponent(new URL(req.url,'http://localhost').pathname);
   if(p==='/health'){res.writeHead(200,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify({ok:true}));}
+  if(p==='/mcp'){return handleAuditMcp(req,res);}
   if(p==='/api/internal/deterministic/scheduler'&&req.method==='POST'){
    if(process.env.CRM_DETERMINISTIC_SCHEDULER_ENABLED!=='true'||!process.env.CRM_DETERMINISTIC_SCHEDULER_SECRET){res.writeHead(404,security);return res.end('Deterministic scheduler disabled');}
    const provided=String(req.headers['x-efps-deterministic-secret']||'');
