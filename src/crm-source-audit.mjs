@@ -112,15 +112,18 @@ export async function repairCatalogCollections({dryRun=true}={}){
   const results=[];
   for(const item of additions){
     const token=String(process.env.WHAPI_API_TOKEN||'').trim();
-    const url=WHAPI_BASE_URL+'/business/collections/'+encodeURIComponent(item.id);
+    let collectionId=item.id;
     for(let offset=0;offset<item.productIds.length;offset+=5){
       const productIds=item.productIds.slice(offset,offset+5);
+      const url=WHAPI_BASE_URL+'/business/collections/'+encodeURIComponent(collectionId);
       const controller=new AbortController(); const timer=setTimeout(()=>controller.abort(),60000);
       try{
         const res=await fetch(url,{method:'PATCH',headers:{Authorization:'Bearer '+token,Accept:'application/json','Content-Type':'application/json'},body:JSON.stringify({add_products:productIds}),signal:controller.signal});
         const text=await res.text(); let body=null; try{body=text?JSON.parse(text):null}catch{}
         if(!res.ok)throw new Error('WhAPI HTTP '+res.status+': '+String(text||'').slice(0,300));
-        results.push({id:item.id,name:item.name,added:productIds.length,status:res.status,body});
+        const nextId=String(body?.newCollectionId||body?.id||body?.collection?.id||'').trim();
+        if(nextId)collectionId=nextId;
+        results.push({id:item.id,collectionId:collectionId,name:item.name,added:productIds.length,status:res.status,body});
       }finally{clearTimeout(timer);}
     }
   }
