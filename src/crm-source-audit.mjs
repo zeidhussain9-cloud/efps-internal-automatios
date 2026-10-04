@@ -1,5 +1,6 @@
 import {readHousingSheet} from './housing-sheet-adapter.mjs';
 import pg from 'pg';
+import {auditRequirementAndMatching} from './crm-requirement-match-audit.mjs';
 const {Pool}=pg;
 
 const WHAPI_BASE_URL=(process.env.WHAPI_BASE_URL||'https://gate.whapi.cloud').replace(/\/$/,'');
@@ -147,7 +148,46 @@ async function crmSnapshot(){
       (select count(*) from crm_webhook_events where provider='whapi' and direction='Incoming' and payload->>'chat_id' like '%@s.whatsapp.net' and phone is not null) as eligible_incoming_contacts,
       (select count(*) from crm_webhook_events e where provider='whapi' and direction='Incoming' and payload->>'chat_id' like '%@s.whatsapp.net' and phone is not null and (e.lead_id is not null or exists (select 1 from crm_contact_classifications c where c.phone=e.phone))) as mapped_incoming_contacts,
       (select count(*) from crm_webhook_events e where provider='whapi' and payload->>'chat_id' like '%@s.whatsapp.net' and phone is not null and message_id is not null and not exists (select 1 from crm_messages m where m.id=e.message_id)) as broken_message_links`);
-    await client.query('ROLLBACK'); return {...q.rows[0],eventReconciliation:{eligibleMessageEvents:Number(reconciliation.rows[0].eligible_message_events),linkedMessageEvents:Number(reconciliation.rows[0].linked_message_events),eligibleIncomingContacts:Number(reconciliation.rows[0].eligible_incoming_contacts),mappedIncomingContacts:Number(reconciliation.rows[0].mapped_incoming_contacts),brokenMessageLinks:Number(reconciliation.rows[0].broken_message_links),messageReconciled:Number(reconciliation.rows[0].eligible_message_events)===Number(reconciliation.rows[0].linked_message_events)&&Number(reconciliation.rows[0].broken_message_links)===0,contactReconciled:Number(reconciliation.rows[0].eligible_incoming_contacts)===Number(reconciliation.rows[0].mapped_incoming_contacts)},source_number:SOURCE_NUMBER,readOnly:true};
+    const requirementRows=await client.query(`select
+      c.lead_id,
+      l.requirements,
+      l.tenant_type,
+      r.lead_id as profile_lead_id,
+      r.bhk,r.budget,r.preferred_locations,r.tenant_type as profile_tenant_type,r.move_in_date,r.pets,r.veg_nonveg,
+      r.furnishing,r.parking,r.property_type,r.bathrooms,r.occupancy_count,r.lease_term_months,
+      r.preferred_floor,r.preferred_amenities,r.notes
+      from crm_contact_classifications c
+      join crm_leads l on l.id=c.lead_id
+      left join crm_lead_requirements r on r.lead_id=c.lead_id
+      where c.classification_code='qualified_lead' and c.status='promoted'
+      order by c.lead_id`);
+    const inventory=await client.query(`select listing_id,locality,bhk,monthly_rent,furnishing,pet_friendly,listing_state
+      from crm_inventory_snapshot
+      where source_kind='housing_sheet' and deleted_at is null and listing_state='Available'`);
+    const qualifiedLeads=requirementRows.rows.map(row=>({
+      lead_id:row.lead_id,
+      requirements:row.requirements,
+      tenant_type:row.tenant_type,
+      profile:row.profile_lead_id?{
+        bhk:row.bhk,budget:row.budget===null?null:Number(row.budget),preferred_locations:row.preferred_locations||[],
+        tenant_type:row.profile_tenant_type,move_in_date:row.move_in_date,pets:row.pets,veg_nonveg:row.veg_nonveg,
+        furnishing:row.furnishing,parking:row.parking,property_type:row.property_type,bathrooms:row.bathrooms,
+        occupancy_count:row.occupancy_count===null?null:Number(row.occupancy_count),
+        lease_term_months:row.lease_term_months===null?null:Number(row.lease_term_months),
+        preferred_floor:row.preferred_floor,preferred_amenities:row.preferred_amenities||[],notes:row.notes
+      }:null
+    }));
+    const requirementMatchAudit=auditRequirementAndMatching({qualifiedLeads,inventoryRows:inventory.rows});
+    await client.query('ROLLBACK');
+    return {...q.rows[0],eventReconciliation:{
+      eligibleMessageEvents:Number(reconciliation.rows[0].eligible_message_events),
+      linkedMessageEvents:Number(reconciliation.rows[0].linked_message_events),
+      eligibleIncomingContacts:Number(reconciliation.rows[0].eligible_incoming_contacts),
+      mappedIncomingContacts:Number(reconciliation.rows[0].mapped_incoming_contacts),
+      brokenMessageLinks:Number(reconciliation.rows[0].broken_message_links),
+      messageReconciled:Number(reconciliation.rows[0].eligible_message_events)===Number(reconciliation.rows[0].linked_message_events)&&Number(reconciliation.rows[0].broken_message_links)===0,
+      contactReconciled:Number(reconciliation.rows[0].eligible_incoming_contacts)===Number(reconciliation.rows[0].mapped_incoming_contacts)
+    },requirementMatchAudit,source_number:SOURCE_NUMBER,readOnly:true};
   } finally {client.release();await pool.end();}
 }
 
@@ -155,7 +195,7 @@ export async function sourceAuditSnapshot(){
   const [whapiHealthResult,whapi,sheet,catalog,crm]=await Promise.allSettled([whapiHealth(),whapiRecentMessages({count:100,fromMe:false}),housingSheetSnapshot(),whapiCatalogAudit(),crmSnapshot()]);
   const latestWhapi=whapi.status==='fulfilled'?whapi.value.messages.reduce((m,x)=>Math.max(m,Number(x?.timestamp||0)),0):0;
   return {checkedAt:new Date().toISOString(),sourceNumber:SOURCE_NUMBER,
-    whapi:whapi.status==='fulfilled'?{ok:true,recentInboundCount:whapi.value.messages.length,total:whapi.value.total,latestMessageTimestamp:latestWhapi||null,health:whapiHealthResult.status==='fulfilled'?whapiHealthResult.value:null}:{ok:false,error:whapi.reason?.message||'WhAPI read failed',health:whapiHealthResult.status==='fulfilled'?whapiHealthResult.value:{error:whapiHealthResult.reason?.message||'WhAPI health read failed'}},
+    whapi:whapi.status==='fulfilled'?{ok:true,recentInboundCount:whapi.value.messages.length,total:whapi.value.total,latestMessageTimestamp:latestWhapi||null,health:whapiHealthResult.status==='fulfilled'?whapiHealthResult.value:null}:{ok:false,degraded:true,error:whapi.reason?.message||'WhAPI read failed',health:whapiHealthResult.status==='fulfilled'?whapiHealthResult.value:{error:whapiHealthResult.reason?.message||'WhAPI health read failed'},knownLimitation:'WhAPI /messages/list currently returns HTTP 500; catalog and CRM audits remain independently evaluated'},
     sheet:sheet.status==='fulfilled'?{ok:true,...sheet.value}:{ok:false,error:sheet.reason?.message||'Sheet read failed'},
     catalog:catalog.status==='fulfilled'?catalog.value:{ok:false,error:catalog.reason?.message||'WhAPI catalog read failed'},
     catalogReconciliation:catalog.status==='fulfilled'&&sheet.status==='fulfilled'?reconcileCatalogToSheet(sheet.value,catalog.value):{complete:false,error:'Sheet or catalog unavailable'},

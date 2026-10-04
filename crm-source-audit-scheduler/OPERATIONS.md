@@ -9,7 +9,9 @@
 5. Confirm the JSON contains successful WhAPI, Google Sheet, catalog and CRM persistence results.
 6. Confirm Sheet available count equals WhAPI product count.
 7. Confirm products-with-collections plus products-without-collections equals the WhAPI product count.
-8. Confirm the workflow subsequently runs on its hourly schedule.
+8. Confirm the JSON reports a complete Point 40–42 requirement/matching audit.
+9. Confirm 253/253 qualified leads have valid requirement profiles, inputs, and deterministic result sets; zero-match leads are valid.
+10. Confirm the workflow subsequently runs on its hourly schedule.
 
 ## Security requirements
 

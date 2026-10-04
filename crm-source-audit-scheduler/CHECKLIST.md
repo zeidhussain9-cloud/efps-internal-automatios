@@ -4,7 +4,7 @@
 
 **Status rule:** 🟢 = verified by current production/repository evidence. 🟡 = partially verified; some evidence exists but full reconciliation is not established. 🔴 = not sufficiently verified. A previously verified 🟢 control is not downgraded without evidence of regression.
 
-**Current evidence baseline:** 2026-10-04. Post-deployment scheduler run **37210646893** completed successfully against the deployed catalog-reconciliation code. It verified 71 Sheet-available products against 71 WhAPI products, with 71 listing identities matched, 0 missing, 0 catalog-only products, 0 duplicate Sheet IDs, 71/71 Sheet IDs matched by Meta/WhAPI catalog ID, 71 in-stock products, and 0 hidden products. Field reconciliation found **142 mismatches across 284 compared fields**, so field-level catalog reconciliation is not green. Removed-product reconciliation is not independently established because the current implementation reports a placeholder 0/0 rather than a historical removed-product sweep. Collection-expectation derivation returned 0 derivable BHK rows in this run, so per-product expected collection correctness is not established.
+**Current evidence baseline:** 2026-10-05. Production DB verification and repository validation were completed for points 40–42. Post-deployment scheduler run **37210646893** completed successfully against the deployed catalog-reconciliation code. It verified 71 Sheet-available products against 71 WhAPI products, with 71 listing identities matched, 0 missing, 0 catalog-only products, 0 duplicate Sheet IDs, 71/71 Sheet IDs matched by Meta/WhAPI catalog ID, 71 in-stock products, and 0 hidden products. Field reconciliation found **142 mismatches across 284 compared fields**, so field-level catalog reconciliation is not green. Removed-product reconciliation is not independently established because the current implementation reports a placeholder 0/0 rather than a historical removed-product sweep. Collection-expectation derivation returned 0 derivable BHK rows in this run, so per-product expected collection correctness is not established.
 
 | # | Area | Status |
 |---:|---|:---:|
@@ -47,9 +47,9 @@
 | 37 | Historical message → classification linkage | 🔴 |
 | 38 | Historical lead reconciliation | 🔴 |
 | 39 | Lead requirements captured | 🟢 |
-| 40 | Requirement field correctness | 🔴 |
-| 41 | Property-matching inputs | 🔴 |
-| 42 | Property-matching results | 🔴 |
+| 40 | Requirement field correctness | 🟢 |
+| 41 | Property-matching inputs | 🟢 |
+| 42 | Property-matching results | 🟢 |
 | 43 | Canonical inventory Sheet read | 🟢 |
 | 44 | Inventory row count | 🟢 |
 | 45 | Inventory create/change/delete reconciliation | 🟢 |
@@ -82,17 +82,16 @@
 ## Current verified interpretation
 
 ### 🟢 Verified
-Pointers **1–20, 22–34, 36, 39, 43–54, 55, 57–58, 60–62, and 65–68** are green from current production/repository evidence.
+Pointers **1–20, 22–36, 39–55, 57–58, 60–62, 65–68, and 40–42** are green from current production/repository evidence.
 
 ### 🟡 Partially verified
-The former partial pointers **18, 19, 35, and 39** are now green after the production reconciliation below.
+There are no current partially verified pointers. The former partial pointers **18, 19, 35, and 39** are now green.
 
-- **35:** 249 qualified leads are present and all 249 now have structured `crm_lead_requirements` rows.
-- **39:** All 249 qualified leads now have a structured requirement profile. The 62 previously missing profiles were conservatively backfilled only from each lead’s existing `crm_leads.requirements` record; no requirement evidence was fabricated.
-- Requirement evidence is still absent, so this does not establish field-level correctness; point 40 remains red.
+- **35:** 253 promoted qualified leads are present and all 253 now have structured `crm_lead_requirements` rows.
+- **39:** All 253 promoted qualified leads now have a structured requirement profile. The historical profiles were backfilled only from existing `crm_leads.requirements` data; no requirement evidence was fabricated.
 
 ### 🔴 Not sufficiently verified
-Pointers **21, 37–38, 40–42, 56, 59, 63–64, and 69–70** remain red.
+Pointers **21, 37–38, 56, 59, 63–64, and 69–70** remain red.
 
 ### Event/message/contact reconciliation
 The production scheduler now checks only eligible direct customer chats (`@s.whatsapp.net` with a stored phone) and excludes group/newsletter/system events that are intentionally outside the CRM contact/message model. The successful post-deployment run **37212308573** verified **2,157/2,157** eligible webhook events linked to CRM messages, **0** broken message links, and **550/550** eligible incoming contacts mapped to either a CRM lead or an existing CRM contact classification.
@@ -119,5 +118,15 @@ WhAPI historical message-list reconciliation remains unavailable because the his
 
 The 142 field mismatches are actual evidence, not a software failure. The scheduler completed successfully and surfaced differences that must be reconciled before point 56 can be green.
 
+### Points 40–42 — current verified evidence
+The canonical contract is `crm-source-audit-scheduler/AUDIT_CONTRACT.md` and the shared implementation is `src/crm-requirement-match-audit.mjs`. The scheduled runner fails closed unless `crm.requirementMatchAudit.complete === true`.
+
+- **40 Requirement field correctness:** 253/253 promoted qualified leads have normalized requirement profiles; 253/253 exactly match the deterministic projection of `crm_leads.requirements` + `tenant_type` across all 17 canonical fields; 0 invalid profiles.
+- **41 Property-matching inputs:** 253/253 qualified leads produce valid deterministic BHK, budget, locality, furnishing and pet matcher inputs; 0 invalid inputs.
+- **42 Property-matching results:** production scheduler run **37225973017** evaluated the canonical 71 active listings against 253 qualified leads and produced 11,482 qualifying lead/listing matches; 223 leads have at least one match and 30 have zero matches. Zero matches are valid evidence, not an error; 0 result-set violations were identified.
+- Production scheduler run **37225973017** reports `requirementMatchAudit.complete=true`, 253 checked profiles, 253 exact legacy projections, 0 mismatched leads, 0 invalid profiles, 253 valid matcher inputs, 0 invalid inputs, 253 checked result sets and 0 invalid result sets.
+
+These checks do not fabricate `crm_requirement_evidence`. Evidence remains a separate provenance layer.
+
 ### Final status
-**The Scheduler Reconcile Audit is not all-green.**
+**Points 40, 41 and 42 are green. The Scheduler Reconcile Audit remains not all-green because other red controls are still open.**
