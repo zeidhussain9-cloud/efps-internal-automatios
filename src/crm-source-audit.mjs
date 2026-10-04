@@ -70,18 +70,26 @@ export async function whapiCatalogAudit(){
   return {ok:true,productCount:reconciled.productCount,collectionCount:collections.items.length,productsWithCollections:reconciled.productsWithCollections,productsWithoutCollections:reconciled.productsWithoutCollections,collectionDetails:collectionResults.map(({id,name,productCount})=>({id,name,productCount})),complete:true,readOnly:true};
 }
 
+function countField(rows,index){
+  const counts={};
+  for(const row of rows){
+    const value=String(row?.[index]??'').trim()||'(blank)';
+    counts[value]=(counts[value]||0)+1;
+  }
+  return counts;
+}
+
 export async function housingSheetSnapshot(){
   const result=await readHousingSheet({env:process.env});
   const rows=Array.isArray(result.rows)?result.rows:[];
   const header=rows[0]||[];
   const dataRows=rows.slice(1).filter(row=>Array.isArray(row)&&String(row?.[0]??'').trim());
-  const statusCounts={};
-  for(const row of dataRows){
-    const status=String(row?.[1]??'').trim()||'(blank)';
-    statusCounts[status]=(statusCounts[status]||0)+1;
-  }
-  const availableCatalogCount=Object.entries(statusCounts).reduce((n,[status,count])=>n+(status.toLowerCase()==='available'?count:0),0);
-  return {range:result.range||null,rowCount:dataRows.length,columnCount:header.length,statusCounts,availableCatalogCount,readOnly:true};
+  const statusCounts=countField(dataRows,1);
+  const intakeStatusCounts=countField(dataRows,2);
+  const listingStateCounts=countField(dataRows,4);
+  const metaCatalogStatusCounts=countField(dataRows,45);
+  const metaCatalogIdCount=dataRows.filter(row=>String(row?.[44]??'').trim()).length;
+  return {range:result.range||null,rowCount:dataRows.length,columnCount:header.length,statusCounts,intakeStatusCounts,listingStateCounts,metaCatalogStatusCounts,metaCatalogIdCount,readOnly:true};
 }
 
 async function crmSnapshot(){
