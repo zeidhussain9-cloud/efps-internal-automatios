@@ -68,7 +68,61 @@ export async function whapiCatalogAudit(){
     collectionResults.push({id,name:detail?.name||collection?.name||null,productCount:collectionProducts.length,products:collectionProducts});
   }
   const reconciled=reconcileCatalogProducts(products.items,collectionResults);
-  return {ok:true,productCount:reconciled.productCount,productIds:[...new Set(products.items.map(product=>String(product?.id||'').trim()).filter(Boolean))],products:products.items.map(product=>({id:String(product?.id||'').trim(),retailerId:String(product?.product_retailer_id||product?.retailer_id||'').trim(),name:product?.name||null,description:product?.description||null,price:product?.price??null,currency:product?.currency||null,availability:product?.availability||null,url:product?.url||null,isHidden:product?.is_hidden??null,imageCount:Array.isArray(product?.images)?product.images.length:0})),collectionCount:collections.items.length,productsWithCollections:reconciled.productsWithCollections,productsWithoutCollections:reconciled.productsWithoutCollections,collectionDetails:collectionResults.map(c=>({id:c.id,name:c.name,productCount:c.productCount,productIds:c.products.map(p=>String(p?.id||'').trim()).filter(Boolean)})),complete:true,readOnly:true};
+  return {ok:true,productCount:reconciled.productCount,productIds:[...new Set(products.items.map(product=>String(product?.id||'').trim()).filter(Boolean))],products:products.items.map(product=>({id:String(product?.id||'').trim(),retailerId:String(product?.product_retailer_id||product?.retailer_id||'').trim(),name:product?.name||null,description:product?.description||null,price:product?.price??null,currency:product?.currency||null,availability:product?.availability||null,url:product?.url||null,isHidden:product?.is_hidden??null,imageCount:Array.isArray(product?.images)?product.images.length:0,imageUrls:Array.isArray(product?.images)?product.images.map(x=>String(x?.url||x?.original_image_url||x?.image_url||x||'').trim()).filter(Boolean):[]})),collectionCount:collections.items.length,productsWithCollections:reconciled.productsWithCollections,productsWithoutCollections:reconciled.productsWithoutCollections,collectionDetails:collectionResults.map(c=>({id:c.id,name:c.name,productCount:c.productCount,productIds:c.products.map(p=>String(p?.id||'').trim()).filter(Boolean)})),complete:true,readOnly:true};
+}
+
+function normalizeCatalogCollectionName(value){return String(value??'').replace(/^\p{Extended_Pictographic}\uFE0F?\s*/u,'').replace(/^\p{Extended_Pictographic}\s*/u,'').replace(/\s+/g,' ').trim();}
+function deriveCatalogCollectionName(bhk){
+  const s=String(bhk||'').toUpperCase().replace(/\s+/g,'');
+  if(s.includes('1RK')||s.includes('1BHK'))return '1RK & 1BHK';
+  if(s.includes('2BHK'))return '2BHK';
+  if(s.includes('3BHK'))return '3BHK';
+  if(/4\+BHK|4BHK|5BHK|6BHK/.test(s))return '4+ BHK';
+  return null;
+}
+
+export async function repairCatalogCollections({dryRun=true}={}){
+  const sheet=await housingSheetSnapshot();
+  const catalog=await whapiCatalogAudit();
+  const rows=Array.isArray(sheet?.availableRows)?sheet.availableRows:[];
+  const products=Array.isArray(catalog?.products)?catalog.products:[];
+  const productById=new Map(products.map(product=>[String(product.id||'').trim(),product]).filter(([id])=>id));
+  const productByRetailer=new Map(products.map(product=>[String(product.retailerId||'').trim(),product]).filter(([id])=>id));
+  const collections=new Map((catalog.collectionDetails||[]).map(collection=>[normalizeCatalogCollectionName(collection.name),collection]).filter(([name])=>name));
+  const plan=new Map();
+  const unresolved=[];
+  for(const row of rows){
+    const expected=deriveCatalogCollectionName(row.bhk);
+    if(!expected){unresolved.push({listingId:row.listingId,reason:'BHK has no canonical collection'});continue;}
+    const collection=collections.get(expected);
+    if(!collection){unresolved.push({listingId:row.listingId,expected,reason:'canonical collection does not exist'});continue;}
+    const product=(row.metaCatalogId&&productById.get(String(row.metaCatalogId).trim()))||productByRetailer.get(row.listingId);
+    if(!product){unresolved.push({listingId:row.listingId,expected,reason:'catalog product not found'});continue;}
+    const productId=String(product.id||'').trim();
+    const existing=new Set((collection.productIds||[]).map(String));
+    if(!existing.has(productId)){
+      if(!plan.has(collection.id))plan.set(collection.id,{id:collection.id,name:collection.name,productIds:[]});
+      plan.get(collection.id).productIds.push(productId);
+    }
+  }
+  const additions=[...plan.values()].map(item=>({...item,productIds:[...new Set(item.productIds)]}));
+  const changedProducts=additions.reduce((n,item)=>n+item.productIds.length,0);
+  if(unresolved.length)return {ok:false,dryRun,unresolved,additions,changedProducts};
+  if(dryRun)return {ok:true,dryRun,unresolved:[],additions,changedProducts};
+  const results=[];
+  for(const item of additions){
+    const token=String(process.env.WHAPI_API_TOKEN||'').trim();
+    const url=WHAPI_BASE_URL+'/business/collections/'+encodeURIComponent(item.id);
+    const controller=new AbortController(); const timer=setTimeout(()=>controller.abort(),15000);
+    try{
+      const res=await fetch(url,{method:'PATCH',headers:{Authorization:'Bearer '+token,Accept:'application/json','Content-Type':'application/json'},body:JSON.stringify({add_products:item.productIds}),signal:controller.signal});
+      const text=await res.text(); let body=null; try{body=text?JSON.parse(text):null}catch{}
+      if(!res.ok)throw new Error('WhAPI HTTP '+res.status+': '+String(text||'').slice(0,300));
+      results.push({id:item.id,name:item.name,added:item.productIds.length,status:res.status,body});
+    }finally{clearTimeout(timer);}
+  }
+  const verified=await whapiCatalogAudit();
+  return {ok:true,dryRun:false,unresolved:[],additions,changedProducts,results,verified:{productsWithCollections:verified.productsWithCollections,productsWithoutCollections:verified.productsWithoutCollections,collectionDetails:verified.collectionDetails}};
 }
 
 function countField(rows,index){
@@ -91,12 +145,20 @@ export async function housingSheetSnapshot(){
   const metaCatalogStatusCounts=countField(dataRows,45);
   const metaCatalogIdCount=dataRows.filter(row=>String(row?.[44]??'').trim()).length;
   const availableCatalogCount=Number(listingStateCounts.Available||0);
-    const availableRows=dataRows.filter(row=>String(row?.[4]??'').trim()==='Available').map(row=>({listingId:String(row?.[0]??'').trim(),catalogTitle:String(row?.[33]??'').trim(),cloudinaryImages:String(row?.[34]??'').split(',').map(x=>x.trim()).filter(Boolean),metaCatalogId:String(row?.[44]??'').trim(),metaCatalogStatus:String(row?.[45]??'').trim(),postedUrl:String(row?.[41]??'').trim(),bhk:String(row?.[13]??'').trim(),listingState:String(row?.[4]??'').trim()}));
-  return {range:result.range||null,rowCount:dataRows.length,columnCount:header.length,statusCounts,intakeStatusCounts,listingStateCounts,metaCatalogStatusCounts,metaCatalogIdCount,availableCatalogCount,availableRows,readOnly:true};
+    const mapRow=row=>({listingId:String(row?.[0]??'').trim(),catalogTitle:String(row?.[33]??'').trim(),cloudinaryImages:String(row?.[34]??'').split(',').map(x=>x.trim()).filter(Boolean),metaCatalogId:String(row?.[44]??'').trim(),metaCatalogStatus:String(row?.[45]??'').trim(),postedUrl:String(row?.[41]??'').trim(),bhk:String(row?.[13]??'').trim(),listingState:String(row?.[4]??'').trim()});
+  const allRows=dataRows.map(mapRow);
+  const availableRows=allRows.filter(row=>row.listingState==='Available');
+  return {range:result.range||null,rowCount:dataRows.length,columnCount:header.length,statusCounts,intakeStatusCounts,listingStateCounts,metaCatalogStatusCounts,metaCatalogIdCount,availableCatalogCount,allRows,availableRows,readOnly:true};
 }
+
+function normalizeCatalogTitle(value){return String(value??'').replace(/^\p{Extended_Pictographic}\uFE0F?\s*/u,'').replace(/^\p{Extended_Pictographic}\s*/u,'').replace(/\s+/g,' ').trim();}
+function mediaKey(value){const s=String(value??'').trim();const match=s.match(/(?:^|[\\/])photo_(\\d+)\\.[a-z0-9]+(?:[?#].*)?$/i);return match?`photo_${match[1]}`:s.replace(/[?#].*$/,'');}
+function normalizedMediaKeys(values){return [...new Set((values||[]).map(mediaKey).filter(Boolean))].sort();}
+function normalizeCollection(value){return String(value??'').replace(/^\p{Extended_Pictographic}\uFE0F?\s*/u,'').replace(/^\p{Extended_Pictographic}\s*/u,'').replace(/\s+/g,' ').trim();}
 
 function reconcileCatalogToSheet(sheet,catalog){
   const rows=Array.isArray(sheet?.availableRows)?sheet.availableRows:[];
+  const allRows=Array.isArray(sheet?.allRows)?sheet.allRows:rows;
   const products=Array.isArray(catalog?.products)?catalog.products:[];
   const byId=new Map(products.map(p=>[String(p.id||'').trim(),p]).filter(([id])=>id));
   const byRetailer=new Map(products.map(p=>[String(p.retailerId||'').trim(),p]).filter(([id])=>id));
@@ -114,18 +176,24 @@ function reconcileCatalogToSheet(sheet,catalog){
   const fieldMismatches=[];
   for(const {row,product} of matches){
     const checks=[
-      ['title',row.catalogTitle,product.name],
+      ['title',normalizeCatalogTitle(row.catalogTitle),normalizeCatalogTitle(product.name)],
       ['url',row.postedUrl,product.url],
       ['availability',row.listingState==='Available'?'in stock':null,product.availability],
-      ['image_count',row.cloudinaryImages.length,product.imageCount]
+      ['image_set',normalizedMediaKeys(row.cloudinaryImages),normalizedMediaKeys(product.imageUrls)]
     ];
-    for(const [field,a,b] of checks){if(a!==''&&a!==null&&a!==undefined&&b!==null&&b!==undefined&&String(a)!==String(b))fieldMismatches.push({listingId:row.listingId,productId:product.id,field,sheet:a,whapi:b});}
+    for(const [field,a,b] of checks){
+      if(field==='url'&&(a===''||a===null||a===undefined||b===null||b===undefined))continue;
+      const equal=field==='image_set'?JSON.stringify(a)===JSON.stringify(b):String(a)===String(b);
+      if(!equal)fieldMismatches.push({listingId:row.listingId,productId:product.id,field,sheet:a,whapi:b});
+    }
   }
-  const expectedCollection=bhk=>{const s=String(bhk||'').toUpperCase().replace(/\\s+/g,'');if(s.includes('1RK')||s.includes('1BHK'))return '1RK & 1BHK';if(s.includes('2BHK'))return '2BHK';if(s.includes('3BHK'))return '3BHK';if(/4\\+BHK|4BHK|5BHK|6BHK/.test(s))return '4+ BHK';return null;};
-  const memberships=new Map(); for(const c of (catalog.collectionDetails||[])) for(const id of c.productIds||[]) memberships.set(String(id),c.name);
+  const expectedCollection=bhk=>{const s=String(bhk||'').toUpperCase().replace(/\s+/g,'');if(s.includes('1RK')||s.includes('1BHK'))return '1RK & 1BHK';if(s.includes('2BHK'))return '2BHK';if(s.includes('3BHK'))return '3BHK';if(/4\+BHK|4BHK|5BHK|6BHK/.test(s))return '4+ BHK';return null;};
+  const memberships=new Map(); for(const c of (catalog.collectionDetails||[])) for(const id of c.productIds||[]) memberships.set(String(id),normalizeCollection(c.name));
   const collectionMismatches=[];
   for(const {row,product} of matches){const expected=expectedCollection(row.bhk);if(expected){const actual=memberships.get(String(product.id))||null;if(actual!==expected)collectionMismatches.push({listingId:row.listingId,productId:product.id,expected,actual});}}
-  return {sheetAvailable:rows.length,whapiProducts:products.length,identity:{matched:matches.length,missing:missing.length,catalogOnly:catalogOnly.length,duplicateSheetIds:duplicateSheetIds.length},field:{compared:matches.length*4,mismatches:fieldMismatches.length,mismatchDetails:fieldMismatches.slice(0,100)},lifecycle:{sheetAvailableRows:rows.length,productsMarkedInStock:products.filter(p=>p.availability==='in stock'&&!p.isHidden).length,productsHidden:products.filter(p=>p.isHidden===true).length},id:{sheetIds:rows.filter(r=>r.metaCatalogId).length,matchedByMetaId:rows.filter(r=>r.metaCatalogId&&byId.has(r.metaCatalogId)).length,retailerIdFallbackMatches:matches.filter(x=>!x.row.metaCatalogId&&byRetailer.has(x.row.listingId)).length},removed:{sheetRemovedMarked:0,catalogProductsForRemovedSheet:0},missingProducts:missing.map(r=>({listingId:r.listingId,metaCatalogId:r.metaCatalogId})),catalogOnlyProducts:catalogOnly.map(p=>({id:p.id,retailerId:p.retailerId,name:p.name})),collectionExpectation:{derivableBhk:rows.filter(r=>expectedCollection(r.bhk)).length,mismatches:collectionMismatches.length,details:collectionMismatches.slice(0,100)},complete:true};
+  const removedRows=allRows.filter(row=>row.listingState!=='Available'&&row.metaCatalogId);
+  const removedStillCatalog=removedRows.filter(row=>byId.has(row.metaCatalogId)||byRetailer.has(row.listingId));
+  return {sheetAvailable:rows.length,whapiProducts:products.length,identity:{matched:matches.length,missing:missing.length,catalogOnly:catalogOnly.length,duplicateSheetIds:duplicateSheetIds.length},field:{compared:matches.length*4,mismatches:fieldMismatches.length,mismatchDetails:fieldMismatches.slice(0,100)},lifecycle:{sheetAvailableRows:rows.length,productsMarkedInStock:products.filter(p=>p.availability==='in stock'&&!p.isHidden).length,productsHidden:products.filter(p=>p.isHidden===true).length},id:{sheetIds:rows.filter(r=>r.metaCatalogId).length,matchedByMetaId:rows.filter(r=>r.metaCatalogId&&byId.has(r.metaCatalogId)).length,retailerIdFallbackMatches:matches.filter(x=>!x.row.metaCatalogId&&byRetailer.has(x.row.listingId)).length},removed:{nonAvailableSheetRows:removedRows.length,catalogProductsForNonAvailableSheet:removedStillCatalog.length,removedReconciled:removedStillCatalog.length===0},missingProducts:missing.map(r=>({listingId:r.listingId,metaCatalogId:r.metaCatalogId})),catalogOnlyProducts:catalogOnly.map(p=>({id:p.id,retailerId:p.retailerId,name:p.name})),collectionExpectation:{derivableBhk:rows.filter(r=>expectedCollection(r.bhk)).length,mismatches:collectionMismatches.length,details:collectionMismatches.slice(0,100)},complete:matches.length===rows.length&&missing.length===0&&catalogOnly.length===0&&duplicateSheetIds.length===0&&fieldMismatches.length===0&&removedStillCatalog.length===0&&collectionMismatches.length===0};
 }
 
 async function crmSnapshot(){
@@ -164,6 +232,20 @@ async function crmSnapshot(){
     const inventory=await client.query(`select listing_id,locality,bhk,monthly_rent,furnishing,pet_friendly,listing_state
       from crm_inventory_snapshot
       where source_kind='housing_sheet' and deleted_at is null and listing_state='Available'`);
+    const media=await client.query(`with active as (
+      select listing_id,cloudinary_image_urls
+      from crm_inventory_snapshot
+      where source_kind='housing_sheet' and deleted_at is null and listing_state='Available'
+    ), urls as (
+      select listing_id,jsonb_array_elements_text(cloudinary_image_urls) url from active
+    )
+    select
+      (select count(*) from active) as active_listings,
+      (select count(*) from active where jsonb_typeof(cloudinary_image_urls)='array' and jsonb_array_length(cloudinary_image_urls)>0) as listings_with_images,
+      (select count(*) from urls) as image_urls,
+      (select count(*) from urls where url like 'https://res.cloudinary.com/%') as valid_cloudinary_urls,
+      (select count(*) from (select url from urls group by url having count(*)>1) d) as duplicate_urls,
+      (select count(*) from crm_property_media) as property_media_rows`);
     const qualifiedLeads=requirementRows.rows.map(row=>({
       lead_id:row.lead_id,
       requirements:row.requirements,
@@ -179,6 +261,17 @@ async function crmSnapshot(){
     }));
     const requirementMatchAudit=auditRequirementAndMatching({qualifiedLeads,inventoryRows:inventory.rows});
     await client.query('ROLLBACK');
+    const mediaRow=media.rows[0]||{};
+    const mediaReconciliation={
+      activeListings:Number(mediaRow.active_listings),
+      listingsWithImages:Number(mediaRow.listings_with_images),
+      imageUrls:Number(mediaRow.image_urls),
+      validCloudinaryUrls:Number(mediaRow.valid_cloudinary_urls),
+      duplicateUrls:Number(mediaRow.duplicate_urls),
+      propertyMediaRows:Number(mediaRow.property_media_rows),
+      propertyMediaTableUnused: Number(mediaRow.property_media_rows)===0,
+      complete:Number(mediaRow.active_listings)===Number(mediaRow.listings_with_images)&&Number(mediaRow.image_urls)===Number(mediaRow.valid_cloudinary_urls)&&Number(mediaRow.duplicate_urls)===0
+    };
     return {...q.rows[0],eventReconciliation:{
       eligibleMessageEvents:Number(reconciliation.rows[0].eligible_message_events),
       linkedMessageEvents:Number(reconciliation.rows[0].linked_message_events),
@@ -187,7 +280,7 @@ async function crmSnapshot(){
       brokenMessageLinks:Number(reconciliation.rows[0].broken_message_links),
       messageReconciled:Number(reconciliation.rows[0].eligible_message_events)===Number(reconciliation.rows[0].linked_message_events)&&Number(reconciliation.rows[0].broken_message_links)===0,
       contactReconciled:Number(reconciliation.rows[0].eligible_incoming_contacts)===Number(reconciliation.rows[0].mapped_incoming_contacts)
-    },requirementMatchAudit,source_number:SOURCE_NUMBER,readOnly:true};
+    },requirementMatchAudit,mediaReconciliation,source_number:SOURCE_NUMBER,readOnly:true};
   } finally {client.release();await pool.end();}
 }
 
