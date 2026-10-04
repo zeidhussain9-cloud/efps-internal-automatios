@@ -1,11 +1,13 @@
 # EFPS CRM — Current Verified State
 
-> Verified 2026-10-04 01:19 IST against repository, Supabase production, Render and browser/test evidence. Older dated audit documents remain historical evidence.
+> Verified 2026-10-04 09:10 UTC against repository, Supabase production, Render and browser/test evidence. Older dated audit documents remain historical evidence.
 
 ## Runtime baseline
 
 - Production branch: crm-ui-dashboard
-- Verified deterministic implementation baseline: 8996dd32d732b0d8fab17f41b42306c230cd1de1
+- Verified production tree: 0106375f656a3a63e8953ee2fe0e5b2b2c25dc2f
+- Production crm-ui-dashboard commit: 65b46f95372a072f47d113328934a026b911325a
+- main commit: 58dc1b3427db73bffd0804c2bb8d006f92e9a6e6
 - Render service: srv-darsv560tbcc73cu4ip0
 - Current crm-ui-dashboard release: verified LIVE
 - Production source: +919148338801
@@ -14,9 +16,9 @@
 
 ## Current production database
 
-- 239 CRM leads
-- 8,098 CRM messages
-- 1,831 persisted webhook events; 1,831 processed, 0 received, 0 processing, 0 failed
+- 244 CRM leads; 11 currently auto-qualified
+- 8,919 CRM messages
+- 2,701 persisted WhAPI webhook events; 2,701 processed, 0 received, 0 failed
 - 362 current classifications: 239 promoted, 88 classified, 32 excluded, 3 pending
 - 186 normalized lead requirements
 - 277 AI runs / 214 drafts / 190 AI cursors
@@ -49,7 +51,7 @@ The AI scheduler implementation remains installed, but its pg_cron trigger is in
 
 ## Current deterministic results
 
-Automatically qualified contacts from the activation run:
+Historical activation evidence (not a current-state enumeration):
 
 - 590 -> L-LIVE-875c2b1beb64bf8d8608
 - 591 -> L-LIVE-bb28ebc56e66bb0eaea4
@@ -64,10 +66,18 @@ Remaining pending contacts after the verified activation run:
 - 511
 - 552
 
+## Source audit adapter
+
+- Read-only MCP adapter implemented and deployed on Render.
+- Exposed tools: WhAPI health/recent message/full message read, canonical Housing_Listings snapshot, and cross-source CRM audit snapshot.
+- No write tools are exposed.
+- Google Sheet credential and Sheet ID are present in Render and the live 5-minute sync read 88 rows at 2026-10-04 09:10:02 UTC with 0 changes and 0 removals.
+- Render currently reports WHAPI_API_TOKEN absent and CRM_SOURCE_AUDIT_MCP_ENABLED/CRM_SOURCE_AUDIT_TOKEN absent. The /mcp endpoint therefore fails closed with HTTP 401 until those exact secrets are configured.
+
 ## Verification
 
 - npm run build: PASS
-- npm test: 120/120 PASS
+- npm test: 126/126 PASS
 - npm run test:browser: 1/1 PASS
 - Production health: GET /health = HTTP 200
 - AUTO QUALIFIED browser regression: PASS
