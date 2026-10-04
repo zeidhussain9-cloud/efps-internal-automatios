@@ -92,16 +92,35 @@ class WhApiClient:
         return os.environ.get(self.LIVE_FLAG) == "1"
 
     def assert_live_allowed(self, operation: str) -> None:
+        if not config.api_enabled():
+            raise WhApiLiveTrafficBlocked(
+                f"BLOCKED: WhAPI API traffic is disabled ({operation}). "
+                f"Set {config.API_ENABLED_FLAG}=true only for an approved catalog-creation operation."
+            )
         if not self.live_enabled():
             raise WhApiLiveTrafficBlocked(
                 f"BLOCKED: attempted whapi.cloud call ({operation}). "
                 f"Set {self.LIVE_FLAG}=1 explicitly for the approved run."
             )
 
+    def assert_catalog_write_allowed(self, operation: str) -> None:
+        self.assert_live_allowed(operation)
+        if not config.catalog_write_enabled():
+            raise WhApiLiveTrafficBlocked(
+                f"BLOCKED: non-approved WhAPI operation ({operation}). "
+                f"Set {config.CATALOG_WRITE_FLAG}=true only for the explicit catalog-creation operation."
+            )
+
     def _request(
         self, method: str, path: str, payload: Mapping[str, Any] | None = None
     ) -> Any:
-        self.assert_live_allowed(f"{method} {path}")
+        operation=f"{method} {path}"
+        if method.upper()=="POST" and path.rstrip("/")=="/business/products":
+            self.assert_catalog_write_allowed(operation)
+        else:
+            raise WhApiLiveTrafficBlocked(
+                f"BLOCKED: WhAPI operation is outside the catalog-creation allowlist ({operation})."
+            )
         url = f"{self.base_url}/{path.lstrip('/')}"
         body = None
         headers = {

@@ -67,7 +67,7 @@ A deterministic Qualified Lead is persisted with classification_source=determini
 - Live CRM evidence corpus reviewed.
 - Production dry-run: 9 considered / 6 qualified / 3 pending / 0 failures.
 - Production activation run: 9 considered / 6 qualified / 3 pending / 0 failures.
-- 120/120 automated tests.
+- 134/134 automated tests.
 - Browser regression 1/1.
 - Production Render health 200.
 - Persisted classification and audit verification.

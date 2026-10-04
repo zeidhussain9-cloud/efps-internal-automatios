@@ -1,6 +1,6 @@
 # EasyFind CRM — Canonical Data Model
 
-## Authoritative current verified state — 2026-10-04 00:49 IST
+## Authoritative current verified state — 2026-10-05
 
 Older dated checkpoints below are historical evidence and are not current-state declarations.
 
@@ -8,9 +8,9 @@ Older dated checkpoints below are historical evidence and are not current-state 
 - Render: easyfind-crm-d01-d05 / srv-darsv560tbcc73cu4ip0
 - Supabase: qttcutwzehtskfcwxkwj
 - Production source: +919148338801
-- Current snapshot: 239 leads; 8,098 messages; 1,831 webhook events; 277 AI runs; 214 drafts; 362 classifications; 88 active inventory listings.
+- Current snapshot: 253 leads; 9,224 messages; 3,025 persisted WhAPI webhook events; 277 AI runs; 214 drafts; 389 classifications; 88 inventory rows (71 Available / 17 Rented Out).
 - Classification status: 239 promoted; 88 classified; 32 excluded; 3 pending.
-- Group Message: 14 source contacts are currently group_message / excluded based on persisted webhook chat_id values ending in @g.us.
+- Group Message: persisted webhook evidence is used as a deterministic exclusion signal for pending group chats; exact current group-contact count is not reasserted in this checkpoint.
 
 ### Current operational flow
 
@@ -30,7 +30,7 @@ The first-class contact classification codes include group_message with label Gr
 
 ### Test-history checkpoint
 
-The P1–P5 hardening release added regression coverage for webhook promotion linkage, reserved AU/AV exclusion, and disposable inventory create/edit/delete history. The final repository verification was 78/78 automated tests, browser 1/1, and production build PASS. Historical earlier test counts in dated handoff/audit sections are retained as historical checkpoints.
+The P1–P5 hardening release added regression coverage for webhook promotion linkage, reserved AU/AV exclusion, and disposable inventory create/edit/delete history. The current repository verification is 134/134 automated tests, browser 1/1, and production build PASS. Historical earlier test counts in dated handoff/audit sections are retained as historical checkpoints.
 
 
 

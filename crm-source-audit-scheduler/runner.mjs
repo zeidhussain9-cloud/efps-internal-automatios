@@ -51,15 +51,16 @@ const failures=[];
 for(const [name,value] of Object.entries(payload)){
   if(value&&typeof value==='object'&&value.error&&!value.degraded) failures.push(`${name}: ${value.error}`);
 }
-if(payload.catalog?.complete!==true) failures.push('catalog: incomplete catalog reconciliation');
-if(payload.catalogReconciliation?.field?.mismatches!==0) failures.push('catalog: field-by-field reconciliation incomplete');
-if(payload.catalogReconciliation?.removed?.removedReconciled!==true) failures.push('catalog: removed-product reconciliation incomplete');
-if(payload.catalogReconciliation?.collectionExpectation?.mismatches!==0) failures.push('catalog: collection membership reconciliation incomplete');
+const catalogPolicyDisabled=payload.catalog?.policyDisabled===true||payload.catalogReconciliation?.policyDisabled===true;
+if(!catalogPolicyDisabled&&payload.catalog?.complete!==true) failures.push('catalog: incomplete catalog reconciliation');
+if(!catalogPolicyDisabled&&payload.catalogReconciliation?.field?.mismatches!==0) failures.push('catalog: field-by-field reconciliation incomplete');
+if(!catalogPolicyDisabled&&payload.catalogReconciliation?.removed?.removedReconciled!==true) failures.push('catalog: removed-product reconciliation incomplete');
+if(!catalogPolicyDisabled&&payload.catalogReconciliation?.collectionExpectation?.mismatches!==0) failures.push('catalog: collection membership reconciliation incomplete');
 if(payload.crm?.mediaReconciliation?.complete!==true) failures.push('crm: Cloudinary media reconciliation incomplete');
 if(payload.crm?.eventReconciliation?.messageReconciled!==true) failures.push('crm event->message reconciliation incomplete');
 if(payload.crm?.eventReconciliation?.contactReconciled!==true) failures.push('crm event->contact reconciliation incomplete');
 if(payload.crm?.requirementMatchAudit?.complete!==true) failures.push('requirement/matching audit incomplete');
-if(payload.sheet?.availableCatalogCount!==undefined&&payload.catalog?.productCount!==undefined&&Number(payload.sheet.availableCatalogCount)!==Number(payload.catalog.productCount)){
+if(!catalogPolicyDisabled&&payload.sheet?.availableCatalogCount!==undefined&&payload.catalog?.productCount!==undefined&&Number(payload.sheet.availableCatalogCount)!==Number(payload.catalog.productCount)){
   failures.push(`catalog count mismatch: Sheet available=${payload.sheet.availableCatalogCount}, WhAPI products=${payload.catalog.productCount}`);
 }
 if(failures.length){

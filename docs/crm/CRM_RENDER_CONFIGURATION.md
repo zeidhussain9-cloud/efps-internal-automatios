@@ -1,6 +1,6 @@
 # EFPS CRM — Render Configuration
 
-> Verified 2026-10-04 00:49 IST. Older candidate/deployment statements below are historical and superseded.
+> Verified 2026-10-05. Older candidate/deployment statements below are historical and superseded.
 
 ## Production service
 
@@ -16,8 +16,11 @@
 - Inventory sync endpoint is signed and invoked by Supabase cron.
 - AI scheduler endpoint remains HMAC-protected and separate. The deterministic scheduler endpoint uses a dedicated secret and is invoked hourly by Supabase cron job crm_deterministic_scheduler_1h.
 - Automatic WhatsApp sending remains disabled; drafts require operator review and pre-send grounding.
+- WhAPI API safety: non-catalog API operations are hard-blocked in the shared client; webhook ingestion remains a separate path.
 
 ## Release verification
+
+- Current live deploy: dep-db1b2svf3r2c73brd6m0, commit 1982c7ea0a158ee0edcb00fad43e021876c13b9d, status live.
 
 A candidate is not production-live until Render reports the candidate SHA live and the production health/process audit is rerun. This document must not contain an older SHA as the current live commit.
 

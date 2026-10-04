@@ -1,6 +1,6 @@
 # EFPS CRM — Handoff
 
-> Current verified snapshot: 2026-10-04 00:49 IST. Older dated snapshots below are historical and superseded.
+> Current verified snapshot: 2026-10-05. Older dated snapshots below are historical and superseded.
 
 ## Production
 
@@ -12,7 +12,7 @@
 
 ## Current data
 
-239 leads; 8,098 messages; 1,831 webhook events; 277 AI runs; 214 drafts; 362 classifications; 88 active inventory listings.
+253 leads; 9,224 messages; 3,025 persisted WhAPI webhook events; 277 AI runs; 214 drafts; 389 classifications; 88 inventory rows (71 Available / 17 Rented Out).
 Classification status: 239 promoted, 88 classified, 32 excluded, 3 pending.
 
 ## Runtime state

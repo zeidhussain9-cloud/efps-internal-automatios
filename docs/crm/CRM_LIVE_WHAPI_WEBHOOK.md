@@ -1,6 +1,6 @@
 # CRM live WhAPI webhook — current verified state
 
-> Verified 2026-10-04 00:49 IST. Earlier dated event-count blocks remain historical evidence and are superseded.
+> Verified 2026-10-05. Earlier dated event-count blocks remain historical evidence and are superseded.
 
 ## Current production identity
 
@@ -8,12 +8,12 @@
 - Render service: easyfind-crm-d01-d05 / srv-darsv560tbcc73cu4ip0
 - Repository branch: crm-ui-dashboard
 - Supabase project: qttcutwzehtskfcwxkwj
-- Current database snapshot: 239 leads; 8,098 messages; 1,831 webhook events; 277 AI runs; 214 drafts; 362 classifications; 88 active inventory listings.
+- Current database snapshot: 253 leads; 9,224 messages; 3,025 persisted WhAPI webhook events; 277 AI runs; 214 drafts; 389 classifications; 88 inventory rows (71 Available / 17 Rented Out).
 - Classification status: 239 promoted / 88 classified / 32 excluded / 3 pending
 
 ## Canonical flow
 
-WhAPI -> crm_webhook_events (durable first write) -> webhook classification/reconciliation -> crm_messages + crm_contact_classifications -> operator-qualified promotion into crm_leads.
+WhAPI webhook -> crm_webhook_events (durable first write) -> webhook classification/reconciliation -> crm_messages + crm_contact_classifications -> operator-qualified promotion into crm_leads.
 
 ## Group Message gate
 
@@ -38,7 +38,7 @@ WhAPI +919148338801
 
 CRM lead workspace
   -> complete chronological conversation + normalized requirements + evidence + notes + prior AI runs + cursor
-  -> Bedrock primary / Sonnet fallback / Ollama fallback
+  -> server-side AI analysis when explicitly invoked
   -> persisted crm_ai_runs + crm_drafts + provenance
   -> operator review/edit/pre-send grounding
   -> manual WhatsApp action only; no automatic send
@@ -52,7 +52,7 @@ Housing_Listings A:AV
 
 ### Test-history checkpoint
 
-The P1–P5 hardening release added regression coverage for webhook promotion linkage, reserved AU/AV exclusion, and disposable inventory create/edit/delete history. The current repository verification is 78/78 automated tests, browser 1/1, and production build PASS. Historical earlier test counts in dated handoff/audit sections are retained as historical checkpoints.
+The P1–P5 hardening release added regression coverage for webhook promotion linkage, reserved AU/AV exclusion, and disposable inventory create/edit/delete history. The current repository verification is 134/134 automated tests, browser 1/1, and production build PASS. Historical earlier test counts in dated handoff/audit sections are retained as historical checkpoints.
 
 
 
@@ -77,7 +77,7 @@ See the authoritative current-state block at the top of this document for the cu
 ## Current production checkpoint — 2026-10-01
 
 - Source in scope: `+919148338801`.
-- Supabase current state: 239 leads, 362 classifications, 3 pending classifications, 239 promoted classifications, 8,098 messages.
+- Supabase current state verified 2026-10-05: 253 leads, 389 classifications, 8 pending classifications, 253 promoted classifications, 9,224 messages.
 - `crm_webhook_events`: 73 rows for the source; 73 processed, 0 received, 0 failed. Automatic reconciliation is active; there is no current received-event backlog.
 - The historical 5,286-message SQLite archive remains historical source evidence and is not the current CRM message count.
 - Do not initiate another WhAPI historical API extraction as part of ordinary reconciliation. Live discovery of new contacts is through the webhook boundary and `crm_contact_classifications`.
@@ -163,7 +163,7 @@ The Render application no longer accepts CRM WhatsApp webhook writes. Its old `/
 
 ## No outbound automation
 
-The CRM webhook only records WhatsApp activity. It never calls a WhAPI send endpoint and never generates or sends a customer reply automatically.
+The CRM webhook only records WhatsApp activity. It never calls a WhAPI send endpoint and never generates or sends a customer reply automatically. The shared WhAPI client now hard-blocks non-catalog API operations independently of the webhook path.
 
 ## Validation performed
 

@@ -14,6 +14,9 @@ SECRET_NAME = "efps-whapi-panel-token"
 TOKEN_ENV = "WHAPI_API_TOKEN"
 BASE_URL = "https://gate.whapi.cloud"
 LIVE_FLAG = "EFPS_WHAPI_LIVE"
+API_ENABLED_FLAG = "EFPS_WHAPI_API_ENABLED"
+CATALOG_WRITE_FLAG = "EFPS_WHAPI_CATALOG_WRITE_ENABLED"
+WEBHOOK_ENABLED_FLAG = "EFPS_WHAPI_WEBHOOK_ENABLED"
 
 WEBHOOK_TOKEN_ENV = "EFPS_WEBHOOK_TOKEN"
 WEBHOOK_QUERY_PARAMETER = "t"
@@ -26,8 +29,23 @@ INVENTORY_SOURCE_NUMBERS = (
 )
 
 
+def flag_enabled(name: str, default: bool = False) -> bool:
+    value = os.environ.get(name)
+    if value is None:
+        return default
+    return value.strip().lower() in {"1", "true", "yes", "on"}
+
 def live_enabled() -> bool:
-    return os.environ.get(LIVE_FLAG, "") == "1"
+    return flag_enabled(LIVE_FLAG, False)
+
+def api_enabled() -> bool:
+    return flag_enabled(API_ENABLED_FLAG, False)
+
+def catalog_write_enabled() -> bool:
+    return api_enabled() and flag_enabled(CATALOG_WRITE_FLAG, False)
+
+def webhook_enabled() -> bool:
+    return flag_enabled(WEBHOOK_ENABLED_FLAG, True)
 
 
 def normalise_phone(value: str) -> str:

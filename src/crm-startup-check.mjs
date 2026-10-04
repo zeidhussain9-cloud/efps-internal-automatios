@@ -16,6 +16,9 @@ export function configurationStatus(env){
   sheetsCredentialPresent:Boolean(env.GOOGLE_SERVICE_ACCOUNT_JSON_BASE64||env.GOOGLE_SERVICE_ACCOUNT_JSON||env.GOOGLE_APPLICATION_CREDENTIALS),
   sheetsIdPresent:Boolean(env.HOUSING_SHEET_ID||env.SHEET_ID),
   whapiTokenPresent:Boolean(env.WHAPI_API_TOKEN),
+  whapiApiEnabled:env.EFPS_WHAPI_API_ENABLED==='true',
+  whapiCatalogWriteEnabled:env.EFPS_WHAPI_CATALOG_WRITE_ENABLED==='true',
+  whapiWebhookEnabled:env.EFPS_WHAPI_WEBHOOK_ENABLED!=='false',
   sourceAuditMcpEnabled:env.CRM_SOURCE_AUDIT_MCP_ENABLED==='true',
   sourceAuditTokenPresent:Boolean(env.CRM_SOURCE_AUDIT_TOKEN),
   liveDataEnabled:env.CRM_REAL_DATA_ENABLED==='true'

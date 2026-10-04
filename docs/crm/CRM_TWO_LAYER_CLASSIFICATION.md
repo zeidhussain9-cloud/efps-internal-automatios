@@ -37,7 +37,7 @@ The former `crm-ui-feedback-polish-2026-10-02` candidate specified that a promot
 
 The Contact Classification queue remains the source of operator decisions. “Cold Inquiry” is shown only when present in stored classification data; lead age, message age, budget, and AI output do not create cold-lead or financial-risk labels. An overdue attention cue is derived only from an incomplete stored follow-up whose due time has passed. These are display-only changes and do not alter the promotion transaction or classification registry.
 
-## Authoritative current verified state — 2026-10-04 01:19 IST
+## Authoritative current verified state — 2026-10-05 01:19 IST
 
 This is the latest repository/production checkpoint. Older dated sections in maintained documents are historical evidence and must not be interpreted as current state.
 
@@ -52,15 +52,15 @@ This is the latest repository/production checkpoint. Older dated sections in mai
 - **Live Render:** current crm-ui-dashboard release verified LIVE
 - **Production health:** `GET /health` = HTTP 200, `{"ok":true}`
 - **Production WhatsApp source:** `+919148338801`
-- **Supabase:** 239 leads; 8,098 messages; 1,831 webhook events; 362 classifications; 186 requirements; 277 AI runs; 214 drafts; 190 AI cursors; 88 active inventory rows.
-- **Classification status:** 239 promoted; 88 classified; 32 excluded; 3 pending = 362 total.
-- **Webhook status:** 1,831 processed; 0 received; 0 processing; 0 failed.
-- **Message reconciliation:** 8,098 total = 6,047 lead-linked + 2,051 classified non-lead; unreconciled = 0.
+- **Supabase:** 253 leads; 9,224 messages; 3,025 persisted WhAPI webhook events; 389 classifications; 253 normalized lead requirements; 277 AI runs; 214 drafts; 190 AI cursors; 88 inventory rows.
+- **Classification status:** 253 promoted; 88 classified; 40 excluded; 8 pending = 389 total.
+- **Webhook status:** 3,025 persisted webhook events; 0 failed processing records.
+- **Message reconciliation:** 9,224 total CRM messages; current reconciliation evidence is maintained by the source-audit scheduler.
 - **Historical classification population:** 228 historical records; 140 qualified mappings.
 - **Inventory:** 88 active rows = 71 Available + 17 Rented Out; 1,996 sync runs; latest sync recorded 88 rows / 0 changed / 0 removed; inventory-change rows = 0.
-- **Cloudinary:** 829/829 distinct production URLs returned HTTP 200 with `image/*` content-type by direct HEAD checks from the production-machine network path.
+- **Cloudinary:** 696 stored distinct production URLs returned HTTP 200 with `image/*` content-type by direct HEAD checks from the production-machine network path.
 - **AI integrity:** draft→AI-run lead mismatch = 0; stale evidence references = 0; invalid cursor lead links = 0.
-- **Tests:** `npm run build` PASS; `npm test` 120/120 PASS; `npm run test:browser` 1/1 PASS.
+- **Tests:** `npm run build` PASS; `npm test` 134/134 PASS; `npm run test:browser` 1/1 PASS.
 - **Supabase Edge Function:** `whapi-crm-webhook` ACTIVE v9.
 - **AWS legacy webhook:** no changes in the audited CRM hardening range.
 - **24-item CRM audit:** GREEN / VERIFIED.
@@ -94,7 +94,7 @@ Housing_Listings A:AV
 
 ### Test-history checkpoint
 
-The P1–P5 hardening release added regression coverage for webhook promotion linkage, reserved AU/AV exclusion, and disposable inventory create/edit/delete history. The final repository verification is 120/120 automated tests, browser 1/1, and production build PASS. Historical earlier test counts in dated handoff/audit sections are retained as historical checkpoints.
+The P1–P5 hardening release added regression coverage for webhook promotion linkage, reserved AU/AV exclusion, and disposable inventory create/edit/delete history. The current repository verification is 134/134 automated tests, browser 1/1, and production build PASS. Historical earlier test counts in dated handoff/audit sections are retained as historical checkpoints.
 
 
 
