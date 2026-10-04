@@ -141,7 +141,13 @@ async function crmSnapshot(){
       (select max(message_at) from crm_messages) as message_latest,
       (select row_count from crm_inventory_sync_runs where source_kind='housing_sheet' order by created_at desc limit 1) as sheet_sync_rows,
       (select created_at from crm_inventory_sync_runs where source_kind='housing_sheet' order by created_at desc limit 1) as sheet_sync_latest`);
-    await client.query('ROLLBACK'); return {...q.rows[0],source_number:SOURCE_NUMBER,readOnly:true};
+    const reconciliation=await client.query(`select
+      (select count(*) from crm_webhook_events where provider='whapi' and payload->>'chat_id' like '%@s.whatsapp.net' and phone is not null) as eligible_message_events,
+      (select count(*) from crm_webhook_events where provider='whapi' and payload->>'chat_id' like '%@s.whatsapp.net' and phone is not null and message_id is not null) as linked_message_events,
+      (select count(*) from crm_webhook_events where provider='whapi' and direction='Incoming' and payload->>'chat_id' like '%@s.whatsapp.net' and phone is not null) as eligible_incoming_contacts,
+      (select count(*) from crm_webhook_events e where provider='whapi' and direction='Incoming' and payload->>'chat_id' like '%@s.whatsapp.net' and phone is not null and (e.lead_id is not null or exists (select 1 from crm_contact_classifications c where c.phone=e.phone))) as mapped_incoming_contacts,
+      (select count(*) from crm_webhook_events e where provider='whapi' and payload->>'chat_id' like '%@s.whatsapp.net' and phone is not null and message_id is not null and not exists (select 1 from crm_messages m where m.id=e.message_id)) as broken_message_links`);
+    await client.query('ROLLBACK'); return {...q.rows[0],eventReconciliation:{eligibleMessageEvents:Number(reconciliation.rows[0].eligible_message_events),linkedMessageEvents:Number(reconciliation.rows[0].linked_message_events),eligibleIncomingContacts:Number(reconciliation.rows[0].eligible_incoming_contacts),mappedIncomingContacts:Number(reconciliation.rows[0].mapped_incoming_contacts),brokenMessageLinks:Number(reconciliation.rows[0].broken_message_links),messageReconciled:Number(reconciliation.rows[0].eligible_message_events)===Number(reconciliation.rows[0].linked_message_events)&&Number(reconciliation.rows[0].broken_message_links)===0,contactReconciled:Number(reconciliation.rows[0].eligible_incoming_contacts)===Number(reconciliation.rows[0].mapped_incoming_contacts)},source_number:SOURCE_NUMBER,readOnly:true};
   } finally {client.release();await pool.end();}
 }
 
