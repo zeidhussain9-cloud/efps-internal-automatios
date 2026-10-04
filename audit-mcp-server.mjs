@@ -33,10 +33,14 @@ async function oidcAuthorized(req){
     const header=decodeJwtPart(encodedHeader);
     const claims=decodeJwtPart(encodedPayload);
     if(header.alg!=='RS256'||!header.kid)return false;
-    if(claims.iss!==OIDC_ISSUER||claims.aud!==OIDC_AUDIENCE||claims.repository!==OIDC_REPOSITORY||claims.ref!==OIDC_REF||claims.workflow_ref!==OIDC_WORKFLOW_REF)return false;
-    if(claims.repository_visibility!=='public'||claims.ref_type!=='branch')return false;
+    const audienceOk=claims.aud===OIDC_AUDIENCE||(Array.isArray(claims.aud)&&claims.aud.includes(OIDC_AUDIENCE));
+    const subjectOk=claims.sub===`repo:${OIDC_REPOSITORY}:ref:${OIDC_REF}`;
+    const workflowOk=claims.workflow_ref===OIDC_WORKFLOW_REF||claims.job_workflow_ref===OIDC_WORKFLOW_REF;
+    if(claims.iss!==OIDC_ISSUER||!audienceOk||claims.repository!==OIDC_REPOSITORY||claims.ref!==OIDC_REF||!workflowOk||!subjectOk)return false;
+    if(claims.ref_type&&claims.ref_type!=='branch')return false;
     const now=Math.floor(Date.now()/1000);
-    if(!Number.isInteger(claims.exp)||claims.exp<now-30||!Number.isInteger(claims.nbf)||claims.nbf>now+30)return false;
+    if(!Number.isInteger(claims.exp)||claims.exp<now-30)return false;
+    if(claims.nbf!==undefined&&(!Number.isInteger(claims.nbf)||claims.nbf>now+30))return false;
     if(!jwksCache||jwksCache.expiresAt<now){
       const response=await fetch(OIDC_JWKS_URL);
       if(!response.ok)throw Error('OIDC JWKS unavailable');
