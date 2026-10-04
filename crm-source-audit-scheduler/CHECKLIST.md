@@ -123,7 +123,8 @@ The canonical contract is `crm-source-audit-scheduler/AUDIT_CONTRACT.md` and the
 
 - **40 Requirement field correctness:** 253/253 promoted qualified leads have normalized requirement profiles; 253/253 exactly match the deterministic projection of `crm_leads.requirements` + `tenant_type` across all 17 canonical fields; 0 invalid profiles.
 - **41 Property-matching inputs:** 253/253 qualified leads produce valid deterministic BHK, budget, locality, furnishing and pet matcher inputs; 0 invalid inputs.
-- **42 Property-matching results:** the canonical inventory contains 71 active listings. Deterministic evaluation produced 11,100 qualifying lead/listing matches across 253 leads; 180 leads have at least one match and 73 have zero matches. Zero matches are valid evidence, not an error; 0 result-set violations were identified.
+- **42 Property-matching results:** production scheduler run **37225973017** evaluated the canonical 71 active listings against 253 qualified leads and produced 11,482 qualifying lead/listing matches; 223 leads have at least one match and 30 have zero matches. Zero matches are valid evidence, not an error; 0 result-set violations were identified.
+- Production scheduler run **37225973017** reports `requirementMatchAudit.complete=true`, 253 checked profiles, 253 exact legacy projections, 0 mismatched leads, 0 invalid profiles, 253 valid matcher inputs, 0 invalid inputs, 253 checked result sets and 0 invalid result sets.
 
 These checks do not fabricate `crm_requirement_evidence`. Evidence remains a separate provenance layer.
 

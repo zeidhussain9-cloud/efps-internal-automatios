@@ -1,12 +1,12 @@
 # EFPS CRM — Current Verified State
 
-> Verified 2026-10-04 09:10 UTC against repository, Supabase production, Render and browser/test evidence. Older dated audit documents remain historical evidence.
+> Verified 2026-10-05 against repository, Supabase production, Render, GitHub Actions and browser/test evidence. Older dated audit documents remain historical evidence.
 
 ## Runtime baseline
 
 - Production branch: crm-ui-dashboard
 - Verified production tree: 0106375f656a3a63e8953ee2fe0e5b2b2c25dc2f
-- Production crm-ui-dashboard commit: 65b46f95372a072f47d113328934a026b911325a
+- Production crm-ui-dashboard commit: 7f0ac2211b3cb797ab4aaaa734f5edeea9ec0393
 - main commit: 58dc1b3427db73bffd0804c2bb8d006f92e9a6e6
 - Render service: srv-darsv560tbcc73cu4ip0
 - Current crm-ui-dashboard release: verified LIVE
@@ -16,14 +16,14 @@
 
 ## Current production database
 
-- 244 CRM leads; 11 currently auto-qualified
-- 8,919 CRM messages
-- 2,701 persisted WhAPI webhook events; 2,701 processed, 0 received, 0 failed
-- 362 current classifications: 239 promoted, 88 classified, 32 excluded, 3 pending
-- 186 normalized lead requirements
+- 253 CRM leads; 253 promoted qualified leads
+- 9,222 CRM messages
+- 3,023 persisted WhAPI webhook events; 0 processing errors
+- 389 current classifications: 253 promoted, 88 classified, 40 excluded, 8 pending
+- 253 normalized lead requirements; 0 promoted qualified leads missing a profile
 - 277 AI runs / 214 drafts / 190 AI cursors
 - 88 active inventory rows: 71 Available / 17 Rented Out
-- Message reconciliation: 8,098 total = 6,047 lead-linked + 2,051 classified non-lead; unreconciled = 0
+- Message reconciliation population: 6,821 lead-linked + 2,401 non-lead = 9,222 total
 
 ## Deterministic classification
 

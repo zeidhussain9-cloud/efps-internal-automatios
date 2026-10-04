@@ -110,6 +110,8 @@ Verified from production Supabase during the 2026-10-05 reconciliation:
 - requirement evidence rows: present as a separate table; this audit does not fabricate or require evidence rows for Point 40
 - active housing-sheet inventory: 71
 
-The repository test suite passed 130/130 after the audit implementation.
+The repository test suite passed 134/134 after the audit implementation. Browser regression passed 1/1.
 
-Production green status requires the scheduled runner to execute this contract against the deployed code; local tests alone are not sufficient to claim the scheduled production run is green.
+Production scheduler run **37225973017** on commit **7f0ac2211b3cb797ab4aaaa734f5edeea9ec0393** completed successfully after deployment. It verified `requirementMatchAudit.complete=true`: 253/253 qualified profiles present, 253/253 exact projections, 0 mismatches, 253/253 valid matcher inputs, 0 invalid inputs, 253/253 checked result sets, 0 invalid result sets, 11,482 total matches and 30 zero-match leads.
+
+Production green status is therefore supported by both the deployed scheduled run and repository tests.
