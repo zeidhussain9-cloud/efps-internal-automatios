@@ -15,6 +15,9 @@ export function configurationStatus(env){
   bedrockModelPresent:Boolean(env.AWS_BEDROCK_MODEL_ID),
   sheetsCredentialPresent:Boolean(env.GOOGLE_SERVICE_ACCOUNT_JSON_BASE64||env.GOOGLE_SERVICE_ACCOUNT_JSON||env.GOOGLE_APPLICATION_CREDENTIALS),
   sheetsIdPresent:Boolean(env.HOUSING_SHEET_ID||env.SHEET_ID),
+  whapiTokenPresent:Boolean(env.WHAPI_API_TOKEN),
+  sourceAuditMcpEnabled:env.CRM_SOURCE_AUDIT_MCP_ENABLED==='true',
+  sourceAuditTokenPresent:Boolean(env.CRM_SOURCE_AUDIT_TOKEN),
   liveDataEnabled:env.CRM_REAL_DATA_ENABLED==='true'
  };
 }
