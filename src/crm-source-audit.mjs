@@ -50,10 +50,10 @@ async function crmSnapshot(){
 }
 
 export async function sourceAuditSnapshot(){
-  const [whapi,sheet,crm]=await Promise.allSettled([whapiRecentMessages({count:100,fromMe:false}),housingSheetSnapshot(),crmSnapshot()]);
+  const [whapiHealthResult,whapi,sheet,crm]=await Promise.allSettled([whapiHealth(),whapiRecentMessages({count:100,fromMe:false}),housingSheetSnapshot(),crmSnapshot()]);
   const latestWhapi=whapi.status==='fulfilled'?whapi.value.messages.reduce((m,x)=>Math.max(m,Number(x?.timestamp||0)),0):0;
   return {checkedAt:new Date().toISOString(),sourceNumber:SOURCE_NUMBER,
-    whapi:whapi.status==='fulfilled'?{ok:true,recentInboundCount:whapi.value.messages.length,total:whapi.value.total,latestMessageTimestamp:latestWhapi||null}:{ok:false,error:whapi.reason?.message||'WhAPI read failed'},
+    whapi:whapi.status==='fulfilled'?{ok:true,recentInboundCount:whapi.value.messages.length,total:whapi.value.total,latestMessageTimestamp:latestWhapi||null,health:whapiHealthResult.status==='fulfilled'?whapiHealthResult.value:null}:{ok:false,error:whapi.reason?.message||'WhAPI read failed',health:whapiHealthResult.status==='fulfilled'?whapiHealthResult.value:{error:whapiHealthResult.reason?.message||'WhAPI health read failed'}},
     sheet:sheet.status==='fulfilled'?{ok:true,...sheet.value}:{ok:false,error:sheet.reason?.message||'Sheet read failed'},
     crm:crm.status==='fulfilled'?{ok:true,...crm.value}:{ok:false,error:crm.reason?.message||'CRM read failed'}};
 }
