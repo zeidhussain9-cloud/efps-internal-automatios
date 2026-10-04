@@ -52,6 +52,10 @@ for(const [name,value] of Object.entries(payload)){
   if(value&&typeof value==='object'&&value.error&&!value.degraded) failures.push(`${name}: ${value.error}`);
 }
 if(payload.catalog?.complete!==true) failures.push('catalog: incomplete catalog reconciliation');
+if(payload.catalog?.field?.mismatches!==0) failures.push('catalog: field-by-field reconciliation incomplete');
+if(payload.catalog?.removed?.removedReconciled!==true) failures.push('catalog: removed-product reconciliation incomplete');
+if(payload.catalog?.collectionExpectation?.mismatches!==0) failures.push('catalog: collection membership reconciliation incomplete');
+if(payload.crm?.mediaReconciliation?.complete!==true) failures.push('crm: Cloudinary media reconciliation incomplete');
 if(payload.crm?.eventReconciliation?.messageReconciled!==true) failures.push('crm event->message reconciliation incomplete');
 if(payload.crm?.eventReconciliation?.contactReconciled!==true) failures.push('crm event->contact reconciliation incomplete');
 if(payload.crm?.requirementMatchAudit?.complete!==true) failures.push('requirement/matching audit incomplete');
