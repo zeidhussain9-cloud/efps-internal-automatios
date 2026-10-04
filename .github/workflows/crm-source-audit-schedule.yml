@@ -1,0 +1,30 @@
+name: CRM Source Audit Schedule
+
+on:
+  schedule:
+    - cron: '7 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  source-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Use Node.js 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24.21.0
+
+      - name: Checkout production branch definition
+        uses: actions/checkout@v4
+        with:
+          ref: crm-ui-dashboard
+
+      - name: Run read-only source audit
+        env:
+          CRM_SOURCE_AUDIT_TOKEN: ${{ secrets.CRM_SOURCE_AUDIT_TOKEN }}
+          CRM_SOURCE_AUDIT_URL: https://easyfind-crm-d01-d05.onrender.com/mcp
+        run: node scripts/crm-source-audit-runner.mjs
