@@ -38,6 +38,6 @@ jobs:
 
       - name: Run read-only source audit
         env:
-          CRM_SOURCE_AUDIT_TOKEN: ${{ steps.oidc.outputs.token }}
+          CRM_SOURCE_AUDIT_TOKEN: ${{ secrets.CRM_SOURCE_AUDIT_TOKEN }}
           CRM_SOURCE_AUDIT_URL: https://easyfind-crm-d01-d05.onrender.com/mcp
         run: node scripts/crm-source-audit-runner.mjs
