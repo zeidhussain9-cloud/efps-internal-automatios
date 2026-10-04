@@ -62,6 +62,12 @@ The adapter is deliberately narrower than the full WhAPI MCP. WhAPI's official M
 
 The adapter is an audit/evidence layer. The existing webhook, deterministic scheduler, inventory scheduler, and Supabase persistence remain authoritative runtime paths.
 
+## Current production verification
+
+The adapter code is deployed on Render in commit 1941eedf59cc18108ca5f9591b5a97b5028d870d. Render startup verification currently reports the canonical Google Sheet credential and Sheet ID as present, but WHAPI_API_TOKEN, CRM_SOURCE_AUDIT_MCP_ENABLED and CRM_SOURCE_AUDIT_TOKEN are not present. Therefore the MCP endpoint is intentionally disabled in production until the WhAPI API credential and MCP access secret are explicitly configured. No credential value is guessed or copied from another secret.
+
+The existing 5-minute Housing Sheet reconciliation is independently live; the latest verified run at 2026-10-04 09:00:01 UTC read 88 rows with zero changes and zero removals.
+
 ## Verification
 
 Repository test coverage includes MCP protocol/authentication and confirms the exposed tool list contains only the read-only audit tools.
