@@ -21,7 +21,7 @@ jobs:
           node-version: 24.21.0
 
       - name: Checkout production branch definition
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           ref: crm-ui-dashboard
 

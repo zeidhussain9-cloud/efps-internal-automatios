@@ -11,10 +11,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout new repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Checkout legacy repository at pinned commit
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: zeidhussain9-cloud/efps-platform
           ref: bd186c7c3418d633bca6766b1b92204c7a56d484
