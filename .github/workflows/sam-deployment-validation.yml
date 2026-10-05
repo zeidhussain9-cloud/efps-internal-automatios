@@ -37,7 +37,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout canonical source
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up AWS SAM CLI
         uses: aws-actions/setup-sam@v2
