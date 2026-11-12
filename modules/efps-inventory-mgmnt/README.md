@@ -4,7 +4,7 @@
 
 `Needs Review` is not a normal result of deterministic extraction. A valid deterministic extraction remains `Pending` after `intake_status = Processed`.
 
-`Needs Review` is reserved for a deterministic validation error or an explicit AI conflict after the deterministic gate. Google Maps uncertainty is recorded as an issue but does not by itself change `status` to `Needs Review`.
+`Needs Review` is used for deterministic validation errors, explicit AI conflicts, or a supplied Maps URL that cannot be VERIFIED. Unverified Maps candidates never supply locality/pincode and do not overwrite source values. A VERIFIED Maps locality/place name overrides conflicting source locality/society.
 
 ## Canonical Stage-2 pipeline
 
@@ -65,7 +65,7 @@ The inventory contract is 48 columns A:AV. Recurring Stage 1/2 updates are restr
 
 ## Notion intake adapter
 
-`src/notion_intake.py` is the Notion intake adapter. It fetches the submitted Notion page, claims it idempotently in the existing `efps-sessions` DynamoDB table, persists the raw record to the canonical Housing_Listings Sheet, downloads supported Notion-hosted photo attachments, uploads them through the shared Cloudinary helper, and delegates all property processing to `pipeline.process_closed_session()`. It then creates/updates the Housing Listings Notion page and writes the intake status, Listing ID, notes, processed timestamp, and relation back to the intake page.
+`src/notion_intake.py` is the Notion intake adapter. It fetches the submitted Notion page, claims it idempotently in the existing `efps-sessions` DynamoDB table, persists the raw record to the canonical Housing_Listings Sheet, downloads supported Notion-hosted photo attachments, uploads them through the shared Cloudinary helper, and delegates all property processing to `pipeline.process_closed_session()`. It then generates the v7.1 `whatsapp_post` from explicit/verified facts, creates/updates the Housing Listings Notion page, and writes intake status, Listing ID, notes, processed timestamp, and relation back to the intake page. Long Maps URLs are omitted from captions and flagged; pet policy is not inferred. No WhatsApp message is sent.
 
 The adapter does not implement a second extraction engine, operate on AU/AV, or send WhatsApp messages. Its SAM endpoint and required secret contract are documented in `docs/NOTION_PROPERTY_INTAKE.md`. Production activation remains gated on the AWS Secrets Manager Notion credential and webhook secret, SAM deployment, Notion automation configuration, and one controlled end-to-end acceptance test.
 
