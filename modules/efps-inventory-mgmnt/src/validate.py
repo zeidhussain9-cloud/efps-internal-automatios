@@ -1,3 +1,5 @@
+[Reading 65 lines from start (total: 65 lines, 0 remaining)]
+
 """Deterministic validation for the Stage-2 inventory record."""
 from __future__ import annotations
 import re
@@ -25,7 +27,8 @@ def validate(row:dict)->list[str]:
     if not row["listing_id"]:errors.append("listing_id required")
     if not row["monthly_rent"]:errors.append("monthly_rent required")
     if row["BHK"] and not re.fullmatch(r"\d+(?:\.\d+)? BHK",str(row["BHK"])) and row["BHK"]!="1 RK":errors.append("invalid BHK")
-    if row["property_subtype"] and row["property_subtype"] not in PROPERTY_SUBTYPES:errors.append("invalid property_subtype")
+    if not row["property_subtype"]:errors.append("property_subtype required")
+    elif row["property_subtype"] not in PROPERTY_SUBTYPES:errors.append("invalid property_subtype")
     if row["furnish_type"] and row["furnish_type"] not in FURNISH_TYPES:errors.append("invalid furnish_type")
     if row["preferred_tenant_type"] and row["preferred_tenant_type"] not in PREFERRED_TENANT_TYPES:errors.append("invalid preferred_tenant_type")
     if row["bachelor_preference"] and row["bachelor_preference"] not in BACHELOR_PREFERENCES:errors.append("invalid bachelor_preference")

@@ -1,3 +1,5 @@
+[Reading 100 lines from start (total: 100 lines, 0 remaining)]
+
 """Canonical deterministic candidate resolution for Inventory Stage 2."""
 from __future__ import annotations
 import re
@@ -82,13 +84,12 @@ def resolve_internal_property_type(text:str)->str:
     if generic:return sorted(generic,key=lambda c:(c.segment_index,c.position))[-1].value
     return ""
 def _property_subtype_candidates(text:str)->tuple[set[str],bool]:
-    labels=_label_candidates(text,r"property\s*subtype|subtype","property_subtype");source=" ".join(c.value for c in labels);scopes=(source,text or "");patterns=((r"\b1\s*[- ]?\s*rk\b|\bstudio\b","Studio"),(r"\bindependent\s+house\b","Independent House"),(r"\bindependent\s+floor\b","Independent Floor"),(r"\bduplex\b","Duplex"),(r"\bvilla\b","Villa"),(r"\b(?:apartment|flat|unit)\b","Apartment"));found=set();unsupported=False
+    labels=_label_candidates(text,r"property\s*subtype|subtype","property_subtype");source=" ".join(c.value for c in labels);scopes=(source,text or "");patterns=((r"\b1\s*[- ]?\s*rk\b|\bstudio\b","Studio"),(r"\bindependent\s+house\b","Independent House"),(r"\bindependent\s+floor\b","Independent Floor"),(r"\bduplex\b","Duplex"),(r"\bvilla\b","Villa"),(r"\b(?:apartment|flat|unit|penthouse)\b","Apartment"));found=set();unsupported=False
     for scope in scopes:
-        if re.search(r"\bpenthouse\b|\bfarm\s*house\b",scope,re.I):unsupported=True
+        if re.search(r"\bfarm\s*house\b",scope,re.I):unsupported=True
         for pattern,canonical in patterns:
             if re.search(pattern,scope,re.I):found.add(canonical)
     if re.search(r"\bduplex\s+villa\b",text or "",re.I):found.discard("Villa")
-    if len(found)>1 and "Apartment" in found:found.discard("Apartment")
     return found,unsupported
 def has_property_subtype_evidence(text:str)->bool:
     found,unsupported=_property_subtype_candidates(text);return bool(found) or unsupported

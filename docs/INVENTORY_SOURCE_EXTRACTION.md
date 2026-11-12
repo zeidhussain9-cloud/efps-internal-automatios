@@ -1,3 +1,5 @@
+[Reading 66 lines from start (total: 66 lines, 0 remaining)]
+
 # Inventory Source Extraction Contract
 
 **Status:** Active
@@ -54,12 +56,12 @@ A `📍 Name:` marker supplies a property/society-name candidate and a subsequen
 
 - Decimal BHK values such as `2.5 BHK` are preserved.
 - Later explicit source corrections supersede earlier explicit values for recurring multi-candidate fields.
-- Society, landmark, locality, subtype, highlights, age, tenant preference, bachelor preference, pet status, and servant-room source facts are extracted within source-message boundaries. `property_subtype` is secondary and non-blocking: existing Apartment fallback for generic apartment-style records remains; unsupported/conflicting subtype evidence stays blank and does not hold readiness.
+- Society, landmark, locality, subtype, highlights, age, tenant preference, bachelor preference, pet status, and servant-room source facts are extracted within source-message boundaries. `property_subtype` is mandatory: when no subtype evidence exists, the established Apartment fallback applies. Penthouse normalizes to Apartment. Unsupported or conflicting subtype evidence remains unresolved and validation routes the record to `Needs Review`.
 - Placeholder-only values are blank for normalization purposes.
 
 ## Regression requirement
 
-Every production extraction/resolution defect must have a regression fixture for the exact triggering source shape. Current regression coverage must exercise segmentation, multi-candidate resolution, corrections, positive/negative gating, decimal BHK, maintenance units/qualifiers/inclusion, singular/decimal balcony counts, explicit pet negatives, Sheet-independence, dependent defaults, normalized validation, preservation of source Maps short links, optional unresolved subtype, the `Available` Stage-1 bootstrap, and the `Catalogue Ready` intake lifecycle value.
+Every production extraction/resolution defect must have a regression fixture for the exact triggering source shape. Current regression coverage must exercise segmentation, multi-candidate resolution, corrections, positive/negative gating, decimal BHK, maintenance units/qualifiers/inclusion, singular/decimal balcony counts, explicit pet negatives, Sheet-independence, dependent defaults, normalized validation, preservation of source Maps short links, mandatory subtype validation, Penthouse-to-Apartment normalization, conflicting subtype review, the `Available` Stage-1 bootstrap, and the `Catalogue Ready` intake lifecycle value.
 
 ## Model-test interpretation
 

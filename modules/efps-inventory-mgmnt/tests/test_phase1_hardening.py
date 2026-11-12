@@ -1,3 +1,5 @@
+[Reading 228 lines from start (total: 228 lines, 0 remaining)]
+
 from __future__ import annotations
 
 from src import phase1
@@ -192,15 +194,22 @@ def test_verified_maps_resolution_preserves_original_short_url():
     assert canonical_url not in out["google_maps_url"]
 
 
-def test_missing_property_subtype_is_non_blocking_and_stays_blank():
+def test_penthouse_normalizes_to_apartment_and_is_valid():
     result = phase1.run_phase1(
         "Property Type: Standalone\nProperty Subtype: Penthouse\nRent: 40000",
-        row=initial_row("EF-TEST-SUBTYPE-OPTIONAL"),
+        row=initial_row("EF-TEST-PENTHOUSE"),
     )
     assert result.row["internal_property_type"] == "Standalone"
-    assert result.row["property_subtype"] == ""
+    assert result.row["property_subtype"] == "Apartment"
     assert result.row["status"] == "Pending"
-    assert "property_subtype" in result.report["unresolved_fields"]
+    assert "property_subtype" not in result.report["unresolved_fields"]
+
+
+def test_missing_property_subtype_fails_validation():
+    row = initial_row("EF-TEST-SUBTYPE-REQUIRED")
+    row.update(status="Pending", intake_status="Processed", monthly_rent="40000", internal_property_type="Standalone")
+    errors = validate.validate(row)
+    assert "property_subtype required" in errors
 
 
 def test_initial_raw_row_accepts_available_bootstrap_state():
@@ -216,5 +225,6 @@ def test_catalogue_ready_is_a_valid_intake_status():
         intake_status="Catalogue Ready",
         monthly_rent="40000",
         internal_property_type="Standalone",
+        property_subtype="Apartment",
     )
     assert validate.validate(row) == []

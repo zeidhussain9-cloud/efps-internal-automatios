@@ -1,3 +1,5 @@
+[Reading 48 lines from start (total: 48 lines, 0 remaining)]
+
 from __future__ import annotations
 
 from . import pipeline
@@ -28,7 +30,7 @@ def test_placeholder_society_and_landmark_use_location():
 
 
 def test_partial_maps_does_not_create_needs_review():
-    raw = "2 BHK\nRent: 40000\nLocation: Harlur\nGoogle Maps: https://maps.app.goo.gl/example"
+    raw = "2 BHK Apartment\nRent: 40000\nCommunity: Gated Community\nLocation: Harlur\nGoogle Maps: https://maps.app.goo.gl/example"
 
     class PartialMaps:
         def extract_url(self, text):

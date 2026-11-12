@@ -1,3 +1,5 @@
+[Reading 140 lines from start (total: 140 lines, 0 remaining)]
+
 """Inventory processing and safe Stage-1/2 Sheets persistence."""
 from __future__ import annotations
 
@@ -80,6 +82,7 @@ def process_closed_session(raw_text: str, *, row: dict | None = None, maps_clien
                 if not source_society or source_society == out.get("locality", ""):
                     out["society_name"] = place_name
         elif resolved.confidence == "PARTIAL_MATCH":
+            issues.append("Google Maps verification failed or is incomplete: PARTIAL_MATCH")
             # PARTIAL_MATCH: Only fill blanks, never override user data
             if not out.get("locality", "").strip():
                 out["locality"] = resolved.locality or ""

@@ -1,3 +1,5 @@
+[Reading 177 lines from start (total: 177 lines, 0 remaining)]
+
 """Deterministic normalization for Stage 2 property processing."""
 from __future__ import annotations
 import re
@@ -7,7 +9,7 @@ NUMERIC_FIELDS={"pincode","built_up_area","carpet_area","age_of_property_years",
 SEMI_FURNISHED_DEFAULTS=("Wardrobe","Modular Kitchen","Geyser","Fan","Light")
 FULLY_FURNISHED_DEFAULTS=SEMI_FURNISHED_DEFAULTS+("Fridge","Washing Machine","TV","Sofa","Bed","Dining Table")
 CARPET_RATIO=0.90
-PORTAL_SUBTYPE_MAP={"Triplex Villa":"Villa","Complex Villa":"Villa","Villa Complex":"Villa","Duplex Villa":"Villa","Triplex":"Independent House","Builder Floor":"Independent Floor","Independent Building":"Independent House"}
+PORTAL_SUBTYPE_MAP={"Triplex Villa":"Villa","Complex Villa":"Villa","Villa Complex":"Villa","Duplex Villa":"Duplex","Penthouse":"Apartment","Triplex":"Independent House","Builder Floor":"Independent Floor","Independent Building":"Independent House"}
 NO_FLOOR_SUBTYPES={"Villa","Independent House","Duplex"}
 _RK_RE=re.compile(r"\b(\d)\s*rk\b",re.I)
 _MONTHS=re.compile(r"^\s*(\d+(?:\.\d+)?)\s*(?:months?|mnths?|mos?)\s*$",re.I)

@@ -1,3 +1,5 @@
+[Reading 85 lines from start (total: 85 lines, 0 remaining)]
+
 from __future__ import annotations
 
 from . import pipeline
@@ -70,7 +72,7 @@ def test_property_subtype_is_direct_when_present_and_apartment_only_as_fallback(
     independent = pipeline.deterministic("2 BHK\nRent: 40000\nIndependent House", pipeline.initial_row("EF-TEST-SUBTYPE-003"))
     assert direct["property_subtype"] == "Villa"
     assert apartment["property_subtype"] == "Apartment"
-    assert independent["property_subtype"] == ""
+    assert independent["property_subtype"] == "Independent House"
 
 
 def test_catalog_title_and_highlights_are_deterministic_fallbacks():
