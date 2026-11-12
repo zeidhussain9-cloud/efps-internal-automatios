@@ -285,9 +285,20 @@ def test_webhook_accepts_notion_automation_page_id_payload(monkeypatch):
     page_id = str(uuid.uuid4())
     monkeypatch.setenv("NOTION_WEBHOOK_SECRET", "secret-value")
     monkeypatch.setattr(intake, "process_page", lambda supplied: {"status": "Processed", "listing_id": "EF-TEST"} if supplied == page_id else (_ for _ in ()).throw(AssertionError(supplied)))
+    enqueued = []
+    monkeypatch.setattr(intake, "_enqueue_worker", lambda supplied, arn: enqueued.append((supplied, arn)))
+    context = type("Context", (), {"invoked_function_arn": "arn:aws:lambda:ap-southeast-1:123456789012:function:test"})()
     result = intake.lambda_handler(
         {"headers": {"X-EFPS-Notion-Intake-Token": "secret-value"}, "body": json.dumps({"id": page_id})},
-        None,
+        context,
     )
-    assert result["statusCode"] == 200
-    assert json.loads(result["body"])["listing_id"] == "EF-TEST"
+    assert result["statusCode"] == 202
+    assert enqueued == [(page_id, context.invoked_function_arn)]
+    assert json.loads(result["body"])["accepted"] is True
+
+def test_async_worker_invocation_runs_page_processor(monkeypatch):
+    page_id = "12345678-1234-1234-1234-123456789abc"
+    monkeypatch.setattr(intake, "process_page", lambda supplied: {"status": "Processed", "listing_id": "EF-ASYNC"} if supplied == page_id else {})
+    result = intake.lambda_handler({"_efps_notion_worker": True, "page_id": page_id}, None)
+    assert result["status"] == "Processed"
+    assert result["listing_id"] == "EF-ASYNC"

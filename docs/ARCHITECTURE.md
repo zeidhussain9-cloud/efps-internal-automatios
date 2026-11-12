@@ -25,7 +25,8 @@ This section supersedes the older dated operational snapshots below. Historical 
 
 ```text
 Notion Property Intake (activation pending)
-  -> signed page-ID webhook
+  -> signed page-ID webhook (202)
+  -> asynchronous Lambda worker
   -> idempotent efps-sessions claim
   -> canonical Inventory pipeline
   -> Housing_Listings A:AT + Cloudinary photos

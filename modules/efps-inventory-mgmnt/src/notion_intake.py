@@ -513,7 +513,25 @@ def process_page(
         raise
 
 
+def _enqueue_worker(page_id: str, function_arn: str):
+    import boto3
+    response = boto3.client("lambda").invoke(
+        FunctionName=function_arn,
+        InvocationType="Event",
+        Payload=json.dumps({"_efps_notion_worker": True, "page_id": page_id}).encode("utf-8"),
+    )
+    if int(response.get("StatusCode") or 0) != 202:
+        raise IntakeError("Notion intake worker enqueue was not accepted")
+
+
 def lambda_handler(event, context):
+    # Internal asynchronous invocation: raise on failure so Lambda retry policy applies.
+    if event.get("_efps_notion_worker"):
+        page_id = str(event.get("page_id") or "").strip()
+        if not re.fullmatch(r"[0-9a-fA-F-]{32,36}", page_id):
+            raise IntakeError("Invalid asynchronous intake page ID")
+        return process_page(page_id)
+
     headers = {str(k).lower(): str(v) for k, v in (event.get("headers") or {}).items()}
     expected = os.environ.get("NOTION_WEBHOOK_SECRET", "")
     supplied = headers.get("x-efps-notion-intake-token", "")
@@ -539,8 +557,8 @@ def lambda_handler(event, context):
     if not re.fullmatch(r"[0-9a-fA-F-]{32,36}", page_id):
         return {"statusCode": 400, "body": json.dumps({"error": "page_id is required"})}
     try:
-        result = process_page(page_id)
-        return {"statusCode": 200, "headers": {"Content-Type": "application/json"}, "body": json.dumps({"ok": True, **result})}
+        _enqueue_worker(page_id, context.invoked_function_arn)
+        return {"statusCode": 202, "headers": {"Content-Type": "application/json"}, "body": json.dumps({"ok": True, "accepted": True, "page_id": page_id})}
     except Exception as exc:
-        print(json.dumps({"notion_intake_error": str(exc)[:1500], "page_id": page_id}))
-        return {"statusCode": 500, "headers": {"Content-Type": "application/json"}, "body": json.dumps({"error": "intake processing failed"})}
+        print(json.dumps({"notion_intake_enqueue_error": str(exc)[:1500], "page_id": page_id}))
+        return {"statusCode": 500, "headers": {"Content-Type": "application/json"}, "body": json.dumps({"error": "intake enqueue failed"})}

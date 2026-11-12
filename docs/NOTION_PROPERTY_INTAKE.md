@@ -6,8 +6,8 @@ The Notion database **Property Intake — Raw Details & Photos** is an intake su
 
 ## Processing flow
 
-1. Notion database automation sends the trigger page ID to the SAM endpoint `/notion/intake` with header `X-EFPS-Notion-Intake-Token`. The handler accepts `page_id`, top-level `id`, `page.id`, `data.page.id`, `data.id`, or `entity.id` payload shapes.
-2. Lambda verifies the shared webhook token and fetches the page through the Notion API.
+1. Notion database automation sends the trigger page ID to the SAM endpoint `/notion/intake` with header `X-EFPS-Notion-Intake-Token`. The handler accepts `page_id`, top-level `id`, `page.id`, `data.page.id`, `data.id`, or `entity.id` payload shapes, queues an asynchronous self-invocation, and returns HTTP 202 immediately.
+2. The API Lambda verifies the shared webhook token and enqueues the page ID. The worker invocation fetches the page through the Notion API; async retries are enabled for transient failures.
 3. A conditional record in the existing `efps-sessions` DynamoDB table claims the page idempotently. The same `listing_id` is reused for retries and edits.
 4. The original Raw Property Data is written to the canonical A:AT Sheet row. Photos are downloaded only from supported Notion-hosted HTTPS file URLs and uploaded through `shared/cloudinary/media.py` to deterministic `properties/{listing_id}/photo_{n}` IDs, up to the ten-image catalogue limit.
 5. The canonical Inventory pipeline processes the raw text. It preserves the exact original Maps URL, applies locality/place-name changes only from VERIFIED Maps results, and routes unverified Maps candidates to Needs Review. Mandatory subtype validation remains active.
@@ -50,4 +50,4 @@ No token or secret value belongs in Git. The Lambda reuses the existing Sheets, 
 
 ## Current deployment boundary
 
-Repository code and SAM configuration are prepared separately from production cutover. The endpoint is not active until the SAM stack is deployed with `NotionSecretArn`, the Notion automation is configured, and the acceptance test passes.
+Repository code and SAM configuration are prepared separately from production cutover. The endpoint is not active until the SAM stack is deployed with `NotionSecretArn`, the Notion automation is configured, and the acceptance test passes. The webhook responds 202 after queueing; the worker has a 180-second timeout and two asynchronous retries.
