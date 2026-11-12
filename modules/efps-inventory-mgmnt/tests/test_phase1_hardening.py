@@ -180,13 +180,13 @@ def test_verified_maps_resolution_preserves_original_short_url():
 
         def resolve(self, *, maps_url):
             assert maps_url == short_url
-            return SimpleNamespace(confidence="VERIFIED", canonical_url=canonical_url, locality="Harlur", pincode="560102", place_name="Verified Society")
+            return SimpleNamespace(confidence="VERIFIED", canonical_url=canonical_url, locality="Verified Locality", pincode="560102", place_name="Verified Society")
 
-    raw = "Property Type: Semi Gated\nProperty Subtype: Apartment\n2 BHK\nRent: 40000\nLocation: Harlur\n" + short_url
+    raw = "Property Type: Semi Gated\nProperty Subtype: Apartment\n2 BHK\nRent: 40000\nLocation: Source Locality\n" + short_url
     out, _ = process_closed_session(raw, row=initial_row("EF-TEST-MAPS-SHORT"), maps_client=FakeMapsClient())
 
     assert out["google_maps_url"] == short_url
-    assert out["locality"] == "Harlur"
+    assert out["locality"] == "Verified Locality"
     assert out["pincode"] == "560102"
     assert out["society_name"] == "Verified Society"
     assert canonical_url not in out["google_maps_url"]
