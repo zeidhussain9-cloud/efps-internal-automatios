@@ -1,3 +1,14 @@
+## Authoritative current verified state — 2026-11-12
+
+- Render production: `easyfind-crm-d01-d05` LIVE from recovery commit `97dff533cfeee3138866277430a471ccc8369ac3`; Supabase Edge Function `whapi-crm-webhook` ACTIVE v10.
+- Current population: 371 CRM leads, 839 contact classifications, 18,970 CRM messages since 2026-10-05, 104 active inventory rows.
+- Webhook: 18,621/18,621 message events since 2026-10-05 linked to `crm_messages`; 0 current errors; 43 original phone-constraint errors retained in history.
+- Group messages: no current group message is linked to a lead timeline; 1,809 historical links removed with prior lead/chat associations preserved.
+- Deterministic scheduler: 922 completed / 0 failed since 2026-10-05. AI scheduler intentionally paused.
+- Inventory sync: 104 Sheet rows / 104 Supabase rows; five-minute cron active and verified HTTP 200.
+- Build PASS; 139/139 automated tests PASS; browser 1/1 PASS.
+- Full current evidence: `CRM_CURRENT_VERIFIED_STATE.md` and `CRM_RECOVERY_AUDIT_2026-11-12.md`.
+
 ## 2026-10-02 — Replit feedback branch recovery and line-by-line audit checkpoint
 
 Historical recovery record: the former isolated branch `crm-ui-feedback-polish-2026-10-02` was recovered after the Replit workspace exhausted its credits. The branch is based directly on production checkpoint `97b43a7d158eb8b3cd773ed3febb45c4f8a52540` and contains the recovered UI/inventory implementation plus regression coverage.
@@ -25,7 +36,7 @@ Historical recovery record: the former isolated branch `crm-ui-feedback-polish-2
 
 Implementation review is complete at the repository diff level. Build, full automated tests, browser regression, production deployment, and branch reconciliation remain evidence-gated until the recovered candidate is executed and verified. This section must not be interpreted as a production-live claim.
 
-## Current production audit — 2026-10-01 (post-reconciliation)
+## Historical production audit — 2026-10-01 (post-reconciliation)
 
 See the authoritative current-state block at the top of this document for the verified Render/Supabase checkpoint.
 
@@ -37,7 +48,7 @@ The former `crm-ui-feedback-polish-2026-10-02` candidate specified that a promot
 
 The Contact Classification queue remains the source of operator decisions. “Cold Inquiry” is shown only when present in stored classification data; lead age, message age, budget, and AI output do not create cold-lead or financial-risk labels. An overdue attention cue is derived only from an incomplete stored follow-up whose due time has passed. These are display-only changes and do not alter the promotion transaction or classification registry.
 
-## Authoritative current verified state — 2026-10-05 01:19 IST
+## Historical verified state — 2026-10-05 01:19 IST
 
 This is the latest repository/production checkpoint. Older dated sections in maintained documents are historical evidence and must not be interpreted as current state.
 
@@ -94,7 +105,7 @@ Housing_Listings A:AV
 
 ### Test-history checkpoint
 
-The P1–P5 hardening release added regression coverage for webhook promotion linkage, reserved AU/AV exclusion, and disposable inventory create/edit/delete history. The current repository verification is 134/134 automated tests, browser 1/1, and production build PASS. Historical earlier test counts in dated handoff/audit sections are retained as historical checkpoints.
+The P1–P5 hardening release added regression coverage for webhook promotion linkage, reserved AU/AV exclusion, and disposable inventory create/edit/delete history. At the 2026-10-05 historical checkpoint, repository verification was 134/134 automated tests, browser 1/1, and production build PASS. Historical earlier test counts in dated handoff/audit sections are retained as historical checkpoints.
 
 
 
@@ -162,4 +173,4 @@ Inventory sender/source routing is outside this CRM classification path and rema
 
 Points **40 Requirement field correctness**, **41 Property-matching inputs**, and **42 Property-matching results** are governed by the single canonical contract in `crm-source-audit-scheduler/AUDIT_CONTRACT.md` and the shared implementation in `src/crm-requirement-match-audit.mjs`. The scheduled runner fails closed unless the combined requirement/matching audit is complete. Do not duplicate or redefine these rules in this document.
 
-Current live population verified 2026-10-05: **253 promoted qualified leads**, **253 normalized requirement profiles**, **0 missing profiles**, and **71 active canonical inventory listings**. Requirement evidence remains a separate provenance layer and is not fabricated by this audit.
+Historical live population snapshot verified 2026-10-05: **253 promoted qualified leads**, **253 normalized requirement profiles**, **0 missing profiles**, and **71 active canonical inventory listings**. Requirement evidence remains a separate provenance layer and is not fabricated by this audit.

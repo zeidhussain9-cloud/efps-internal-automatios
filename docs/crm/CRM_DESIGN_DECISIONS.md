@@ -1,6 +1,17 @@
+## Authoritative current verified state — 2026-11-12
+
+- Render production: `easyfind-crm-d01-d05` LIVE from recovery commit `97dff533cfeee3138866277430a471ccc8369ac3`; Supabase Edge Function `whapi-crm-webhook` ACTIVE v10.
+- Current population: 371 CRM leads, 839 contact classifications, 18,970 CRM messages since 2026-10-05, 104 active inventory rows.
+- Webhook: 18,621/18,621 message events since 2026-10-05 linked to `crm_messages`; 0 current errors; 43 original phone-constraint errors retained in history.
+- Group messages: no current group message is linked to a lead timeline; 1,809 historical links removed with prior lead/chat associations preserved.
+- Deterministic scheduler: 922 completed / 0 failed since 2026-10-05. AI scheduler intentionally paused.
+- Inventory sync: 104 Sheet rows / 104 Supabase rows; five-minute cron active and verified HTTP 200.
+- Build PASS; 139/139 automated tests PASS; browser 1/1 PASS.
+- Full current evidence: `CRM_CURRENT_VERIFIED_STATE.md` and `CRM_RECOVERY_AUDIT_2026-11-12.md`.
+
 # EasyFind CRM — Design Decision Register
 
-## Authoritative current verified state — 2026-10-05
+## Historical verified state — 2026-10-05
 
 This is the latest repository/production checkpoint. Older dated sections in maintained documents are historical evidence and must not be interpreted as current state.
 

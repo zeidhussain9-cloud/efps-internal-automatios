@@ -1,18 +1,31 @@
-## Current production audit — 2026-10-01 (post-reconciliation)
+## Authoritative current verified state — 2026-11-12
+
+Older dated checkpoints below are historical evidence and are not current-state declarations.
+
+- Production branch `crm-ui-dashboard`; Render LIVE commit `97dff533cfeee3138866277430a471ccc8369ac3`, deployment `dep-dbqo57o473hc73881mdg`.
+- Supabase project `qttcutwzehtskfcwxkwj`; `whapi-crm-webhook` ACTIVE v10.
+- CRM: 371 leads, 839 classifications, 18,970 messages since 2026-10-05.
+- WhAPI since 2026-10-05: 18,621 message events; 18,621 linked to `crm_messages`; 0 current errors; 43 original errors retained in `processing_error_history`.
+- Group messages remain evidence but never attach to a lead timeline; 1,809 historical links were removed and prior associations retained in `reconciliation_history`.
+- Inventory: 104 canonical Sheet rows and 104 active Supabase rows; five-minute sync active and verified HTTP 200.
+- Deterministic scheduler: 922 completed / 0 failed since 2026-10-05; AI scheduler intentionally paused.
+- Full detail: `CRM_CURRENT_VERIFIED_STATE.md` and `CRM_RECOVERY_AUDIT_2026-11-12.md`.
+
+## Historical production audit — 2026-10-01 (post-reconciliation)
 
 See the authoritative current-state block at the top of this document for the verified Render/Supabase checkpoint.
 
-## Current production truth — 2026-09-30
+## Historical production truth — 2026-09-30
 
 This document contains historical source-of-truth decisions below. The current operational CRM truth is now split by provenance: the audited local SQLite extraction remains the historical evidence set, while Supabase is the production operational store for the connected source `+919148338801`. Live WhAPI messages enter through the Supabase webhook boundary and are persisted in `crm_webhook_events` before downstream reconciliation.
 
-Current production baseline: 253 leads, 389 classifications, 8 pending classifications, 253 promoted, 9,224 messages, and 3,025 persisted webhook events with 0 failed processing records.
+Historical production baseline at the 2026-09-30 checkpoint: 253 leads, 389 classifications, 8 pending classifications, 253 promoted, 9,224 messages, and 3,025 persisted webhook events with 0 failed processing records.
 
 The older statements in this document that WhAPI was a future integration are historical and are superseded by this section.
 
 # EasyFind CRM — Source-of-Truth Reconciliation
 
-## Authoritative current verified state — 2026-10-05
+## Historical verified state — 2026-10-05
 
 This is the latest repository/production checkpoint. Older dated sections in maintained documents are historical evidence and must not be interpreted as current state.
 

@@ -1,23 +1,19 @@
 # EasyFind CRM Documentation
 
-## Authoritative current verified state — 2026-10-04 00:49 IST
+## Authoritative current verified state — 2026-11-12
 
 Older dated checkpoints below are historical evidence and are not current-state declarations.
 
-- Deployment branch: crm-ui-dashboard
-- Render: easyfind-crm-d01-d05 / srv-darsv560tbcc73cu4ip0
-- Supabase: qttcutwzehtskfcwxkwj
-- Production source: +919148338801
-- Current snapshot: 253 leads; 9,224 messages; 3,025 persisted WhAPI webhook events; 277 AI runs; 214 drafts; 389 classifications; 88 inventory rows (71 Available / 17 Rented Out).
-- Classification status: 239 promoted; 88 classified; 32 excluded; 3 pending.
-- Group Message is a first-class Unqualified classification for pending webhook contacts whose chat_id ends in @g.us.
-- The group rule is implemented in both webhook execution paths, audited, and the 14 currently pending group-originated contacts have been backfilled.
+- Production: Render `easyfind-crm-d01-d05` / `srv-darsv560tbcc73cu4ip0`, LIVE deployment `dep-dbqo57o473hc73881mdg`, commit `97dff533cfeee3138866277430a471ccc8369ac3` on `crm-ui-dashboard`.
+- Supabase: `qttcutwzehtskfcwxkwj`; `whapi-crm-webhook` ACTIVE v10.
+- CRM: 371 leads; 839 classifications; 18,970 messages since 2026-10-05.
+- Webhooks since 2026-10-05: 18,621 message events, all linked to `crm_messages`, 0 current errors; 43 original errors retained in `processing_error_history`.
+- Group messages remain evidence but never attach to a lead timeline; 1,809 historical group-message lead links were removed with prior associations retained in `reconciliation_history`.
+- Inventory: 104 active rows (87 Available / 17 Rented Out); five-minute Sheet sync is active and returned consecutive HTTP 200 responses after the fix.
+- Deterministic scheduler: 922 completed runs / 0 failed since 2026-10-05. AI scheduler intentionally paused; no automatic WhatsApp sends.
+- Verification: build PASS; 139/139 automated tests PASS; browser 1/1 PASS.
 
-### Test-history checkpoint
-
-The P1–P5 hardening release added regression coverage for webhook promotion linkage, reserved AU/AV exclusion, and disposable inventory create/edit/delete history. The final repository verification was 71/71 automated tests, browser 1/1, and production build PASS. Historical earlier test counts in dated handoff/audit sections are retained as historical checkpoints.
-
-
+See `CRM_CURRENT_VERIFIED_STATE.md` for the full current evidence and `CRM_RECOVERY_AUDIT_2026-11-12.md` for the dated recovery record.
 
 ## Canonical working branch
 
@@ -52,7 +48,7 @@ The original prototype was synthetic-only. That dated boundary is retained for h
 `steering.md` at repository root is the **dedicated, executable system prompt** for the hosted CRM Ollama adapter. It is deliberately distinct from the repository agent protocol `CORE_STEERING.md` and from canonical business facts in `docs/BUSINESS_CONTEXT.md`. Its limited EFPS context is loaded server-side and cached once per process; the fictional pilot remains the only authorized model input. See `CRM_AI_AND_LEAD_IMPORT_GATE_2026-09-27.md` for the verified hosted response and remaining data-import gates.
 
 
-## 2026-10-01 — Current production closure status
+## 2026-10-01 — Historical production closure status
 
 The CRM browser regression is fixed and D07 is resolved on `crm-ui-dashboard`. D07 covers operator session security, sensitive-data masking, reversible archive, audit visibility, explicit export controls, retention/deletion boundaries and offline handling. D08 remains open.
 
@@ -84,4 +80,4 @@ The CRM AI workspace is now production-enabled on Render service `srv-darsv560tb
 
 Points **40 Requirement field correctness**, **41 Property-matching inputs**, and **42 Property-matching results** are governed by the single canonical contract in `crm-source-audit-scheduler/AUDIT_CONTRACT.md` and the shared implementation in `src/crm-requirement-match-audit.mjs`. The scheduled runner fails closed unless the combined requirement/matching audit is complete. Do not duplicate or redefine these rules in this document.
 
-Current live population verified 2026-10-05: **253 promoted qualified leads**, **253 normalized requirement profiles**, **0 missing profiles**, and **71 active canonical inventory listings**. Requirement evidence remains a separate provenance layer and is not fabricated by this audit.
+Historical live population snapshot verified 2026-10-05: **253 promoted qualified leads**, **253 normalized requirement profiles**, **0 missing profiles**, and **71 active canonical inventory listings**. Requirement evidence remains a separate provenance layer and is not fabricated by this audit.

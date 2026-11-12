@@ -1,62 +1,31 @@
 # EasyFind CRM — Canonical Data Model
 
-## Authoritative current verified state — 2026-10-05
+## Authoritative current verified state — 2026-11-12
 
 Older dated checkpoints below are historical evidence and are not current-state declarations.
 
-- Deployment branch: crm-ui-dashboard
-- Render: easyfind-crm-d01-d05 / srv-darsv560tbcc73cu4ip0
-- Supabase: qttcutwzehtskfcwxkwj
-- Production source: +919148338801
-- Current snapshot: 253 leads; 9,224 messages; 3,025 persisted WhAPI webhook events; 277 AI runs; 214 drafts; 389 classifications; 88 inventory rows (71 Available / 17 Rented Out).
-- Classification status: 239 promoted; 88 classified; 32 excluded; 3 pending.
-- Group Message: persisted webhook evidence is used as a deterministic exclusion signal for pending group chats; exact current group-contact count is not reasserted in this checkpoint.
+- Deployment branch: `crm-ui-dashboard`; Render deployment `dep-dbqo57o473hc73881mdg` is LIVE from commit `97dff533cfeee3138866277430a471ccc8369ac3`.
+- Supabase: `qttcutwzehtskfcwxkwj`; Edge Function `whapi-crm-webhook` ACTIVE v10.
+- Current population: 371 leads (138 deterministic auto-qualified), 839 contact classifications, 18,970 CRM messages since 2026-10-05, and 104 active inventory rows (87 Available / 17 Rented Out).
+- Webhook message events since 2026-10-05: 18,621 / 18,621 linked to `crm_messages`; 0 current processing errors; 43 original phone-constraint errors retained in `processing_error_history`.
+- Phone-null message events are retained in `crm_messages` without a contact classification or fabricated phone. Group messages are retained but never linked to a promoted lead timeline.
+- Historical group-message cleanup unlinked 1,809 messages from lead timelines; original lead/chat associations are preserved in `reconciliation_history`.
+- Deterministic scheduler: 922 completed runs / 0 failed since 2026-10-05. AI scheduler remains intentionally paused.
 
 ### Current operational flow
 
-WhAPI +919148338801
-  -> crm_webhook_events (persist + deduplicate)
-  -> deterministic group gate when chat_id ends with @g.us
-       -> Group Message / excluded for pending contacts
-       -> otherwise pending classification
-  -> crm_messages + classification registry
-  -> operator classification update
-       -> non-qualified: remains outside CRM leads
-       -> Qualified Lead: audited promotion transaction
+WhAPI +919148338801 -> `crm_webhook_events` (durable first write) -> `crm_process_webhook_event` -> `crm_messages` for every message event -> optional `crm_contact_classifications` when a valid personal phone exists -> deterministic scheduler -> operator-qualified promotion into `crm_leads`.
+
+Group chat detection uses `chat_id` ending in `@g.us`. A group message is never linked to a lead timeline, even if its sender phone already belongs to a promoted contact. Existing personal contact classification is preserved and not demoted.
 
 ### Classification contract
 
-The first-class contact classification codes include group_message with label Group Message. It is an Unqualified classification and does not create a crm_leads row. The webhook rule preserves group chat ID/name in evidence and writes an audit activity record.
+The first-class contact classification code `group_message` has label Group Message and is Unqualified. It does not create a `crm_leads` row. A phone-null group event is stored as a message with null `classification_id` and null `lead_id`; the raw event payload remains the evidence source.
 
 ### Test-history checkpoint
 
-The P1–P5 hardening release added regression coverage for webhook promotion linkage, reserved AU/AV exclusion, and disposable inventory create/edit/delete history. The current repository verification is 134/134 automated tests, browser 1/1, and production build PASS. Historical earlier test counts in dated handoff/audit sections are retained as historical checkpoints.
+Current repository verification: production build PASS, 139/139 automated tests PASS, browser regression 1/1 PASS. The browser test used the installed Chrome executable via `CHROME_PATH` because the Playwright-managed Chromium download was unavailable in the Mac environment.
 
-
-
-**Canonical repository:** `zeidhussain9-cloud/efps-internal-automatios`  
-**Branch:** `crm-ui-dashboard`  
-**Status (2026-10-01):** Production CRM UI is live on `crm-ui-dashboard` / Render `easyfind-crm-d01-d05`. Current production source is `+919148338801`; historical and live data are reconciled in Supabase.
-
-## Current production checkpoint — 2026-10-01
-
-- Render `easyfind-crm-d01-d05` is live from the synchronized `crm-ui-dashboard` release.
-- Source-linked leads: 239; classifications: 362; pending classifications: 3; promoted classifications: 239; CRM messages: 8,098.
-- Webhook events: 436 total, 436 processed, 0 received, 0 processing, 0 failed.
-- `crm_ai_runs` now includes `input_tokens`, `output_tokens`, `total_tokens`, `estimated_cost_usd`, and `pricing_source`. These are populated from provider usage when available and are retained with the AI run used to create the draft.
-
-## Historical operational baseline — superseded by the 04:31 UTC checkpoint above — 2026-10-01
-
-- Production source: `+919148338801`
-- Source-linked CRM leads: 186
-- Contact classifications: 289
-- Pending classifications: 2
-- Promoted classifications: 186
-- Current CRM messages: 8,098
-- Webhook events: 73 (73 processed, 0 received, 0 failed)
-- Historical SQLite message archive: 5,286; this remains historical evidence and is not the current live message count.
-- The Contact Classification UI is operator-gated and uses explicit Update actions.
-- Qualified Lead is the only path into Lead CRM.
 
 ## 1. Lead data source
 
@@ -169,7 +138,7 @@ These are application-layer records, not replacements for the historical source 
 
 ## 7. Provisioned operational PostgreSQL schema
 
-Supabase `easyfind-crm` contains the operational CRM tables including the durable `crm_webhook_events` ingress/audit table. The source SQLite is historical migration evidence, not a second live editable database. Stable message deduplication uses `(source_number,provider_message_id)`. Live WhAPI ingress is enabled for `+919148338801`; webhook events are recorded before reconciliation into messages/classifications/leads. Contact classification is operator-gated. Tenant type is stored as a lead requirement, not as a separate header editor. Operational tables use RLS and browser-facing access remains protected through the CRM server. Media bytes are excluded; future references use Cloudinary URLs.
+Supabase `easyfind-crm` contains the operational CRM tables including the durable `crm_webhook_events` ingress/audit table. `crm_webhook_events.processing_error_history` retains reconciled exception text; `crm_webhook_events.reconciliation_history` retains prior lead/chat associations when historical group messages are unlinked. Both are JSONB arrays. The source SQLite is historical migration evidence, not a second live editable database. Stable message deduplication uses `(source_number,provider_message_id)`. Live WhAPI ingress is enabled for `+919148338801`; webhook events are recorded before reconciliation into messages/classifications/leads. `crm_messages.classification_id` and `lead_id` may be null for phone-less/group evidence. Contact classification is operator-gated. Tenant type is stored as a lead requirement, not as a separate header editor. Operational tables use RLS and browser-facing access remains protected through the CRM server. Media bytes are excluded; future references use Cloudinary URLs.
 
 
 ## 2026-10-01 — Production AI + normalized requirements implementation
@@ -223,4 +192,4 @@ The production AI workspace also consumes `crm_ai_runs`, `crm_requirement_eviden
 
 Points **40 Requirement field correctness**, **41 Property-matching inputs**, and **42 Property-matching results** are governed by the single canonical contract in `crm-source-audit-scheduler/AUDIT_CONTRACT.md` and the shared implementation in `src/crm-requirement-match-audit.mjs`. The scheduled runner fails closed unless the combined requirement/matching audit is complete. Do not duplicate or redefine these rules in this document.
 
-Current live population verified 2026-10-05: **253 promoted qualified leads**, **253 normalized requirement profiles**, **0 missing profiles**, and **71 active canonical inventory listings**. Requirement evidence remains a separate provenance layer and is not fabricated by this audit.
+Current live population verified 2026-11-12: **371 CRM leads**, **138 deterministic auto-qualified leads**, **104 active canonical inventory listings**, and **0 webhook message events missing a crm_messages link** since 2026-10-05. Requirement evidence remains a separate provenance layer and is not fabricated by this audit.

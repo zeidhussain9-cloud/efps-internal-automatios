@@ -1,6 +1,6 @@
 # CRM Deterministic Classification Engine
 
-> Verified 2026-10-04 01:19 IST against production Supabase and the live Render release.
+> Verified 2026-11-12 14:45 IST against production Supabase, the live Render release and scheduler history. Older dated checkpoints are historical.
 
 ## Purpose
 
@@ -21,7 +21,7 @@ New messages for a pending contact continue attaching to the same classification
 
 ## Decision model
 
-1. Hard exclusions: persisted WhatsApp group chat evidence (@g.us), operator-confirmed Internal, Personal / Family, Agent / Partner, Vendor / Supplier, and other existing operator-controlled exclusions.
+1. Hard exclusions: persisted WhatsApp group chat evidence (@g.us), operator-confirmed Internal, Personal / Family, Agent / Partner, Vendor / Supplier, and other existing operator-controlled exclusions. Group messages remain stored but are never linked to a promoted lead timeline.
 2. Qualification Gate A: customer-originated intent.
 3. Qualification Gate B: property or requirement evidence.
 4. Gate A + Gate B: Qualified Lead.
@@ -53,21 +53,19 @@ A deterministic Qualified Lead is persisted with classification_source=determini
 
 ## Current production verification
 
-- Current classifications: 362
-- Promoted Qualified Leads: 239
-- Classified Unqualified: 88
-- Excluded: 32
-- Waiting for Classification: 3
-- Deterministic scheduler rule version: 1.0.0
-- Latest activation run: 9 candidates; 6 qualified; 0 unqualified; 3 pending; 0 failures
-- AI runs triggered by deterministic activation: 0
+- Contact classifications: **839** total — 371 promoted, 88 classified, 96 pending, 284 excluded.
+- CRM leads: **371**; `auto_qualified=true`: **138**; `auto_qualified=false`: 233.
+- Deterministic scheduler since 2026-10-05: **922 completed / 0 failed**; latest observed run 2026-11-12 09:00 UTC.
+- Rule version: 1.0.0.
+- AI runs triggered by deterministic classification: 0.
+- AI scheduler `crm_ai_scheduler_6h` remains intentionally paused.
 
 ## Validation
 
 - Live CRM evidence corpus reviewed.
 - Production dry-run: 9 considered / 6 qualified / 3 pending / 0 failures.
 - Production activation run: 9 considered / 6 qualified / 3 pending / 0 failures.
-- 134/134 automated tests.
+- 139/139 automated tests.
 - Browser regression 1/1.
 - Production Render health 200.
 - Persisted classification and audit verification.
@@ -88,4 +86,4 @@ Existing historical property_listing_sent rows remain historical CRM data. The n
 
 Points **40 Requirement field correctness**, **41 Property-matching inputs**, and **42 Property-matching results** are governed by the single canonical contract in `crm-source-audit-scheduler/AUDIT_CONTRACT.md` and the shared implementation in `src/crm-requirement-match-audit.mjs`. The scheduled runner fails closed unless the combined requirement/matching audit is complete. Do not duplicate or redefine these rules in this document.
 
-Current live population verified 2026-10-05: **253 promoted qualified leads**, **253 normalized requirement profiles**, **0 missing profiles**, and **71 active canonical inventory listings**. Requirement evidence remains a separate provenance layer and is not fabricated by this audit.
+Current live population verified 2026-11-12: **371 CRM leads**, **138 deterministic auto-qualified leads**, **104 active canonical inventory listings**, and **922 successful deterministic scheduler runs since 2026-10-05**. Requirement evidence remains a separate provenance layer and is not fabricated by this audit.

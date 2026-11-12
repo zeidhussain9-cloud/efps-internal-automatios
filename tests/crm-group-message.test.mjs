@@ -54,3 +54,11 @@ test('legacy null-phone message backfill is bounded and includes processed missi
  assert.match(migration,/processing_status='processed' AND message_id IS NULL/);
  assert.match(migration,/ORDER BY id LIMIT 500 FOR UPDATE SKIP LOCKED/);
 });
+test('historical group-message reconciliation preserves prior links and removes lead attachment',async()=>{
+ const migration=await read('db/migrations/20261112160000_crm_unlink_historical_group_messages.sql');
+ assert.match(migration,/reconciliation_history=e\.reconciliation_history/);
+ assert.match(migration,/previous_lead_id/);
+ assert.match(migration,/SET lead_id=NULL/);
+ assert.match(migration,/UPDATE public\.crm_messages m/);
+ assert.doesNotMatch(migration,/SET classification_id=NULL/);
+});

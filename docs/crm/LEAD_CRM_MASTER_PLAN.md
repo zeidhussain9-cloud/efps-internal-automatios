@@ -1,6 +1,6 @@
 # EFPS CRM — Master Plan / Current Execution State
 
-> Current verified snapshot: 2026-10-04 00:49 IST. Older dated checkpoints are historical evidence and superseded.
+> Current verified snapshot: 2026-11-12 14:45 IST. Older dated checkpoints below are historical evidence and superseded.
 
 ## Production baseline
 
@@ -36,12 +36,12 @@ Deterministic OOC assignment and Group Message classification are implemented wi
 
 ## Current production snapshot
 
-253 leads; 9,222 messages; 3,023 WhAPI webhook events; 277 AI runs; 214 drafts; 389 classifications; 71 active inventory listings.
-Classification status: 253 promoted / 88 classified / 40 excluded / 8 pending.
+371 CRM leads; 138 deterministic auto-qualified; 839 contact classifications; 18,970 CRM messages since 2026-10-05; 18,621 WhAPI message events since 2026-10-05, all linked; 104 active inventory listings (87 Available / 17 Rented Out).
+Deterministic scheduler: 922 completed / 0 failed since 2026-10-05. AI scheduler remains intentionally paused.
 
 ## Group Message gate
 
-Pending contacts whose persisted webhook chat_id ends in @g.us are automatically assigned Group Message with status excluded. Existing promoted leads are preserved and operator-classified records are not overwritten.
+Group messages are retained as message evidence and never attached to a promoted lead timeline. Phone-null group events do not create contact classifications. Existing personal contact classifications are preserved and not demoted. Historical erroneous group-to-lead links have been removed with their prior associations retained in reconciliation_history.
 
 Independent encrypted backup/isolated restore proof and least-privilege AWS credential rotation require separately provisioned infrastructure/credentials. They are the only infrastructure items that should remain open in the production hardening register.
 
@@ -57,4 +57,4 @@ Use `docs/crm/CRM_CURRENT_VERIFIED_STATE.md` as the current operational source. 
 
 Points **40 Requirement field correctness**, **41 Property-matching inputs**, and **42 Property-matching results** are governed by the single canonical contract in `crm-source-audit-scheduler/AUDIT_CONTRACT.md` and the shared implementation in `src/crm-requirement-match-audit.mjs`. The scheduled runner fails closed unless the combined requirement/matching audit is complete. Do not duplicate or redefine these rules in this document.
 
-Current live population verified 2026-10-05: **253 promoted qualified leads**, **253 normalized requirement profiles**, **0 missing profiles**, and **71 active canonical inventory listings**. Requirement evidence remains a separate provenance layer and is not fabricated by this audit.
+Historical live population snapshot verified 2026-10-05: **253 promoted qualified leads**, **253 normalized requirement profiles**, **0 missing profiles**, and **71 active canonical inventory listings**. Requirement evidence remains a separate provenance layer and is not fabricated by this audit.

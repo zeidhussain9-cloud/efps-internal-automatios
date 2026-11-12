@@ -1,167 +1,42 @@
-# CRM UI branch reconciliation — current verified state
+# CRM UI branch and release reconciliation
 
-> Verified 2026-10-04 00:49 IST. Historical recovery/reconciliation sections below are retained as historical evidence and superseded.
+> Verified 2026-11-12 14:50 IST against GitHub, the Mac worktrees and the live Render deployment.
 
-- Intended branches for this workstream: main and crm-ui-dashboard.
-- Render deploy branch: crm-ui-dashboard.
-- Contact Classification includes the first-class Group Message / group_message Unqualified category.
-- Pending WhatsApp group traffic is automatically routed to Group Message using persisted webhook chat_id suffix evidence (@g.us).
-- Current source snapshot: 253 leads; 9,224 messages; 3,025 persisted WhAPI webhook events; 277 AI runs; 214 drafts; 389 classifications; 88 inventory rows (71 Available / 17 Rented Out).
-- Classification status: 239 promoted / 88 classified / 32 excluded / 3 pending.
+## Canonical branch model
 
-## Current release evidence
+- `main`: canonical release/integration branch.
+- `crm-ui-dashboard`: canonical CRM implementation and Render deployment branch.
+- Render deploys from `crm-ui-dashboard`.
+- Before this recovery release, `main` was at `0aae093b8b4fc524aa731d16cf5603d39b830598`; the CRM branch release commit `97dff533cfeee3138866277430a471ccc8369ac3` includes that main checkpoint as its parent. This permits a fast-forward reconciliation without force-push.
+- Final release closeout advances `main` to the verified `crm-ui-dashboard` head and verifies `tree(main) == tree(crm-ui-dashboard)`.
+- GitHub lists four additional Dependabot refs tied to open PRs #93, #94, #96 and #97. These are automation PR heads, not human development/deployment branches; retain them while their PRs remain open. Do not merge their major dependency upgrades without separate compatibility testing.
 
-The release record reports the crm-ui-dashboard commit SHA, tree SHA, CI result, Render deployment ID, Supabase Edge Function version, Supabase migration version, and final equality of main and crm-ui-dashboard trees.
+## Recovery release evidence
 
-## Historical evidence
+- Render service: `easyfind-crm-d01-d05` / `srv-darsv560tbcc73cu4ip0`.
+- Live deployment at the recovery checkpoint: `dep-dbqo57o473hc73881mdg`, commit `97dff533cfeee3138866277430a471ccc8369ac3`.
+- Supabase project: `qttcutwzehtskfcwxkwj`; `whapi-crm-webhook` ACTIVE v10.
+- Production health and root routes return HTTP 200.
+- Inventory sync returned consecutive HTTP 200 responses at five-minute cadence with 104 rows and 0 changes on the stable runs.
+- WhAPI: 18,621/18,621 message events since 2026-10-05 linked to `crm_messages`; 0 current errors.
+- Group messages are not attached to lead timelines; 1,809 historical group links were removed with prior associations retained.
+- Deterministic scheduler: 922 completed / 0 failed since 2026-10-05; AI scheduler remains paused.
 
-### 2026-10-02 — Replit feedback branch recovery and line-by-line audit checkpoint
+## Local checkout
 
-Historical recovery record: the former isolated branch `crm-ui-feedback-polish-2026-10-02` was recovered after the Replit workspace exhausted its credits. The branch is based directly on production checkpoint `97b43a7d158eb8b3cd773ed3febb45c4f8a52540` and contains the recovered UI/inventory implementation plus regression coverage.
+- Repository: `/Users/zeidzakir/Projects/efps-internal-automatios`.
+- CRM worktree: `/Users/zeidzakir/Projects/efps-internal-automatios/leads_automation/crm-ui-dashboard`.
+- The nested CRM worktree tracks `crm-ui-dashboard`; the root worktree tracks `main`.
+- The unrelated pre-existing workspace files were preserved. No clean/reset operation was used on unrelated files.
+- After GitHub branch updates, fetch and sync both worktrees from GitHub; do not treat a local-only commit as canonical.
 
-### Audited implementation extracted for verification
+## Release gate
 
-- Lead cards now expose persisted `crm_leads.classification` separately from operational `crm_leads.lead_type`; missing classification is rendered as `Not recorded` and is not inferred from age, message history, budget, or AI output.
-- Lead cards expose a persisted overdue-follow-up count derived from incomplete follow-ups whose due time has passed. No financial-risk label is inferred from budget.
-- Lead status tones are secondary, low-contrast semantic styling and remain text-labelled; color is not the only meaning.
-- Lead-card classification spacing and mobile hierarchy were hardened with explicit identity-to-classification separation and narrow-screen overflow coverage.
-- Inventory KPI cards remain clickable and use full-inventory summaries/facets rather than page counts.
-- Inventory search, status/BHK/locality/photo filters, sorting, and 24-row pagination now compose through the protected inventory overview response. Filter/sort changes reset to page zero; the browser ignores stale inventory/audit responses.
-- Inventory pagination has explicit query validation and deterministic filter/sort/page regression coverage.
-- Global and lead Activity requests use cancellation guards so stale responses cannot overwrite current state.
-- Contact Classification filter/source changes reset pagination without issuing a stale page response.
-- Browser regression coverage now exercises inventory page 2, filter reset, classification visibility, overdue attention, mobile classification spacing, and horizontal-overflow safety.
+1. Commit and push implementation to `crm-ui-dashboard`.
+2. Verify build, full automated tests, browser regression and production-specific checks.
+3. Wait for Render to report the exact candidate LIVE; verify Supabase and external sync results.
+4. Refresh current-state docs with production evidence.
+5. Fast-forward `main` to the verified CRM branch head; verify both refs have the same tree.
+6. Confirm only the two canonical human branches remain; open Dependabot refs are retained only while their PRs are open.
 
-### Audit exclusions / corrections
-
-- Replit-only `.replit` and startup-instruction asset were removed from the promotion candidate.
-- Replit-mutated dependency ranges and package-firewall lockfile URLs were removed; the production `package.json` and `package-lock.json` were restored to the verified `97b43a7` baseline.
-- No production database write, webhook/integration change, schema migration, or Render deployment is included in this checkpoint.
-
-### Verification state
-
-Implementation review is complete at the repository diff level. Build, full automated tests, browser regression, production deployment, and branch reconciliation remain evidence-gated until the recovered candidate is executed and verified. This section must not be interpreted as a production-live claim.
-
-# CRM UI branch reconciliation
-
-## Historical feedback branch record — reconciled and retired
-
-Historical work was isolated on the former `crm-ui-feedback-polish-2026-10-02` branch. The production reconciliation details below remain unchanged and do not include this branch. This work adds only CRM UI/read-only overview behavior and regression coverage; no merge, deployment, production-data write, integration change, or schema migration has been performed. Record the branch’s local verification separately from the production verification below.
-
-## Authoritative current verified state — 2026-10-05 01:19 IST
-
-This is the latest repository/production checkpoint. Older dated sections in maintained documents are historical evidence and must not be interpreted as current state.
-
-- **CRM deployment branch:** `crm-ui-dashboard`
-- **CRM commit:** `5b86f40666e467c3ca8350ff24c9fb2a966afe8e`
-- **CRM tree:** `3fb6f74f5335428faf9afae8e05d47e536a9b413`
-- **main:** reconciled release branch
-- **main:** `0b93f7f25fa579a6b366b74e731bbe328be414de`
-- **Tree equality:** `tree(main) == tree(crm-ui-dashboard)` = **TRUE**
-- **Render:** `easyfind-crm-d01-d05` / `srv-darsv560tbcc73cu4ip0`
-- **Live Render deployment:** current crm-ui-dashboard release = **LIVE**
-- **Live Render commit:** current crm-ui-dashboard release
-- **Production health:** `GET /health` = HTTP 200, `{"ok":true}`
-- **Production WhatsApp source:** `+919148338801`
-- **Supabase:** 253 leads; 9,224 messages; 3,025 persisted WhAPI webhook events; 389 classifications; 253 normalized lead requirements; 277 AI runs; 214 drafts; 190 AI cursors; 88 inventory rows.
-- **Classification status:** 253 promoted; 88 classified; 40 excluded; 8 pending = 389 total.
-- **Webhook status:** 3,025 persisted webhook events; 0 failed processing records.
-- **Message reconciliation:** 9,224 total CRM messages; current reconciliation evidence is maintained by the source-audit scheduler.
-- **Historical classification population:** 228 historical records; 140 qualified mappings.
-- **Inventory:** 88 active rows = 71 Available + 17 Rented Out; 1,996 sync runs; latest sync recorded 88 rows / 0 changed / 0 removed; inventory-change rows = 0.
-- **Cloudinary:** 696 stored distinct production URLs returned HTTP 200 with `image/*` content-type by direct HEAD checks from the production-machine network path.
-- **AI integrity:** draft→AI-run lead mismatch = 0; stale evidence references = 0; invalid cursor lead links = 0.
-- **Tests:** `npm run build` PASS; `npm test` 134/134 PASS; `npm run test:browser` 1/1 PASS.
-- **Supabase Edge Function:** `whapi-crm-webhook` ACTIVE v9.
-- **AWS legacy webhook:** no changes in the audited CRM hardening range.
-- **24-item CRM audit:** GREEN / VERIFIED.
-
-### Current operational flow
-
-```text
-WhAPI +919148338801
-  -> crm_webhook_events (persist + deduplicate)
-  -> webhook processor/reconciler
-  -> crm_messages + classification registry
-  -> operator classification update
-       -> non-qualified: remains outside CRM leads
-       -> Qualified Lead: audited promotion transaction
-            -> crm_leads + preserved messages
-            -> webhook event lead linkage reconciled
-
-CRM lead workspace
-  -> complete chronological conversation + normalized requirements + evidence + notes + prior AI runs + cursor
-  -> Bedrock primary / Sonnet fallback / Ollama fallback
-  -> persisted crm_ai_runs + crm_drafts + provenance
-  -> operator review/edit/pre-send grounding
-  -> manual WhatsApp action only; no automatic send
-
-Housing_Listings A:AV
-  -> CRM reads operational A:AT only
-  -> 88-row operational mirror in crm_inventory_snapshot
-  -> five-minute reconciliation
-  -> crm_inventory_sync_changes records future field-level changes
-```
-
-### Test-history checkpoint
-
-The P1–P5 hardening release added regression coverage for webhook promotion linkage, reserved AU/AV exclusion, and disposable inventory create/edit/delete history. The current repository verification is 134/134 automated tests, browser 1/1, and production build PASS. Historical earlier test counts in dated handoff/audit sections are retained as historical checkpoints.
-
-
-
-**Canonical UI branch:** `crm-ui-dashboard`
-**Reference branch:** `main` (reconciled repository branch; not the Render deployment branch)
-**Checkpoint:** 2026-10-01 — commit `da13083f6cb1f3c78ec3f4df661c515d43f556fa`, tree `f36a5ccb4bae742e83603b09bee59d01595ecf00`
-**`main` checkpoint:** `692bdcbbab51752b8eb7d4927921d1cfc4830de7`, tree `f36a5ccb4bae742e83603b09bee59d01595ecf00`
-
-## Current contract
-
-- GitHub contains only the intended `crm-ui-dashboard` and `main` branches for the UI workstream.
-- The UI source selector exposes all three audited EFPS WhatsApp source numbers: `+919148338801`, `+917975102130`, `+919902024973`. The connected live WhAPI ingress remains `+919148338801`.
-- Current production evidence verified 2026-10-05 is 253 leads, 389 classifications, 8 pending classifications, 253 promoted classifications, and 9,224 CRM messages for +919148338801.
-- Historical message provenance remains source-backed; SQLite message IDs are stored as `source_message_id`, not fabricated provider IDs.
-- The live CRM path is lead-only. There is no listener abstraction, no inventory listener, no lead listener or staged intake queue. `crm_contact_classifications` is the pre-lead registry and operator qualification gate.
-- WhAPI pushes `messages` webhooks to the Supabase Edge Function `whapi-crm-webhook`.
-- `crm_webhook_events` records the webhook activity before lead/message processing.
-- Existing promoted source-phone leads receive appended messages; unseen source-phone contacts remain classifications/messages until an operator selects Qualified Lead.
-- `crm_messages` is rendered chronologically by provider `message_at`.
-- Supabase Realtime signals the UI after message insertion; the browser does not poll WhAPI or poll the CRM workspace.
-- The CRM never sends WhatsApp messages automatically.
-- Render remains the authenticated UI/API host. Supabase is the live webhook ingress and CRM database. No AWS runtime is used for the CRM webhook.
-
-## Data gates completed
-
-The current production CRM registry contains 253 leads and 389 classifications, with 8 pending classifications and 253 promoted. Current CRM messages total 9,224 for the production source. No separate intake queue is used.
-
-## Live webhook gate
-
-Current persisted counts verified 2026-10-05 are 253 leads, 389 classifications, 9,224 messages and 3,025 persisted webhook events with 0 failed processing records.
-
-The WhAPI-to-Supabase live ingress is enabled for the current production source. Do not run another historical WhAPI API extraction as part of ordinary CRM reconciliation. Historical SQLite evidence and live webhook data remain distinct provenance classes.
-
-## Canonical technical document
-
-See `docs/crm/CRM_LIVE_WHAPI_WEBHOOK.md` for the complete live architecture, event table, lead association rules, ordering, Realtime behavior and security boundary.
-
-
-## Classification write fix — 2026-09-30
-
-A single operator test on contact `+919216063368` produced the definitive Render diagnostic: PostgreSQL `42P18`, `could not determine data type of parameter $5`, at the `insert lead` stage. The failing parameter was the source number passed into `jsonb_build_object()` during new-lead creation. The consolidated fix explicitly casts that parameter to `text`. Local build and the full 62-test suite passed before deployment. Render deployment `dep-daum4rtg1s2s73cntsv0` is live from commit `45dbab7b1ba92387e5e001f74929ad40c92be6a9`. The subsequent operator retry succeeded.
-
-## 2026-10-02 — Final recovered-candidate audit record
-
-- Candidate branch: `crm-ui-feedback-polish-2026-10-02`
-- Candidate HEAD: `1241b062dfbc7a96b139ec0a7f68d68f43baab51e`
-- Production/dashboard baseline: `97b43a7d158eb8b3cd773ed3febb45c4f8a52540`
-- Pull request: #60 — CRM UI feedback polish
-- Replit-only workspace artifacts removed before promotion.
-- Production dependency manifest and lockfile restored to the verified baseline.
-- Recovered implementation includes classification visibility/tone, overdue follow-up attention, inventory filtering/sorting/pagination, stale-response guards, classification pagination reset, and browser/server regression coverage.
-- No production merge, Render deployment, database mutation, schema migration, or webhook/integration change has been performed from this candidate.
-- Automated build/test evidence for this exact candidate is still pending; do not mark the candidate production-verified until `npm run build`, `npm test`, and `npm run test:browser` are observed passing.
-- `main` and `crm-ui-dashboard` remain unchanged from the verified production baseline until that evidence gate is satisfied.
-
-
-## 2026-10-02 synchronized state
-
-The recovered CRM UI feedback work is now on `crm-ui-dashboard`. The `main` branch has been reconciled to the same repository tree without rewriting main history. Replit-only workspace artifacts were excluded and the production dependency manifest was restored. Render deploys from `crm-ui-dashboard`; repository reconciliation is verified, while live runtime status must be confirmed from Render.
+Detailed live status is maintained in `CRM_CURRENT_VERIFIED_STATE.md`; the recovery evidence is in `CRM_RECOVERY_AUDIT_2026-11-12.md`.
