@@ -66,7 +66,10 @@ def process_closed_session(raw_text: str, *, row: dict | None = None, maps_clien
     if maps_url:
         resolved = maps.resolve(maps_url=maps_url)
         if resolved.confidence == "VERIFIED":
-            out["google_maps_url"] = resolved.canonical_url or maps_url
+            # Preserve the exact source URL (including maps.app.goo.gl/share.google short links)
+            # for mobile sharing. GoogleMapsClient expands it internally for geocoding.
+            # Persisting resolved.canonical_url here produces long desktop-style links.
+            out["google_maps_url"] = maps_url
             if not out.get("locality", "").strip():
                 out["locality"] = resolved.locality or out.get("locality", "")
             if not out.get("pincode", "").strip():
