@@ -36,7 +36,7 @@ Accepted explicit evidence includes property-type labels and boolean gating labe
 
 ## Maintenance evidence
 
-Only maintenance-specific labels or the specific `rent + maintenance` pattern can create maintenance candidates. Numeric values with `K`/lakh units are normalized to rupees. Source qualifiers such as `+ Water` and `Water Charges` are preserved. `Included` is represented by maintenance `0` and `maintenance_included = Yes`; an amount alone does not imply inclusion. `Included + Water` is also represented by maintenance `0 + Water` with `maintenance_included = Yes`.
+Only maintenance-specific labels or the specific `rent + maintenance` pattern can create maintenance candidates. Numeric values with `K`/lakh units are normalized to rupees. Source qualifiers such as `+ Water` and an exact `Water Charges` value are preserved. `Included` is represented by maintenance `0` and `maintenance_included = Yes`; an amount alone does not imply inclusion. `Included + Water` is represented in the canonical row as `Water Charges Additional` with `maintenance_included = Yes`.
 
 ## Numeric source variants
 
@@ -48,18 +48,18 @@ Pet status is source-grounded during deterministic normalization. Explicit negat
 
 ## Location and Maps URL separation
 
-A `📍 Name:` marker supplies a property/society-name candidate and a subsequent Maps URL supplies `google_maps_url`. A `📍 Landmark:` marker followed only by a Maps URL does not make the URL the landmark; `landmark` remains blank unless a real landmark value is supplied. The deterministic Maps URL is source-extracted without requiring network access during the read-only projection.
+A `📍 Name:` marker supplies a property/society-name candidate and a subsequent Maps URL supplies `google_maps_url`. A `📍 Landmark:` marker followed only by a Maps URL does not make the URL the landmark. After Maps enrichment, current Phase 1 fills a still-blank `landmark` with the resolved `locality` as a final fallback. The source Maps URL is extracted without network access during deterministic projection; live Maps enrichment expands it internally for verification but preserves the exact source URL in the stored `google_maps_url` field.
 
 ## Other source rules
 
 - Decimal BHK values such as `2.5 BHK` are preserved.
 - Later explicit source corrections supersede earlier explicit values for recurring multi-candidate fields.
-- Society, landmark, locality, subtype, highlights, age, tenant preference, bachelor preference, pet status, and servant-room source facts are extracted within source-message boundaries.
+- Society, landmark, locality, subtype, highlights, age, tenant preference, bachelor preference, pet status, and servant-room source facts are extracted within source-message boundaries. `property_subtype` is secondary and non-blocking: existing Apartment fallback for generic apartment-style records remains; unsupported/conflicting subtype evidence stays blank and does not hold readiness.
 - Placeholder-only values are blank for normalization purposes.
 
 ## Regression requirement
 
-Every production extraction/resolution defect must have a regression fixture for the exact triggering source shape. Current regression coverage must exercise segmentation, multi-candidate resolution, corrections, positive/negative gating, decimal BHK, maintenance units/qualifiers/inclusion, singular/decimal balcony counts, explicit pet negatives, Sheet-independence, dependent defaults, and normalized validation.
+Every production extraction/resolution defect must have a regression fixture for the exact triggering source shape. Current regression coverage must exercise segmentation, multi-candidate resolution, corrections, positive/negative gating, decimal BHK, maintenance units/qualifiers/inclusion, singular/decimal balcony counts, explicit pet negatives, Sheet-independence, dependent defaults, normalized validation, preservation of source Maps short links, optional unresolved subtype, the `Available` Stage-1 bootstrap, and the `Catalogue Ready` intake lifecycle value.
 
 ## Model-test interpretation
 
