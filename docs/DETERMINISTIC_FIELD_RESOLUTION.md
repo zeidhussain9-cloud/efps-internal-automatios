@@ -83,7 +83,7 @@ https://maps.app.goo.gl/...
 
 The marker name is a society/property-name candidate and the URL is a `google_maps_url` candidate. A `📍 Landmark:` marker followed by a Maps URL must not store the URL as `landmark`; the URL belongs to `google_maps_url`. If no actual landmark is supplied, current Phase 1 fills a blank `landmark` with the resolved locality as a final fallback.
 
-`google_maps_url` is a deterministic source field because the URL is present in `raw_message_text`. Maps resolution is a separate enrichment step that may verify/replace locality, obtain pincode and supply a place name. The resolver may expand a short URL internally, but the stored `google_maps_url` remains the exact source URL; do not persist the long canonical search URL.
+`google_maps_url` is a deterministic source field because the URL is present in `raw_message_text`. Maps resolution is a separate enrichment step. Only VERIFIED results may replace conflicting locality or society/place name and provide pincode. An unverified result does not supply location facts and routes the row to `Needs Review`. The resolver may expand a short URL internally, but the stored `google_maps_url` remains the exact source URL; do not persist the long canonical search URL.
 
 `locality` is source-owned during deterministic extraction: explicit `Property Location`, `Location`, `Locality`, or `Area` text is authoritative for the projection. Verified Maps may replace it later during enrichment; absence of Maps enrichment must not downgrade correct raw-source locality extraction.
 

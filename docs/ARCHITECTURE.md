@@ -1,32 +1,43 @@
 # EFPS Internal Automations — Architecture
 
-## Authoritative current verified state — 2026-10-05
+## Authoritative current verified state — 2026-11-13
 
-This is the latest repository/production checkpoint. Older dated sections in maintained documents are historical evidence and must not be interpreted as current state.
+This section supersedes the older dated operational snapshots below. Historical checkpoints remain only as audit history.
 
+- **GitHub repository:** `zeidhussain9-cloud/efps-internal-automatios`
 - **CRM deployment branch:** `crm-ui-dashboard`
-- **Verified deterministic implementation baseline:** `8996dd32d732b0d8fab17f41b42306c230cd1de1`
-- **CRM tree:** `c16bafdf7ed4e369d3171a4ee58f80a919630f10`
-- **main:** reconciled release branch
-- **main tree:** verified equal to crm-ui-dashboard at release close
-- **Tree equality:** `tree(main) == tree(crm-ui-dashboard)` = **TRUE**
-- **Render:** `easyfind-crm-d01-d05` / `srv-darsv560tbcc73cu4ip0`
-- **Live Render deployment:** current crm-ui-dashboard release = **LIVE**
-- **Live Render:** current crm-ui-dashboard release verified LIVE
-- **Production health:** `GET /health` = HTTP 200, `{"ok":true}`
-- **Production WhatsApp source:** `+919148338801`
-- **Supabase:** 253 leads; 9,224 messages; 3,025 persisted WhAPI webhook events; 389 classifications; 253 normalized lead requirements; 277 AI runs; 214 drafts; 190 AI cursors; 88 inventory rows.
-- **Classification status:** 253 promoted; 88 classified; 40 excluded; 8 pending = 389 total.
-- **Webhook status:** 3,025 persisted webhook events; 0 failed processing records.
-- **Message reconciliation:** 9,224 total CRM messages; current reconciliation evidence is maintained by the source-audit scheduler.
-- **Historical classification population:** 228 historical records; 140 qualified mappings.
-- **Inventory:** 88 active rows = 71 Available + 17 Rented Out; 1,377 sync runs; latest sync recorded 88 rows / 0 changed / 0 removed; inventory-change rows = 0.
-- **Cloudinary:** 696 stored distinct production URLs returned HTTP 200 with `image/*` content-type by direct HEAD checks from the production-machine network path.
-- **AI integrity:** draft→AI-run lead mismatch = 0; stale evidence references = 0; invalid cursor lead links = 0.
-- **Tests:** `npm run build` PASS; `npm test` 134/134 PASS; `npm run test:browser` 1/1 PASS.
-- **Supabase Edge Function:** `whapi-crm-webhook` ACTIVE v9.
-- **AWS legacy webhook:** no changes in the audited CRM hardening range.
-- **24-item CRM audit:** GREEN / VERIFIED.
+- **CRM branch HEAD:** `bd29293846df3b09fac67fae2f2b0c555c821ec7`
+- **Main branch HEAD:** `9adc3e04174f074f3ccf93c82eea3658ed4b0eb9`
+- **Shared tracked tree:** `c1404c064b12367cec7b54af33604a5b1091d278`; branch trees are identical.
+- **Render production service:** `easyfind-crm-d01-d05` / `srv-darsv560tbcc73cu4ip0`
+- **Latest Render deployment:** `bd29293846df3b09fac67fae2f2b0c555c821ec7` = LIVE.
+- **Production health:** GitHub production health smoke completed successfully after the latest deployment.
+- **Inventory schema:** 48 physical columns A:AV; runtime processing and CRM mirror are restricted to A:AT. Reserved AU/AV are excluded from operational writes and CRM projection.
+- **Inventory/Supabase mirror:** 104 active `housing_sheet` rows; latest verified snapshot sync was `2026-11-12 21:45:01 UTC`.
+- **Subtype contract:** mandatory supported `property_subtype`; Apartment is the no-evidence fallback; Penthouse maps to Apartment; conflicting/unsupported evidence requires Needs Review.
+- **Maps contract:** only VERIFIED results may override locality/place name; unverified Maps candidates are not applied and require Needs Review. The original source URL remains stored. Captions use only the original short mobile URL; long URLs are omitted and flagged.
+- **Notion intake:** repository adapter and optional SAM route are implemented and validated, but not activated in production. The optional `NotionSecretArn` must be configured before the Lambda/API route exists. Notion automation and an end-to-end acceptance test are still pending.
+- **WhatsApp:** v7.1 caption generation writes the Notion-only `whatsapp_post` field from explicit/verified facts. No WhatsApp message is sent by the intake adapter.
+- **Verification:** inventory contract 123/123; CRM unit/server tests 139/139; browser regression 1/1; SAM template validation/build and dependency packaging PASS.
+- **Production data:** this intake rollout has not inserted or modified Housing_Listings rows or historical listing records. Notion reference-page/database descriptions and the intake form-view label were updated.
+
+### Current operational flow
+
+```text
+Notion Property Intake (activation pending)
+  -> signed page-ID webhook
+  -> idempotent efps-sessions claim
+  -> canonical Inventory pipeline
+  -> Housing_Listings A:AT + Cloudinary photos
+  -> v7.1 whatsapp_post + Housing Listings Notion relation/status
+  -> existing Sheet-to-Supabase inventory sync (unchanged)
+
+WhAPI CRM webhook
+  -> existing event persistence/deduplication
+  -> CRM message/classification workflow
+  -> audited lead promotion
+  -> operator review and manual WhatsApp action only
+```
 
 ### Current WhAPI API safety boundary
 

@@ -1,67 +1,23 @@
 # Data Contracts
 
-## Authoritative current verified state — 2026-10-05
+## Authoritative current verified state — 2026-11-13
 
-This is the latest repository/production checkpoint. Older dated sections in maintained documents are historical evidence and must not be interpreted as current state.
+This section is the current verified checkpoint. Older dated figures below are historical and must not be treated as current production metrics.
 
-- **CRM deployment branch:** `crm-ui-dashboard`
-- **Verified deterministic implementation baseline:** `8996dd32d732b0d8fab17f41b42306c230cd1de1`
-- **CRM tree:** `c16bafdf7ed4e369d3171a4ee58f80a919630f10`
-- **main:** reconciled release branch
-- **main tree:** verified equal to crm-ui-dashboard at release close
-- **Tree equality:** `tree(main) == tree(crm-ui-dashboard)` = **TRUE**
-- **Render:** `easyfind-crm-d01-d05` / `srv-darsv560tbcc73cu4ip0`
-- **Live Render deployment:** current crm-ui-dashboard release = **LIVE**
-- **Live Render:** current crm-ui-dashboard release verified LIVE
-- **Production health:** `GET /health` = HTTP 200, `{"ok":true}`
-- **Production WhatsApp source:** `+919148338801`
-- **Supabase:** 253 leads; 9,224 messages; 3,025 persisted WhAPI webhook events; 389 classifications; 253 normalized lead requirements; 277 AI runs; 214 drafts; 190 AI cursors; 88 inventory rows.
-- **Classification status:** 253 promoted; 88 classified; 40 excluded; 8 pending = 389 total.
-- **Webhook status:** 3,025 persisted webhook events; 0 failed processing records.
-- **Message reconciliation:** 9,224 total CRM messages; current reconciliation evidence is maintained by the source-audit scheduler.
-- **Historical classification population:** 228 historical records; 140 qualified mappings.
-- **Inventory:** 88 active rows = 71 Available + 17 Rented Out; 1,377 sync runs; latest sync recorded 88 rows / 0 changed / 0 removed; inventory-change rows = 0.
-- **Cloudinary:** 696 stored distinct production URLs returned HTTP 200 with `image/*` content-type by direct HEAD checks from the production-machine network path.
-- **AI integrity:** draft→AI-run lead mismatch = 0; stale evidence references = 0; invalid cursor lead links = 0.
-- **Tests:** `npm run build` PASS; `npm test` 134/134 PASS; `npm run test:browser` 1/1 PASS.
-- **Supabase Edge Function:** `whapi-crm-webhook` ACTIVE v9.
-- **AWS legacy webhook:** no changes in the audited CRM hardening range.
-- **24-item CRM audit:** GREEN / VERIFIED.
-
-### Current operational flow
-
-```text
-WhAPI +919148338801
-  -> crm_webhook_events (persist + deduplicate)
-  -> webhook processor/reconciler
-  -> crm_messages + classification registry
-  -> operator classification update
-       -> non-qualified: remains outside CRM leads
-       -> Qualified Lead: audited promotion transaction
-            -> crm_leads + preserved messages
-            -> webhook event lead linkage reconciled
-
-CRM lead workspace
-  -> complete chronological conversation + normalized requirements + evidence + notes + prior AI runs + cursor
-  -> Bedrock primary / Sonnet fallback / Ollama fallback
-  -> persisted crm_ai_runs + crm_drafts + provenance
-  -> operator review/edit/pre-send grounding
-  -> manual WhatsApp action only; no automatic send
-
-Housing_Listings A:AV
-  -> CRM reads operational A:AT only
-  -> 88-row operational mirror in crm_inventory_snapshot
-  -> five-minute reconciliation
-  -> crm_inventory_sync_changes records future field-level changes
-```
-
-### Test-history checkpoint
-
-The P1–P5 hardening release added regression coverage for webhook promotion linkage, reserved AU/AV exclusion, and disposable inventory create/edit/delete history. The current repository verification is 134/134 automated tests, browser 1/1, and production build PASS. Historical earlier test counts in dated handoff/audit sections are retained as historical checkpoints.
-
-
-
-This is the canonical cross-module data ownership and contract reference for EFPS Internal Automations.
+- **Repository:** `zeidhussain9-cloud/efps-internal-automatios`
+- **CRM branch HEAD:** `bd29293846df3b09fac67fae2f2b0c555c821ec7`
+- **Main branch HEAD:** `9adc3e04174f074f3ccf93c82eea3658ed4b0eb9`
+- **Branch tree equality:** both branches resolve to `c1404c064b12367cec7b54af33604a5b1091d278`.
+- **Render:** latest `crm-ui-dashboard` deployment is LIVE; production health smoke passed.
+- **Housing inventory mirror:** 104 active rows in `crm_inventory_snapshot`; latest verified sync timestamp `2026-11-12 21:45:01 UTC`.
+- **Inventory validation:** 123 tests passed, including subtype, Maps, intake idempotency, caption, and projection regressions.
+- **CRM validation:** 139 unit/server tests passed; browser regression 1/1 passed.
+- **SAM validation:** template validation, clean build, generated-template validation, Python compilation, and Lambda dependency packaging passed.
+- **Subtype:** mandatory supported value; Apartment fallback only when no subtype evidence exists; Penthouse -> Apartment; conflicting/unsupported candidates remain unresolved and require Needs Review.
+- **Maps:** preserve the exact original source URL. Only VERIFIED Maps results may replace conflicting locality/place name; unverified candidates do not overwrite data and route to Needs Review.
+- **Notion intake:** adapter is in the repository; optional `NotionSecretArn` feature gate is not activated. No Notion-to-Sheet/Cloudinary production write has occurred. Automation and end-to-end acceptance remain pending.
+- **Supabase ownership:** the existing Sheet-to-`crm_inventory_snapshot` sync path is unchanged; the Notion adapter writes only the canonical Sheet and relies on that existing sync path.
+- **WhatsApp:** `whatsapp_post` is generated for Notion from explicit/verified v7.1 facts. The adapter does not send WhatsApp messages.
 
 ## Inventory contract
 

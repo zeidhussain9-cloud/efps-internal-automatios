@@ -48,7 +48,7 @@ Pet status is source-grounded during deterministic normalization. Explicit negat
 
 ## Location and Maps URL separation
 
-A `📍 Name:` marker supplies a property/society-name candidate and a subsequent Maps URL supplies `google_maps_url`. A `📍 Landmark:` marker followed only by a Maps URL does not make the URL the landmark. After Maps enrichment, current Phase 1 fills a still-blank `landmark` with the resolved `locality` as a final fallback. The source Maps URL is extracted without network access during deterministic projection; live Maps enrichment expands it internally for verification but preserves the exact source URL in the stored `google_maps_url` field.
+A `📍 Name:` marker supplies a property/society-name candidate and a subsequent Maps URL supplies `google_maps_url`. A `📍 Landmark:` marker followed only by a Maps URL does not make the URL the landmark. After Maps enrichment, current Phase 1 fills a still-blank `landmark` with the resolved `locality` as a final fallback. The source Maps URL is extracted without network access during deterministic projection; live Maps enrichment expands it internally for verification but preserves the exact source URL in the stored `google_maps_url` field. Only VERIFIED results may override conflicting source locality or society/place name. An unverified candidate is not applied and routes the row to `Needs Review`.
 
 ## Other source rules
 
