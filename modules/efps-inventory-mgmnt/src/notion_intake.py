@@ -443,7 +443,12 @@ def process_page(
     props = page.get("properties") or {}
     raw_text = _plain_text(props.get("Raw Property Data") or {})
     if not raw_text:
-        raise IntakeError("Raw Property Data is required")
+        note = "Raw Property Data is required before processing."
+        notion.update_page(page_id, {
+            "Intake Status": {"status": {"name": "Needs Review"}},
+            "Processing Notes": _rich(note),
+        })
+        return {"status": "Needs Review", "listing_id": "", "issues": [note]}
     photos = _photos(page)
     photo_signature = [
         {"type": x.get("type"), "name": x.get("name"), "path": urlparse(_file_url(x)).path}

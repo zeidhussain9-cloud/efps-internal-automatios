@@ -302,3 +302,17 @@ def test_async_worker_invocation_runs_page_processor(monkeypatch):
     result = intake.lambda_handler({"_efps_notion_worker": True, "page_id": page_id}, None)
     assert result["status"] == "Processed"
     assert result["listing_id"] == "EF-ASYNC"
+
+def test_blank_raw_property_data_is_marked_needs_review_without_claiming():
+    class FakeNotion:
+        def __init__(self): self.updates = []
+        def get_page(self, page_id):
+            return {"properties": {"Raw Property Data": {"rich_text": []}, "Photos": {"files": []}}}
+        def update_page(self, page_id, properties): self.updates.append(properties)
+    class NoCalls:
+        def __getattr__(self, name): raise AssertionError(f"unexpected call: {name}")
+    notion = FakeNotion()
+    result = intake.process_page("12345678-1234-1234-1234-123456789abc", notion=notion,
+                                 store=NoCalls(), sheets=NoCalls(), cloudinary=NoCalls())
+    assert result["status"] == "Needs Review"
+    assert notion.updates[0]["Intake Status"]["status"]["name"] == "Needs Review"
