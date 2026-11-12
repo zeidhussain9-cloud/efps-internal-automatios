@@ -194,7 +194,7 @@ def test_verified_maps_resolution_preserves_original_short_url():
 
 def test_missing_property_subtype_is_non_blocking_and_stays_blank():
     result = phase1.run_phase1(
-        "Property Type: Standalone\nRent: 40000",
+        "Property Type: Standalone\nProperty Subtype: Penthouse\nRent: 40000",
         row=initial_row("EF-TEST-SUBTYPE-OPTIONAL"),
     )
     assert result.row["internal_property_type"] == "Standalone"

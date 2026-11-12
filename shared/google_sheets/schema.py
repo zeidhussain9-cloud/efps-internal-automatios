@@ -72,7 +72,7 @@ _ROWS = [
 ("whatsapp_contact_link",PANEL,STAGE_1,(),(),"Fixed company contact link."),
 ("whatsapp_group_link",PANEL,STAGE_1,(),(),"Fixed company group link."),
 ("transaction_type",PANEL,STAGE_1,("Rent",),(),"Fixed for current rental workflow."),
-("property_subtype",PANEL,STAGE_2,("Apartment","Villa","Independent House","Duplex","Studio","Independent Floor"),(),"Secondary optional classification. Explicit supported subtype is retained; missing or unresolved subtype stays blank and does not block inventory readiness. Invalid non-empty values remain validation errors."),
+("property_subtype",PANEL,STAGE_2,("Apartment","Villa","Independent House","Duplex","Studio","Independent Floor"),(),"Secondary optional classification. Existing supported subtype normalization is retained; unsupported or conflicting subtype evidence remains blank and does not block inventory readiness. Invalid non-empty values remain validation errors."),
 ("city",PANEL,STAGE_1,("Bengaluru",),(),"Fixed for current inventory workflow."),
 ("posted_url",HOUSING_AGENT,STAGE_3,(),(),"Housing Portal downstream-owned."),
 ("posted_at",HOUSING_AGENT,STAGE_3,(),(),"Housing Portal downstream-owned."),

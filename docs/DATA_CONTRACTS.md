@@ -88,7 +88,7 @@ The completed `raw_message_text` is the only extraction source. Existing Sheet v
 - `locality`: use explicit `Property Location`, `Location`, `Locality`, or `Area`. This is deterministic source extraction. A verified Maps locality may replace it later during the separate enrichment stage.
 - `google_maps_url`: extract deterministic source URLs, including common short-link and Google Maps forms supported by the shared adapter. Read-only deterministic projection must not require network resolution.
 - `pincode`: optional/enrichment-owned unless explicitly written in source. A blank pincode is a valid deterministic result and must not by itself create `Needs Review`.
-- `property_subtype`: secondary optional field. Keep an explicitly resolved supported subtype; otherwise leave blank. Missing subtype is non-blocking and must not hold a listing in Needs Review. Invalid non-empty values remain validation errors.
+- `property_subtype`: secondary optional field. Existing Apartment fallback for generic apartment-style records remains; unsupported or conflicting subtype evidence stays blank and is non-blocking. Invalid non-empty values remain validation errors.
 - `maintenance`: normalize explicit maintenance values and the specific `rent + maintenance` form. Preserve source qualifiers such as `+ Water`. `Included` means `0` plus `maintenance_included = Yes`; `Included + Water` means `0 + Water` plus `maintenance_included = Yes`.
 - `property_highlights`: preserve explicit highlights. Otherwise construct only supported factual deterministic fragments. Blank is valid when no supported highlight is present.
 - `balconies`: accept explicit numeric `Balcony`/`Balconies` forms; a bare singular `Balcony` is one balcony.
