@@ -81,13 +81,13 @@ EFPS source messages commonly use a structured marker such as:
 https://maps.app.goo.gl/...
 ```
 
-The marker name is a society/property-name candidate and the URL is a `google_maps_url` candidate. A `📍 Landmark:` marker followed by a Maps URL must not store the URL as `landmark`; the URL belongs to `google_maps_url` and the landmark remains blank unless an actual landmark value is supplied.
+The marker name is a society/property-name candidate and the URL is a `google_maps_url` candidate. A `📍 Landmark:` marker followed by a Maps URL must not store the URL as `landmark`; the URL belongs to `google_maps_url`. If no actual landmark is supplied, current Phase 1 fills a blank `landmark` with the resolved locality as a final fallback.
 
-`google_maps_url` is a deterministic source field because the URL is present in `raw_message_text`. Maps resolution is a separate enrichment step that may verify/replace locality and obtain pincode.
+`google_maps_url` is a deterministic source field because the URL is present in `raw_message_text`. Maps resolution is a separate enrichment step that may verify/replace locality, obtain pincode and supply a place name. The resolver may expand a short URL internally, but the stored `google_maps_url` remains the exact source URL; do not persist the long canonical search URL.
 
 `locality` is source-owned during deterministic extraction: explicit `Property Location`, `Location`, `Locality`, or `Area` text is authoritative for the projection. Verified Maps may replace it later during enrichment; absence of Maps enrichment must not downgrade correct raw-source locality extraction.
 
-`society_name` may fall back to locality only after direct source parsing and enrichment have had an opportunity to establish a society/property name. `landmark` never inherits locality.
+`society_name` may fall back to locality only after direct source parsing and enrichment have had an opportunity to establish a society/property name. `landmark` currently falls back to resolved locality only after direct source parsing and Maps enrichment have had an opportunity to establish a real landmark.
 
 ### Numeric balcony source forms
 
@@ -110,7 +110,7 @@ Pincode is an enrichment field when it is not explicitly present in source text.
 `preferred_tenant_type` is the parent field and `bachelor_preference` is its dependent field. The live Sheet dropdowns are authoritative for exact values:
 
 - `preferred_tenant_type` = `Family` or `Open For All`.
-- `Family` -> `bachelor_preference` must be blank.
+- `Family` -> `bachelor_preference` must be blank unless the raw source explicitly says `Family & Female Bachelors`; that special source phrase resolves to `Open For All` + `Female Only `.
 - `Open For All` -> `bachelor_preference` defaults exactly to `Open for both`.
 - Explicit valid source evidence for `Female Only ` or `Male Only` overrides the default.
 
