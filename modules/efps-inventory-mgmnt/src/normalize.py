@@ -70,13 +70,9 @@ def _canonical_subtype(value:str)->str:
         if raw.lower()==canonical.lower():return canonical
     return ""
 def default_property_subtype(row:dict,raw_text:str)->dict:
-    explicit=_canonical_subtype(row.get("property_subtype","")); row["property_subtype"]=explicit
-    if explicit:return row
-    if _SUBTYPE_EVIDENCE.search(raw_text or ""):return row
-    if re.search(r"\b1\s*[- ]?\s*rk\b",raw_text or "",re.I):row["property_subtype"]="Studio"
-    elif re.search(r"\b(?:duplex\s+)?villa\b",raw_text or "",re.I):row["property_subtype"]="Villa"
-    elif _STANDALONE_WORDS.search(raw_text or ""):return row
-    else:row["property_subtype"]="Apartment"
+    # Subtype is intentionally secondary and optional. Never infer Apartment
+    # merely because the source omitted subtype evidence.
+    row["property_subtype"]=_canonical_subtype(row.get("property_subtype",""))
     return row
 def floor_for_standalone(row:dict)->dict:
     subtype=str(row.get("property_subtype","")).strip()
