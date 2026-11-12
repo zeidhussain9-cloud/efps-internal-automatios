@@ -279,3 +279,15 @@ def test_process_page_duplicate_delivery_does_not_write():
     result = intake.process_page("intake-page-id", notion=FakeNotion(), store=FakeStore(),
                                  sheets=NoCalls(), cloudinary=NoCalls())
     assert result == {"status": "already_processed", "listing_id": "EF-EXISTING"}
+
+def test_webhook_accepts_notion_automation_page_id_payload(monkeypatch):
+    import uuid
+    page_id = str(uuid.uuid4())
+    monkeypatch.setenv("NOTION_WEBHOOK_SECRET", "secret-value")
+    monkeypatch.setattr(intake, "process_page", lambda supplied: {"status": "Processed", "listing_id": "EF-TEST"} if supplied == page_id else (_ for _ in ()).throw(AssertionError(supplied)))
+    result = intake.lambda_handler(
+        {"headers": {"X-EFPS-Notion-Intake-Token": "secret-value"}, "body": json.dumps({"id": page_id})},
+        None,
+    )
+    assert result["statusCode"] == 200
+    assert json.loads(result["body"])["listing_id"] == "EF-TEST"
