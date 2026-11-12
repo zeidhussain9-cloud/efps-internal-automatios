@@ -75,11 +75,13 @@ export async function syncInventorySnapshot({rows,connectionString=process.env.D
    const incomingIds=[...new Set(rows.map(x=>x.row.listing_id))];
    if(incomingIds.length) await client.query(`UPDATE crm_inventory_snapshot SET deleted_at=$1,last_synced_at=$1 WHERE source_kind='housing_sheet' AND deleted_at IS NULL AND NOT(listing_id=ANY($2::text[]))`,[now,incomingIds]);
    else await client.query(`UPDATE crm_inventory_snapshot SET deleted_at=$1,last_synced_at=$1 WHERE source_kind='housing_sheet' AND deleted_at IS NULL`,[now]);
+   // The change-history table has an FK to crm_inventory_sync_runs.
+   // Create the parent row first in this transaction, then append its changes.
+   await client.query('INSERT INTO crm_inventory_sync_runs(run_id,source_kind,row_count,changed_count,removed_count) VALUES($1,$2,$3,$4,$5)',[runId,'housing_sheet',plan.total,plan.changed,plan.removed]);
    const changes=inventoryChangeRows(existing,rows,runId,now);
    if(changes.length) await client.query(`INSERT INTO crm_inventory_sync_changes(run_id,listing_id,change_type,field_name,old_value,new_value,source_hash_before,source_hash_after,changed_at)
      SELECT run_id,listing_id,change_type,field_name,old_value,new_value,source_hash_before,source_hash_after,changed_at
      FROM jsonb_to_recordset($1::jsonb) AS x(run_id text,listing_id text,change_type text,field_name text,old_value jsonb,new_value jsonb,source_hash_before text,source_hash_after text,changed_at timestamptz)`,[JSON.stringify(changes)]);
-   await client.query('INSERT INTO crm_inventory_sync_runs(run_id,source_kind,row_count,changed_count,removed_count) VALUES($1,$2,$3,$4,$5)',[runId,'housing_sheet',plan.total,plan.changed,plan.removed]);
    await client.query('INSERT INTO crm_activity(lead_id,actor,action,details) VALUES(NULL,$1,$2,$3::jsonb)',['housing-sheet-sync','inventory.sync.completed',JSON.stringify({run_id:runId,row_count:plan.total,changed_count:plan.changed,removed_count:plan.removed})]);
    await client.query('COMMIT');
    return {...plan,runId,syncedAt:now};

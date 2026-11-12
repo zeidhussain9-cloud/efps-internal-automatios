@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {diffInventory,inventoryChangeRows,projectSheetRows} from '../src/inventory-sync.mjs';
+import {diffInventory,inventoryChangeRows,projectSheetRows,syncInventorySnapshot} from '../src/inventory-sync.mjs';
 test('projects canonical Sheet rows and rejects duplicate IDs',()=>{
  const header=[];assert.deepEqual(projectSheetRows([]),[]);
  const row=[];row[0]='EF-2609-TEST';row[7]='Whitefield';row[13]='2 BHK';row[20]='50000';row[34]='https://res.cloudinary.com/x/image/upload/a.jpg, https://res.cloudinary.com/x/image/upload/b.jpg';
@@ -32,4 +32,17 @@ test('inventory change history reconstructs create, field edit and delete',()=>{
  const edited=inventoryChangeRows(old,incoming2,'run-2','2026-10-01T00:05:00Z');
  assert.ok(edited.some(x=>x.listing_id==='RT-1'&&x.field_name==='locality'&&x.old_value==='Whitefield'&&x.new_value==='Indiranagar'));
  assert.ok(edited.some(x=>x.listing_id==='RT-2'&&x.change_type==='deleted'));
+});
+
+
+test('sync writes the parent run before FK-dependent change history',async()=>{
+ const statements=[];
+ const client={query:async(sql)=>{statements.push(String(sql));if(String(sql).includes('SELECT listing_id,source_kind,source_hash,source_record,deleted_at'))return{rows:[]};return{rows:[]}},release(){}};
+ const pool={connect:async()=>client};
+ const rows=projectSheetRows([Object.assign([], {0:'FK-ORDER-1',7:'Whitefield',13:'2 BHK',20:'50000'})]);
+ await syncInventorySnapshot({rows,pool});
+ const runIndex=statements.findIndex(sql=>sql.includes('INSERT INTO crm_inventory_sync_runs'));
+ const changeIndex=statements.findIndex(sql=>sql.includes('INSERT INTO crm_inventory_sync_changes'));
+ assert.ok(runIndex>=0,'sync run parent row must be inserted');
+ assert.ok(changeIndex>runIndex,'change history must be inserted after its parent sync run');
 });

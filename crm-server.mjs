@@ -56,7 +56,7 @@ createServer(async(req,res)=>{
    const expected=createHmac('sha256',process.env.CRM_INVENTORY_SYNC_SECRET).update(ts).digest('hex');
    if(expected.length!==provided.length||!timingSafeEqual(Buffer.from(expected),Buffer.from(provided.toLowerCase()))){res.writeHead(401,security);return res.end('Invalid inventory sync authentication');}
    try{const {readCanonicalInventory,syncInventorySnapshot}=await import('./src/inventory-sync.mjs');const rows=await readCanonicalInventory(process.env);const result=await syncInventorySnapshot({rows});res.writeHead(200,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify({ok:true,...result}));}
-   catch(e){res.writeHead(502,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify({ok:false,error:'Inventory sync failed'}));}
+   catch(e){console.error('[inventory-sync] reconciliation failed',{code:e?.code||null,constraint:e?.constraint||null,table:e?.table||null,error_name:e?.name||null});res.writeHead(502,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify({ok:false,error:'Inventory sync failed'}));}
   }
   const mode=accessMode(process.env);
   if(mode==='misconfigured'){res.writeHead(503,security);return res.end('CRM access configuration incomplete');}

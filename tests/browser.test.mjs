@@ -19,7 +19,7 @@ test('production CRM browser journey uses only live-record surfaces',async()=>{
  const server=startServer();let browser;
  try{
   assert.equal(await waitForServer(),true,'server starts');
-  browser=await chromium.launch({headless:true});
+  browser=await chromium.launch({headless:true,...(process.env.CHROME_PATH?{executablePath:process.env.CHROME_PATH}:{})});
   const page=await browser.newPage();
   await page.route('**/api/db/leads*',route=>route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({
     leads:[
