@@ -21,12 +21,11 @@ def validate(row:dict)->list[str]:
     for key,value in FIXED.items():
         if row[key]!=value:errors.append(f"{key} must be {value}")
     if row["status"] not in ("Pending","Needs Review"):errors.append("status must be Pending or Needs Review after deterministic extraction")
-    if row["intake_status"] not in ("Raw","Processed"):errors.append("intake_status must be Raw or Processed")
+    if row["intake_status"] not in ("Raw","Processed","Catalogue Ready"):errors.append("intake_status must be Raw, Processed or Catalogue Ready")
     if not row["listing_id"]:errors.append("listing_id required")
     if not row["monthly_rent"]:errors.append("monthly_rent required")
     if row["BHK"] and not re.fullmatch(r"\d+(?:\.\d+)? BHK",str(row["BHK"])) and row["BHK"]!="1 RK":errors.append("invalid BHK")
-    if not row["property_subtype"]:errors.append("property_subtype unresolved")
-    elif row["property_subtype"] not in PROPERTY_SUBTYPES:errors.append("invalid property_subtype")
+    if row["property_subtype"] and row["property_subtype"] not in PROPERTY_SUBTYPES:errors.append("invalid property_subtype")
     if row["furnish_type"] and row["furnish_type"] not in FURNISH_TYPES:errors.append("invalid furnish_type")
     if row["preferred_tenant_type"] and row["preferred_tenant_type"] not in PREFERRED_TENANT_TYPES:errors.append("invalid preferred_tenant_type")
     if row["bachelor_preference"] and row["bachelor_preference"] not in BACHELOR_PREFERENCES:errors.append("invalid bachelor_preference")
@@ -58,7 +57,8 @@ def validate_raw(row:dict)->list[str]:
     if not row["onboarded_on"]:errors.append("onboarded_on required")
     for key,value in FIXED.items():
         if row[key]!=value:errors.append(f"{key} must be {value}")
-    for key in ("listing_state","posted_url","posted_at","error_notes","meta_catalog_id","meta_catalog_status"):
+    if row["listing_state"] not in ("","Available"):errors.append("listing_state must be blank or Available at initial intake")
+    for key in ("posted_url","posted_at","error_notes","meta_catalog_id","meta_catalog_status"):
         if row[key]:errors.append(f"{key} must be empty at initial intake")
     if any(str(row.get(field,"") or "") for field in schema.RESERVED_COLUMNS):errors.append("reserved Inventory columns AU/AV must remain blank")
     return errors

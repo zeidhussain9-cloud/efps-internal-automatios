@@ -82,13 +82,13 @@ The completed `raw_message_text` is the only extraction source. Existing Sheet v
 ### Direct fields
 
 - `onboarded_on`: formatted as human-readable IST datetime ("19 Sep 2026, 4:55 AM"). Stage 1 captures WhAPI epoch timestamp from the "NEW" boundary message and formats it immediately. This is a presentation field, not an extraction field.
-- `internal_property_type`: resolve explicit source gating evidence first. Explicit negative gating resolves to `Standalone`. Specific/generic gated wording is accepted after explicit labelled evidence. Independently adjudicated community names may resolve through `src/community_property_types.py`. **No gating/standalone evidence is not proof of Standalone; unresolved type is represented as blank until an authoritative adjudication/enrichment source exists.**
+- `internal_property_type`: resolve explicit source gating evidence first. Explicit negative gating resolves to `Standalone`. Specific/generic gated wording is accepted after explicit labelled evidence. The current resolver does not call a community registry; only explicit labels, boolean gating evidence and generic gated/standalone wording are used. **No gating/standalone evidence is not proof of Standalone; unresolved type is represented as blank until an authoritative adjudication/enrichment source exists.**
 - `society_name`: use the directly supplied society name. Also accept apartment/community/building-name labels. Structured `📍 Name:` markers are source anchors; `📍 Landmark:` and `📍 Location:` are not society names. Strip presentation-only markdown. Placeholder-only values such as `*` or `-` count as blank. If blank after source extraction/enrichment, use the resulting locality.
-- `landmark`: use the directly supplied landmark. A `📍 Landmark:` marker followed only by a Maps URL remains blank. A Maps URL must never be stored as a landmark; the URL belongs to `google_maps_url`. Landmark does not inherit locality.
+- `landmark`: use the directly supplied landmark. A `📍 Landmark:` marker followed only by a Maps URL remains blank. A Maps URL must never be stored as a landmark; the URL belongs to `google_maps_url`. Current Phase 1 fills a blank landmark with the resolved locality as a final fallback.
 - `locality`: use explicit `Property Location`, `Location`, `Locality`, or `Area`. This is deterministic source extraction. A verified Maps locality may replace it later during the separate enrichment stage.
 - `google_maps_url`: extract deterministic source URLs, including common short-link and Google Maps forms supported by the shared adapter. Read-only deterministic projection must not require network resolution.
 - `pincode`: optional/enrichment-owned unless explicitly written in source. A blank pincode is a valid deterministic result and must not by itself create `Needs Review`.
-- `property_subtype`: use explicit subtype and normalize supported aliases. `Duplex Villa` resolves to `Villa`; 1 RK/studio resolves to `Studio`; normal apartment-style records fall back to `Apartment`.
+- `property_subtype`: secondary optional field. Existing Apartment fallback for generic apartment-style records remains; unsupported or conflicting subtype evidence stays blank and is non-blocking. Invalid non-empty values remain validation errors.
 - `maintenance`: normalize explicit maintenance values and the specific `rent + maintenance` form. Preserve source qualifiers such as `+ Water`. `Included` means `0` plus `maintenance_included = Yes`; `Included + Water` means `0 + Water` plus `maintenance_included = Yes`.
 - `property_highlights`: preserve explicit highlights. Otherwise construct only supported factual deterministic fragments. Blank is valid when no supported highlight is present.
 - `balconies`: accept explicit numeric `Balcony`/`Balconies` forms; a bare singular `Balcony` is one balcony.
@@ -134,9 +134,9 @@ These are application/business dependencies. A dependent field may still have ex
 
 The 11-field review is no longer a manually inferred "PARTIAL" list. A field is only a failure when its contract is violated. Valid blanks are accepted where the field is optional/enrichment-owned, including pincode and property highlights when no source highlight exists. Historical Sheet mismatches are separately adjudicated and never treated as parser evidence.
 
-## Known community adjudications
+## Community classification boundary
 
-`modules/efps-inventory-mgmnt/src/community_property_types.py` contains explicit community-level property-type facts that cannot be derived safely from a generic society-name pattern. The registry is deliberately small and evidence-driven. `Prima Hi-Life` is recorded as `Gated Community` based on independent project/property evidence; unknown communities must not be auto-classified as gated merely because they are apartments/societies.
+The reviewed branch does not contain or invoke a community property-type registry. `internal_property_type` is resolved only from source labels, boolean gating evidence and generic gated/standalone wording in `field_resolution.py`. A community/society name alone does not imply Gated Community. Unresolved type remains blank and requires review.
 
 ## Verified live Sheet vocabulary
 

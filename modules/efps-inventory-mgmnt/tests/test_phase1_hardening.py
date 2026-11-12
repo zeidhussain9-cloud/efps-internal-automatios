@@ -190,3 +190,31 @@ def test_verified_maps_resolution_preserves_original_short_url():
     assert out["pincode"] == "560102"
     assert out["society_name"] == "Verified Society"
     assert canonical_url not in out["google_maps_url"]
+
+
+def test_missing_property_subtype_is_non_blocking_and_stays_blank():
+    result = phase1.run_phase1(
+        "Property Type: Standalone\nProperty Subtype: Penthouse\nRent: 40000",
+        row=initial_row("EF-TEST-SUBTYPE-OPTIONAL"),
+    )
+    assert result.row["internal_property_type"] == "Standalone"
+    assert result.row["property_subtype"] == ""
+    assert result.row["status"] == "Pending"
+    assert "property_subtype" in result.report["unresolved_fields"]
+
+
+def test_initial_raw_row_accepts_available_bootstrap_state():
+    row = initial_row("EF-TEST-RAW-AVAILABLE", onboarded_on="2026-11-13 10:00 AM")
+    assert row["listing_state"] == "Available"
+    assert validate.validate_raw(row) == []
+
+
+def test_catalogue_ready_is_a_valid_intake_status():
+    row = initial_row("EF-TEST-CATALOGUE-READY")
+    row.update(
+        status="Pending",
+        intake_status="Catalogue Ready",
+        monthly_rent="40000",
+        internal_property_type="Standalone",
+    )
+    assert validate.validate(row) == []
