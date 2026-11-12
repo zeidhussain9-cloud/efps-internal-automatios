@@ -527,7 +527,15 @@ def lambda_handler(event, context):
         payload = json.loads(body)
     except (json.JSONDecodeError, TypeError, UnicodeDecodeError):
         return {"statusCode": 400, "body": json.dumps({"error": "invalid JSON"})}
-    page_id = str(payload.get("page_id") or payload.get("data", {}).get("page", {}).get("id") or payload.get("entity", {}).get("id") or "").strip()
+    page_id = str(
+        payload.get("page_id")
+        or payload.get("id")
+        or payload.get("page", {}).get("id")
+        or payload.get("data", {}).get("page", {}).get("id")
+        or payload.get("data", {}).get("id")
+        or payload.get("entity", {}).get("id")
+        or ""
+    ).strip()
     if not re.fullmatch(r"[0-9a-fA-F-]{32,36}", page_id):
         return {"statusCode": 400, "body": json.dumps({"error": "page_id is required"})}
     try:
