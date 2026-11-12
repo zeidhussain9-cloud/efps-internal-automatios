@@ -27,7 +27,7 @@ def test_placeholder_society_and_landmark_use_location():
     assert row["landmark"] == "Harlur"
 
 
-def test_partial_maps_does_not_create_needs_review():
+def test_partial_maps_requires_review_and_does_not_apply_candidate_location():
     raw = "2 BHK Apartment\nRent: 40000\nCommunity: Gated Community\nLocation: Harlur\nGoogle Maps: https://maps.app.goo.gl/example"
 
     class PartialMaps:
@@ -35,7 +35,7 @@ def test_partial_maps_does_not_create_needs_review():
             return "https://maps.app.goo.gl/example"
 
         def resolve(self, *, maps_url="", address=""):
-            return MapsResolution(confidence="PARTIAL_MATCH")
+            return MapsResolution(confidence="PARTIAL_MATCH", locality="Unverified Nearby", pincode="999999")
 
     processed, issues = pipeline.process_closed_session(
         raw,
@@ -43,6 +43,8 @@ def test_partial_maps_does_not_create_needs_review():
         maps_client=PartialMaps(),
         ai_llm=None,
     )
-    assert processed["status"] == "Pending"
+    assert processed["status"] == "Needs Review"
     assert processed["intake_status"] == "Processed"
+    assert processed["locality"] == "Harlur"
+    assert processed["pincode"] == ""
     assert issues == ["Google Maps verification failed or is incomplete: PARTIAL_MATCH"]

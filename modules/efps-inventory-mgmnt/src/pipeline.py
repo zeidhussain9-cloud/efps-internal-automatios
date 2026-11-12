@@ -63,29 +63,32 @@ def process_closed_session(raw_text: str, *, row: dict | None = None, maps_clien
     issues = list(result.issues)
     maps = maps_client or GoogleMapsClient()
     maps_url = out.get("google_maps_url", "")
+    maps_unverified = False
     if maps_url:
         resolved = maps.resolve(maps_url=maps_url)
         if resolved.confidence == "VERIFIED":
-            # Preserve the exact source URL (including maps.app.goo.gl/share.google short links)
-            # for mobile sharing. GoogleMapsClient expands it internally for geocoding.
-            # Persisting resolved.canonical_url here produces long desktop-style links.
             out["google_maps_url"] = maps_url
-            if not out.get("locality", "").strip():
-                out["locality"] = resolved.locality or out.get("locality", "")
-            if not out.get("pincode", "").strip():
-                out["pincode"] = resolved.pincode or out.get("pincode", "")
+            verified_locality = str(resolved.locality or "").strip()
+            source_locality = str(out.get("locality", "") or "").strip()
+            if verified_locality:
+                if source_locality and source_locality.casefold() != verified_locality.casefold():
+                    issues.append(f"Google Maps verified locality overrides source locality: {source_locality} -> {verified_locality}")
+                out["locality"] = verified_locality
+            else:
+                issues.append("Google Maps verification failed or is incomplete: verified locality missing")
+                maps_unverified = True
+            if resolved.pincode:
+                out["pincode"] = resolved.pincode
             place_name = str(getattr(resolved, "place_name", "") or "").strip()
             if place_name:
                 source_society = str(out.get("society_name", "") or "").strip()
-                if not source_society or source_society == out.get("locality", ""):
-                    out["society_name"] = place_name
-        elif resolved.confidence == "PARTIAL_MATCH":
-            issues.append("Google Maps verification failed or is incomplete: PARTIAL_MATCH")
-            # PARTIAL_MATCH: Only fill blanks, never override user data
-            if not out.get("locality", "").strip():
-                out["locality"] = resolved.locality or ""
-            if not out.get("pincode", "").strip():
-                out["pincode"] = resolved.pincode or ""
+                if source_society and source_society.casefold() != place_name.casefold():
+                    issues.append(f"Google Maps verified place name overrides source society: {source_society} -> {place_name}")
+                out["society_name"] = place_name
+                issues.append(f"Google Maps verified place name: {place_name}")
+        else:
+            issues.append(f"Google Maps verification failed or is incomplete: {resolved.confidence}")
+            maps_unverified = True
     try:
         from .phase1 import apply_location_contract
     except ImportError:
@@ -96,7 +99,7 @@ def process_closed_session(raw_text: str, *, row: dict | None = None, maps_clien
         out["status"] = "Needs Review"
         issues.extend(errors)
     else:
-        out["status"] = "Pending"
+        out["status"] = "Needs Review" if maps_unverified else "Pending"
     if out["status"] == "Pending":
         out = ai.apply(out, raw_text, ai_llm)
         if out.get("_ai_conflicts"):

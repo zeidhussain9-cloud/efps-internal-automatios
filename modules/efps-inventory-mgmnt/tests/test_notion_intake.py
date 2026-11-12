@@ -188,3 +188,94 @@ def test_photo_upload_partial_failure_does_not_publish_incomplete_url_set(monkey
     assert urls == []
     assert len(issues) == 1
     assert "Photo 1" in issues[0]
+def test_v71_caption_uses_verified_short_map_and_never_guesses_pet_policy():
+    row = {"furnish_type": "Semi Furnished", "BHK": "2 BHK", "monthly_rent": "50000",
+           "security_deposit": "125000", "built_up_area": "1200", "floor_number": "3",
+           "total_floors": "12", "preferred_tenant_type": "Anyone", "pet_friendly": "Yes",
+           "internal_property_type": "Gated Community", "locality": "Kasavanahalli",
+           "google_maps_url": "https://maps.app.goo.gl/AbC123", "bathrooms": "2", "balconies": "2"}
+    raw = "Pets allowed\nAvailability: Ready to Occupy\n2 attached bathrooms\nUtility"
+    caption = intake.build_whatsapp_post(row, raw, maps_verified=True, verified_society_name="Verified Society")
+    assert caption.startswith("*👉Semi Furnished 2 BHK with Utility & 2 Attached Bathrooms & 2 Balconies*")
+    assert "Rent: 50K" in caption and "Deposit: 1.25L" in caption
+    assert "Available from: Ready to Occupy" in caption
+    assert "Preferred tenant: Open For All" in caption
+    assert "Pets: Allowed\nGated Community\nLocation: *Kasavanahalli*" in caption
+    assert "*📍 Verified Society:\nhttps://maps.app.goo.gl/AbC123" in caption
+
+
+def test_v71_caption_requires_maps_verification_and_omits_long_map_url():
+    row = {"furnish_type": "Fully Furnished", "BHK": "1 BHK", "locality": "Harlur",
+           "google_maps_url": "https://maps.app.goo.gl/AbC123"}
+    assert intake.build_whatsapp_post(row, "Pets allowed", maps_verified=False) == ""
+    row["google_maps_url"] = "https://www.google.com/maps/search/?api=1&query=Harlur"
+    caption = intake.build_whatsapp_post(row, "Pets allowed", maps_verified=True)
+    assert "google.com/maps" not in caption and "Location: *Harlur*" in caption
+    assert "Pets: Allowed" in caption
+
+
+def test_v71_caption_does_not_infer_pet_policy_from_inventory_default():
+    row = {"furnish_type": "Semi Furnished", "BHK": "2 BHK", "locality": "Harlur", "pet_friendly": "Yes"}
+    assert "Pets:" not in intake.build_whatsapp_post(row, "2 BHK Apartment", maps_verified=True)
+
+
+def test_retry_can_reclaim_needs_review_page():
+    class FakeTable:
+        def __init__(self): self.expression = None
+        def update_item(self, **kwargs): self.expression = kwargs["ConditionExpression"]
+        def get_item(self, **kwargs):
+            return {"Item": {"user_id": "notion-intake:abc", "state": "needs_review", "payload_hash": "same", "listing_id": "EF-TEST"}}
+    table = FakeTable()
+    status, _ = intake.DynamoIntakeStore(table).claim("abc", "same")
+    assert status == "claimed" and ":needs_review" in table.expression
+
+
+def test_process_page_persists_one_listing_and_reconciles_intake(monkeypatch):
+    class FakeNotion:
+        def __init__(self): self.updates, self.saved = [], []
+        def get_page(self, page_id):
+            return {"created_time": "2026-11-13T00:00:00Z", "properties": {
+                "Raw Property Data": {"rich_text": [{"plain_text": "2 BHK Apartment\nRent: 50000\nLocation: Harlur"}]},
+                "Photos": {"files": []}, "Listing ID": {"rich_text": []}}}
+        def update_page(self, page_id, properties): self.updates.append(properties)
+        def save_listing(self, row): self.saved.append(row); return "housing-page-id"
+    class FakeStore:
+        def __init__(self): self.finished = []
+        def claim(self, page_id, payload_hash): return "claimed", {"listing_id": "EF-TEST-INTAKE"}
+        def set_listing_id(self, page_id, listing_id): raise AssertionError("existing ID should be reused")
+        def finish(self, page_id, state, **kwargs): self.finished.append((state, kwargs))
+    class FakeSheets:
+        def __init__(self): self.inserts, self.writes = [], []
+        def read_range(self, spreadsheet_id, worksheet_name, range_name): return []
+        def insert_rows(self, spreadsheet_id, worksheet_name, rows): self.inserts.extend(rows)
+        def write_ranges(self, spreadsheet_id, worksheet_name, updates): self.writes.extend(updates)
+    fake_notion, fake_store, fake_sheets = FakeNotion(), FakeStore(), FakeSheets()
+    def fake_pipeline(raw_text, *, row, maps_client):
+        result = dict(row)
+        result.update(status="Pending", intake_status="Processed", property_subtype="Apartment",
+                      raw_message_text=raw_text, locality="Harlur", BHK="2 BHK",
+                      furnish_type="Semi Furnished", monthly_rent="50000")
+        return result, []
+    monkeypatch.setattr(intake.pipeline, "process_closed_session", fake_pipeline)
+    result = intake.process_page("intake-page-id", notion=fake_notion, store=fake_store,
+                                 sheets=fake_sheets, cloudinary=object(), maps_client=object())
+    assert result["status"] == "Processed" and result["listing_id"] == "EF-TEST-INTAKE"
+    assert len(fake_sheets.inserts) == 1 and fake_sheets.writes
+    assert fake_notion.saved[0]["whatsapp_post"].startswith("*👉Semi Furnished 2 BHK*")
+    assert fake_notion.saved[0]["whatsapp_post"].endswith("Location: *Harlur*")
+    assert fake_notion.updates[-1]["Intake Status"]["status"]["name"] == "Processed"
+    assert fake_notion.updates[-1]["Processed Property"]["relation"][0]["id"] == "housing-page-id"
+    assert fake_store.finished[0][0] == "processed"
+
+
+def test_process_page_duplicate_delivery_does_not_write():
+    class FakeNotion:
+        def get_page(self, page_id):
+            return {"properties": {"Raw Property Data": {"rich_text": [{"plain_text": "raw"}]}, "Photos": {"files": []}}}
+    class FakeStore:
+        def claim(self, page_id, payload_hash): return "duplicate", {"listing_id": "EF-EXISTING"}
+    class NoCalls:
+        def __getattr__(self, name): raise AssertionError(f"unexpected call: {name}")
+    result = intake.process_page("intake-page-id", notion=FakeNotion(), store=FakeStore(),
+                                 sheets=NoCalls(), cloudinary=NoCalls())
+    assert result == {"status": "already_processed", "listing_id": "EF-EXISTING"}

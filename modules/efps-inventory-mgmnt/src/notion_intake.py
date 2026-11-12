@@ -8,6 +8,7 @@ import os
 import re
 import time
 from datetime import datetime, timezone
+from decimal import Decimal, InvalidOperation
 from urllib.parse import urlparse
 
 import requests
@@ -115,13 +116,14 @@ class DynamoIntakeStore:
                 UpdateExpression="SET payload_hash=:hash, #state=:processing, updated_at=:now, expires_at=:ttl",
                 ConditionExpression=(
                     "attribute_not_exists(user_id) OR (payload_hash <> :hash AND #state <> :processing) "
-                    "OR #state = :failed OR (#state = :processing AND updated_at < :stale)"
+                    "OR #state = :failed OR #state = :needs_review OR (#state = :processing AND updated_at < :stale)"
                 ),
                 ExpressionAttributeNames={"#state": "state"},
                 ExpressionAttributeValues={
                     ":hash": payload_hash,
                     ":processing": "processing",
                     ":failed": "failed",
+                    ":needs_review": "needs_review",
                     ":now": now,
                     ":ttl": now + 90 * 86400,
                     ":stale": stale_before,
@@ -132,7 +134,7 @@ class DynamoIntakeStore:
             if exc.__class__.__name__ != "ConditionalCheckFailedException":
                 raise
             item = self.get(page_id) or {}
-            if item.get("payload_hash") == payload_hash and item.get("state") in {"processed", "needs_review"}:
+            if item.get("payload_hash") == payload_hash and item.get("state") == "processed":
                 return "duplicate", item
             return "in_progress", item
 
@@ -253,13 +255,14 @@ TEXT_FIELDS = {
     "BHK", "bachelor_preference", "catalog_title", "city", "cloudinary_image_urls",
     "error_notes", "flat_furnishings", "floor_number", "furnish_type", "intake_status",
     "internal_property_type", "landmark", "listing_id", "listing_state", "locality",
-    "maintenance", "onboarded_on", "open_parking", "posted_at", "preferred_tenant_type",
-    "property_highlights", "property_subtype", "raw_message_text", "society_amenities",
-    "society_name", "status", "total_floors", "transaction_type",
+    "maintenance", "meta_catalog_id", "meta_catalog_status", "onboarded_on", "open_parking",
+    "posted_at", "preferred_tenant_type", "property_highlights", "property_subtype",
+    "raw_message_text", "society_amenities", "society_name", "status", "transaction_type",
+    "whatsapp_post",
 }
 NUMBER_FIELDS = {
     "age_of_property_years", "balconies", "bathrooms", "built_up_area", "carpet_area",
-    "covered_parking", "monthly_rent", "pincode", "security_deposit",
+    "covered_parking", "monthly_rent", "pincode", "security_deposit", "total_floors",
 }
 URL_FIELDS = {"google_maps_url", "posted_url", "whatsapp_contact_link", "whatsapp_group_link"}
 
@@ -287,6 +290,108 @@ def listing_notion_properties(row: dict) -> dict:
         properties["WhatsApp Destination"] = {"url": destination}
     # Reserved source columns are intentionally omitted from this projection.
     return properties
+
+
+
+def _compact_amount(value: object) -> str:
+    try:
+        amount = Decimal(str(value).replace(",", "").strip())
+    except (InvalidOperation, TypeError, ValueError):
+        return str(value or "").strip()
+    if amount == 0:
+        return "0"
+    if amount >= 100000:
+        text = format(amount / Decimal(100000), "f")
+        text = text.rstrip("0").rstrip(".") if "." in text else text
+        return f"{text}L"
+    if amount >= 1000:
+        text = format(amount / Decimal(1000), "f")
+        text = text.rstrip("0").rstrip(".") if "." in text else text
+        return f"{text}K"
+    text = format(amount, "f")
+    return text.rstrip("0").rstrip(".") if "." in text else text
+
+
+def _short_mobile_maps_url(url: str) -> bool:
+    parsed = urlparse(str(url or "").strip())
+    host = (parsed.hostname or "").lower()
+    return parsed.scheme == "https" and (host in {"maps.app.goo.gl", "share.google"} or (host == "goo.gl" and parsed.path.startswith("/maps")))
+
+
+def _explicit_pet_policy(raw_text: str) -> str:
+    text = str(raw_text or "")
+    if re.search(r"\b(?:no\s+pets?|pets?\s+not\s+allowed|pets?\s+prohibited|not\s+pet\s+friendly)\b", text, re.I):
+        return "Not Allowed"
+    if re.search(r"\b(?:pets?\s+allowed|pet\s+friendly|pets?\s+welcome)\b", text, re.I):
+        return "Allowed"
+    return ""
+
+
+def _available_from(raw_text: str) -> str:
+    text = str(raw_text or "")
+    match = re.search(r"\b(?:available\s+from|available\s+on|availability)\s*[:\-]\s*([^\n\r]+)", text, re.I)
+    if not match:
+        return "Ready to Occupy" if re.search(r"\b(?:ready\s+to\s+occupy|immediately\s+available|available\s+immediately)\b", text, re.I) else ""
+    value = match.group(1).strip(" .;")
+    return "Ready to Occupy" if re.search(r"\b(?:now|immediate|immediately|ready\s+to\s+occupy)\b", value, re.I) else value
+
+
+def build_whatsapp_post(row: dict, raw_text: str, *, maps_verified: bool, verified_society_name: str = "") -> str:
+    """Build the v7.1 copy/paste caption using only explicit or Maps-verified facts."""
+    maps_url = str(row.get("google_maps_url") or "").strip()
+    if maps_url and not maps_verified:
+        return ""
+    locality = str(row.get("locality") or "").strip()
+    if not locality:
+        return ""
+    title_parts = [str(row.get("furnish_type") or "").strip(), str(row.get("BHK") or "").strip()]
+    title = " ".join(x for x in title_parts if x)
+    raw = str(raw_text or "")
+    features = []
+    if re.search(r"\bprivate\s+terrace\b", raw, re.I): features.append("Private Terrace")
+    if re.search(r"\butility\b", raw, re.I): features.append("Utility")
+    attached = re.search(r"\b(\d+)\s+attached\s+bathrooms?\b", raw, re.I)
+    if attached: features.append(f"{attached.group(1)} Attached Bathrooms")
+    elif row.get("bathrooms"):
+        count = str(row["bathrooms"]).strip()
+        features.append(f"{count} Bathroom" + ("" if count == "1" else "s"))
+    balconies = str(row.get("balconies") or "").strip()
+    if balconies and balconies not in {"0", "0.0"}:
+        features.append(f"{balconies} " + ("Balcony" if balconies == "1" else "Balconies"))
+    if features: title += (" with " if title else "") + " & ".join(features[:3])
+    if not title: title = str(row.get("catalog_title") or row.get("listing_id") or "").strip()
+    if not title: return ""
+    lines = [f"*👉{title}*"]
+    rent = _compact_amount(row.get("monthly_rent"))
+    if rent: lines.append(f"Rent: {rent}")
+    maintenance = str(row.get("maintenance") or "").strip()
+    if str(row.get("maintenance_included") or "").strip().lower() == "yes": maintenance = "Included"
+    if maintenance: lines.append(f"Maintenance: {maintenance}")
+    deposit = _compact_amount(row.get("security_deposit"))
+    if deposit: lines.append(f"Deposit: {deposit}")
+    sqft = str(row.get("built_up_area") or "").strip()
+    if sqft: lines.append(f"Sqft: {sqft}")
+    floor = str(row.get("floor_number") or "").strip()
+    total_floors = str(row.get("total_floors") or "").strip()
+    if floor and total_floors and "/" not in floor and floor.lower() not in {"villa", "independent house", "duplex"}:
+        floor = f"{floor}/{total_floors}"
+    if floor: lines.append(f"Floor: {floor}")
+    availability = _available_from(raw)
+    if availability: lines.append(f"Available from: {availability}")
+    tenant = str(row.get("preferred_tenant_type") or "").strip()
+    if tenant:
+        tenant = "Open For All" if tenant.lower() in {"anyone", "open for all"} else tenant
+        lines.append(f"Preferred tenant: {tenant}")
+    pets = _explicit_pet_policy(raw)
+    if pets: lines.append(f"Pets: {pets}")
+    if str(row.get("internal_property_type") or "").strip() == "Gated Community": lines.append("Gated Community")
+    lines.append(f"Location: *{locality}*")
+    if maps_url and _short_mobile_maps_url(maps_url):
+        society = str(verified_society_name or ("" if maps_url else row.get("society_name") or "")).strip()
+        landmark = str(row.get("landmark") or "").strip()
+        label = society if society and society.casefold() != locality.casefold() else ("Landmark" if landmark and landmark.casefold() != locality.casefold() else "")
+        if label: lines.extend(["", f"*📍 {label}:", maps_url])
+    return "\n".join(lines)
 
 
 def _row_for_listing(client: GoogleSheetsClient, listing_id: str):
@@ -374,7 +479,19 @@ def process_page(
         if photo_issues:
             processed["status"] = "Needs Review"
         processed["cloudinary_image_urls"] = row.get("cloudinary_image_urls", processed.get("cloudinary_image_urls", ""))
-        pipeline.write_phase1_update(sheets, row_number, processed)
+        maps_url = str(processed.get("google_maps_url") or "").strip()
+        maps_failed = bool(maps_url) and any(issue.startswith("Google Maps verification failed") for issue in issues)
+        if maps_url and not _short_mobile_maps_url(maps_url):
+            issues.append("Original Maps URL is not a supported short mobile link; omitted from the caption and requires review.")
+            processed["status"] = "Needs Review"
+        verified_society = next((issue.split(":", 1)[1].strip() for issue in issues if issue.startswith("Google Maps verified place name:")), "")
+        caption = build_whatsapp_post(processed, raw_text, maps_verified=not maps_failed, verified_society_name=verified_society)
+        if not caption:
+            issues.append("WhatsApp caption not generated because a verified locality or Maps verification is missing.")
+            processed["status"] = "Needs Review"
+        processed["whatsapp_post"] = caption
+        sheet_projection = {name: processed[name] for name in schema.NAMES}
+        pipeline.write_phase1_update(sheets, row_number, sheet_projection)
         listing_page_id = notion.save_listing(processed)
         final_state = "Needs Review" if processed.get("status") == "Needs Review" else "Processed"
         note = "; ".join(issues) if issues else "Processed through the canonical EFPS inventory pipeline."
