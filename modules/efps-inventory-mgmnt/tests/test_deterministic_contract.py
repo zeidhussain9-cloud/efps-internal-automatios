@@ -1,3 +1,5 @@
+[Reading 67 lines from start (total: 67 lines, 0 remaining)]
+
 from __future__ import annotations
 from src.pipeline import deterministic
 from src import extract
@@ -33,6 +35,16 @@ def test_one_rk_is_studio():
     out=deterministic("1 RK\nRent: 20000\nLocation: Harlur");assert out["BHK"]=="1 RK";assert out["property_subtype"]=="Studio"
 def test_normal_apartment_is_apartment():
     out=deterministic("2 BHK Apartment\nRent: 40000\nLocation: Harlur");assert out["property_subtype"]=="Apartment"
+
+def test_penthouse_is_normalized_to_apartment():
+    out=deterministic("2 BHK Penthouse\nRent: 40000\nLocation: Harlur");assert out["property_subtype"]=="Apartment"
+
+def test_conflicting_subtype_evidence_remains_unresolved_for_review():
+    from src.phase1 import run_phase1
+    result=run_phase1("2 BHK Apartment Villa\nRent: 40000\nLocation: Harlur")
+    assert result.row["property_subtype"]==""
+    assert result.row["status"]=="Needs Review"
+    assert "property_subtype required" in result.issues
 def test_maps_url_is_extracted_without_network_enrichment():
     raw="Location: Kartik Nagar, Doddanekundi\n📍 Bren Avalon:\nhttps://maps.app.goo.gl/example";out=deterministic(raw);assert out["google_maps_url"]=="https://maps.app.goo.gl/example";assert out["society_name"]=="Bren Avalon"
 def test_share_google_url_is_extracted_and_preserved_exactly():

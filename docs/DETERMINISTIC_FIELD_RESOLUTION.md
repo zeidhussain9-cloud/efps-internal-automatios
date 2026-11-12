@@ -1,3 +1,5 @@
+[Reading 187 lines from start (total: 187 lines, 0 remaining)]
+
 # Deterministic Field Resolution
 
 **Status:** Active
@@ -44,7 +46,7 @@ The operational EFPS subtype vocabulary is:
 - `Villa` — villa inventory, including explicit compound wording such as `Duplex Villa`.
 - `Studio` — reserved for 1 RK inventory.
 
-The portal UI exposes additional categories (`Independent House`, `Duplex`, `Independent Floor`, `Penthouse`, `Farm House`), but EFPS normal operations primarily use Apartment, Villa, and Studio. Explicit supported subtype wording remains authoritative; aliases are canonicalized before fallback. A normal building must not be left blank merely because it lacks an explicit subtype label.
+The canonical Sheet vocabulary includes `Independent House`, `Duplex`, and `Independent Floor` in addition to Apartment, Villa, and Studio. `Penthouse` is normalized to `Apartment`. `Farm House` remains unsupported and unresolved. When no subtype evidence exists, the established deterministic Apartment fallback applies. When incompatible subtype candidates are present, the resolver must not silently choose one: leave the subtype unresolved so mandatory validation routes the record to `Needs Review`.
 
 ### Maintenance
 
@@ -163,7 +165,9 @@ Every production extraction/resolution defect must have a fixture for the exact 
 - source-message boundaries;
 - multiple candidates and later explicit corrections;
 - decimal BHK and 1 RK;
-- Apartment/Villa/Studio subtype rules;
+- Apartment/Villa/Studio and supported subtype rules;
+- Penthouse-to-Apartment normalization;
+- mandatory subtype validation and conflicting/unsupported subtype review;
 - maintenance amount normalization;
 - maintenance included and included-plus-water semantics;
 - positive and negative gating evidence;

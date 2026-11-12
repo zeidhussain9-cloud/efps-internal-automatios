@@ -1,3 +1,5 @@
+[Reading 112 lines from start (total: 112 lines, 0 remaining)]
+
 """Canonical Housing_Listings contract and three-stage population metadata."""
 from __future__ import annotations
 from dataclasses import dataclass
@@ -72,7 +74,7 @@ _ROWS = [
 ("whatsapp_contact_link",PANEL,STAGE_1,(),(),"Fixed company contact link."),
 ("whatsapp_group_link",PANEL,STAGE_1,(),(),"Fixed company group link."),
 ("transaction_type",PANEL,STAGE_1,("Rent",),(),"Fixed for current rental workflow."),
-("property_subtype",PANEL,STAGE_2,("Apartment","Villa","Independent House","Duplex","Studio","Independent Floor"),(),"Secondary optional classification. Existing supported subtype normalization is retained; unsupported or conflicting subtype evidence remains blank and does not block inventory readiness. Invalid non-empty values remain validation errors."),
+("property_subtype",PANEL,STAGE_2,("Apartment","Villa","Independent House","Duplex","Studio","Independent Floor"),(),"Required canonical subtype. Use Apartment as the deterministic fallback only when no subtype evidence exists; Penthouse normalizes to Apartment. Unsupported or conflicting evidence remains unresolved and requires review."),
 ("city",PANEL,STAGE_1,("Bengaluru",),(),"Fixed for current inventory workflow."),
 ("posted_url",HOUSING_AGENT,STAGE_3,(),(),"Housing Portal downstream-owned."),
 ("posted_at",HOUSING_AGENT,STAGE_3,(),(),"Housing Portal downstream-owned."),

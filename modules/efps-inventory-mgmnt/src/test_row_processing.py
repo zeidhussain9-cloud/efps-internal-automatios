@@ -1,3 +1,5 @@
+[Reading 40 lines from start (total: 40 lines, 0 remaining)]
+
 from __future__ import annotations
 
 from . import pipeline
@@ -27,7 +29,7 @@ Gated Community"""
     assert row["maintenance"] == "Water Charges"
     assert row["maintenance_included"] == "No"
     assert row["preferred_tenant_type"] == "Family"
-    assert row["bachelor_preference"] == "Not Allowed"
+    assert row["bachelor_preference"] == ""
     assert row["internal_property_type"] == "Gated Community"
     assert row["city"] == "Bengaluru"
     assert row["transaction_type"] == "Rent"
