@@ -111,3 +111,20 @@ A separate audit found historical `@g.us` group messages incorrectly attached to
 ## 8. Remaining verification boundary
 
 The production root and health endpoints are publicly reachable and return HTTP 200. The inventory API is protected and correctly returns HTTP 401 without an operator session. The live database mirror, source Sheet, server route, and local browser regression were verified; an authenticated production browser session was not used.
+
+## Post-release revalidation — 2026-11-12
+
+This addendum supersedes earlier checkpoint values above where they differ.
+
+- Render deployment dep-dbqod1nf3r2c73fe2gc0 is LIVE from commit d4083c8c33802f33295b090b9b1c4e71453b5090.
+- main and crm-ui-dashboard both point to that commit; shared tree ba5b62470c4bbb97a155451db18dae17229a3133.
+- Current webhook message-event count since 2026-10-05 is 18,641; all 18,641 link to crm_messages; 0 active errors; 43 original error instances remain in processing_error_history.
+- Current phone-null event count is 6,652. Group-message count is 13,611, with 0 lead-linked group events.
+- Deterministic scheduler has 923 completed runs / 0 failed; cumulative run totals are 319 candidates, 118 qualified, 8 unqualified and 193 pending.
+- Inventory mirror remains 104 active rows (87 Available / 17 Rented Out). Latest successful five-minute run observed at 09:55:01 UTC: 104 rows / 0 changed / 0 removed. Twelve HTTP 200 responses followed the last observed 502 at 09:10 UTC.
+- Slack batch: 16 of 17 confirmed IDs are present in the active Supabase mirror. NFHV is a duplicate/replaced intake represented by B42K. WVP3 still has an empty property_subtype, matching its original Slack review warning; keep it under operator review.
+- The current mirror does not retain a separate original Needs Review marker, and no execution log proves how the other original warnings were cleared. The Google Drive connector is disabled by admin in this ChatGPT environment, so the canonical Sheet was not independently reread during this follow-up.
+- Recent two-hour inbound traffic was dominated by group/newsletter events; it did not exercise a new one-to-one personal lead promotion.
+- GitHub Actions passed: 139/139 automated tests and browser regression 1/1. The production-health smoke job was skipped.
+- No local Mac checkout is retained, per the owner's instruction; no local checkout was searched for or required.
+- The authenticated production inventory UI was not directly exercised. Supabase mirror verification and CI browser regression do not by themselves prove each listing rendered in an authenticated production session.

@@ -1,46 +1,39 @@
 # EFPS CRM — Render Configuration
 
-> Verified 2026-11-12 14:45 IST against Render service metadata, live deployment, health endpoint and Supabase sync evidence.
+> Revalidated 2026-11-12 against Render service metadata, live deployment and Supabase sync evidence.
 
 ## Production service
 
-- Service: `srv-darsv560tbcc73cu4ip0`
-- Name: `easyfind-crm-d01-d05`
+- Service: srv-darsv560tbcc73cu4ip0
+- Name: easyfind-crm-d01-d05
 - URL: https://easyfind-crm-d01-d05.onrender.com
-- Branch: `crm-ui-dashboard`
+- Branch: crm-ui-dashboard
 - Auto-deploy: enabled on commit
-- Latest live deployment: `dep-dbqo57o473hc73881mdg`
-- Live commit: `97dff533cfeee3138866277430a471ccc8369ac3`
+- Latest live deployment: dep-dbqod1nf3r2c73fe2gc0
+- Live commit: d4083c8c33802f33295b090b9b1c4e71453b5090
 
 ## Runtime boundaries
 
-- Webhook ingress is Supabase-first and durable; Render is not the WhatsApp webhook persistence boundary.
-- `whapi-crm-webhook` is ACTIVE v10. Null-phone messages are persisted without fake contacts; group messages are never linked to a promoted lead timeline.
-- Inventory sync endpoint is HMAC authenticated and invoked by Supabase cron `crm_inventory_sheet_reconcile_5m` every five minutes.
-- The inventory sync inserts the parent `crm_inventory_sync_runs` row before child `crm_inventory_sync_changes` rows to satisfy the foreign key.
-- The deterministic scheduler endpoint uses a dedicated secret and is invoked hourly by `crm_deterministic_scheduler_1h`.
-- AI scheduler `crm_ai_scheduler_6h` remains intentionally paused.
-- Automatic WhatsApp sending remains disabled; drafts require operator review and pre-send grounding.
-- WhAPI API safety: non-catalog API operations are hard-blocked in the shared client; webhook ingestion remains a separate path.
+- Supabase is the durable WhatsApp webhook ingress and CRM database.
+- whapi-crm-webhook is ACTIVE v10; phone-null messages are persisted without fake contacts.
+- Group messages are retained as evidence but never attached to a promoted lead's personal timeline.
+- Inventory sync is HMAC protected and invoked by crm_inventory_sheet_reconcile_5m every five minutes.
+- Inventory sync inserts the parent crm_inventory_sync_runs row before child crm_inventory_sync_changes rows.
+- Deterministic qualification is invoked hourly by crm_deterministic_scheduler_1h.
+- AI scheduler remains intentionally paused; automatic WhatsApp sending remains disabled.
 
 ## Release verification
 
-- Latest Render deployment `dep-dbqo57o473hc73881mdg` is LIVE from commit `97dff533cfeee3138866277430a471ccc8369ac3`.
-- Production `GET /health`: HTTP 200.
-- Production `GET /`: HTTP 200.
-- Inventory sync: HTTP 200 at 09:11 UTC (104 rows / 104 changed / 0 removed) and 09:15 and 09:20 UTC (each 104 rows / 0 changed / 0 removed).
-- Protected inventory API without operator session returns HTTP 401 as expected.
-
-A candidate is not production-live until Render reports the candidate SHA live and the production health/process audit is rerun. The previous 2026-10-05 SHA is historical, not the current live commit.
+- Render reports deployment dep-dbqod1nf3r2c73fe2gc0 LIVE from commit d4083c8c33802f33295b090b9b1c4e71453b5090.
+- Inventory: 104 active rows; latest successful sync 09:55 UTC, 104 rows / 0 changed / 0 removed.
+- Supabase webhook reconciliation: 18,641/18,641 message events linked, 0 active errors.
+- GitHub Actions CRM UI Verification and CRM synthetic CI passed; 139/139 automated tests and browser 1/1 passed.
+- Production-health smoke job was skipped. An authenticated production inventory browser session was not exercised in this follow-up.
 
 ## External credential hardening
 
-AWS least-privilege rotation requires authorized AWS IAM administration. Do not mark the rotation complete based only on repository configuration.
+AWS least-privilege rotation and independent encrypted backup/isolated-restore proof remain external infrastructure prerequisites until separately evidenced.
 
 ## AI scheduler — intentionally paused
 
-- `crm_ai_scheduler_6h` is paused.
-- Its implementation and `crm_invoke_ai_scheduler()` function remain in the repository and database.
-- The pg_cron trigger has been removed; no recurring AI scheduler execution is currently scheduled.
-- The deterministic classification scheduler remains active independently at `0 * * * *`.
-- Reactivation requires an explicit operational decision and a new scheduler activation.
+The AI scheduler implementation remains available, but no recurring AI cron trigger is installed. Reactivation requires a separate explicit operational decision.

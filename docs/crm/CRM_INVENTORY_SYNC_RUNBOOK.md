@@ -1,71 +1,61 @@
 # EFPS CRM — Housing Inventory Sync Runbook
 
-> Verified 2026-11-12 14:50 IST / 09:20 UTC against the canonical Sheet, Supabase, Render and the five-minute cron.
+> Revalidated 2026-11-12 against production Supabase, Render, the deployed sync code and the recorded source audit.
 
 ## Source and boundary
 
-- Canonical source: Google Sheet tab `Housing_Listings`.
-- CRM reads operational columns A:AT only. Reserved AU/AV are not read into the operational CRM projection.
-- The CRM sync is read-only against Google Sheets. The Slack intake workflow owns Sheet writes.
-- Supabase table: `public.crm_inventory_snapshot`.
-- Change history: `public.crm_inventory_sync_changes`.
-- Render service: `srv-darsv560tbcc73cu4ip0`; branch: `crm-ui-dashboard`.
-- Sync endpoint: HMAC-protected; invoked by Supabase cron `crm_inventory_sheet_reconcile_5m` every five minutes.
+- Canonical source: Google Sheet tab Housing_Listings.
+- CRM reads operational columns A:AT only; reserved AU/AV are excluded.
+- CRM sync is read-only against Google Sheets. Slack intake owns Sheet writes.
+- Supabase snapshot: public.crm_inventory_snapshot.
+- Change history: public.crm_inventory_sync_changes.
+- Render service: srv-darsv560tbcc73cu4ip0; production branch: crm-ui-dashboard.
+- Supabase cron crm_inventory_sheet_reconcile_5m invokes the HMAC-protected endpoint every five minutes.
 
 ## Current verified state
 
-- Canonical Sheet rows: **104**.
-- Supabase active snapshot: **104** — 87 Available / 17 Rented Out.
-- Latest scheduled successful sync: **2026-11-12 09:20:01 UTC** — 104 rows / 0 changed / 0 removed, HTTP 200.
-- First catch-up sync after release: **09:11:54 UTC** — 104 rows / 104 changed / 0 removed, HTTP 200.
-- The catch-up ledger recorded 16 created listings and 123 field-level changes across existing rows; no rows were removed. The the 09:15 and 09:20 scheduled runs were stable at 0 changes.
-- `crm_inventory_sheet_reconcile_5m` remains active at `*/5 * * * *`.
+- Supabase active snapshot: 104 — 87 Available / 17 Rented Out.
+- Latest successful run observed: 2026-11-12 09:55:01 UTC, 104 rows / 0 changed / 0 removed.
+- The recovery audit recorded a direct source Sheet read of 104 rows. The Google Drive connector is disabled by admin in the current ChatGPT environment, so this follow-up verified the production mirror and sync-run evidence but did not repeat the independent Sheet read.
+- The last observed 502 was at 09:10 UTC. Twelve HTTP 200 responses followed through 09:55 UTC; no later 502 was present in the queried response window.
+- The five-minute cron remains active.
 
 ## Confirmed 502 cause and repair
 
-The 502 was caused by transaction ordering in `src/inventory-sync.mjs`:
-
-1. The sync generated `crm_inventory_sync_changes` rows referencing a `run_id`.
-2. It inserted those child rows before inserting the parent `crm_inventory_sync_runs` row.
-3. The `crm_inventory_sync_changes.run_id` foreign key rejected the child insert.
-4. The transaction rolled back and the protected endpoint returned HTTP 502.
-
-The code now inserts the parent sync-run row first, then its child change-history rows in the same transaction. A regression test asserts this ordering. The first catch-up and next scheduled run both returned HTTP 200.
+The sync transaction inserted child rows in crm_inventory_sync_changes before inserting the parent crm_inventory_sync_runs row. The child run_id foreign key rejected the insert and rolled back the transaction. The code now inserts the parent row first and then its child change-history rows in the same transaction. A regression test asserts this ordering.
 
 ## Slack property batch — 12 November 2026
 
-The intake bot posted 17 listing confirmations. A direct read-only fetch of the canonical Sheet returned 104 rows and matched 16 unique IDs. Supabase contains the same 16 rows, all active and Available:
+The intake bot confirmed 17 IDs. Sixteen are present in the current Supabase mirror:
 
-- `EF-2611-VN4A`
-- `EF-2611-G5ZS`
-- `EF-2611-JBVP`
-- `EF-2611-ZEFZ`
-- `EF-2611-6JYX`
-- `EF-2611-97J4`
-- `EF-2611-79F1`
-- `EF-2611-98PS`
-- `EF-2611-Q2GV`
-- `EF-2611-WVP3`
-- `EF-2611-9ZZJ`
-- `EF-2611-XXHD`
-- `EF-2611-5NZA`
-- `EF-2611-KQ44`
-- `EF-2611-3Q39`
-- `EF-2611-B42K`
+- EF-2611-VN4A
+- EF-2611-G5ZS
+- EF-2611-JBVP
+- EF-2611-ZEFZ
+- EF-2611-6JYX
+- EF-2611-97J4
+- EF-2611-79F1
+- EF-2611-98PS
+- EF-2611-Q2GV
+- EF-2611-WVP3
+- EF-2611-9ZZJ
+- EF-2611-XXHD
+- EF-2611-5NZA
+- EF-2611-KQ44
+- EF-2611-3Q39
+- EF-2611-B42K
 
-`EF-2611-NFHV` is not a separate current Sheet row. Its Bellandur 2-BHK / ₹40K / 2-of-5 floor / Nov 15 listing details are repeated in the later `EF-2611-B42K` entry, which adds the explicit `Semi Gated` property type and 10 photos. Do not insert NFHV again as a second property; treat it as a duplicate/replaced intake.
+EF-2611-NFHV is a duplicate/replaced intake represented by EF-2611-B42K; do not insert NFHV separately.
 
-### Review-state preservation
+## Needs Review preservation
 
-Eight Slack confirmations initially reported `Needs Review`: `EF-2611-9ZZJ`, `EF-2611-6JYX`, `EF-2611-XXHD`, `EF-2611-5NZA`, `EF-2611-NFHV`, `EF-2611-WVP3`, `EF-2611-97J4`, and `EF-2611-G5ZS`.
+The eight original Slack warnings were for G5ZS, 6JYX, 97J4, WVP3, NFHV, 9ZZJ, XXHD and 5NZA. Seven surviving IDs now show internal_property_type=Semi Gated and empty error_notes; NFHV is replaced by B42K. The current mirror has no separate Needs Review marker, and no execution log proves how each warning was cleared. WVP3 still has an empty property_subtype, matching its original Slack warning. Keep WVP3 under review pending operator validation; do not silently mark it ready.
 
-The current canonical Sheet has no active `Needs Review` rows. The seven surviving IDs now have `status=Pending`, `internal_property_type=Semi Gated`, and empty `error_notes`; NFHV is the duplicate/replaced record. The CRM sync did not write to or change the Sheet. It mirrored the source values as found. Do not re-open those rows without a new validation finding.
+## Operating rules
 
-## Verification and operating rules
-
-- Empty Sheet snapshots are rejected to prevent mass tombstoning.
-- Snapshot writes, parent sync-run creation, change-ledger inserts and activity logging are transactional and protected by an advisory lock.
-- A failed run must be diagnosed from Render application logs and the corresponding `net._http_response` row; the endpoint's public error body intentionally does not expose internal exception details.
+- Empty Sheet snapshots are rejected to prevent mass tombstones.
+- Snapshot upserts, parent sync-run creation, change-ledger inserts and activity logging are transactional and protected by an advisory lock.
+- A failed run must be diagnosed from Render application logs and its net._http_response record; the public endpoint intentionally hides internal exception details.
 - Never write to the canonical Sheet from the CRM sync path.
-- Do not treat inventory edit history before `crm_inventory_sync_changes` was introduced as reconstructable.
-- Production UI root and health endpoint return HTTP 200. The inventory API requires an operator session; unauthenticated access correctly returns HTTP 401. The live Supabase snapshot is the UI's inventory source.
+- Do not treat inventory history before crm_inventory_sync_changes existed as reconstructable.
+- The authenticated inventory UI remains unverified in this follow-up; Supabase mirror presence alone does not prove a user-visible card rendered.
