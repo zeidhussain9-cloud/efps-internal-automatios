@@ -285,7 +285,7 @@ def listing_notion_properties(row: dict) -> dict:
     if group:
         properties["WhatsApp Group"] = {"select": {"name": group}}
         properties["WhatsApp Destination"] = {"url": destination}
-    # Never touch reserved source_group / inventory_locked or infer a caption.
+    # Reserved source columns are intentionally omitted from this projection.
     return properties
 
 
