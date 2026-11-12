@@ -175,6 +175,9 @@ def test_verified_maps_resolution_preserves_original_short_url():
     canonical_url = "https://www.google.com/maps/search/?api=1&query=12.9,77.6"
 
     class FakeMapsClient:
+        def extract_url(self, raw_text):
+            return short_url
+
         def resolve(self, *, maps_url):
             assert maps_url == short_url
             return SimpleNamespace(confidence="VERIFIED", canonical_url=canonical_url, locality="Harlur", pincode="560102", place_name="Verified Society")
