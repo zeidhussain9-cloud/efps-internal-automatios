@@ -1,5 +1,3 @@
-[Reading 65 lines from start (total: 65 lines, 0 remaining)]
-
 """Deterministic validation for the Stage-2 inventory record."""
 from __future__ import annotations
 import re

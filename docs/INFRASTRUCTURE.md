@@ -131,6 +131,15 @@ The Render environment variable names supplied for the future prototype are depl
 
 The Keychain entries are the local-development credential source. They are not a production Lambda credential mechanism. The SAM deployment contract uses existing AWS Secrets Manager secrets and injects only the required runtime environment variables; secret values are never stored in GitHub or this document. See `docs/DEPLOYMENT.md`.
 
+## Notion Property Intake
+
+- Intake database: `Property Intake — Raw Details & Photos` (`89dad7a3990849ca9dc23e5bcb3fa99f`)
+- Housing Listings database: `416fedf9b4e881bd94f8c41c6f82601e`
+- SAM function: `EFPSNotionIntake`; API route: `/notion/intake`
+- Existing DynamoDB table: `efps-sessions` (used with a dedicated `notion-intake:` key namespace)
+- Runtime secret: AWS Secrets Manager `NotionSecretArn`, JSON keys `api_token` and `webhook_secret`
+- The endpoint remains inactive until the SAM stack is updated, the Notion automation is configured with the private header token, and a controlled end-to-end intake passes.
+
 ## Google Sheets
 
 - Spreadsheet ID: `1zdOLWklkWlnVECCtcH4SJj6vm6nEVjINpTT2U2UJEKc`

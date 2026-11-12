@@ -12,7 +12,7 @@ This document retains the historical SAM deployment contract. It is not the prod
 
 ## Runtime credential inputs
 
-`template.yaml` requires existing AWS Secrets Manager ARNs as deployment parameters. Secret values are never committed to GitHub.
+`template.yaml` requires the existing AWS Secrets Manager ARNs as deployment parameters. The Notion intake integration is optional and remains absent from the deployed stack unless `NotionSecretArn` is supplied. Secret values are never committed to GitHub.
 
 | SAM parameter | Environment variable(s) | Required secret shape |
 |---|---|---|
@@ -21,8 +21,9 @@ This document retains the historical SAM deployment contract. It is not the prod
 | `GoogleSheetsSecretArn` | `GOOGLE_SERVICE_ACCOUNT_JSON` | Complete Google service-account JSON as `SecretString` |
 | `CloudinarySecretArn` | `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET` | JSON object with `cloud_name`, `api_key`, and `api_secret` |
 | `MapsSecretArn` | `GOOGLE_MAPS_API_KEY` | API key as `SecretString` |
+| `NotionSecretArn` | `NOTION_API_TOKEN`, `NOTION_WEBHOOK_SECRET` | JSON object with `api_token` and `webhook_secret` |
 
-The existing `WebhookToken` parameter remains a `NoEcho` deployment parameter because the current webhook authorization code consumes `EFPS_WEBHOOK_TOKEN` directly.
+The existing `WebhookToken` parameter remains a `NoEcho` deployment parameter because the current webhook authorization code consumes `EFPS_WEBHOOK_TOKEN` directly. The Notion intake Lambda uses the separate `NotionSecretArn` JSON secret; its API token and private automation header token are never stored in repository files.
 
 The repository does not create, rotate, or overwrite these secrets. The AWS deployment operator must supply ARNs for existing secrets and ensure their shapes match this contract. This is intentionally separate from proving that the referenced secrets currently exist in AWS.
 

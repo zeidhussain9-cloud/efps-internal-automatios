@@ -1,5 +1,3 @@
-[Reading 112 lines from start (total: 112 lines, 0 remaining)]
-
 """Canonical Housing_Listings contract and three-stage population metadata."""
 from __future__ import annotations
 from dataclasses import dataclass

@@ -1,5 +1,3 @@
-[Reading 228 lines from start (total: 228 lines, 0 remaining)]
-
 from __future__ import annotations
 
 from src import phase1

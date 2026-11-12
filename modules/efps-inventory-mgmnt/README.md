@@ -63,6 +63,12 @@ Stage 2 first segments `raw_message_text` into source-message units using `src/s
 
 The inventory contract is 48 columns A:AV. Recurring Stage 1/2 updates are restricted to A:D and F:AO. The initial Stage-1 row insertion currently bootstraps E (`listing_state`) as `Available`; subsequent Stage-1/2 projections protect E. AP:AT are downstream-owned. AU and AV are reserved and must remain blank.
 
+## Notion intake adapter
+
+`src/notion_intake.py` is the Notion intake adapter. It fetches the submitted Notion page, claims it idempotently in the existing `efps-sessions` DynamoDB table, persists the raw record to the canonical Housing_Listings Sheet, downloads supported Notion-hosted photo attachments, uploads them through the shared Cloudinary helper, and delegates all property processing to `pipeline.process_closed_session()`. It then creates/updates the Housing Listings Notion page and writes the intake status, Listing ID, notes, processed timestamp, and relation back to the intake page.
+
+The adapter does not implement a second extraction engine, operate on AU/AV, or send WhatsApp messages. Its SAM endpoint and required secret contract are documented in `docs/NOTION_PROPERTY_INTAKE.md`. Production activation remains gated on the AWS Secrets Manager Notion credential and webhook secret, SAM deployment, Notion automation configuration, and one controlled end-to-end acceptance test.
+
 ## Verification
 
-Regression coverage includes canonical source segmentation, multi-candidate resolution, later corrections, decimal BHK, maintenance unit normalization/qualifiers/inclusion, positive/negative property-type evidence, singular/decimal balcony source forms, explicit pet negatives, Sheet-independence, dependent defaults, and normalized maintenance validation. Production projection gating validates the committed deterministic path against rows 2–26 without Sheet-value feedback or writes; live external-system writes remain a separate acceptance boundary.
+Regression coverage includes canonical source segmentation, multi-candidate resolution, later corrections, decimal BHK, maintenance unit normalization/qualifiers/inclusion, positive/negative property-type evidence, singular/decimal balcony source forms, explicit pet negatives, Sheet-independence, dependent defaults, normalized maintenance validation, and Notion intake projection/idempotency boundaries. Production projection gating validates the committed deterministic path against rows 2–26 without Sheet-value feedback or writes; live external-system writes remain a separate acceptance boundary.
