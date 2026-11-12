@@ -2,16 +2,21 @@
 
 ## Authoritative current verified state — 2026-11-12
 
-Older dated checkpoints below are historical evidence and are not current-state declarations.
+> Current live release revalidated 2026-11-12. Older dated checkpoints below remain historical.
 
-- Deployment branch: `crm-ui-dashboard`; Render deployment `dep-dbqo57o473hc73881mdg` is LIVE from commit `97dff533cfeee3138866277430a471ccc8369ac3`.
-- Supabase: `qttcutwzehtskfcwxkwj`; Edge Function `whapi-crm-webhook` ACTIVE v10.
-- Current population: 371 leads (138 deterministic auto-qualified), 839 contact classifications, 18,970 CRM messages since 2026-10-05, and 104 active inventory rows (87 Available / 17 Rented Out).
-- Webhook message events since 2026-10-05: 18,621 / 18,621 linked to `crm_messages`; 0 current processing errors; 43 original phone-constraint errors retained in `processing_error_history`.
-- Phone-null message events are retained in `crm_messages` without a contact classification or fabricated phone. Group messages are retained but never linked to a promoted lead timeline.
-- Historical group-message cleanup unlinked 1,809 messages from lead timelines; original lead/chat associations are preserved in `reconciliation_history`.
-- Deterministic scheduler: 922 completed runs / 0 failed since 2026-10-05. AI scheduler remains intentionally paused.
+- Render LIVE: deployment dep-dbqod1nf3r2c73fe2gc0, commit d4083c8c33802f33295b090b9b1c4e71453b5090 on crm-ui-dashboard.
+- Supabase project qttcutwzehtskfcwxkwj; whapi-crm-webhook ACTIVE v10.
+- main and crm-ui-dashboard both point to d4083c8c33802f33295b090b9b1c4e71453b5090; shared tree ba5b62470c4bbb97a155451db18dae17229a3133.
+- CRM: 371 leads; 138 deterministic auto-qualified; 839 contact classifications; 18,641 messages since 2026-10-05.
+- Webhooks: 18,641/18,641 message events linked to crm_messages; 0 active errors; 43 original errors retained in processing_error_history.
+- Group messages: 13,611 since 2026-10-05; 0 linked to lead timelines.
+- Inventory: 104 active rows (87 Available / 17 Rented Out); five-minute cron active; latest successful run 09:55 UTC.
+- Deterministic scheduler: 923 completed / 0 failed; AI scheduler intentionally paused.
+- CI: build PASS; 139/139 automated tests PASS; browser regression 1/1 PASS. Production-health smoke job skipped.
+- Slack batch: 16 of 17 IDs in the Supabase mirror; NFHV is represented by duplicate/re-entry B42K. WVP3 has an empty property_subtype and remains under review pending operator validation.
+- The owner deleted all Mac checkouts; none is retained or recreated.
 
+See CRM_CURRENT_VERIFIED_STATE.md for current evidence and CRM_RECOVERY_AUDIT_2026-11-12.md for recovery history.
 ### Current operational flow
 
 WhAPI +919148338801 -> `crm_webhook_events` (durable first write) -> `crm_process_webhook_event` -> `crm_messages` for every message event -> optional `crm_contact_classifications` when a valid personal phone exists -> deterministic scheduler -> operator-qualified promotion into `crm_leads`.

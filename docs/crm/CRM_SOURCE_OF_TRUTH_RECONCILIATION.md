@@ -1,16 +1,20 @@
 ## Authoritative current verified state — 2026-11-12
 
-Older dated checkpoints below are historical evidence and are not current-state declarations.
+> Current live release revalidated 2026-11-12. Older dated checkpoints below remain historical.
 
-- Production branch `crm-ui-dashboard`; Render LIVE commit `97dff533cfeee3138866277430a471ccc8369ac3`, deployment `dep-dbqo57o473hc73881mdg`.
-- Supabase project `qttcutwzehtskfcwxkwj`; `whapi-crm-webhook` ACTIVE v10.
-- CRM: 371 leads, 839 classifications, 18,970 messages since 2026-10-05.
-- WhAPI since 2026-10-05: 18,621 message events; 18,621 linked to `crm_messages`; 0 current errors; 43 original errors retained in `processing_error_history`.
-- Group messages remain evidence but never attach to a lead timeline; 1,809 historical links were removed and prior associations retained in `reconciliation_history`.
-- Inventory: 104 canonical Sheet rows and 104 active Supabase rows; five-minute sync active and verified HTTP 200.
-- Deterministic scheduler: 922 completed / 0 failed since 2026-10-05; AI scheduler intentionally paused.
-- Full detail: `CRM_CURRENT_VERIFIED_STATE.md` and `CRM_RECOVERY_AUDIT_2026-11-12.md`.
+- Render LIVE: deployment dep-dbqod1nf3r2c73fe2gc0, commit d4083c8c33802f33295b090b9b1c4e71453b5090 on crm-ui-dashboard.
+- Supabase project qttcutwzehtskfcwxkwj; whapi-crm-webhook ACTIVE v10.
+- main and crm-ui-dashboard both point to d4083c8c33802f33295b090b9b1c4e71453b5090; shared tree ba5b62470c4bbb97a155451db18dae17229a3133.
+- CRM: 371 leads; 138 deterministic auto-qualified; 839 contact classifications; 18,641 messages since 2026-10-05.
+- Webhooks: 18,641/18,641 message events linked to crm_messages; 0 active errors; 43 original errors retained in processing_error_history.
+- Group messages: 13,611 since 2026-10-05; 0 linked to lead timelines.
+- Inventory: 104 active rows (87 Available / 17 Rented Out); five-minute cron active; latest successful run 09:55 UTC.
+- Deterministic scheduler: 923 completed / 0 failed; AI scheduler intentionally paused.
+- CI: build PASS; 139/139 automated tests PASS; browser regression 1/1 PASS. Production-health smoke job skipped.
+- Slack batch: 16 of 17 IDs in the Supabase mirror; NFHV is represented by duplicate/re-entry B42K. WVP3 has an empty property_subtype and remains under review pending operator validation.
+- The owner deleted all Mac checkouts; none is retained or recreated.
 
+See CRM_CURRENT_VERIFIED_STATE.md for current evidence and CRM_RECOVERY_AUDIT_2026-11-12.md for recovery history.
 ## Historical production audit — 2026-10-01 (post-reconciliation)
 
 See the authoritative current-state block at the top of this document for the verified Render/Supabase checkpoint.

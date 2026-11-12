@@ -1,14 +1,20 @@
 ## Authoritative current verified state — 2026-11-12
 
-- Render production: `easyfind-crm-d01-d05` LIVE from recovery commit `97dff533cfeee3138866277430a471ccc8369ac3`; Supabase Edge Function `whapi-crm-webhook` ACTIVE v10.
-- Current population: 371 CRM leads, 839 contact classifications, 18,970 CRM messages since 2026-10-05, 104 active inventory rows.
-- Webhook: 18,621/18,621 message events since 2026-10-05 linked to `crm_messages`; 0 current errors; 43 original phone-constraint errors retained in history.
-- Group messages: no current group message is linked to a lead timeline; 1,809 historical links removed with prior lead/chat associations preserved.
-- Deterministic scheduler: 922 completed / 0 failed since 2026-10-05. AI scheduler intentionally paused.
-- Inventory sync: 104 Sheet rows / 104 Supabase rows; five-minute cron active and verified HTTP 200.
-- Build PASS; 139/139 automated tests PASS; browser 1/1 PASS.
-- Full current evidence: `CRM_CURRENT_VERIFIED_STATE.md` and `CRM_RECOVERY_AUDIT_2026-11-12.md`.
+> Current live release revalidated 2026-11-12. Older dated checkpoints below remain historical.
 
+- Render LIVE: deployment dep-dbqod1nf3r2c73fe2gc0, commit d4083c8c33802f33295b090b9b1c4e71453b5090 on crm-ui-dashboard.
+- Supabase project qttcutwzehtskfcwxkwj; whapi-crm-webhook ACTIVE v10.
+- main and crm-ui-dashboard both point to d4083c8c33802f33295b090b9b1c4e71453b5090; shared tree ba5b62470c4bbb97a155451db18dae17229a3133.
+- CRM: 371 leads; 138 deterministic auto-qualified; 839 contact classifications; 18,641 messages since 2026-10-05.
+- Webhooks: 18,641/18,641 message events linked to crm_messages; 0 active errors; 43 original errors retained in processing_error_history.
+- Group messages: 13,611 since 2026-10-05; 0 linked to lead timelines.
+- Inventory: 104 active rows (87 Available / 17 Rented Out); five-minute cron active; latest successful run 09:55 UTC.
+- Deterministic scheduler: 923 completed / 0 failed; AI scheduler intentionally paused.
+- CI: build PASS; 139/139 automated tests PASS; browser regression 1/1 PASS. Production-health smoke job skipped.
+- Slack batch: 16 of 17 IDs in the Supabase mirror; NFHV is represented by duplicate/re-entry B42K. WVP3 has an empty property_subtype and remains under review pending operator validation.
+- The owner deleted all Mac checkouts; none is retained or recreated.
+
+See CRM_CURRENT_VERIFIED_STATE.md for current evidence and CRM_RECOVERY_AUDIT_2026-11-12.md for recovery history.
 ## 2026-10-02 — Replit feedback branch recovery and line-by-line audit checkpoint
 
 Historical recovery record: the former isolated branch `crm-ui-feedback-polish-2026-10-02` was recovered after the Replit workspace exhausted its credits. The branch is based directly on production checkpoint `97b43a7d158eb8b3cd773ed3febb45c4f8a52540` and contains the recovered UI/inventory implementation plus regression coverage.

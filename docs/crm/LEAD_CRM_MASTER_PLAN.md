@@ -36,8 +36,9 @@ Deterministic OOC assignment and Group Message classification are implemented wi
 
 ## Current production snapshot
 
-371 CRM leads; 138 deterministic auto-qualified; 839 contact classifications; 18,970 CRM messages since 2026-10-05; 18,621 WhAPI message events since 2026-10-05, all linked; 104 active inventory listings (87 Available / 17 Rented Out).
-Deterministic scheduler: 922 completed / 0 failed since 2026-10-05. AI scheduler remains intentionally paused.
+371 CRM leads; 138 deterministic auto-qualified; 839 contact classifications; 18,641 CRM messages and 18,641 linked WhAPI message events since 2026-10-05; 104 active inventory listings (87 Available / 17 Rented Out).
+Deterministic scheduler: 923 completed / 0 failed since 2026-10-05. AI scheduler remains intentionally paused.
+Live Render commit: d4083c8c33802f33295b090b9b1c4e71453b5090; main and crm-ui-dashboard share the same tree.
 
 ## Group Message gate
 

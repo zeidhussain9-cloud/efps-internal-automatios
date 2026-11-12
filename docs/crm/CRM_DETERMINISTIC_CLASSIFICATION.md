@@ -53,12 +53,13 @@ A deterministic Qualified Lead is persisted with classification_source=determini
 
 ## Current production verification
 
-- Contact classifications: **839** total — 371 promoted, 88 classified, 96 pending, 284 excluded.
-- CRM leads: **371**; `auto_qualified=true`: **138**; `auto_qualified=false`: 233.
-- Deterministic scheduler since 2026-10-05: **922 completed / 0 failed**; latest observed run 2026-11-12 09:00 UTC.
+- Contact classifications: 839 total — 371 promoted, 88 classified, 96 pending, 284 excluded.
+- CRM leads: 371; auto_qualified=true: 138; auto_qualified=false: 233.
+- Deterministic scheduler since 2026-10-05: 923 completed / 0 failed; latest observed run 2026-11-12 10:00 UTC.
+- Cumulative run totals: 319 candidates, 118 qualified, 8 unqualified, 193 pending. These are scheduler-run totals, not unique contacts.
 - Rule version: 1.0.0.
 - AI runs triggered by deterministic classification: 0.
-- AI scheduler `crm_ai_scheduler_6h` remains intentionally paused.
+- AI scheduler remains intentionally paused.
 
 ## Validation
 
