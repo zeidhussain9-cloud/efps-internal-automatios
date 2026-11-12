@@ -1,5 +1,3 @@
-[Reading 213 lines from start (total: 213 lines, 0 remaining)]
-
 # Data Contracts
 
 ## Authoritative current verified state — 2026-10-05

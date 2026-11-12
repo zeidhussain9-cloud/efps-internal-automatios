@@ -1,5 +1,3 @@
-[Reading 66 lines from start (total: 66 lines, 0 remaining)]
-
 # Inventory Source Extraction Contract
 
 **Status:** Active

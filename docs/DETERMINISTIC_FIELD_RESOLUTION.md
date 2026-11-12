@@ -1,5 +1,3 @@
-[Reading 187 lines from start (total: 187 lines, 0 remaining)]
-
 # Deterministic Field Resolution
 
 **Status:** Active

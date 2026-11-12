@@ -1,5 +1,3 @@
-[Reading 67 lines from start (total: 67 lines, 0 remaining)]
-
 from __future__ import annotations
 from src.pipeline import deterministic
 from src import extract

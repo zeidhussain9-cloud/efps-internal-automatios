@@ -1,5 +1,3 @@
-[Reading 100 lines from start (total: 100 lines, 0 remaining)]
-
 """Canonical deterministic candidate resolution for Inventory Stage 2."""
 from __future__ import annotations
 import re

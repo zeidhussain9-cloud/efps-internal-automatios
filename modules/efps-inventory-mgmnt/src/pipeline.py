@@ -1,5 +1,3 @@
-[Reading 140 lines from start (total: 140 lines, 0 remaining)]
-
 """Inventory processing and safe Stage-1/2 Sheets persistence."""
 from __future__ import annotations
 

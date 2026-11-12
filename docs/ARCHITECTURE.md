@@ -168,6 +168,8 @@ WhAPI webhook
 
 `handler.py` is the scheduled Raw-row adapter and calls the canonical Inventory package directly. The SAM template supplies the existing Lead resources plus the `efps-sessions` table ARN required by the Stage-1 durable session store.
 
+`modules/efps-inventory-mgmnt/src/notion_intake.py` is a separate Notion intake adapter. It claims Notion submissions idempotently in the existing `efps-sessions` table, downloads Notion-hosted photos into the shared Cloudinary upload path, and delegates property processing to the same `pipeline.process_closed_session()` implementation. It persists the resulting A:AT inventory row and reconciles the related Housing Listings Notion page plus intake status/notes/relation. Its SAM route is `/notion/intake`; it does not change the WhAPI webhook or send WhatsApp messages. Activation requires the dedicated Notion Secrets Manager secret, a configured Notion database automation, and an end-to-end acceptance test.
+
 No Stage-2 implementation from the legacy system is part of this architecture.
 
 ## Private CRM architecture — reconciliation baseline

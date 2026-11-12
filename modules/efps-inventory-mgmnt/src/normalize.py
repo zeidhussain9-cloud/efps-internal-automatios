@@ -1,5 +1,3 @@
-[Reading 177 lines from start (total: 177 lines, 0 remaining)]
-
 """Deterministic normalization for Stage 2 property processing."""
 from __future__ import annotations
 import re

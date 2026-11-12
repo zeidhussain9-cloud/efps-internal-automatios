@@ -39,6 +39,14 @@ Parameters:
     Type: String
     AllowedPattern: '^arn:[^:]+:secretsmanager:[^:]+:[0-9]{12}:secret:.+$'
     Description: Existing Secrets Manager secret ARN whose SecretString contains the Google Maps API key
+  NotionSecretArn:
+    Type: String
+    Default: ''
+    AllowedPattern: '^$|^arn:[^:]+:secretsmanager:[^:]+:[0-9]{12}:secret:.+$'
+    Description: Optional Secrets Manager ARN whose JSON api_token and webhook_secret fields enable the Notion property intake Lambda
+
+Conditions:
+  HasNotionSecret: !Not [!Equals [!Ref NotionSecretArn, '']]
 
 Globals:
   Function:
@@ -80,6 +88,26 @@ Resources:
             - Effect: Allow
               Action: [dynamodb:GetItem, dynamodb:PutItem, dynamodb:UpdateItem, dynamodb:Query, dynamodb:Scan, dynamodb:DeleteItem]
               Resource: [!Ref LeadsTableArn, !Ref InteractionsTableArn, !Ref LeadAuditTableArn, !Ref SessionsTableArn]
+
+  EFPSNotionIntake:
+    Type: AWS::Serverless::Function
+    Condition: HasNotionSecret
+    Properties:
+      Handler: notion_intake.lambda_handler
+      CodeUri: .
+      Environment:
+        Variables:
+          NOTION_API_TOKEN: !Sub '{{resolve:secretsmanager:${NotionSecretArn}:SecretString:api_token}}'
+          NOTION_WEBHOOK_SECRET: !Sub '{{resolve:secretsmanager:${NotionSecretArn}:SecretString:webhook_secret}}'
+      Events:
+        Intake:
+          Type: Api
+          Properties: { Path: /notion/intake, Method: post }
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action: [dynamodb:GetItem, dynamodb:PutItem, dynamodb:UpdateItem]
+              Resource: [!Ref SessionsTableArn]
 
   EFPSCommands:
     Type: AWS::Serverless::Function
@@ -173,3 +201,6 @@ Outputs:
     Value: !Sub 'https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/slack/events'
   SlackInteractiveUrl:
     Value: !Sub 'https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/slack/interactive'
+  NotionIntakeUrl:
+    Condition: HasNotionSecret
+    Value: !Sub 'https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/notion/intake'

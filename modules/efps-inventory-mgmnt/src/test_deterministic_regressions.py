@@ -1,5 +1,3 @@
-[Reading 48 lines from start (total: 48 lines, 0 remaining)]
-
 from __future__ import annotations
 
 from . import pipeline
