@@ -9,8 +9,8 @@
 - URL: https://easyfind-crm-d01-d05.onrender.com
 - Branch: crm-ui-dashboard
 - Auto-deploy: enabled on commit
-- Verified live deployment: `dep-dbrev7ajnfac739de33g`
-- Live commit: `61688164b25f7a7a8e6df8248f91987a9c471ef6`
+- Signed-in inventory behavior verified on code-bearing release: `61688164b25f7a7a8e6df8248f91987a9c471ef6`
+- Documentation-only follow-ups are auto-deployed on this branch; GitHub production health smoke passed. See Render for the current deployment ID and commit.
 
 ## Runtime boundaries
 
@@ -24,7 +24,7 @@
 
 ## Release verification
 
-- Render was observed live from `61688164b25f7a7a8e6df8248f91987a9c471ef6`; `/health` and `/` returned HTTP 200 in the release check.
+- The signed-in inventory and edit flow were visually checked against code-bearing release `61688164b25f7a7a8e6df8248f91987a9c471ef6`. A later documentation-only deployment passed GitHub production health smoke.
 - Signed-in production inventory showed 104 Notion-owned properties (87 Available / 17 Rented). A real Notion edit appeared through Supabase in the dashboard.
 - A real delete soft-deleted the Supabase projection after about one minute. Restoring from Notion Trash produced no observed Lambda or Supabase Edge Function request; the projection stayed deleted. End-to-end restore is an open blocker.
 - Test snapshot and intake rows were removed, and the test page was permanently deleted from Notion Trash after user approval.
