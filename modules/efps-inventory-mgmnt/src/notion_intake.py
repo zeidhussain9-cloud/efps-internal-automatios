@@ -1,6 +1,3 @@
-Warning: truncated output (original token count: 9502)
-Total output lines: 769
-
 """Idempotent Notion property intake adapter over the canonical Inventory pipeline."""
 from __future__ import annotations
 
@@ -378,7 +375,116 @@ def build_whatsapp_post(row: dict, raw_text: str, *, maps_verified: bool, verifi
     title = " ".join(x for x in title_parts if x)
     raw = str(raw_text or "")
     features = []
-    if re.search(r"\bprivate\s+terrace\b", raw…1502 tokens truncated…ls(**{key: str(values[key]) for key in required}))
+    if re.search(r"\bprivate\s+terrace\b", raw, re.I): features.append("Private Terrace")
+    if re.search(r"\butility\b", raw, re.I): features.append("Utility")
+    attached = re.search(r"\b(\d+)\s+attached\s+bathrooms?\b", raw, re.I)
+    if attached: features.append(f"{attached.group(1)} Attached Bathrooms")
+    elif row.get("bathrooms"):
+        count = str(row["bathrooms"]).strip()
+        features.append(f"{count} Bathroom" + ("" if count == "1" else "s"))
+    balconies = str(row.get("balconies") or "").strip()
+    if balconies and balconies not in {"0", "0.0"}:
+        features.append(f"{balconies} " + ("Balcony" if balconies == "1" else "Balconies"))
+    if features: title += (" with " if title else "") + " & ".join(features[:3])
+    if not title: title = str(row.get("catalog_title") or row.get("listing_id") or "").strip()
+    if not title: return ""
+    lines = [f"*👉{title}*"]
+    rent = _compact_amount(row.get("monthly_rent"))
+    if rent: lines.append(f"Rent: {rent}")
+    maintenance = str(row.get("maintenance") or "").strip()
+    if str(row.get("maintenance_included") or "").strip().lower() == "yes": maintenance = "Included"
+    if maintenance: lines.append(f"Maintenance: {maintenance}")
+    deposit = _compact_amount(row.get("security_deposit"))
+    if deposit: lines.append(f"Deposit: {deposit}")
+    sqft = str(row.get("built_up_area") or "").strip()
+    if sqft: lines.append(f"Sqft: {sqft}")
+    floor = str(row.get("floor_number") or "").strip()
+    total_floors = str(row.get("total_floors") or "").strip()
+    if floor and total_floors and "/" not in floor and floor.lower() not in {"villa", "independent house", "duplex"}:
+        floor = f"{floor}/{total_floors}"
+    if floor: lines.append(f"Floor: {floor}")
+    availability = _available_from(raw)
+    if availability: lines.append(f"Available from: {availability}")
+    tenant = str(row.get("preferred_tenant_type") or "").strip()
+    if tenant:
+        tenant = "Open For All" if tenant.lower() in {"anyone", "open for all"} else tenant
+        lines.append(f"Preferred tenant: {tenant}")
+    pets = _explicit_pet_policy(raw)
+    if pets: lines.append(f"Pets: {pets}")
+    if str(row.get("internal_property_type") or "").strip() == "Gated Community": lines.append("Gated Community")
+    lines.append(f"Location: *{locality}*")
+    if maps_url and _short_mobile_maps_url(maps_url):
+        society = str(verified_society_name or ("" if maps_url else row.get("society_name") or "")).strip()
+        landmark = str(row.get("landmark") or "").strip()
+        label = society if society and society.casefold() != locality.casefold() else ("Landmark" if landmark and landmark.casefold() != locality.casefold() else "")
+        if label: lines.extend(["", f"*📍 {label}:", maps_url])
+    return "\n".join(lines)
+
+
+def _row_for_listing(client: GoogleSheetsClient, listing_id: str):
+    rows = client.read_range(schema.SHEET_ID, schema.WORKSHEET_NAME, "A2:AT")
+    for row_number, values in enumerate(rows, start=2):
+        padded = list(values) + [""] * (schema.GRID_WIDTH - len(values))
+        row = schema.row_to_mapping(padded)
+        if str(row.get("listing_id") or "") == listing_id:
+            return row_number, row
+    return None
+
+
+def _upload_photos(page: dict, listing_id: str, row: dict, cloudinary: CloudinaryClient):
+    files = _photos(page)
+    existing = [x.strip() for x in str(row.get("cloudinary_image_urls") or "").split(",") if x.strip()]
+    if len(files) > MAX_IMAGES:
+        return existing, ["Photo count exceeds the ten-image catalogue limit"]
+    if not files or len(existing) >= len(files):
+        return existing, []
+    # Re-upload the full ordered set to deterministic public IDs. overwrite=True makes
+    # partial retries safe and avoids treating one successful later photo as an earlier file.
+    urls, issues = [], []
+    for index, item in enumerate(files, start=1):
+        try:
+            blob = _download_image(_file_url(item))
+            uploaded = upload_property_images(cloudinary, listing_id, [blob], start_index=index)
+            urls.extend(x.url for x in uploaded)
+        except Exception as exc:
+            issues.append(f"Photo {index} upload failed: {str(exc)[:220]}")
+    # Only publish a complete ordered photo set. On partial failure, deterministic
+    # Cloudinary IDs allow a later retry to overwrite the same files safely.
+    return (urls if not issues else existing), issues
+
+
+def _aws_secret_value(environment_name: str) -> str:
+    """Load the current runtime credential from Secrets Manager, never Lambda env plaintext."""
+    import boto3
+    arn = os.environ.get(environment_name, "").strip()
+    if not arn:
+        raise IntakeError(f"{environment_name} is not configured")
+    value = boto3.client("secretsmanager").get_secret_value(SecretId=arn).get("SecretString", "")
+    if not value:
+        raise IntakeError(f"{environment_name} secret is empty")
+    return str(value)
+
+
+def _runtime_sheets_client() -> GoogleSheetsClient:
+    raw = _aws_secret_value("GOOGLE_SHEETS_SECRET_ARN")
+    try:
+        service_account = json.loads(raw)
+    except json.JSONDecodeError as exc:
+        raise IntakeError("Google Sheets service-account secret is not valid JSON") from exc
+    if not isinstance(service_account, dict) or not service_account.get("private_key"):
+        raise IntakeError("Google Sheets service-account secret is missing private_key")
+    return GoogleSheetsClient(credentials=GoogleSheetsCredentials(service_account))
+
+
+def _runtime_cloudinary_client() -> CloudinaryClient:
+    try:
+        values = json.loads(_aws_secret_value("CLOUDINARY_SECRET_ARN"))
+    except json.JSONDecodeError as exc:
+        raise IntakeError("Cloudinary secret is not valid JSON") from exc
+    required = ("cloud_name", "api_key", "api_secret")
+    if not isinstance(values, dict) or any(not str(values.get(key) or "").strip() for key in required):
+        raise IntakeError("Cloudinary secret is missing required credential fields")
+    return CloudinaryClient(credentials=CloudinaryCredentials(**{key: str(values[key]) for key in required}))
 
 
 def _runtime_maps_client() -> GoogleMapsClient:
