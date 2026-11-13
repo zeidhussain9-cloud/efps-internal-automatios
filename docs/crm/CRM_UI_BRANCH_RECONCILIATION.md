@@ -16,8 +16,8 @@ GitHub also lists four Dependabot branch refs associated with open PRs #93, #94,
 
 ## Live release evidence
 
-- Render service: srv-darsv560tbcc73cu4ip0. The signed-in browser showed deployment `dep-dbrev7ajnfac739de33g` LIVE on `61688164b25f7a7a8e6df8248f91987a9c471ef6`; `/health` and `/` returned HTTP 200 in the release check.
-- GitHub `crm-ui-dashboard` is `61688164b25f7a7a8e6df8248f91987a9c471ef6`; `main` is `3c66a89e734d02ade5b4865f05c2dcbc99ec655b`. Both share tree `14717bf1d37afa8d678fc0526026dae357755fdf`.
+- Render service: srv-darsv560tbcc73cu4ip0. The signed-in browser checked inventory behavior on code-bearing release `61688164b25f7a7a8e6df8248f91987a9c471ef6`. The documentation-only follow-up was auto-deployed and passed GitHub production health smoke.
+- `crm-ui-dashboard` and `main` were reconciled after the documentation follow-up and have identical tracked trees. Read current refs from GitHub; this document records behavior rather than its own commit hash.
 - Supabase inventory and signed-in dashboard: 104 listings (87 Available / 17 Rented). A Notion edit visibly propagated through Supabase to the dashboard. A real delete event reached Supabase and soft-deleted the row after about one minute. Earlier duplicate handler replay returned `already_processed`.
 - Restore is an open live-flow failure: restoring the test page in Notion produced no observed Lambda invocation or Edge Function POST, so the Supabase row remained soft-deleted. The direct restore handler was checked separately and is not evidence of webhook delivery.
 - The exact test rows were removed from Supabase; the test page was permanently deleted from Notion Trash after user approval. Dashboard returned to 104 listings.
