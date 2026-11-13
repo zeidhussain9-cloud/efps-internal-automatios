@@ -2,30 +2,45 @@
 
 ## Current verified deployment state — 2026-11-13
 
-- CloudFormation stack: `efps-notion-property-intake` in `ap-southeast-2` — `UPDATE_COMPLETE`.
-- Lambda: `efps-notion-intake` — `Active`, Python 3.12, 512 MB, 180-second timeout.
+- AWS account: `294417174793`; region: `ap-southeast-2`.
+- CloudFormation stack: `efps-notion-property-intake` — `UPDATE_COMPLETE`.
+- Lambda: `efps-notion-intake` — Active, Python 3.12, 512 MB, 180-second timeout.
 - API endpoint: `https://ko3771nvei.execute-api.ap-southeast-2.amazonaws.com/Prod/notion/intake` (`POST /notion/intake`).
-- Webhook probes: invalid handshake signature and invalid event signature each returned HTTP 401; a request signed with the currently stored verification token passed signature validation and reached page-ID validation (HTTP 400). No worker was queued by these probes.
-- Notion API credential: read-only intake database metadata request returned HTTP 200; read-only Housing Listings database query returned HTTP 200 (one result returned; result content was not inspected).
-- The existing `efps-whapi-panel-v2` CloudFormation stack, its six Lambdas, and its API Gateway were not modified by this isolated deployment.
-- **Not end-to-end operational yet.** Notion API read access is verified, but write access and the webhook subscription itself are not verified. The deployed Lambda currently resolves `GOOGLE_SERVICE_ACCOUNT_JSON` to `{}` and resolves the Cloudinary credentials and Google Maps key to `MIGRATION_PLACEHOLDER`. Those are confirmed runtime blockers for Sheet writes, photo upload, and Maps verification. No Notion-to-Sheet/Cloudinary production write has been verified. The Notion Connection webhook subscription and a controlled acceptance test are also not verified as configured.
-- Inventory module test suite: 118/118 passed (87 Notion-intake tests); isolated SAM template and generated template both pass `sam validate --lint`; SAM build succeeded.
+- The deployed Notion Lambda no longer references DynamoDB: `SessionsTableArn`, DynamoDB IAM actions, and the `DynamoIntakeStore` adapter were removed. The legacy `efps-sessions` table is not used by this Notion path.
+- Supabase production project: `easyfind-crm` (`qttcutwzehtskfcwxkwj`, `ap-south-1`). Migration `notion_inventory_intake_supabase_idempotency` created `public.crm_inventory_intake_events` and service-role-only claim/update RPCs. Edge Function `notion-inventory-state` is Active with JWT verification enabled.
+- Supabase idempotency acceptance: authenticated claim, listing-ID persistence, finish, and same-payload replay returned `claimed` then `duplicate`. The temporary test row was deleted.
+- Notion API access: metadata/read checks for both databases returned HTTP 200. Controlled create-and-archive probes for both the Property Intake and Housing Listings databases returned HTTP 200; write/insert and archive permissions are verified.
+- Google Sheet: the repository's canonical Sheet ID exactly matches the supplied workbook (`1zdOLWklkWlnVECCtcH4SJj6vm6nEVjINpTT2U2UJEKc`), tab `Housing_Listings`. Using the valid local macOS Keychain credential, a live read succeeded and the returned A:AT header matched all 46 operational column names.
+- Cloudinary: authenticated API ping returned HTTP 200; a 1x1 PNG upload returned HTTP 200 and the temporary acceptance asset was deleted successfully.
+- Google Maps: live address resolution using the valid local Keychain credential returned `VERIFIED` with locality evidence.
+- **AWS runtime credentials are still blocked:** the AWS Secrets Manager record `efps-whapi-panel-sheet` currently contains `{}`; `efps-whapi-panel-cloudinary` contains placeholder values; `efps-whapi-panel-maps` contains `MIGRATION_PLACEHOLDER`. Valid credentials do exist in the Mac Keychain and passed the checks above, but the AWS secret-write action was not completed. The Lambda now reads these Secrets Manager records at runtime, so updating the secret values will take effect without another deployment.
+- **Notion Connection webhook subscription is not yet verified.** Signature validation is implemented. Invalid signatures return HTTP 401; validly signed malformed page events reach page-ID validation (HTTP 400). No end-to-end intake was run because the AWS runtime secrets are still placeholders and no subscription delivery has been observed.
+- Inventory module tests: 118/118 passed. Isolated SAM template validation/build passed. Supabase Edge Function idempotency acceptance passed.
 
-Notion is an additional intake route alongside the existing WhAPI NEW-delimited inventory session and Slack operator-assisted property/photo intake. The Notion database **Property Intake — Raw Details & Photos** is an intake surface, not a second inventory engine. The isolated Lambda adapter in `modules/efps-inventory-mgmnt/src/notion_intake.py` delegates extraction, normalization, Maps enrichment, and validation to the existing `pipeline.process_closed_session()` implementation.
+## Data ownership and reconciliation
 
-## Processing flow (designed runtime path)
+Notion is an intake surface, not a second inventory database. The authoritative inventory workbook remains Google Sheets `Housing_Listings`; Supabase is the durable processing/idempotency store and downstream CRM inventory projection. No Notion inventory processing state or duplicate guard uses DynamoDB.
 
-1. An administrator configures a Notion Developer Connection webhook subscription to POST events to the endpoint above. This is a **Connection webhook**, not a Notion database-automation `Send webhook` action.
-2. During initial subscription verification, Notion sends `verification_token` and signs the exact handshake body with that token. The handler verifies `X-Notion-Signature` before storing it in the `webhook_secret` field of the dedicated Secrets Manager JSON secret. Later deliveries must include `X-Notion-Signature`, which the handler verifies as HMAC-SHA256 over the exact raw request body using that token.
-3. A valid event containing the Notion page ID is queued through asynchronous self-invocation; the HTTP handler returns 202. The worker fetches the Notion page using `api_token`. Lambda asynchronous invocation is configured for up to two retries.
-4. A conditional record in the existing `efps-sessions` DynamoDB table claims the page idempotently under the `notion-intake:` key prefix. The same `listing_id` is reused for retries and edits. A repeated successfully processed payload is treated as a duplicate.
-5. If `Raw Property Data` is missing, the intake page is marked `Needs Review`. Otherwise, the original raw text is placed into the canonical `Housing_Listings` A:AT row. A new listing ID is allocated only when one does not already exist for that intake page.
-6. Supported Notion-hosted HTTPS photos (maximum ten, 20 MB each) are downloaded and uploaded through `shared/cloudinary/media.py` to deterministic `properties/{listing_id}/photo_{n}` IDs. Unsupported file hosts, non-image content, oversize images, or upload failures create review issues.
-7. The canonical Inventory pipeline processes the raw text. It preserves the original Maps URL, applies locality/place-name changes only from VERIFIED Maps results, and keeps mandatory subtype validation. Unverified Maps evidence does not overwrite source facts and routes the item to review.
-8. The processed A:AT row is written to `Housing_Listings`. The adapter creates or updates the matching Housing Listings Notion page by Listing ID and writes the v7.1 `whatsapp_post` caption from explicit/verified facts. The intake page receives Listing ID, final status, notes, processed timestamp, and the related listing page.
-9. The existing Sheet-to-Supabase inventory synchronization remains the separate downstream mirror path. The Notion adapter does not write directly to Supabase and does not send WhatsApp messages or dispatch a catalogue.
+- **Notion source page:** raw property text and uploaded photos remain in `Property Intake — Raw Details & Photos`.
+- **Idempotency and processing state:** `public.crm_inventory_intake_events` in Supabase. Its primary key is the Notion source page ID; it stores payload hash, processing state, Listing ID, related Notion listing page ID, notes, and timestamps. RLS is enabled; table and RPC access are restricted to `service_role`, used only by the Supabase Edge Function.
+- **Canonical inventory record:** the existing `Housing_Listings` Google Sheet tab, columns A:AT. Listing ID remains the immutable record identity. Reserved AU/AV columns remain untouched.
+- **Supabase CRM inventory projection:** the existing five-minute Sheet-to-Supabase sync updates `public.crm_inventory_snapshot`, keyed by `listing_id`. The Notion adapter does not independently create a competing inventory projection.
+- **Notion listing view:** the existing Housing Listings Notion database receives the matching Listing ID, property fields, photo URLs, and the intake page relation/status.
 
-**Important:** Steps 3–9 describe the implemented processing path, not a successful production acceptance run. Current credential blockers prevent that end-to-end claim.
+## Processing flow
+
+1. An operator creates a page in the Notion Property Intake database and enters `Raw Property Data`; photos may be attached in `Photos`.
+2. The Notion Developer Connection sends `page.created` or `page.properties_updated` to the endpoint above.
+3. The Lambda verifies `X-Notion-Signature` against the stored webhook verification token, extracts the page ID, queues an asynchronous worker, and returns HTTP 202.
+4. The worker fetches the page from Notion and computes a stable hash of raw property text and photo metadata.
+5. The worker calls the Supabase `notion-inventory-state` Edge Function. A database RPC atomically claims the page ID. Same-hash processed replays return `duplicate`; recent processing claims return `in_progress`; failed/Needs Review/stale work can be reclaimed. The Listing ID is retained across retries.
+6. If required raw text is missing, the intake page is marked `Needs Review`. Otherwise, the canonical Inventory pipeline allocates/reuses a Listing ID, writes the initial raw record, and performs extraction, normalization, validation, and Maps enrichment.
+7. Supported Notion-hosted HTTPS photos (maximum ten, 20 MB each) are downloaded and uploaded through the shared Cloudinary helper to deterministic `properties/{listing_id}/photo_{n}` IDs. Unsupported hosts, non-image content, oversize images, or upload failures create review issues.
+8. The processed A:AT record is written to `Housing_Listings`. The adapter creates/updates the Housing Listings Notion page by Listing ID and writes the v7.1 `whatsapp_post` from explicit/verified facts. The intake page receives Listing ID, final status, notes, processed timestamp, and the related listing page.
+9. The existing five-minute Sheet-to-Supabase synchronization mirrors the Sheet row into `crm_inventory_snapshot` and records sync history.
+10. Re-delivery of the same processed page/payload is stopped by Supabase idempotency before any second Sheet write. A materially changed page can be reprocessed against the same Listing ID.
+
+The intake adapter does not send WhatsApp messages or dispatch a catalogue.
 
 ## Notion database properties
 
@@ -41,24 +56,28 @@ It updates:
 - `Processed At`
 - `Processed Property` (relation to Housing Listings)
 
-The canonical Housing Listings database ID in code is `bccfd4f55e294b269daa093a928f873a`. The intake database ID is `89dad7a3990849ca9dc23e5bcb3fa99f`. WhatsApp Group and WhatsApp Destination are assigned only from the BHK mapping. The adapter never sends WhatsApp messages.
+The intake database ID is `89dad7a3990849ca9dc23e5bcb3fa99f`; Housing Listings database ID is `bccfd4f55e294b269daa093a928f873a`.
 
-## Security and deployment
+## Secrets and runtime configuration
 
-The isolated template is `notion-intake-template.yaml`. It creates only the `efps-notion-intake` Lambda, its IAM role/invoke configuration, and a dedicated API Gateway. It reuses the existing `efps-sessions` table and existing secret ARNs; it does not update the shared WhAPI/CRM stack.
+The isolated Lambda receives secret ARNs, not credential values. It retrieves credentials from Secrets Manager at runtime:
 
-The dedicated AWS Secrets Manager secret `efps-notion-intake` must contain:
-- `api_token`: Notion internal connection token with read/write access to both Notion databases. The Lambda retrieves it from Secrets Manager at worker runtime; it is not stored in Lambda environment variables.
-- `webhook_secret`: Notion subscription verification token, populated by the initial webhook verification handshake.
+- `efps-notion-intake`: JSON with `api_token` and `webhook_secret`.
+- `efps-whapi-panel-sheet`: complete Google service-account JSON object with `private_key`.
+- `efps-whapi-panel-cloudinary`: JSON with `cloud_name`, `api_key`, and `api_secret`.
+- `efps-whapi-panel-maps`: Google Maps API key as a plain SecretString (a JSON object containing `api_key` is also accepted).
 
-The template also references the existing Google Sheets, Cloudinary, and Maps secrets. Their existence alone is not sufficient: their resolved runtime values must be valid. The currently deployed values are not valid for this intake (Sheets JSON `{}`, Cloudinary and Maps placeholders); replace them only through the authorized secret-management process, then redeploy/update the isolated stack so CloudFormation refreshes dynamic references. Never put secret values in Git or documentation.
+The Supabase URL and public anon JWT are non-secret Lambda configuration. The Edge Function uses Supabase's server-side service-role key internally; it is never sent to Lambda. The Edge Function additionally checks a SHA-256 digest of the Notion API token supplied by the Lambda. Rotating that Notion API token requires updating the expected digest and redeploying the Edge Function.
 
-## Acceptance gates still open
+## Remaining acceptance gates
 
-- Supply valid production Google service-account JSON, Cloudinary credentials, and Google Maps API key to the approved secret records, then update the isolated stack.
-- Verify page-level Notion reads and write permissions for both target databases during acceptance; database metadata and a read-only Housing Listings query already returned HTTP 200.
-- Create/verify the Notion Connection webhook subscription and capture its verification token.
-- Submit one controlled test intake and confirm exactly one Sheet row, expected Cloudinary URLs, one related Housing Listings page, and a completed intake record.
-- Replay the same event and confirm no duplicate row or Notion page.
-- Confirm the existing Sheet-to-Supabase sync mirrors the new row.
-- Confirm no WhatsApp message or catalogue dispatch was sent.
+1. Update the three AWS runtime secret records from the already-verified Mac Keychain credentials. Exact secret names and formats are listed above. The current AWS values are empty/placeholders; no credential values need to be pasted into chat.
+2. Create the Notion **Connection webhook** subscription (not a database automation webhook action) for `page.created` and `page.properties_updated`, pointing to the endpoint above. Notion's verification handshake will automatically populate `webhook_secret` in `efps-notion-intake`.
+3. After those two actions, run one controlled test page with a photo and verify one Sheet row, Cloudinary URLs, Notion listing relation/status, Supabase idempotency record, same-payload replay suppression, and the subsequent Sheet-to-Supabase sync.
+4. Confirm no WhatsApp message or catalogue dispatch was sent.
+
+The temporary Notion write-permission probe pages were archived. The temporary Supabase idempotency test row was deleted. No production inventory row was created by these probes.
+
+## Legacy boundary
+
+The old WhAPI `NEW`-delimited inventory listener and its DynamoDB session state are legacy code retained temporarily at the user's direction. It is not the new Notion processing path and is not to be removed until the final cleanup phase is explicitly started.

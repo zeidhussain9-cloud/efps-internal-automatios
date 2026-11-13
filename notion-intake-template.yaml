@@ -15,9 +15,6 @@ Parameters:
   MapsSecretArn:
     Type: String
     AllowedPattern: '^arn:[^:]+:secretsmanager:[^:]+:[0-9]{12}:secret:.+$'
-  SessionsTableArn:
-    Type: String
-    AllowedPattern: '^arn:[^:]+:dynamodb:[^:]+:[0-9]{12}:table/.+$'
 
 Resources:
   EFPSNotionIntake:
@@ -36,11 +33,11 @@ Resources:
       Environment:
         Variables:
           NOTION_SECRET_ARN: !Ref NotionSecretArn
-          GOOGLE_SERVICE_ACCOUNT_JSON: !Sub '{{resolve:secretsmanager:${GoogleSheetsSecretArn}:SecretString}}'
-          CLOUDINARY_CLOUD_NAME: !Sub '{{resolve:secretsmanager:${CloudinarySecretArn}:SecretString:cloud_name}}'
-          CLOUDINARY_API_KEY: !Sub '{{resolve:secretsmanager:${CloudinarySecretArn}:SecretString:api_key}}'
-          CLOUDINARY_API_SECRET: !Sub '{{resolve:secretsmanager:${CloudinarySecretArn}:SecretString:api_secret}}'
-          GOOGLE_MAPS_API_KEY: !Sub '{{resolve:secretsmanager:${MapsSecretArn}:SecretString}}'
+          GOOGLE_SHEETS_SECRET_ARN: !Ref GoogleSheetsSecretArn
+          CLOUDINARY_SECRET_ARN: !Ref CloudinarySecretArn
+          MAPS_SECRET_ARN: !Ref MapsSecretArn
+          SUPABASE_URL: 'https://qttcutwzehtskfcwxkwj.supabase.co'
+          SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF0dGN1dHd6ZWh0c2tmY3d4a3dqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA0MzcxNzksImV4cCI6MjEwNjAxMzE3OX0.C1sk2ZQqLjfvZUlsscrWOEWnqGYOFl6-xEnLmLsojic'
           PYTHONPATH: 'modules/efpd-lead-mgmnt/src:modules/efps-inventory-mgmnt/src'
       Events:
         Intake:
@@ -52,14 +49,17 @@ Resources:
         - AWSLambdaBasicExecutionRole
         - Statement:
             - Effect: Allow
-              Action: [dynamodb:GetItem, dynamodb:PutItem, dynamodb:UpdateItem]
-              Resource: !Ref SessionsTableArn
-            - Effect: Allow
               Action: [lambda:InvokeFunction]
               Resource: !Sub arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:efps-notion-intake
             - Effect: Allow
               Action: [secretsmanager:GetSecretValue, secretsmanager:PutSecretValue]
               Resource: !Ref NotionSecretArn
+            - Effect: Allow
+              Action: [secretsmanager:GetSecretValue]
+              Resource:
+                - !Ref GoogleSheetsSecretArn
+                - !Ref CloudinarySecretArn
+                - !Ref MapsSecretArn
 
 Outputs:
   NotionIntakeUrl:

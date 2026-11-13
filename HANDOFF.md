@@ -6,10 +6,10 @@
 
 - Isolated stack `efps-notion-property-intake` in `ap-southeast-2`: `UPDATE_COMPLETE`.
 - Lambda `efps-notion-intake`: Active; endpoint `https://ko3771nvei.execute-api.ap-southeast-2.amazonaws.com/Prod/notion/intake`.
-- Invalid handshake/event signatures returned HTTP 401; validly signed malformed event reached page-ID validation (HTTP 400); Notion API read access to both databases returned HTTP 200.
-- End-to-end processing is blocked: deployed Sheets credential is `{}`; Cloudinary/Maps runtime values are `MIGRATION_PLACEHOLDER`. No Notion intake Sheet/media write is verified. Notion subscription and controlled acceptance remain pending.
+- Invalid handshake/event signatures returned HTTP 401; validly signed malformed event reached page-ID validation (HTTP 400); controlled create/archive write probes for both Notion databases returned HTTP 200. Supabase idempotency claim/replay passed.
+- End-to-end intake remains blocked by AWS Secrets Manager copies (Sheets `{}`, Cloudinary/Maps placeholders) and the unconfigured Notion Connection subscription. Valid local Keychain credentials passed live Sheet, Cloudinary, and Maps checks. The Notion path now uses Supabase `crm_inventory_intake_events`; no DynamoDB is used for Notion.
 - Inventory module tests 118/118 (87 Notion-intake tests); combined inventory/webhook-routing tests 130/130; CRM npm test 139/139; browser regression 1/1; Vite build PASS; SAM isolated build and validation pass.
-- Existing inventory intake includes Slack /efps add-property and /efps photos start for operator-entered details/photos, plus the WhAPI path from the two dedicated sender numbers and NEW session delimiter. The deployed WhAPI Lambda last code update was 2026-10-04; the current repo routing uses the explicit sender allowlist and has dispatch regression tests. The shared WhAPI/CRM stack was not redeployed.
+- Existing operator-assisted intake includes Slack /efps add-property and /efps photos start. The old WhAPI NEW-delimited inventory listener remains in the deployed artifact but is legacy, not the current inventory workflow, and is retained only until the final cleanup phase. It was not changed or removed in this task.
 
 ## Production
 

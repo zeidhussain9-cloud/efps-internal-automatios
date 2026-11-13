@@ -4,9 +4,9 @@
 
 ## Source and boundary
 
-- Canonical source: Google Sheet tab Housing_Listings. All intake producers converge on this one Sheet; Notion is an additional planned producer once its runtime credentials and webhook subscription pass acceptance.
+- Canonical source: Google Sheet tab Housing_Listings. Slack and the new Notion intake converge on this one Sheet. The Notion adapter is deployed and has Supabase idempotency, but production intake remains blocked until the AWS secret copies are corrected and the Notion Connection webhook subscription is configured.
 - CRM reads operational columns A:AT only; reserved AU/AV are excluded.
-- CRM sync is read-only against Google Sheets and never writes the canonical Sheet. Sheet writes are owned by the existing Slack inventory intake and the dedicated WhAPI inventory listener (two configured source numbers, NEW-delimited sessions). The new Notion intake stack is deployed but is not yet an operational Sheet writer because its Sheets/Cloudinary/Maps runtime credentials are placeholders; no Notion write is verified.
+- CRM sync is read-only against Google Sheets and never writes the canonical Sheet. Sheet writes are owned by the Slack operator intake and, once enabled, the Notion inventory adapter. The old WhAPI NEW-delimited inventory listener is legacy and retained only until the final cleanup phase; it is not the current Notion workflow. Notion API write permission is verified, but AWS runtime secrets and webhook subscription still block production intake.
 - Supabase snapshot: public.crm_inventory_snapshot.
 - Change history: public.crm_inventory_sync_changes.
 - Render service: srv-darsv560tbcc73cu4ip0; production branch: crm-ui-dashboard.

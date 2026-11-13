@@ -14,63 +14,55 @@ This section supersedes the older dated operational snapshots below. Historical 
 - **Inventory/Supabase mirror:** 104 active `housing_sheet` rows; latest verified snapshot sync was `2026-11-12 21:45:01 UTC`.
 - **Subtype contract:** mandatory supported `property_subtype`; Apartment is the no-evidence fallback; Penthouse maps to Apartment; conflicting/unsupported evidence requires Needs Review.
 - **Maps contract:** only VERIFIED results may override locality/place name; unverified Maps candidates are not applied and require Needs Review. The original source URL remains stored. Captions use only the original short mobile URL; long URLs are omitted and flagged.
-- **WhAPI inventory intake:** deployed EFPSWebhook is Active with EFPS_WHAPI_LIVE=1 and EFPS_WEBHOOK_LIVE=1; its last Lambda code update was 2026-10-04. The deployed artifact routes the two dedicated inventory senders (917975102130, 919902024973) through the inventory listener and NEW session boundary. The current repository parser is transport-only; the repository webhook handler now uses the explicit INVENTORY_SENDERS allowlist and has dispatch regression coverage. The shared WhAPI/CRM stack was not redeployed in this task.
-- **Notion intake:** isolated stack efps-notion-property-intake is UPDATE_COMPLETE; Lambda efps-notion-intake is Active and its API route is deployed. Invalid signatures are rejected; signed malformed events reach page validation; Notion API read access to both databases is verified. End-to-end processing remains blocked by Sheets `{}` and Cloudinary/Maps MIGRATION_PLACEHOLDER values; subscription and acceptance are not verified.
+- **Legacy WhAPI inventory listener:** the deployed EFPSWebhook artifact still contains the old two-sender NEW-delimited route, but this path is not the current inventory workflow. It is retained untouched until the final cleanup phase; the shared WhAPI/CRM stack was not redeployed in this task.
+- **Notion intake:** isolated stack efps-notion-property-intake is UPDATE_COMPLETE; Lambda efps-notion-intake is Active. Both Notion databases passed controlled create/archive permission probes. Supabase crm_inventory_intake_events and notion-inventory-state provide idempotency; no DynamoDB is used by this path. Local Keychain Sheet/Cloudinary/Maps credentials passed live checks, but AWS Secrets Manager copies remain `{}`/placeholders and the Notion Connection subscription/end-to-end acceptance are pending.
 - **WhatsApp:** v7.1 caption generation writes the Notion-only `whatsapp_post` field from explicit/verified facts. No WhatsApp message is sent by the intake adapter.
 - **Verification:** this task reran the inventory module suite (118/118, including 87 Notion-intake tests) and the combined inventory/webhook-routing suite (130/130); isolated SAM template/build/generated-template validation PASS. CRM npm test: 139/139; browser regression: 1/1; Vite production build: PASS; both shared and isolated SAM templates/build artifacts validate.
 - **Production data:** no Notion intake-to-Sheet/Cloudinary write has been verified. The isolated endpoint deployment did not modify the shared WhAPI/CRM stack or existing Housing_Listings rows.
 
-### Inventory intake paths — verified runtime contract
+### Inventory intake paths — current ownership
 
 ~~~text
-EXISTING WHAPI INVENTORY
-  authenticated WhAPI webhook
-  -> two dedicated sender numbers: 917975102130 / 919902024973
-  -> exact NEW message opens a sender session
-  -> following text messages accumulate in DynamoDB efps-sessions
-  -> message IDs are deduplicated; first property message allocates Listing ID and Sheet row
-  -> next NEW closes the prior session and opens the next one
-  -> canonical process_closed_session extraction, validation and Maps enrichment
-  -> Housing_Listings A:AT
+SLACK OPERATOR INTAKE
+  /efps add-property and /efps photos start
+  -> canonical Inventory pipeline
+  -> Housing_Listings Google Sheet
 
-EXISTING SLACK INVENTORY
-  #eps-wapi-pannel: /efps add-property
-  -> operator enters details in a Slack thread and replies done
-  -> canonical pipeline creates Listing ID and Housing_Listings row
-  -> operator attaches photos in that same thread and replies done
-  -> files upload to Cloudinary; URLs update the same Sheet row
-  -> /efps photos start handles the remaining rows missing photos
+NOTION INTAKE (deployed; awaiting AWS secret correction and webhook subscription)
+  Notion Connection webhook
+  -> isolated Lambda signature validation + async worker
+  -> Supabase crm_inventory_intake_events idempotency claim
+  -> canonical Inventory pipeline
+  -> Housing_Listings Google Sheet + Cloudinary photo URLs
+  -> Housing Listings Notion page + intake relation/status
 
-NEW NOTION INTAKE (deployed, currently blocked)
-  Notion Connection webhook with X-Notion-Signature
-  -> async Lambda worker and idempotent efps-sessions claim
-  -> same canonical Inventory pipeline
-  -> Housing_Listings A:AT + Cloudinary photos + Notion listing relation/status
-
-ALL INTAKE ROUTES
+ALL ACTIVE SHEET PRODUCERS
   -> existing five-minute Sheet-to-Supabase sync
+  -> crm_inventory_snapshot (primary key: listing_id)
+
+LEGACY WHAPI NEW-DELIMITED INVENTORY
+  -> retained only pending the final cleanup phase
+  -> old efps-sessions DynamoDB state
+  -> not part of the new Notion intake architecture
 ~~~
 
-The WhAPI session stores text and message IDs. Media-only WhAPI messages are noted but the current adapter does not upload their binary attachments. Slack is the existing operator-assisted photo route. Notion is an additional image-capable intake route, but its Sheets/Cloudinary/Maps runtime credentials must be corrected before use. The intake adapters do not send WhatsApp messages automatically.
+The Notion idempotency table and RPCs are in Supabase, not DynamoDB. The existing legacy WhAPI path is intentionally retained for now and must not be removed until the final cleanup phase.
 
-### Current operational flow
+### Current Notion operational flow
 
 ```text
-Notion Property Intake (endpoint deployed; runtime credentials / subscription pending)
-  -> signed page-ID webhook (202)
+Notion Property Intake
+  -> signed page.created / page.properties_updated event
   -> asynchronous Lambda worker
-  -> idempotent efps-sessions claim
+  -> Supabase crm_inventory_intake_events claim/replay protection
   -> canonical Inventory pipeline
-  -> Housing_Listings A:AT + Cloudinary photos
-  -> v7.1 whatsapp_post + Housing Listings Notion relation/status
-  -> existing Sheet-to-Supabase inventory sync (unchanged)
-
-WhAPI CRM webhook
-  -> existing event persistence/deduplication
-  -> CRM message/classification workflow
-  -> audited lead promotion
-  -> operator review and manual WhatsApp action only
+  -> Housing_Listings A:AT + Cloudinary photo URLs
+  -> Housing Listings Notion page + intake relation/status
+  -> existing Sheet-to-Supabase sync
+  -> crm_inventory_snapshot
 ```
+
+The old WhAPI `NEW`-delimited inventory path is legacy and retained only until the final cleanup phase. It is not the new Notion workflow.
 
 ### Current WhAPI API safety boundary
 
@@ -195,7 +187,7 @@ Inventory Stage 1/2 recurring updates write A:D and F:AO. E (`listing_state`) is
 ## Historical runtime boundary — 2026-09-16
 This was the acceptance state at the migration checkpoint, not the current runtime state. The current verified WhAPI and Notion inventory deployment facts are recorded in the authoritative 2026-11-13 section at the top of this document.
 
-## Live-system migration boundary — 2026-09-16
+## Historical live-system migration boundary — 2026-09-16
 
 The repository-level live migration is layered on the latest canonical `main`. Lead Management, Slack handlers, and shared WhAPI/Slack capabilities already present on `main` remain authoritative; the migration does not replace newer implementations with the stale migration branch.
 
@@ -212,7 +204,7 @@ WhAPI webhook
 
 `handler.py` is the scheduled Raw-row adapter and calls the canonical Inventory package directly. The SAM template supplies the existing Lead resources plus the `efps-sessions` table ARN required by the Stage-1 durable session store.
 
-`modules/efps-inventory-mgmnt/src/notion_intake.py` is a separate Notion intake adapter. It claims Notion submissions idempotently in the existing `efps-sessions` table, downloads Notion-hosted photos into the shared Cloudinary upload path, and delegates property processing to the same `pipeline.process_closed_session()` implementation. It persists the resulting A:AT inventory row and reconciles the related Housing Listings Notion page plus intake status/notes/relation. Its isolated SAM route is `/notion/intake`; the stack is now deployed separately and does not change the WhAPI webhook or send WhatsApp messages. End-to-end processing remains blocked by the currently invalid Sheets/Cloudinary/Maps runtime credentials; the Notion Developer Connection subscription and controlled acceptance test remain unverified. See the current verified state at the top of this document.
+Historical note: the Notion adapter originally used the legacy `efps-sessions` table. That implementation has been replaced. The current Notion adapter uses Supabase `crm_inventory_intake_events` through the `notion-inventory-state` Edge Function; the isolated SAM template has no DynamoDB parameter or DynamoDB IAM actions. See the current verified state and remaining AWS secret/subscription gates at the top of this document.
 
 No Stage-2 implementation from the legacy system is part of this architecture.
 

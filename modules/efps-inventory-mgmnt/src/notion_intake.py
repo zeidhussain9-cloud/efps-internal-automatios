@@ -13,11 +13,11 @@ from urllib.parse import urlparse
 
 import requests
 
-from shared.cloudinary.client import CloudinaryClient
+from shared.cloudinary.client import CloudinaryClient, CloudinaryCredentials
 from shared.cloudinary.media import Upload, upload_property_images, catalog_urls
 from shared.google_maps import GoogleMapsClient
 from shared.google_sheets import schema
-from shared.google_sheets.client import GoogleSheetsClient
+from shared.google_sheets.client import GoogleSheetsClient, GoogleSheetsCredentials
 
 try:
     from . import pipeline
@@ -27,8 +27,6 @@ except ImportError:
 NOTION_VERSION = "2022-06-28"
 INTAKE_DATABASE_ID = "89dad7a3990849ca9dc23e5bcb3fa99f"
 LISTINGS_DATABASE_ID = "bccfd4f55e294b269daa093a928f873a"
-SESSION_TABLE = "efps-sessions"
-SESSION_PREFIX = "notion-intake:"
 MAX_IMAGES = 10
 MAX_IMAGE_BYTES = 20 * 1024 * 1024
 ALLOWED_FILE_HOSTS = {"secure.notion-static.com", "prod-files-secure.s3.us-west-2.amazonaws.com"}
@@ -90,73 +88,41 @@ class NotionClient:
         return result["id"]
 
 
-class DynamoIntakeStore:
-    """Uses the existing efps-sessions table; no new DynamoDB resource is needed."""
-    def __init__(self, table=None):
-        if table is None:
-            import boto3
-            table = boto3.resource("dynamodb").Table(SESSION_TABLE)
-        self.table = table
+class SupabaseIntakeStore:
+    """Durable Notion idempotency state in the production Supabase project."""
+    def __init__(self, internal_key: str = "", *, session=None):
+        self.url = os.environ.get("SUPABASE_URL", "").rstrip("/")
+        self.anon_key = os.environ.get("SUPABASE_ANON_KEY", "")
+        self.internal_key = internal_key or _notion_secret_value("api_token")
+        self.session = session or requests.Session()
+        if not self.url or not self.anon_key or not self.internal_key:
+            raise IntakeError("Supabase inventory intake endpoint credentials are not configured")
 
-    @staticmethod
-    def key(page_id: str) -> str:
-        return SESSION_PREFIX + page_id.replace("-", "")
-
-    def get(self, page_id: str):
-        result = self.table.get_item(Key={"user_id": self.key(page_id)}, ConsistentRead=True)
-        return result.get("Item")
+    def _request(self, operation: str, **payload):
+        response = self.session.post(
+            f"{self.url}/functions/v1/notion-inventory-state",
+            headers={
+                "apikey": self.anon_key,
+                "Authorization": f"Bearer {self.anon_key}",
+                "X-EFPS-Intake-Auth": self.internal_key,
+                "Content-Type": "application/json",
+            },
+            json={"operation": operation, **payload},
+            timeout=20,
+        )
+        if not response.ok:
+            raise IntakeError(f"Supabase inventory idempotency request failed ({response.status_code})")
+        return response.json()
 
     def claim(self, page_id: str, payload_hash: str):
-        now = int(time.time())
-        stale_before = now - 300
-        key = self.key(page_id)
-        try:
-            self.table.update_item(
-                Key={"user_id": key},
-                UpdateExpression="SET payload_hash=:hash, #state=:processing, updated_at=:now, expires_at=:ttl",
-                ConditionExpression=(
-                    "attribute_not_exists(user_id) OR (payload_hash <> :hash AND #state <> :processing) "
-                    "OR #state = :failed OR #state = :needs_review OR (#state = :processing AND updated_at < :stale)"
-                ),
-                ExpressionAttributeNames={"#state": "state"},
-                ExpressionAttributeValues={
-                    ":hash": payload_hash,
-                    ":processing": "processing",
-                    ":failed": "failed",
-                    ":needs_review": "needs_review",
-                    ":now": now,
-                    ":ttl": now + 90 * 86400,
-                    ":stale": stale_before,
-                },
-            )
-            return "claimed", self.get(page_id)
-        except Exception as exc:
-            if exc.__class__.__name__ != "ConditionalCheckFailedException":
-                raise
-            item = self.get(page_id) or {}
-            if item.get("payload_hash") == payload_hash and item.get("state") == "processed":
-                return "duplicate", item
-            return "in_progress", item
+        result = self._request("claim", page_id=page_id, payload_hash=payload_hash)
+        return str(result.get("status") or "in_progress"), result.get("item") or {}
 
     def set_listing_id(self, page_id: str, listing_id: str):
-        self.table.update_item(
-            Key={"user_id": self.key(page_id)},
-            UpdateExpression="SET listing_id=:listing_id, updated_at=:now",
-            ExpressionAttributeValues={":listing_id": listing_id, ":now": int(time.time())},
-        )
+        self._request("set_listing_id", page_id=page_id, listing_id=listing_id)
 
     def finish(self, page_id: str, state: str, *, listing_page_id: str = "", note: str = ""):
-        self.table.update_item(
-            Key={"user_id": self.key(page_id)},
-            UpdateExpression="SET #state=:state, listing_page_id=:page, note=:note, updated_at=:now",
-            ExpressionAttributeNames={"#state": "state"},
-            ExpressionAttributeValues={
-                ":state": state,
-                ":page": listing_page_id,
-                ":note": note[:1800],
-                ":now": int(time.time()),
-            },
-        )
+        self._request("finish", page_id=page_id, state=state, listing_page_id=listing_page_id, note=note[:1800])
 
 
 def _plain_text(value: dict) -> str:
@@ -426,19 +392,65 @@ def _upload_photos(page: dict, listing_id: str, row: dict, cloudinary: Cloudinar
     return (urls if not issues else existing), issues
 
 
+def _aws_secret_value(environment_name: str) -> str:
+    """Load the current runtime credential from Secrets Manager, never Lambda env plaintext."""
+    import boto3
+    arn = os.environ.get(environment_name, "").strip()
+    if not arn:
+        raise IntakeError(f"{environment_name} is not configured")
+    value = boto3.client("secretsmanager").get_secret_value(SecretId=arn).get("SecretString", "")
+    if not value:
+        raise IntakeError(f"{environment_name} secret is empty")
+    return str(value)
+
+
+def _runtime_sheets_client() -> GoogleSheetsClient:
+    raw = _aws_secret_value("GOOGLE_SHEETS_SECRET_ARN")
+    try:
+        service_account = json.loads(raw)
+    except json.JSONDecodeError as exc:
+        raise IntakeError("Google Sheets service-account secret is not valid JSON") from exc
+    if not isinstance(service_account, dict) or not service_account.get("private_key"):
+        raise IntakeError("Google Sheets service-account secret is missing private_key")
+    return GoogleSheetsClient(credentials=GoogleSheetsCredentials(service_account))
+
+
+def _runtime_cloudinary_client() -> CloudinaryClient:
+    try:
+        values = json.loads(_aws_secret_value("CLOUDINARY_SECRET_ARN"))
+    except json.JSONDecodeError as exc:
+        raise IntakeError("Cloudinary secret is not valid JSON") from exc
+    required = ("cloud_name", "api_key", "api_secret")
+    if not isinstance(values, dict) or any(not str(values.get(key) or "").strip() for key in required):
+        raise IntakeError("Cloudinary secret is missing required credential fields")
+    return CloudinaryClient(credentials=CloudinaryCredentials(**{key: str(values[key]) for key in required}))
+
+
+def _runtime_maps_client() -> GoogleMapsClient:
+    raw = _aws_secret_value("MAPS_SECRET_ARN")
+    try:
+        parsed = json.loads(raw)
+        key = parsed.get("api_key", "") if isinstance(parsed, dict) else raw
+    except json.JSONDecodeError:
+        key = raw
+    if not str(key).strip() or str(key).strip() == "MIGRATION_PLACEHOLDER":
+        raise IntakeError("Google Maps API secret is not configured with a live key")
+    return GoogleMapsClient(api_key=str(key).strip())
+
+
 def process_page(
     page_id: str,
     *,
     notion: NotionClient | None = None,
-    store: DynamoIntakeStore | None = None,
+    store: SupabaseIntakeStore | None = None,
     sheets: GoogleSheetsClient | None = None,
     cloudinary: CloudinaryClient | None = None,
     maps_client=None,
 ):
     notion = notion or NotionClient(_notion_secret_value("api_token"))
-    store = store or DynamoIntakeStore()
-    sheets = sheets or GoogleSheetsClient()
-    cloudinary = cloudinary or CloudinaryClient()
+    store = store or SupabaseIntakeStore()
+    sheets = sheets or _runtime_sheets_client()
+    cloudinary = cloudinary or _runtime_cloudinary_client()
     page = notion.get_page(page_id)
     props = page.get("properties") or {}
     raw_text = _plain_text(props.get("Raw Property Data") or {})
@@ -479,7 +491,7 @@ def process_page(
         urls, photo_issues = _upload_photos(page, listing_id, row, cloudinary)
         if urls:
             row["cloudinary_image_urls"] = catalog_urls([Upload(url=u, public_id="", index=i) for i, u in enumerate(urls, start=1)])
-        processed, issues = pipeline.process_closed_session(raw_text, row=row, maps_client=maps_client or GoogleMapsClient())
+        processed, issues = pipeline.process_closed_session(raw_text, row=row, maps_client=maps_client or _runtime_maps_client())
         issues.extend(photo_issues)
         if photo_issues:
             processed["status"] = "Needs Review"

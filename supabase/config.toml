@@ -2,3 +2,6 @@ project_id = "qttcutwzehtskfcwxkwj"
 
 [functions.whapi-crm-webhook]
 verify_jwt = false
+
+[functions.notion-inventory-state]
+verify_jwt = true
