@@ -525,6 +525,7 @@ def process_page(
     page_id: str,
     *,
     event_type: str = "",
+    updated_property_ids: list[str] | None = None,
     notion: NotionClient | None = None,
     store: SupabaseIntakeStore | None = None,
     sheets: GoogleSheetsClient | None = None,
@@ -550,9 +551,24 @@ def process_page(
             return process_listing_page(page, notion=notion, store=store, force_deleted=True)
         return {"status": "ignored", "listing_id": ""}
 
+    props = page.get("properties") or {}
+    if event_type == "page.properties_updated":
+        changed_ids = {str(value).strip() for value in (updated_property_ids or []) if str(value).strip()}
+        intake_input_ids = {
+            str((props.get(name) or {}).get("id") or "").strip()
+            for name in ("Raw Property Data", "Photos")
+        }
+        intake_input_ids.discard("")
+        if not changed_ids.intersection(intake_input_ids):
+            _log_event(
+                "intake_property_update_ignored",
+                page_id=page_id,
+                updated_property_count=len(changed_ids),
+            )
+            return {"status": "ignored", "listing_id": ""}
+
     sheets = sheets or _runtime_sheets_client()
     cloudinary = cloudinary or _runtime_cloudinary_client()
-    props = page.get("properties") or {}
     raw_text = _plain_text(props.get("Raw Property Data") or {})
     if not raw_text:
         note = "Raw Property Data is required before processing."
@@ -676,12 +692,25 @@ def process_listing_page(page: dict, *, notion: NotionClient, store: SupabaseInt
         raise
 
 
-def _enqueue_worker(page_id: str, function_arn: str, *, event_type: str = "", event_id: str = ""):
+def _enqueue_worker(
+    page_id: str,
+    function_arn: str,
+    *,
+    event_type: str = "",
+    event_id: str = "",
+    updated_property_ids: list[str] | None = None,
+):
     import boto3
     response = boto3.client("lambda").invoke(
         FunctionName=function_arn,
         InvocationType="Event",
-        Payload=json.dumps({"_efps_notion_worker": True, "page_id": page_id, "event_type": event_type, "event_id": event_id}).encode("utf-8"),
+        Payload=json.dumps({
+            "_efps_notion_worker": True,
+            "page_id": page_id,
+            "event_type": event_type,
+            "event_id": event_id,
+            "updated_property_ids": updated_property_ids or [],
+        }).encode("utf-8"),
     )
     if int(response.get("StatusCode") or 0) != 202:
         raise IntakeError("Notion intake worker enqueue was not accepted")
@@ -764,12 +793,17 @@ def lambda_handler(event, context):
         page_id = str(event.get("page_id") or "").strip()
         event_type = str(event.get("event_type") or "")
         event_id = str(event.get("event_id") or "")
+        updated_property_ids = event.get("updated_property_ids") or []
         if not re.fullmatch(r"[0-9a-fA-F-]{32,36}", page_id):
             raise IntakeError("Invalid asynchronous intake page ID")
         started = time.monotonic()
         _log_event("worker_started", page_id=page_id, event_type=event_type, event_id=event_id, aws_request_id=getattr(context, "aws_request_id", ""))
         try:
-            result = process_page(page_id, event_type=event_type)
+            result = process_page(
+                page_id,
+                event_type=event_type,
+                updated_property_ids=updated_property_ids,
+            )
         except Exception as exc:
             _log_event("worker_failed", page_id=page_id, event_type=event_type, event_id=event_id,
                        aws_request_id=getattr(context, "aws_request_id", ""), error_type=type(exc).__name__, error=str(exc)[:1000],
@@ -831,10 +865,22 @@ def lambda_handler(event, context):
         return {"statusCode": 400, "headers": {"Content-Type": "application/json"}, "body": json.dumps({"error": "page ID is required"})}
     event_type = str(payload.get("type") or payload.get("event_type") or "")
     event_id = str(payload.get("id") or payload.get("event_id") or "")
+    updated_property_ids = []
+    if event_type == "page.properties_updated":
+        data = payload.get("data") or {}
+        changed = data.get("updated_properties") or []
+        if isinstance(changed, list):
+            updated_property_ids = [value.strip() for value in changed if isinstance(value, str) and value.strip()]
     try:
         _log_event("webhook_accepted", page_id=page_id, event_type=event_type, event_id=event_id,
                    aws_request_id=getattr(context, "aws_request_id", ""))
-        _enqueue_worker(page_id, context.invoked_function_arn, event_type=event_type, event_id=event_id)
+        _enqueue_worker(
+            page_id,
+            context.invoked_function_arn,
+            event_type=event_type,
+            event_id=event_id,
+            updated_property_ids=updated_property_ids,
+        )
         return {"statusCode": 202, "headers": {"Content-Type": "application/json"}, "body": json.dumps({"ok": True, "accepted": True, "page_id": page_id, "event_id": event_id})}
     except Exception as exc:
         print(json.dumps({"notion_intake_enqueue_error": str(exc)[:1500], "page_id": page_id}))
