@@ -81,15 +81,17 @@ No deployment or cutover is implied by this document.
 
 The optional `EFPSNotionIntake` resource in the shared `template.yaml` is legacy and is not the deployed Notion path; do not enable it. Use only `notion-intake-template.yaml` for Notion intake.
 
-## Isolated Notion intake verification — 2026-11-13 follow-up
+## Isolated Notion intake verification — 2026-11-13 recovery hardening
 
-- Target account/region: AWS `294417174793`, `ap-southeast-2`. Stack `efps-notion-property-intake` is `UPDATE_COMPLETE`; the existing secret ARN parameters were reused without displaying or changing secret values.
-- Lambda `efps-notion-intake` is Active, `LastUpdateStatus=Successful`, `$LATEST`, `LastModified=2026-11-13T10:46:00Z`, CodeSha256 `+b4hBplC+2CGZag7HnpSDdmfwDqwuvHqtuSSLoGd/6c=`.
-- The local Linux SAM dependency artifact was reused because Docker is unavailable. All declared packages were present, the updated Lambda source matched the local source hash, and the generated template passed SAM validation. The exact published commit also passed GitHub's fresh SAM container build and dependency packaging checks.
-- Supabase `notion-inventory-state` is ACTIVE v6 with JWT verification enabled. Live checks confirmed a Notion edit and delete reached Supabase; restore did not produce an observed Lambda or Edge Function request. Earlier direct worker checks covered duplicate and restore-handler behavior, not webhook delivery.
-- The test Supabase snapshot and intake event were removed. The test page was permanently deleted from Notion Trash after user approval. Supabase and the signed-in dashboard returned to 104 active listings (87 Available, 17 Rented Out).
-- The signed-in dashboard displayed Notion-owned inventory and reflected the live Notion edit. The delete event also reached Supabase after about one minute. Restore did not trigger a new observed Lambda/Edge Function request, and the row remained soft-deleted; this remains an end-to-end blocker.
-- Render was observed LIVE on commit `61688164b25f7a7a8e6df8248f91987a9c471ef6`; the release deployment ID was `dep-dbrev7ajnfac739de33g`. `/` and `/health` returned HTTP 200 in the earlier release check.
+- AWS account/region: `294417174793`, `ap-southeast-2`; stack `efps-notion-property-intake` is `UPDATE_COMPLETE`.
+- Lambda `efps-notion-intake`: Active, Python 3.12, 512 MB, 180-second timeout; `LastModified=2026-11-13T15:18:43Z`, CodeSha256 `zZxd6tQPK8D1GriTmqa6rM0KS3An1zHKDsCx/MCs9aU=`.
+- Supabase `notion-inventory-state`: ACTIVE v9, JWT verification enabled.
+- Full live reconciliation: 104 Notion pages, 104 active snapshots, 0 missing/orphaned/duplicate/semantic mismatches. All 104 intake events are processed and have Listing IDs matching their snapshot rows.
+- Reserved fields `source_group` and `inventory_locked` are blank across all 104 pages; 43 populated `inventory_locked` values were cleared.
+- EventBridge reconciliation runs every 15 minutes; unchanged pages are skipped, changed/restored pages are queued, missing projections are soft-deleted, and an empty Notion result fails closed. A soft-deleted active rented listing was reactivated by the reconciler.
+- Async Lambda failures receive 2 retries over a 1-hour maximum age, then route to SQS (14-day retention). Structured logs correlate page ID, event type, webhook event ID and AWS request ID; CloudWatch retention is 30 days.
+- The eight Notion Page event selections remain user-confirmed and unchanged. Actual `page.undeleted` webhook delivery is not independently observed; the scheduled fallback recovers missed restores.
+- The raw Property Intake photo/enrichment path still depends on existing Sheets/Cloudinary/Maps credentials; their validity was not changed or reverified here.
 
 ## Isolated Notion intake deployment — initial rollout, 2026-11-13
 

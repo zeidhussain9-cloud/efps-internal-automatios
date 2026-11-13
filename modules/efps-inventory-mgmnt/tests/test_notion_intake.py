@@ -116,11 +116,11 @@ def test_notion_webhook_validates_native_signature_and_queues_page(monkeypatch):
     queued = []
     monkeypatch.setenv("NOTION_SECRET_ARN", "arn:aws:secretsmanager:ap-southeast-2:123456789012:secret:test")
     monkeypatch.setattr("boto3.client", FakeBoto3.client, raising=False)
-    monkeypatch.setattr(intake, "_enqueue_worker", lambda page_id, arn, event_type="": queued.append((page_id, arn)))
+    monkeypatch.setattr(intake, "_enqueue_worker", lambda page_id, arn, event_type="", event_id="": queued.append((page_id, arn, event_type, event_id)))
     context = type("Context", (), {"invoked_function_arn": "arn:aws:lambda:ap-southeast-2:123456789012:function:test"})()
     result = intake.lambda_handler({"headers": {"X-Notion-Signature": signature}, "body": body}, context)
     assert result["statusCode"] == 202
-    assert queued[0][0] == "12345678-1234-1234-1234-123456789abc"
+    assert queued == [("12345678-1234-1234-1234-123456789abc", context.invoked_function_arn, "page.created", "")]
 
 
 def test_notion_webhook_rejects_invalid_native_signature(monkeypatch):
@@ -219,18 +219,22 @@ def test_process_page_duplicate_delivery_does_not_write(monkeypatch):
         def get_page(self, page_id):
             return {"parent": {"database_id": intake.INTAKE_DATABASE_ID}, "properties": {"Raw Property Data": {"rich_text": [{"plain_text": "raw"}]}, "Photos": {"files": []}}}
     class FakeStore:
+        def __init__(self): self.listing_ids = []
         def claim(self, page_id, payload_hash):
             return "duplicate", {"listing_id": "EF-EXISTING"}
         def find_inventory(self, page_id):
             return {"found": True, "listing_id": "EF-EXISTING"}
+        def set_listing_id(self, page_id, listing_id): self.listing_ids.append((page_id, listing_id))
     class NoCalls:
         def __getattr__(self, name):
             raise AssertionError(f"unexpected call: {name}")
+    store = FakeStore()
     result = intake.process_page(
-        "intake-page-id", notion=FakeNotion(), store=FakeStore(), sheets=NoCalls(),
+        "intake-page-id", notion=FakeNotion(), store=store, sheets=NoCalls(),
         cloudinary=NoCalls(),
     )
     assert result == {"status": "already_processed", "listing_id": "EF-EXISTING"}
+    assert store.listing_ids == [("intake-page-id", "EF-EXISTING")]
 
 
 def test_processed_notion_page_repairs_a_missing_inventory_projection():
@@ -245,6 +249,8 @@ def test_processed_notion_page_repairs_a_missing_inventory_projection():
         def __init__(self):
             self.synced = []
             self.finished = []
+            self.listing_ids = []
+        def set_listing_id(self, page_id, listing_id): self.listing_ids.append((page_id, listing_id))
         def claim(self, page_id, payload_hash):
             return "duplicate", {"listing_id": "EF-2611-ABCD"}
         def find_inventory(self, page_id):
@@ -259,6 +265,7 @@ def test_processed_notion_page_repairs_a_missing_inventory_projection():
     assert result == {"status": "synced", "listing_id": "EF-2611-ABCD"}
     assert len(store.synced) == 1
     assert store.synced[0][1]["listing_id"] == "EF-2611-ABCD"
+    assert store.listing_ids == [(page_id, "EF-2611-ABCD")]
     assert notion.updates == [(page_id, {"listing_id": intake._rich("EF-2611-ABCD")})]
     assert store.finished[0][0] == "processed"
 
@@ -269,7 +276,8 @@ def test_duplicate_notion_page_restore_reactivates_soft_deleted_projection():
         def __init__(self): self.updates = []
         def update_page(self, page_id, properties): self.updates.append((page_id, properties))
     class FakeStore:
-        def __init__(self): self.synced = []
+        def __init__(self): self.synced = []; self.listing_ids = []
+        def set_listing_id(self, page_id, listing_id): self.listing_ids.append((page_id, listing_id))
         def claim(self, page_id, payload_hash): return "duplicate", {"listing_id": "EF-2611-ABCD"}
         def find_inventory(self, page_id): return {"found": True, "listing_id": "EF-2611-ABCD", "deleted_at": "2026-11-13T10:00:00Z"}
         def sync_inventory(self, page_id, row, *, deleted=False): self.synced.append((row, deleted))
@@ -278,6 +286,7 @@ def test_duplicate_notion_page_restore_reactivates_soft_deleted_projection():
     result = intake.process_listing_page(page, notion=notion, store=store)
     assert result == {"status": "synced", "listing_id": "EF-2611-ABCD"}
     assert len(store.synced) == 1 and store.synced[0][1] is False
+    assert store.listing_ids == [(page_id, "EF-2611-ABCD")]
     assert notion.updates == [(page_id, {"listing_id": intake._rich("EF-2611-ABCD")})]
 
 
@@ -430,11 +439,11 @@ def test_webhook_accepts_notion_event_entity_id(monkeypatch):
     monkeypatch.setenv("NOTION_SECRET_ARN", "arn:aws:secretsmanager:ap-southeast-2:123456789012:secret:test")
     monkeypatch.setattr("boto3.client", FakeBoto3.client, raising=False)
     enqueued = []
-    monkeypatch.setattr(intake, "_enqueue_worker", lambda supplied, arn, event_type="": enqueued.append((supplied, arn)))
+    monkeypatch.setattr(intake, "_enqueue_worker", lambda supplied, arn, event_type="", event_id="": enqueued.append((supplied, arn, event_type, event_id)))
     context = type("Context", (), {"invoked_function_arn": "arn:aws:lambda:ap-southeast-2:123456789012:function:test"})()
     result = intake.lambda_handler({"headers": {"X-Notion-Signature": signature}, "body": body}, context)
     assert result["statusCode"] == 202
-    assert enqueued == [(page_id, context.invoked_function_arn)]
+    assert enqueued == [(page_id, context.invoked_function_arn, "page.created", "")]
     assert json.loads(result["body"])["accepted"] is True
 
 
@@ -458,3 +467,57 @@ def test_blank_raw_property_data_is_marked_needs_review_without_claiming():
                                  store=NoCalls(), sheets=NoCalls(), cloudinary=NoCalls())
     assert result["status"] == "Needs Review"
     assert notion.updates[0]["Intake Status"]["status"]["name"] == "Needs Review"
+
+
+def test_listing_reconciliation_skips_unchanged_and_queues_soft_deleted_pages():
+    pages = [
+        {"id": "12345678-1234-1234-1234-123456789abc", "url": "https://notion.test/a", "last_edited_time": "2026-11-13T00:00:00Z",
+         "properties": {"listing_id": {"type": "rich_text", "rich_text": [{"plain_text": "EF-2611-AAAA"}]}}},
+        {"id": "22345678-1234-1234-1234-123456789abc", "url": "https://notion.test/b", "last_edited_time": "2026-11-13T00:00:00Z",
+         "properties": {"listing_id": {"type": "rich_text", "rich_text": [{"plain_text": "EF-2611-BBBB"}]}}},
+    ]
+    class FakeNotion:
+        def list_listings(self): return pages
+    class FakeStore:
+        def __init__(self): self.lookups = 0; self.reconciled = []
+        def find_inventory(self, page_id):
+            self.lookups += 1
+            row = intake.listing_snapshot(pages[self.lookups - 1])
+            digest = hashlib.sha256(json.dumps(row, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+            if self.lookups == 1:
+                return {"found": True, "listing_id": "EF-2611-AAAA", "deleted_at": None, "source_hash": digest}
+            return {"found": True, "listing_id": "EF-2611-BBBB", "deleted_at": "2026-11-12T00:00:00Z", "source_hash": digest}
+        def reconcile_pages(self, page_ids, listings): self.reconciled = page_ids; self.listings = listings; return {"listing_ids_reconciled": len(listings), "soft_deleted": 0}
+    class FakeLambda:
+        def __init__(self): self.payloads = []
+        def invoke(self, **kwargs): self.payloads.append(json.loads(kwargs["Payload"])); return {"StatusCode": 202}
+    store, client = FakeStore(), FakeLambda()
+    result = intake._enqueue_listing_backfill("arn:aws:lambda:ap-southeast-2:123456789012:function:test", notion=FakeNotion(), store=store, lambda_client=client)
+    assert result == {"checked": 2, "accepted": 1, "skipped_unchanged": 1, "listing_ids_reconciled": 2, "soft_deleted_missing": 0}
+    assert client.payloads == [{"_efps_notion_worker": True, "page_id": pages[1]["id"], "event_type": "reconciliation"}]
+    assert store.reconciled == [page["id"] for page in pages]
+    assert store.listings == [
+        {"page_id": pages[0]["id"], "listing_id": "EF-2611-AAAA"},
+        {"page_id": pages[1]["id"], "listing_id": "EF-2611-BBBB"},
+    ]
+
+
+def test_listing_reconciliation_refuses_empty_notion_result():
+    class FakeNotion:
+        def list_listings(self): return []
+    class NoCalls:
+        def __getattr__(self, name): raise AssertionError(f"unexpected call: {name}")
+    import pytest
+    with pytest.raises(intake.IntakeError, match="zero pages"):
+        intake._enqueue_listing_backfill("arn:test", notion=FakeNotion(), store=NoCalls(), lambda_client=NoCalls())
+
+
+def test_notion_listing_reconciliation_excludes_archived_and_trashed_pages():
+    class FakeResponse:
+        ok = True
+        content = b'{"results": [{"id": "active"}, {"id": "archived", "archived": true}, {"id": "trashed", "in_trash": true}], "has_more": false}'
+        def json(self): return json.loads(self.content)
+    class FakeSession:
+        def request(self, *args, **kwargs): return FakeResponse()
+    notion = intake.NotionClient("test-token", session=FakeSession())
+    assert [page["id"] for page in notion.list_listings()] == ["active"]

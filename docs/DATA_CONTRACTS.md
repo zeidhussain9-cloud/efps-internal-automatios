@@ -2,22 +2,17 @@
 
 ## Authoritative current verified state — 2026-11-13
 
-This section is the current verified checkpoint. Older dated figures below are historical and must not be treated as current production metrics.
+This is the current verified checkpoint; older dated figures below are historical.
 
-- **Repository:** `zeidhussain9-cloud/efps-internal-automatios`
-- **Task checkout:** `crm-ui-dashboard`; Notion intake and projection code are deployed. Render is LIVE on commit `ddb0f6391f99ba9a848fd30c8b03bd5db9c1b53c`.
-- **Render:** deployment `dep-dbrei8avcj2c73erda3g` is LIVE; production `/` and `/health` returned HTTP 200; Production health smoke passed.
-- **Housing inventory mirror:** Supabase confirms 104 active `housing_notion` rows in `crm_inventory_snapshot` (87 Available, 17 Rented Out). Test snapshot and intake records are absent. The Notion test page is in Trash. The user confirms webhook verification and all eight Page event selections.
-- **Inventory validation:** GitHub Inventory Contract 130/130 passed; local Notion intake tests 23/23, repository audit, projection regression, compileall, and SAM lint passed.
-- **CRM validation:** latest GitHub CRM build/test/browser checks passed; browser regression 1/1.
-- **SAM validation:** GitHub clean container builds, generated-template validation, Python compilation, and Lambda dependency packaging passed. The deployed Lambda used the existing Linux dependency artifact with its source hash matched; existing secret ARN parameters were reused.
-- **Subtype:** mandatory supported value; Apartment fallback only when no subtype evidence exists; Penthouse -> Apartment; conflicting/unsupported candidates remain unresolved and require Needs Review.
-- **Maps:** preserve the exact original source URL. Only VERIFIED Maps results may replace conflicting locality/place name; unverified candidates do not overwrite data and route to Needs Review.
-- **WhAPI inventory intake:** deployed EFPSWebhook is Active with live flags enabled; deployed code was last updated 2026-10-04 and routes the two dedicated inventory sender numbers through the NEW delimiter. This is a legacy, unused inventory path retained only until the final cleanup phase; the shared stack was not redeployed. Do not treat it as the current inventory workflow.
-- **Slack inventory intake:** the existing /efps add-property flow collects property details in a thread, writes through the canonical Inventory pipeline to Housing_Listings, and uploads associated thread photos to Cloudinary; /efps photos start handles rows still missing photos.
-- **Notion intake:** isolated AWS stack `efps-notion-property-intake` is `UPDATE_COMPLETE`; Lambda `efps-notion-intake` is Active with successful update; Supabase Edge Function `notion-inventory-state` is ACTIVE v6. Controlled test verified create, edit, ID write-back, duplicate suppression, soft-delete, and restore projection behavior. Delete/restore were tested by direct worker invocation; webhook delivery for those event types was not independently verified. Existing secret ARNs were reused, and values were not displayed or changed. Raw Property Intake still depends on Sheet/Cloudinary/Maps runtime credentials; their validity remains unchecked.
-- **Supabase ownership:** `public.crm_inventory_snapshot` remains the existing dashboard projection keyed by immutable `listing_id`. Notion Housing Listings is canonical; page events write `housing_notion` rows through the authenticated Edge Function. Dashboard code reads active `housing_notion` rows only. The Sheet reconciliation cron is disabled; legacy Sheet producers remain compatibility paths. `crm_inventory_intake_events` remains the per-page idempotency store. Test page was trashed and its exact snapshot/intake rows removed. The existing webhook and event selection are user-confirmed.
-- **WhatsApp:** `whatsapp_post` is generated for Notion from explicit/verified v7.1 facts. The adapter does not send WhatsApp messages.
+- **Repository:** `zeidhussain9-cloud/efps-internal-automatios`; deployment branch `crm-ui-dashboard`.
+- **Inventory:** 104 active Notion Housing Listings pages and 104 active `housing_notion` rows in `crm_inventory_snapshot`; 0 missing, orphaned, duplicate or semantic field mismatches. Counts: 87 Available / 17 Rented Out.
+- **Event ledger:** 104/104 processed; all 104 intake events have Listing IDs that match the corresponding snapshot row; 0 failed, needs-review or stale-processing records.
+- **Reserved fields:** `source_group` and `inventory_locked` blank across all 104 pages; 43 populated `inventory_locked` values corrected to blank.
+- **Notion runtime:** Supabase Edge Function `notion-inventory-state` ACTIVE v9 with JWT verification; AWS stack `efps-notion-property-intake` `UPDATE_COMPLETE`; Lambda `efps-notion-intake` Active in `ap-southeast-2`.
+- **Recovery:** 15-minute EventBridge reconciliation checks active Notion pages, enqueues only changed/restored records, reconciles event Listing IDs, and soft-deletes missing projections. Empty Notion results fail closed. A simulated soft-delete of an active rented listing was reversed by the scheduled reconciliation. Actual `page.undeleted` webhook delivery is not independently verified; missed restore delivery is covered by the scheduled fallback.
+- **Failure handling:** allocation retries three times; async failures retry twice and are retained in a 14-day SQS failure queue; structured Lambda logs have page/event/request correlation and 30-day retention.
+- **Legacy paths:** Sheet reconciliation cron removed; legacy Sheet producers and the WhAPI `NEW` listener remain compatibility paths. Raw Property Intake photo/enrichment credential validity remains separate and unverified.
+- **Webhook selections:** all eight Notion Page events remain user-confirmed and unchanged. No secret values were displayed or changed.
 
 ## Inventory contract
 

@@ -4,29 +4,30 @@
 
 ## Canonical editor transition — 2026-11-13
 
-- Notion Housing Listings is the canonical operator editing surface. New Notion pages and edits are designed to write directly into the existing `public.crm_inventory_snapshot` projection under `source_kind='housing_notion'`.
-- Supabase schema migration, `notion-inventory-state` Edge Function v4, and the isolated Notion Lambda are deployed. The existing Connection webhook and all eight Page event selections are user-confirmed.
-- The one-time backfill accepted 104 Housing Listings pages; Supabase confirms 104 active `housing_notion` rows and 104 processed events.
-- The five-minute Sheet reconciliation cron was unscheduled on 2026-11-13. Dashboard inventory now reads Notion-owned (`housing_notion`) rows only.
-- Keep all eight Notion Page events selected: `page.content_updated`, `page.created`, `page.deleted`, `page.locked`, `page.moved`, `page.properties_updated`, `page.undeleted`, and `page.unlocked`.
-- Existing AWS Secrets Manager records were not changed, duplicated, or rotated. The old WhAPI `NEW`-delimited listener remains untouched until final cleanup.
+- Notion Housing Listings is the canonical operator editing surface. Supabase `public.crm_inventory_snapshot` remains the dashboard projection under `source_kind='housing_notion'`.
+- Supabase `notion-inventory-state` ACTIVE v9 (JWT verification enabled); isolated AWS Lambda `efps-notion-intake` Active; stack `efps-notion-property-intake` `UPDATE_COMPLETE`.
+- Full live reconciliation: 104 active Notion pages / 104 active Supabase rows; 0 missing, orphaned, duplicate or semantic field mismatches. All 104 intake events are processed and have Listing IDs matching their snapshot rows.
+- Reserved AU/AV fields: `source_group` and `inventory_locked` are blank across all 104 pages; 43 prior `inventory_locked` values were cleared.
+- A 15-minute EventBridge reconciliation queues only changed/restored pages, repairs event Listing IDs, and soft-deletes projections missing from the complete Notion result. Empty Notion results fail closed.
+- Recovery fallback tested: rented listing `EF-2609-09B5` was soft-deleted through the worker and reactivated by scheduled reconciliation. Actual `page.undeleted` webhook delivery is not independently observed, but missed restore delivery is recovered by the fallback.
+- All eight Page events remain user-confirmed and unchanged. Sheet reconciliation cron is removed. Legacy Sheet producers and the old WhAPI `NEW` listener remain untouched pending separately agreed cleanup.
 
 ## Source and boundary
 
 - Current source: Notion Housing Listings. Historical source: Google Sheet tab Housing_Listings. Legacy Sheet intake writes do not feed the dashboard.
-- CRM reads operational columns A:AT only; reserved AU/AV are excluded.
-- Dashboard sync reads only active Notion-owned rows. Sheet writes are still performed by the Slack operator intake and raw-intake compatibility flow, but those rows are excluded from the dashboard inventory. The old WhAPI NEW-delimited inventory listener is legacy and retained only until final cleanup; it is not the current Notion workflow. The direct Notion Housing Listings mirror is deployed and its 104-page backfill is verified. Raw Property Intake with photos remains separately dependent on the existing Sheet/Cloudinary/Maps runtime secrets.
-- Supabase snapshot: public.crm_inventory_snapshot.
-- Change history: public.crm_inventory_sync_changes.
-- Render service: srv-darsv560tbcc73cu4ip0; production branch: crm-ui-dashboard.
-- Supabase cron `crm_inventory_sheet_reconcile_5m` was removed on 2026-11-13; Notion page events update the projection directly.
+- CRM reads operational columns A:AT only; reserved AU/AV are excluded and blank.
+- Dashboard reads active Notion-owned rows only. Raw Property Intake photo/enrichment remains a separate compatibility path using the existing Sheet/Cloudinary/Maps runtime credentials; their validity was not changed or reverified in this repair.
+- Supabase snapshot: `public.crm_inventory_snapshot`; intake ledger: `public.crm_inventory_intake_events`.
+- Render service: `srv-darsv560tbcc73cu4ip0`; production branch: `crm-ui-dashboard`.
+- Supabase cron `crm_inventory_sheet_reconcile_5m` was removed on 2026-11-13. EventBridge Notion reconciliation now runs every 15 minutes.
 
 ## Current verified state
 
-- Supabase active snapshot: 104 — 87 Available / 17 Rented Out.
-- Current projection: 104 active Notion rows, 87 Available and 17 Rented; all 104 page intake events are processed. No Sheet-owned or test listings remain.
-- The last observed 502 and twelve following HTTP 200 responses belong to the historical Sheet-reconciliation repair window (2026-11-12); that scheduler has since been removed.
-- The old Sheet cron is disabled; verify future inventory changes through Notion page events and the Supabase projection.
+- Supabase active snapshot: 104 — 87 Available / 17 Rented Out; 0 soft-deleted rows.
+- Source media gap (not a sync failure): 99/104 listings have Cloudinary image URLs. Five Rented Out pages have no image URL in Notion: `EF-2609-608J`, `EF-2609-22H0`, `EF-2609-VDWH`, `EF-2609-7JGF`, `EF-2609-MECJ`. The CRM mirrors the blank source values; no substitute images were invented.
+- Intake ledger: 104 processed, 104 with Listing IDs, 104/104 mapped to snapshot rows; 0 failed/needs-review/stale.
+- Initial mapping repair updated all 104 event Listing IDs. Latest v9 scheduled run: 104 checked, 0 queued, 104 unchanged, 0 further mapping updates, 0 soft-deletes.
+- Async failure policy: 2 retries, 1-hour maximum event age, then SQS failure queue (14-day retention). CloudWatch log retention: 30 days.
 
 ## Confirmed 502 cause and repair
 
@@ -67,4 +68,4 @@ The eight original Slack warnings were for G5ZS, 6JYX, 97J4, WVP3, NFHV, 9ZZJ, X
 - Never write to the compatibility Sheet from the CRM snapshot reconciliation path.
 - Do not treat inventory history before crm_inventory_sync_changes existed as reconstructable.
 - Signed-in production UI verification is complete: the edited Notion test listing appeared in the dashboard, and after cleanup the dashboard returned to 104 properties. Supabase mirror checks alone were not used as a substitute for this browser evidence.
-- Live archive/delete was observed through Notion and soft-deleted the Supabase row after about one minute. Restore is not verified: no Lambda or Edge Function request was observed after restoring from Trash, and the projection remained deleted. Retest with a fresh identified test page only; the prior test page has been permanently removed.
+- Live archive/delete was observed through Notion and soft-deleted the Supabase row after about one minute. Actual `page.undeleted` webhook delivery remains unobserved; however, the 15-minute reconciler successfully restored a soft-deleted active rented listing. Missed restore delivery is therefore recovered automatically without changing the Notion webhook settings.

@@ -1,6 +1,6 @@
 # EFPS CRM UI Dashboard — Current State
 
-> Verified 2026-10-04 00:49 IST. Older dated statements in this document are historical evidence and are superseded by this block.
+> CRM operational metrics last revalidated 2026-11-12; Notion inventory and projection revalidated 2026-11-13. Older dated statements in this document are historical evidence.
 
 ## Production identity
 
@@ -47,7 +47,9 @@ The dashboard uses the production Supabase CRM data path. Webhook events are dur
 
 ## Current database snapshot
 
-253 leads; 9,222 messages; 3,023 WhAPI webhook events; 277 AI runs; 214 drafts; 389 classifications; 71 active inventory listings.
+- Inventory verified 2026-11-13: 104 active Notion-owned listings (87 Available / 17 Rented Out); 104 matching Supabase snapshots and 104 processed intake events with matching Listing IDs.
+- Source media gap (not a sync failure): 99/104 listings have Cloudinary image URLs. Five Rented Out pages have no image URL in Notion: `EF-2609-608J`, `EF-2609-22H0`, `EF-2609-VDWH`, `EF-2609-7JGF`, `EF-2609-MECJ`. The CRM mirrors the blank source values; no substitute images were invented.
+- CRM lead, message, AI and classification metrics are recorded in `docs/crm/CRM_CURRENT_VERIFIED_STATE.md` and must be re-queried separately before reuse.
 Classification status for +919148338801: 253 promoted / 88 classified / 40 excluded / 8 pending.
 
 ## Group Message classification

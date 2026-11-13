@@ -2,21 +2,18 @@
 
 ## Authoritative current verified state — 2026-11-13
 
-> The latest UI release is live on the remote branch. Local Lambda-source correction is not yet published; see `CRM_CURRENT_VERIFIED_STATE.md` and `HANDOFF.md` for the verified boundary. Older dated checkpoints below remain historical.
+> The CRM UI remains deployed on `crm-ui-dashboard`. Current inventory synchronization and runtime evidence is in `CRM_CURRENT_VERIFIED_STATE.md` and `docs/NOTION_PROPERTY_INTAKE.md`.
 
-- Render LIVE: deployment `dep-dbrbc8gjo6nc73etsmr0`, commit `6b206ddf07515cff2df82140d86ee873e4ea2965` on `crm-ui-dashboard`; `/health` and `/` returned HTTP 200.
-- Supabase project qttcutwzehtskfcwxkwj; whapi-crm-webhook ACTIVE v10.
-- Remote `crm-ui-dashboard` is at `6b206ddf07515cff2df82140d86ee873e4ea2965`; remote `main` is at `954b24fc21b8b91a6bd5cae3e24a116e31fbdce7`. Their trees matched before the local follow-up fix.
-- CRM: 371 leads; 138 deterministic auto-qualified; 839 contact classifications; 18,641 messages since 2026-10-05.
-- Webhooks: 18,641/18,641 message events linked to crm_messages; 0 active errors; 43 original errors retained in processing_error_history.
-- Group messages: 13,611 since 2026-10-05; 0 linked to lead timelines.
-- Inventory (updated 2026-11-13): 104 active Notion-owned rows (87 Available / 17 Rented); Sheet reconciliation cron removed; dashboard reads Notion only.
-- Deterministic scheduler: 923 completed / 0 failed; AI scheduler intentionally paused.
-- CI: build PASS; 139/139 automated tests PASS; browser regression 1/1 PASS. Production-health smoke job skipped.
-- Slack batch: 16 of 17 IDs in the Supabase mirror; NFHV is represented by duplicate/re-entry B42K. WVP3 has an empty property_subtype and remains under review pending operator validation.
-- Inventory Contract failed on the remote commit for reserved Notion fields; local correction passes repository audit and tests, but publication was rejected by approval review.
+- Supabase project `qttcutwzehtskfcwxkwj`; `whapi-crm-webhook` ACTIVE v10.
+- Inventory runtime: Notion Housing Listings → AWS Lambda `efps-notion-intake` → Supabase Edge Function `notion-inventory-state` ACTIVE v9 → `crm_inventory_snapshot` → CRM dashboard.
+- Live inventory: 104 active Notion pages / 104 active snapshot rows; 0 missing, orphaned, duplicate or semantic field mismatches; 87 Available / 17 Rented Out.
+- Source media gap (not a sync failure): 99/104 listings have Cloudinary image URLs. Five Rented Out pages have no image URL in Notion: `EF-2609-608J`, `EF-2609-22H0`, `EF-2609-VDWH`, `EF-2609-7JGF`, `EF-2609-MECJ`. The CRM mirrors the blank source values; no substitute images were invented.
+- Intake events: 104 processed; 104/104 Listing IDs populated and matching snapshot rows; 0 failed or stale events.
+- Reserved fields: `source_group` and `inventory_locked` blank across all 104 pages; 43 prior `inventory_locked` values cleared.
+- EventBridge fallback runs every 15 minutes and repairs missed edits/restores, event-to-listing mappings, and missing-page tombstones. A soft-delete/restore fallback test passed. Actual Notion `page.undeleted` delivery is not independently verified.
+- Async failures are retained in SQS for 14 days after 2 retries / 1-hour maximum age. Lambda logs include page/event/request correlation and retain 30 days.
+- Sheet reconciliation cron removed; legacy Sheet writes and old WhAPI inventory listener remain by prior direction. Raw Property Intake photo/enrichment credentials are separate and remain unverified.
 
-See CRM_CURRENT_VERIFIED_STATE.md for current evidence and CRM_RECOVERY_AUDIT_2026-11-12.md for recovery history.
 ### Current operational flow
 
 WhAPI +919148338801 -> `crm_webhook_events` (durable first write) -> `crm_process_webhook_event` -> `crm_messages` for every message event -> optional `crm_contact_classifications` when a valid personal phone exists -> deterministic scheduler -> operator-qualified promotion into `crm_leads`.

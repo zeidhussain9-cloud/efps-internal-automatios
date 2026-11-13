@@ -1,14 +1,19 @@
 # EFPS Inventory Management
 
-## Live mirror acceptance note — 2026-11-13
+## Live mirror acceptance note — 2026-11-13 (recovery hardening)
 
-The direct Housing Listings mirror is deployed with Edge Function v6 and a Lambda recovery fix. The controlled test confirmed create and edit synchronization to Supabase, Listing ID write-back, duplicate suppression, soft-delete, and restore clearing the deletion marker. Delete/restore handlers were invoked directly for the test page because webhook delivery for those events was not independently observed. The Supabase test rows were removed; its Notion test page remains in Trash pending permanent removal. The signed-in dashboard display has not been visually checked. See `docs/NOTION_PROPERTY_INTAKE.md` for current acceptance status.
+The direct Housing Listings mirror is deployed with Supabase Edge Function v9 and the isolated Lambda. Full reconciliation confirms 104 active Notion pages and 104 matching Supabase snapshots, with no missing/orphaned/duplicate rows or semantic field mismatches. All 104 intake events are processed and contain the correct Listing ID. The reserved `source_group` and `inventory_locked` fields are blank; 43 populated `inventory_locked` values were cleared.
+
+A 15-minute EventBridge reconciler checks all active Notion pages, queues only changed/restored pages, repairs event-to-listing mappings, and soft-deletes missing projections. Empty source results fail closed. A soft-deleted rented listing was successfully reactivated by the reconciler. Actual Notion `page.undeleted` delivery remains unobserved, but missed restore delivery is covered by the fallback. Async failures are retried and then retained in a 14-day SQS failure queue; structured Lambda logs retain 30 days.
+
+The production dashboard remains at 104 listings (87 Available / 17 Rented Out). See `docs/NOTION_PROPERTY_INTAKE.md` for the live evidence and remaining separate raw-intake credential boundary.
+- Source media gap (not a sync failure): 99/104 listings have Cloudinary image URLs. Five Rented Out pages have no image URL in Notion: `EF-2609-608J`, `EF-2609-22H0`, `EF-2609-VDWH`, `EF-2609-7JGF`, `EF-2609-MECJ`. The CRM mirrors the blank source values; no substitute images were invented.
 
 ## Intake entry points
 
 - Existing Slack intake: /efps add-property collects details in a thread and writes through the canonical pipeline; /efps photos start associates operator-uploaded thread photos with the same Sheet row.
 - Existing WhAPI intake: messages from the two configured inventory sender numbers are accumulated until the next exact NEW boundary; the canonical pipeline closes and processes the prior property session. The runtime allowlist comes from INVENTORY_SENDERS, with the two verified sender numbers as fallback.
-- Canonical editor: Notion Housing Listings. Signed Page events mirror pages directly into the existing dashboard Supabase inventory. Supabase schema and Edge Function v6 and the isolated Lambda are deployed; the user confirms the existing webhook and all eight Page events remain selected. The backfill populated 104 active Notion-owned rows; see docs/NOTION_PROPERTY_INTAKE.md.
+- Canonical editor: Notion Housing Listings. Signed Page events mirror pages directly into the existing dashboard Supabase inventory. Supabase schema and Edge Function v9 and the isolated Lambda are deployed; the user confirms the existing webhook and all eight Page events remain selected. The backfill populated 104 active Notion-owned rows; see docs/NOTION_PROPERTY_INTAKE.md.
 - Raw Notion Property Intake remains a compatibility pipeline that uses the existing Sheet/Cloudinary/Maps credentials and creates/updates Housing Listings pages. No AWS secret values are rotated or duplicated.
 
 ## Review-status boundary
@@ -78,7 +83,7 @@ The inventory contract is 48 columns A:AV. Recurring Stage 1/2 updates are restr
 
 `src/notion_intake.py` has two paths. Raw Property Intake still claims in Supabase `crm_inventory_intake_events`, processes text/photos through the existing deterministic pipeline, writes the compatibility Housing_Listings Sheet row, and creates/updates the Housing Listings page. When a Housing Listings page is created or edited, the new path claims the same source page idempotently, allocates a stable Listing ID when needed, and upserts or soft-deletes the existing `public.crm_inventory_snapshot` row directly. The dashboard now includes `housing_notion` rows, and the compatibility Sheet sync cannot overwrite those rows. Long Maps URLs are omitted from captions and flagged; pet policy is not inferred. No WhatsApp message is sent.
 
-The adapter does not operate on AU/AV or send WhatsApp messages. Its SAM endpoint and secret contract are documented in `docs/NOTION_PROPERTY_INTAKE.md`. The existing AWS stack/Lambda/API route includes the direct mirror change; Supabase `notion-inventory-state` v6 and the schema change are deployed. Backfill completed for 104 pages. The user confirms webhook verification and all eight event selections. Existing AWS secret ARNs were reused; no secret values were displayed or changed. The Notion path has no DynamoDB dependency. Controlled create/edit/replay/soft-delete/restore checks passed, with delete/restore handler invocations simulated directly; signed-in CRM UI rendering and permanent deletion of the test page from Notion Trash remain open.
+The adapter does not operate on AU/AV or send WhatsApp messages. Its SAM endpoint and secret contract are documented in `docs/NOTION_PROPERTY_INTAKE.md`. The existing AWS stack/Lambda/API route and Supabase `notion-inventory-state` v9 are deployed. Full 104-page source/projection reconciliation and event-to-Listing-ID mapping passed. The user-confirmed eight Page event selections were not changed. Existing AWS secret ARNs were reused; no secret values were displayed or changed. The Notion path has no DynamoDB dependency. A 15-minute scheduled reconciler repairs missed changes/restores and soft-deletes missing pages; fallback restoration was live-tested. Actual Notion `page.undeleted` delivery remains unobserved. The signed-in dashboard showed the 104-row projection.
 
 ## Verification
 

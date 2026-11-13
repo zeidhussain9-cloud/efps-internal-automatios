@@ -17,6 +17,12 @@ Parameters:
     AllowedPattern: '^arn:[^:]+:secretsmanager:[^:]+:[0-9]{12}:secret:.+$'
 
 Resources:
+  NotionIntakeFailures:
+    Type: AWS::SQS::Queue
+    Properties:
+      MessageRetentionPeriod: 1209600
+      VisibilityTimeout: 1080
+
   EFPSNotionIntake:
     Type: AWS::Serverless::Function
     Properties:
@@ -30,6 +36,10 @@ Resources:
       EventInvokeConfig:
         MaximumEventAgeInSeconds: 3600
         MaximumRetryAttempts: 2
+        DestinationConfig:
+          OnFailure:
+            Type: SQS
+            Destination: !GetAtt NotionIntakeFailures.Arn
       Environment:
         Variables:
           NOTION_SECRET_ARN: !Ref NotionSecretArn
@@ -40,6 +50,12 @@ Resources:
           SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF0dGN1dHd6ZWh0c2tmY3d4a3dqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA0MzcxNzksImV4cCI6MjEwNjAxMzE3OX0.C1sk2ZQqLjfvZUlsscrWOEWnqGYOFl6-xEnLmLsojic'
           PYTHONPATH: 'modules/efpd-lead-mgmnt/src:modules/efps-inventory-mgmnt/src'
       Events:
+        Reconcile:
+          Type: Schedule
+          Properties:
+            Schedule: rate(15 minutes)
+            Input: '{"_efps_notion_backfill": true}'
+            Enabled: true
         Intake:
           Type: Api
           Properties:
@@ -54,6 +70,9 @@ Resources:
             - Effect: Allow
               Action: [secretsmanager:GetSecretValue, secretsmanager:PutSecretValue]
               Resource: !Ref NotionSecretArn
+            - Effect: Allow
+              Action: [sqs:SendMessage]
+              Resource: !GetAtt NotionIntakeFailures.Arn
             - Effect: Allow
               Action: [secretsmanager:GetSecretValue]
               Resource:

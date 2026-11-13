@@ -1,20 +1,21 @@
 # EFPS CRM — Open Pointers
 
-> CRM operational pointers last verified 2026-10-05; Notion inventory deployment and backfill verified 2026-11-13. Historical release pointers are superseded.
+> CRM operational pointers last verified 2026-10-05; Notion inventory recovery hardening verified 2026-11-13. Historical release pointers are superseded.
 
-## Current Notion inventory rollout — live verification 2026-11-13
+## Current Notion inventory — recovery hardening verified 2026-11-13
 
-- AWS account `294417174793` in `ap-southeast-2` has the active Notion intake Lambda. Supabase `notion-inventory-state` is ACTIVE v6 with JWT verification enabled.
-- The user confirms the existing `EFPS CRM Property Intake` webhook is verified with all eight Page events selected. No event settings were changed.
-- The signed-in production dashboard showed 104 Notion-owned properties (87 Available, 17 Rented Out). A live Notion edit propagated through Supabase and appeared in the dashboard. A real Notion delete soft-deleted its Supabase row after about one minute. Earlier duplicate handler verification returned `already_processed`.
-- **Open blocker:** restoring the test page in Notion did not trigger a new Lambda invocation or Supabase Edge Function request; the Supabase row remained soft-deleted. The direct restore worker check passed, but live webhook delivery did not. Keep all Page events as selected; diagnose event delivery without toggling webhook settings.
-- Cleanup is verified: the exact test snapshot and intake rows were removed from Supabase, and the test page was permanently deleted from Notion Trash after user approval. Supabase and the dashboard returned to 104 rows (87 Available, 17 Rented Out).
-- GitHub `crm-ui-dashboard` is `61688164b25f7a7a8e6df8248f91987a9c471ef6`; GitHub `main` is `3c66a89e734d02ade5b4865f05c2dcbc99ec655b`. Both have tree `14717bf1d37afa8d678fc0526026dae357755fdf`. Render was observed live on `61688164`; `/health` and `/` returned HTTP 200 in the release check.
-- Existing AWS secrets remain reused without revealing or changing values. The Sheet reconciliation cron is removed, but legacy Sheet writes remain; WhAPI remains until final cleanup. Raw photo intake credential validity is still unverified.
+- AWS `efps-notion-intake` is Active in account `294417174793`, region `ap-southeast-2`; stack `efps-notion-property-intake` is `UPDATE_COMPLETE`. Supabase `notion-inventory-state` is ACTIVE v9 with JWT verification enabled.
+- Notion Housing Listings remains canonical. The CRM projection has 104 active rows (87 Available / 17 Rented Out), matching all 104 active Notion pages. There are 0 missing, orphaned, duplicate or semantically mismatched records.
+- All 104 intake events are processed and have Listing IDs matching their snapshot rows. `source_group` and `inventory_locked` are blank across all 104 Notion pages; 43 prior `inventory_locked` values were cleared.
+- EventBridge reconciliation runs every 15 minutes, queues only changed/restored pages, reconciles event Listing IDs, and soft-deletes rows absent from the full Notion result. Empty Notion results fail closed. A soft-deleted active rented listing was reactivated by this fallback.
+- Actual Notion `page.undeleted` webhook delivery remains unobserved, but missed restores are now recovered automatically within the 15-minute reconciliation interval. The eight Page event selections remain user-confirmed and unchanged.
+- Source media gap (not a sync failure): five Rented Out listings have no Cloudinary image URL in Notion (`EF-2609-608J`, `EF-2609-22H0`, `EF-2609-VDWH`, `EF-2609-7JGF`, `EF-2609-MECJ`). The CRM correctly shows 99/104 listings with photos; source media is required to close this gap.
+- Lambda async failures retry twice and then enter the 14-day SQS failure queue; structured logs include page/event/request correlation and retain 30 days.
+- Sheet reconciliation cron is removed. Legacy Sheet writes and the old WhAPI `NEW` listener remain untouched pending separately agreed cleanup.
 
-## Remaining user actions
+## Remaining scoped follow-up
 
-- No immediate operator action is needed. The engineering follow-up is to diagnose why Notion's restore action did not deliver the selected `page.undeleted` event, then repeat a safe live restore test and confirm Supabase and the dashboard recover the listing. Do not alter webhook configuration without separate direction.
+- Raw Property Intake with photos is a separate compatibility pipeline that still depends on the existing Sheets, Cloudinary and Maps runtime credentials. Those credential values were not changed or revalidated during the Housing Listings mirror repair. Do not rotate or overwrite them without a separately approved credential operation.
 
 ## External infrastructure prerequisites
 

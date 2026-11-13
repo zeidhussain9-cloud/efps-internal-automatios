@@ -6,8 +6,8 @@
 
 - Production URL: https://easyfind-crm-d01-d05.onrender.com
 - Render service: easyfind-crm-d01-d05 / srv-darsv560tbcc73cu4ip0
-- Code-bearing release used for signed-in inventory verification: `61688164b25f7a7a8e6df8248f91987a9c471ef6`.
-- Subsequent documentation-only updates were published to the deployment branch and auto-deployed. GitHub production health smoke passed on the documentation follow-up. Use the Render service and GitHub branch refs for the current deployment and commit IDs; documentation commits do not change the verified application code.
+- Signed-in inventory behavior was rechecked against the current live Render deployment; the deployment ID and commit are read from Render at verification time.
+- The current release includes the Notion inventory recovery hardening on the implementation branch. Render auto-deploys from `crm-ui-dashboard`; use the live Render service for the current deployment ID and commit. The CRM dashboard UI itself was not modified by this inventory repair.
 - Supabase project: qttcutwzehtskfcwxkwj
 - Edge Function: whapi-crm-webhook, ACTIVE v10
 - Production source: +919148338801
@@ -24,16 +24,20 @@
 - Deterministic scheduler: 923 completed / 0 failed since 2026-10-05; cumulative run totals 319 candidates, 118 qualified, 8 unqualified, 193 pending.
 - AI scheduler remains intentionally paused. No automatic WhatsApp sending is enabled.
 
-## Inventory synchronization — live acceptance rechecked 2026-11-13
+## Inventory synchronization — live recovery hardening 2026-11-13
 
-- Canonical editing surface: Notion Housing Listings. The legacy `Housing_Listings` Sheet remains a compatibility path; the dashboard reads active Notion rows from the existing Supabase snapshot.
-- Supabase has 104 active `housing_notion` rows (87 Available, 17 Rented). The temporary test snapshot and intake event were removed. The identified test page was permanently deleted from Notion Trash after user approval.
-- `notion-inventory-state` is ACTIVE v6 with JWT verification enabled. Lambda `efps-notion-intake` is Active in AWS account `294417174793`. The user confirmed the existing webhook and all eight Page events remain selected; settings were not changed.
-- The `crm_inventory_sheet_reconcile_5m` cron is unscheduled. Legacy Sheet writes remain in Slack/raw-intake compatibility flows. The old WhAPI path remains until final cleanup.
-- **Verified live:** an edit made in Notion changed the Supabase mirror and was visible in the signed-in production dashboard. A Notion delete event soft-deleted the Supabase row after about one minute. Duplicate handler replay was previously confirmed as `already_processed`.
-- **Restore blocker:** a page restored in Notion disappeared from Trash, but no new Lambda invocation or Edge Function request followed; the Supabase row remained soft-deleted. Direct restore-worker behavior passed earlier, but end-to-end webhook delivery is not working/verified. The test data was then explicitly cleaned from Supabase and the Notion page permanently removed.
-- Dashboard after cleanup displayed 104 listings: 87 Available and 17 Rented Out. Checks found zero test projection rows and zero test intake events.
-- The 104-page backfill and its 104 processed intake events are historical release evidence, not a new backfill run during this check. Existing AWS secret ARNs were reused; secret values were not read or changed.
+- Canonical editor: Notion Housing Listings. The legacy `Housing_Listings` Sheet remains a compatibility path; dashboard reads active Notion rows from the existing Supabase snapshot.
+- Full comparison: 104 active Notion pages, 104 active Supabase rows, 0 missing/orphaned/duplicate records, and 0 semantic field mismatches after normalizing Notion rich-text formatting.
+- Intake ledger: 104 processed events; 104/104 Listing IDs populated and matching snapshot Listing IDs; 0 failed, needs-review, or stale-processing records.
+- Reserved fields: `source_group` blank on all 104 pages; 43 nonblank `inventory_locked` values cleared; it is now blank across all 104.
+- `notion-inventory-state` ACTIVE v9 with JWT verification. AWS `efps-notion-property-intake` stack `UPDATE_COMPLETE`; Lambda `efps-notion-intake` Active.
+- EventBridge reconciliation runs every 15 minutes, queues only changed/restored pages, repairs event-to-listing mappings, and soft-deletes projections absent from the complete Notion result. Empty results fail closed.
+- Initial mapping repair updated all 104 event Listing IDs. Latest v9 reconciliation: 104 checked, 0 queued, 104 unchanged, 0 further mapping updates, 0 soft-deletes.
+- Restore fallback test: `EF-2609-09B5` was soft-deleted in Supabase through the worker and automatically reactivated by the scheduled reconciler. Actual Notion `page.undeleted` webhook delivery remains unobserved; the fallback now recovers missed restores within the 15-minute interval.
+- Lambda retries Listing ID allocation three times. Async failures retry twice and then enter the 14-day SQS failure queue. Structured event/page/request logs retain 30 days.
+- Inventory remains 104 listings: 87 Available and 17 Rented Out. `/health` returned HTTP 200. No CRM UI, lead classification, qualification or WhatsApp behavior changed.
+- Source media gap (not a sync failure): 99/104 listings have Cloudinary image URLs. Five Rented Out pages have no image URL in Notion: `EF-2609-608J`, `EF-2609-22H0`, `EF-2609-VDWH`, `EF-2609-7JGF`, `EF-2609-MECJ`. The CRM mirrors the blank source values; no substitute images were invented.
+- Sheet reconciliation cron remains removed. Legacy Sheet writes and old WhAPI inventory listener remain untouched. Raw Property Intake photo/enrichment credentials remain a separate unverified compatibility path.
 
 ## Slack property batch and review boundary
 
@@ -57,7 +61,7 @@ The 16 IDs are confirmed in Supabase. The source Sheet was not reread during thi
 
 ## CI, UI and verification boundary
 
-- Earlier code-bearing release CI passed Inventory Contract (130/130), SAM build/validation, CRM build/tests/browser, and Production health smoke. The latest `61688164` commit changes documentation only; Inventory Contract is path-filtered, so a new pass on that docs-only commit is not evidenced here.
+- This recovery release passed the full repository build/test/browser suite, 92 inventory-module pytest tests (including 26 Notion intake tests), 4 Edge Function contract tests, SAM build/validation, Python compilation, repository audit, and `git diff --check`. Historical CI checkpoints remain below as dated evidence.
 - Earlier local repository audit, projection regression, compileall, SAM lint, and Notion intake tests passed (23/23); CRM browser regression passed 1/1. This docs-only update did not rerun software tests.
 - The signed-in production inventory page was exercised: it showed 104 properties and the test listing during the edit check, then returned to 104 listings after cleanup.
 - Earlier npm install reported 7 dependency advisories (3 moderate, 4 high); no dependency upgrades were applied.

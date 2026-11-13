@@ -36,6 +36,11 @@ class IntakeError(RuntimeError):
     pass
 
 
+def _log_event(event: str, **fields):
+    """Emit structured, non-secret operational evidence for every Notion event."""
+    print(json.dumps({"service": "efps-notion-intake", "event": event, **fields}, sort_keys=True, default=str))
+
+
 class NotionClient:
     def __init__(self, token: str, *, session=None):
         if not token:
@@ -81,7 +86,10 @@ class NotionClient:
             if cursor:
                 payload["start_cursor"] = cursor
             result = self.request("POST", f"databases/{LISTINGS_DATABASE_ID}/query", payload=payload)
-            pages.extend(result.get("results") or [])
+            pages.extend(
+                page for page in (result.get("results") or [])
+                if not page.get("archived") and not page.get("in_trash")
+            )
             if not result.get("has_more"):
                 return pages
             cursor = result.get("next_cursor")
@@ -136,7 +144,18 @@ class SupabaseIntakeStore:
         self._request("set_listing_id", page_id=page_id, listing_id=listing_id)
 
     def allocate_listing_id(self, page_id: str):
-        return str(self._request("allocate_listing_id", page_id=page_id).get("listing_id") or "")
+        last_error = None
+        for attempt in range(3):
+            try:
+                listing_id = str(self._request("allocate_listing_id", page_id=page_id).get("listing_id") or "").strip()
+                if listing_id:
+                    return listing_id
+                last_error = IntakeError("Supabase Listing ID allocator returned an empty result")
+            except IntakeError as exc:
+                last_error = exc
+            if attempt < 2:
+                time.sleep(0.15 * (attempt + 1))
+        raise IntakeError(f"Supabase Listing ID allocation failed after 3 attempts: {last_error}")
 
     def sync_inventory(self, page_id: str, row: dict, *, deleted: bool = False):
         source_hash = hashlib.sha256(json.dumps(row, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
@@ -147,6 +166,9 @@ class SupabaseIntakeStore:
 
     def find_inventory(self, page_id: str):
         return self._request("find_inventory", page_id=page_id)
+
+    def reconcile_pages(self, page_ids: list[str], listings: list[dict]):
+        return self._request("reconcile_pages", active_page_ids=page_ids, active_listings=listings)
 
     def finish(self, page_id: str, state: str, *, listing_page_id: str = "", note: str = ""):
         self._request("finish", page_id=page_id, state=state, listing_page_id=listing_page_id, note=note[:1800])
@@ -620,7 +642,10 @@ def process_listing_page(page: dict, *, notion: NotionClient, store: SupabaseInt
     if claim == "duplicate":
         existing = store.find_inventory(page_id)
         if existing.get("found") and not existing.get("deleted_at"):
-            return {"status": "already_processed", "listing_id": existing.get("listing_id") or item.get("listing_id", "")}
+            existing_listing_id = str(existing.get("listing_id") or item.get("listing_id") or "").strip()
+            if existing_listing_id:
+                store.set_listing_id(page_id, existing_listing_id)
+            return {"status": "already_processed", "listing_id": existing_listing_id}
         # A completed intake record without its inventory projection can occur
         # after a partial deployment or projection failure. Rebuild the same
         # row from Notion so an idempotent backfill also repairs that gap.
@@ -634,12 +659,14 @@ def process_listing_page(page: dict, *, notion: NotionClient, store: SupabaseInt
             store.finish(page_id, "processed", listing_page_id=page_id, note="Archived from canonical Notion Housing Listings.")
             return {"status": "deleted", "listing_id": ""}
         if not listing_id:
+            existing = store.find_inventory(page_id)
+            listing_id = str(existing.get("listing_id") or "").strip()
+        if not listing_id:
             listing_id = store.allocate_listing_id(page_id)
-            if not listing_id:
-                raise IntakeError("Supabase did not allocate a Listing ID")
         if row["listing_id"].strip() != listing_id:
             notion.update_page(page_id, {"listing_id": _rich(listing_id)})
         row["listing_id"] = listing_id
+        store.set_listing_id(page_id, listing_id)
         store.sync_inventory(page_id, row, deleted=deleted)
         note = "Synced from canonical Notion Housing Listings."
         store.finish(page_id, "processed", listing_page_id=page_id, note=note)
@@ -649,37 +676,57 @@ def process_listing_page(page: dict, *, notion: NotionClient, store: SupabaseInt
         raise
 
 
-def _enqueue_worker(page_id: str, function_arn: str, *, event_type: str = ""):
+def _enqueue_worker(page_id: str, function_arn: str, *, event_type: str = "", event_id: str = ""):
     import boto3
     response = boto3.client("lambda").invoke(
         FunctionName=function_arn,
         InvocationType="Event",
-        Payload=json.dumps({"_efps_notion_worker": True, "page_id": page_id, "event_type": event_type}).encode("utf-8"),
+        Payload=json.dumps({"_efps_notion_worker": True, "page_id": page_id, "event_type": event_type, "event_id": event_id}).encode("utf-8"),
     )
     if int(response.get("StatusCode") or 0) != 202:
         raise IntakeError("Notion intake worker enqueue was not accepted")
 
 
-def _enqueue_listing_backfill(function_arn: str):
-    """Queue a one-time full mirror from Notion without adding another AWS resource."""
-    notion = NotionClient(_notion_secret_value("api_token"))
+def _enqueue_listing_backfill(function_arn: str, *, notion=None, store=None, lambda_client=None):
+    """Reconcile active Notion rows, enqueue only changed/restored pages, and tombstone missing pages."""
+    notion = notion or NotionClient(_notion_secret_value("api_token"))
+    store = store or SupabaseIntakeStore()
     pages = notion.list_listings()
+    if not pages:
+        raise IntakeError("Notion Housing Listings reconciliation returned zero pages; refusing mass tombstone")
     import boto3
-    client = boto3.client("lambda")
-    accepted = 0
+    client = lambda_client or boto3.client("lambda")
+    active_page_ids, active_listings, accepted, skipped = [], [], 0, 0
     for page in pages:
         page_id = str(page.get("id") or "").strip()
         if not re.fullmatch(r"[0-9a-fA-F-]{32,36}", page_id):
-            raise IntakeError("Notion backfill returned an invalid page ID")
+            raise IntakeError("Notion reconciliation returned an invalid page ID")
+        active_page_ids.append(page_id)
+        row = listing_snapshot(page)
+        existing = store.find_inventory(page_id)
+        if not row["listing_id"].strip() and existing.get("listing_id"):
+            row["listing_id"] = str(existing["listing_id"])
+        if row["listing_id"].strip():
+            active_listings.append({"page_id": page_id, "listing_id": row["listing_id"].strip()})
+        source_hash = hashlib.sha256(json.dumps(row, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+        unchanged = bool(existing.get("found")) and not existing.get("deleted_at") and existing.get("source_hash") == source_hash
+        if unchanged:
+            skipped += 1
+            continue
         response = client.invoke(
             FunctionName=function_arn,
             InvocationType="Event",
-            Payload=json.dumps({"_efps_notion_worker": True, "page_id": page_id}).encode("utf-8"),
+            Payload=json.dumps({"_efps_notion_worker": True, "page_id": page_id, "event_type": "reconciliation"}).encode("utf-8"),
         )
         if int(response.get("StatusCode") or 0) != 202:
-            raise IntakeError("Notion inventory backfill enqueue was not accepted")
+            raise IntakeError("Notion inventory reconciliation worker enqueue was not accepted")
         accepted += 1
-    return {"accepted": accepted, "database_id": LISTINGS_DATABASE_ID}
+    tombstones = store.reconcile_pages(active_page_ids, active_listings)
+    result = {"checked": len(active_page_ids), "accepted": accepted, "skipped_unchanged": skipped,
+              "listing_ids_reconciled": int(tombstones.get("listing_ids_reconciled") or 0),
+              "soft_deleted_missing": int(tombstones.get("soft_deleted") or 0)}
+    _log_event("reconciliation_enqueued", **result)
+    return result
 
 
 def _notion_secret_value(key: str, *, update_webhook_token: str = "") -> str:
@@ -704,13 +751,34 @@ def _notion_webhook_secret(*, update_token: str = "") -> str:
 
 def lambda_handler(event, context):
     if event.get("_efps_notion_backfill"):
-        return _enqueue_listing_backfill(context.invoked_function_arn)
+        started = time.monotonic()
+        try:
+            result = _enqueue_listing_backfill(context.invoked_function_arn)
+            _log_event("reconciliation_completed", aws_request_id=getattr(context, "aws_request_id", ""), duration_ms=round((time.monotonic() - started) * 1000), **result)
+            return result
+        except Exception as exc:
+            _log_event("reconciliation_failed", aws_request_id=getattr(context, "aws_request_id", ""), error_type=type(exc).__name__, error=str(exc)[:800])
+            raise
     # Internal asynchronous invocation: raise on failure so Lambda retry policy applies.
     if event.get("_efps_notion_worker"):
         page_id = str(event.get("page_id") or "").strip()
+        event_type = str(event.get("event_type") or "")
+        event_id = str(event.get("event_id") or "")
         if not re.fullmatch(r"[0-9a-fA-F-]{32,36}", page_id):
             raise IntakeError("Invalid asynchronous intake page ID")
-        return process_page(page_id, event_type=str(event.get("event_type") or ""))
+        started = time.monotonic()
+        _log_event("worker_started", page_id=page_id, event_type=event_type, event_id=event_id, aws_request_id=getattr(context, "aws_request_id", ""))
+        try:
+            result = process_page(page_id, event_type=event_type)
+        except Exception as exc:
+            _log_event("worker_failed", page_id=page_id, event_type=event_type, event_id=event_id,
+                       aws_request_id=getattr(context, "aws_request_id", ""), error_type=type(exc).__name__, error=str(exc)[:1000],
+                       duration_ms=round((time.monotonic() - started) * 1000))
+            raise
+        _log_event("worker_completed", page_id=page_id, event_type=event_type, event_id=event_id,
+                   aws_request_id=getattr(context, "aws_request_id", ""), status=result.get("status", "unknown"),
+                   listing_id=result.get("listing_id", ""), duration_ms=round((time.monotonic() - started) * 1000))
+        return result
 
     headers = {str(k).lower(): str(v) for k, v in (event.get("headers") or {}).items()}
     raw_body = event.get("body") or "{}"
@@ -761,9 +829,13 @@ def lambda_handler(event, context):
     ).strip()
     if not re.fullmatch(r"[0-9a-fA-F-]{32,36}", page_id):
         return {"statusCode": 400, "headers": {"Content-Type": "application/json"}, "body": json.dumps({"error": "page ID is required"})}
+    event_type = str(payload.get("type") or payload.get("event_type") or "")
+    event_id = str(payload.get("id") or payload.get("event_id") or "")
     try:
-        _enqueue_worker(page_id, context.invoked_function_arn, event_type=str(payload.get("type") or ""))
-        return {"statusCode": 202, "headers": {"Content-Type": "application/json"}, "body": json.dumps({"ok": True, "accepted": True, "page_id": page_id})}
+        _log_event("webhook_accepted", page_id=page_id, event_type=event_type, event_id=event_id,
+                   aws_request_id=getattr(context, "aws_request_id", ""))
+        _enqueue_worker(page_id, context.invoked_function_arn, event_type=event_type, event_id=event_id)
+        return {"statusCode": 202, "headers": {"Content-Type": "application/json"}, "body": json.dumps({"ok": True, "accepted": True, "page_id": page_id, "event_id": event_id})}
     except Exception as exc:
         print(json.dumps({"notion_intake_enqueue_error": str(exc)[:1500], "page_id": page_id}))
         return {"statusCode": 500, "headers": {"Content-Type": "application/json"}, "body": json.dumps({"error": "intake enqueue failed"})}

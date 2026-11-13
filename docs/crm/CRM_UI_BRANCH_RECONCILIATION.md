@@ -16,13 +16,13 @@ GitHub also lists four Dependabot branch refs associated with open PRs #93, #94,
 
 ## Live release evidence
 
-- Render service: srv-darsv560tbcc73cu4ip0. The signed-in browser checked inventory behavior on code-bearing release `61688164b25f7a7a8e6df8248f91987a9c471ef6`. The documentation-only follow-up was auto-deployed and passed GitHub production health smoke.
-- `crm-ui-dashboard` and `main` were reconciled after the documentation follow-up and have identical tracked trees. Read current refs from GitHub; this document records behavior rather than its own commit hash.
-- Supabase inventory and signed-in dashboard: 104 listings (87 Available / 17 Rented). A Notion edit visibly propagated through Supabase to the dashboard. A real delete event reached Supabase and soft-deleted the row after about one minute. Earlier duplicate handler replay returned `already_processed`.
-- Restore is an open live-flow failure: restoring the test page in Notion produced no observed Lambda invocation or Edge Function POST, so the Supabase row remained soft-deleted. The direct restore handler was checked separately and is not evidence of webhook delivery.
-- The exact test rows were removed from Supabase; the test page was permanently deleted from Notion Trash after user approval. Dashboard returned to 104 listings.
-- Supabase Edge Function `whapi-crm-webhook`: ACTIVE v10. Inventory Sheet cron is removed; compatibility Sheet writes remain. The old WhAPI inventory path stays until final cleanup.
-- Earlier code-bearing release passed Inventory Contract 130/130, SAM container build/validation, CRM checks, and production health smoke. The latest documentation-only commit's path-filtered Inventory Contract rerun is not established here.
+- Render service: `srv-darsv560tbcc73cu4ip0`; the signed-in production inventory page showed 104 Notion-owned properties (87 Available / 17 Rented Out).
+- Live Notion/Supabase reconciliation: 104 active pages / 104 active snapshots; 0 missing, orphaned, duplicate or semantic field mismatches. All 104 intake events have matching Listing IDs.
+- `notion-inventory-state` ACTIVE v9; AWS `efps-notion-intake` Active; CloudFormation stack `UPDATE_COMPLETE`.
+- A 15-minute scheduled reconciler queues changed/restored pages, repairs event-to-listing mappings, and soft-deletes missing projections. Empty source results fail closed. A soft-delete/recovery test passed on rented listing `EF-2609-09B5`.
+- Actual Notion `page.undeleted` webhook delivery is not independently observed; the scheduled fallback now restores a page that is active in Notion even if that webhook is missed.
+- Reserved `source_group` and `inventory_locked` are blank across all 104 Notion pages; 43 populated `inventory_locked` values were cleared.
+- Sheet reconciliation cron is removed. Legacy Sheet writes and old WhAPI inventory path remain until separately agreed cleanup. No CRM UI or lead classification changes were made.
 
 ## Local checkout
 
@@ -30,7 +30,7 @@ The active local checkout is on `crm-ui-dashboard` and tracks the published bran
 
 ## Release gate
 
-1. Diagnose why restore did not deliver the selected Notion `page.undeleted` event; safely repeat the end-to-end restore check only with a new identified test record and remove it afterward.
+1. Actual Notion `page.undeleted` delivery remains unobserved; the 15-minute reconciliation fallback now recovers missed restores and was live-tested on an active rented listing. Keep the eight user-confirmed Page event selections unchanged.
 2. Keep the Sheets compatibility paths and old WhAPI listener until their separately agreed cleanup.
 
 Detailed current evidence is in CRM_CURRENT_VERIFIED_STATE.md and CRM_RECOVERY_AUDIT_2026-11-12.md.

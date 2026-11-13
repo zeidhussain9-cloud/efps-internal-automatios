@@ -1,17 +1,17 @@
 # EFPS CRM — Handoff
 
-## Notion inventory live acceptance follow-up — 2026-11-13
+## Notion inventory recovery hardening — 2026-11-13
 
-- Supabase `notion-inventory-state` version 6 is ACTIVE with JWT verification enabled. The isolated AWS stack `efps-notion-property-intake` is `UPDATE_COMPLETE`; Lambda `efps-notion-intake` is Active and its existing AWS secret ARNs were reused. No secret values were displayed, copied, rotated, or overwritten.
-- The signed-in inventory behavior was verified on code-bearing release `61688164b25f7a7a8e6df8248f91987a9c471ef6`. The documentation follow-up was published to `crm-ui-dashboard`, reconciled into `main`, and auto-deployed by Render. GitHub production health smoke passed on the docs follow-up. The two branches have identical tracked trees; consult their refs for the latest commit IDs.
-- In the signed-in production dashboard, the inventory page displayed 104 listings: 87 Available and 17 Rented Out. The source labels identify Housing Listings in Notion and Supabase as its mirror.
-- The live Notion edit test changed the test listing's locality; the changed value appeared in Supabase (`source_kind=housing_notion`) and then on the dashboard. A real Notion delete reached Supabase and soft-deleted the row after about one minute. Earlier duplicate replay handler verification returned `already_processed`.
-- Restore did **not** complete end to end: after the Notion page was restored from Trash, no new Lambda invocation or Supabase Edge Function POST was observed, and `deleted_at` remained set. The restore worker itself passed a direct invocation check, which does not prove Notion webhook delivery.
-- The exact temporary test projection and intake-event records were deleted from Supabase. The test page was permanently deleted from Notion Trash after explicit user approval. The dashboard and Supabase returned to 104 active Notion listings (87 Available, 17 Rented Out); checks found no remaining test record in the two Supabase tables or Notion Trash.
-- Google Sheets is not the live dashboard source, and its reconciliation cron is removed. Legacy Sheet-writing compatibility paths remain. The old WhAPI inventory path remains by explicit direction until final cleanup. Notion webhook settings were not changed; the user had confirmed all eight Page events selected.
-- GitHub's earlier Inventory Contract check passed 130/130 on the code-bearing release; the latest `61688164` documentation-only commit was not independently shown to rerun that path-filtered check. Other reported release checks are recorded in the CI history below; no new software test was run during this documentation-only update.
-
-> CRM data snapshot: 2026-10-05 (historical; counts were not re-queried in this inventory task). Current inventory intake deployment status: 2026-11-13.
+- Notion Housing Listings is canonical; Supabase `crm_inventory_snapshot` remains the CRM read model.
+- Live source-to-projection comparison: 104 active Notion pages / 104 active Supabase rows; 0 missing, 0 orphaned, 0 duplicate active Listing IDs, 0 semantic field mismatches.
+- Intake ledger: 104 processed events; 104/104 have a Listing ID and each matches its snapshot row; 0 failed, 0 needs-review, 0 stale-processing.
+- Reserved-field repair: `source_group` is blank across all 104 pages. 43 nonblank `inventory_locked` values were cleared; it is blank across all 104.
+- Supabase `notion-inventory-state` ACTIVE v9, JWT verification enabled. AWS `efps-notion-property-intake` stack `UPDATE_COMPLETE`; Lambda `efps-notion-intake` Active, Python 3.12, `$LATEST` updated 2026-11-13 15:18:43 UTC.
+- A 15-minute EventBridge reconciliation scans active Housing Listings, queues only changed/restored pages, reconciles event-to-listing IDs, and soft-deletes rows missing from the full Notion result. Zero-page results fail closed. Initial mapping repair updated all 104 event Listing IDs. Latest v9 run: 104 checked, 0 accepted, 104 unchanged, 0 further mapping updates, 0 soft-deletes.
+- Restore fallback was tested on rented listing `EF-2609-09B5`: a worker soft-delete was reversed by the scheduled reconciliation, returning `deleted_at` to null. This verifies recovery when Notion restore delivery is missed; actual `page.undeleted` webhook delivery was not independently observed. The eight Page event selections remain as user-confirmed; no webhook settings changed.
+- Async failures are retained in the 14-day SQS failure queue after 2 retries / 1-hour maximum age. Lambda logs include page ID, event type, webhook event ID, request ID, outcome and duration; CloudWatch retention is 30 days.
+- Production dashboard inventory remains 104 (87 Available / 17 Rented Out); `/health` HTTP 200. No lead UI/classification/qualification changes, WhatsApp messages, or catalogue sends.
+- Google Sheets reconciliation remains disabled. Legacy Sheet writes and the old WhAPI `NEW` inventory path remain untouched. Raw Property Intake photo/enrichment credentials are a separate unverified path; no secrets were changed.
 
 ## Initial inventory workflow checkpoint — 2026-11-13 (superseded above)
 

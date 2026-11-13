@@ -2,23 +2,18 @@
 
 ## Authoritative current verified state — 2026-11-13
 
-This section supersedes the older dated operational snapshots below. Historical checkpoints remain only as audit history.
+This section supersedes older dated operational snapshots below. Historical checkpoints remain audit history.
 
-- **GitHub repository:** `zeidhussain9-cloud/efps-internal-automatios`
-- **CRM deployment branch:** `crm-ui-dashboard`
-- **Task checkout:** `crm-ui-dashboard`; this migration is being released to the existing Render service.
-- **Render production service:** `easyfind-crm-d01-d05` / `srv-darsv560tbcc73cu4ip0`
-- **Render deployment:** service `srv-darsv560tbcc73cu4ip0` auto-deploys from `crm-ui-dashboard`; deploy `dep-dbrbc8gjo6nc73etsmr0` is LIVE on commit `6b206ddf07515cff2df82140d86ee873e4ea2965`. The health and root routes returned HTTP 200. The corrected reserved-field Lambda source is in local commit `6e16562`; GitHub publication was blocked by approval review.
-- **Production health:** `/health` and `/` returned HTTP 200 after the latest Render deployment; no Render error logs were returned after deployment.
-- **Inventory schema:** 48 physical columns A:AV; runtime processing and CRM mirror are restricted to A:AT. Reserved AU/AV are excluded from operational writes and CRM projection.
-- **Inventory/Supabase mirror:** 104 active `housing_notion` rows are confirmed after the idempotent backfill; the 104 intake event records are all processed. No Sheet-owned rows remain in the current snapshot.
-- **Subtype contract:** mandatory supported `property_subtype`; Apartment is the no-evidence fallback; Penthouse maps to Apartment; conflicting/unsupported evidence requires Needs Review.
-- **Maps contract:** only VERIFIED results may override locality/place name; unverified Maps candidates are not applied and require Needs Review. The original source URL remains stored. Captions use only the original short mobile URL; long URLs are omitted and flagged.
-- **Legacy WhAPI inventory listener:** the deployed EFPSWebhook artifact still contains the old two-sender NEW-delimited route, but this path is not the current inventory workflow. It is retained untouched until the final cleanup phase; the shared WhAPI/CRM stack was not redeployed in this task.
-- **Notion inventory:** Housing Listings is the canonical operator editing surface. Its page events route to the existing Supabase `crm_inventory_snapshot` with `housing_notion` ownership; the dashboard queries only active `housing_notion` rows; the Sheets reconciliation cron is disabled. The database description, schema migration, Edge Function v4, and isolated Lambda are deployed. The user confirms the existing Connection webhook and all eight Page event selections. The one-time backfill completed for 104 rows. Existing AWS secret ARNs were reused; no secret values were exposed or changed. The old WhAPI listener remains untouched for final cleanup.
-- **WhatsApp:** v7.1 caption generation writes the Notion-only `whatsapp_post` field from explicit/verified facts. No WhatsApp message is sent by the intake adapter.
-- **Verification:** this turn verified AWS identity, CloudFormation `UPDATE_COMPLETE`, Lambda `LastUpdateStatus=Successful`, SAM template lint, Python source compilation, backfill acceptance (104 pages), and Supabase processed/active counts (104). 139 Node tests, 88 inventory Python tests, and one browser regression passed. SAM template lint passed. A fresh container build was unavailable; the previously built Linux dependency artifact was reused with hash-matched current source.
-- **Production data:** 104 Housing Listings pages are present as active `housing_notion` rows in the existing snapshot. A follow-up code correction is complete locally but awaits approved GitHub publication.
+- **Repository:** `zeidhussain9-cloud/efps-internal-automatios`; deployment branch `crm-ui-dashboard`; Render service `srv-darsv560tbcc73cu4ip0`.
+- **Inventory source and read model:** Notion Housing Listings is canonical; Supabase `public.crm_inventory_snapshot` is the dashboard projection, with `source_kind='housing_notion'`.
+- **Reconciliation:** 104 active Notion pages / 104 active Supabase rows; 0 missing, 0 orphaned, 0 duplicate IDs, 0 semantic field mismatches. Intake events: 104 processed, 104 Listing IDs present, 104/104 mapped to snapshot IDs.
+- **Reserved fields:** AU `source_group` and AV `inventory_locked` are blank across all 104 Notion pages. 43 populated `inventory_locked` values were corrected.
+- **Runtime:** Supabase `notion-inventory-state` ACTIVE v9 (JWT verification on); AWS stack `efps-notion-property-intake` `UPDATE_COMPLETE`; Lambda `efps-notion-intake` Active in `ap-southeast-2`.
+- **Recovery:** EventBridge reconciliation runs every 15 minutes, queues only changed/restored pages, repairs event Listing IDs, and soft-deletes snapshot rows absent from the full Notion page result. Empty Notion results fail closed. A rented listing was soft-deleted through the worker and successfully reactivated by the reconciler. Actual Notion `page.undeleted` delivery remains unobserved, but missed restore events are recovered automatically by the scheduled fallback.
+- **Failure handling:** Lambda retries empty Listing ID allocation three times; asynchronous failures receive two retries and then enter a 14-day SQS failure queue. Structured logs correlate page ID, event type, webhook event ID, AWS request ID, outcome and duration; log retention is 30 days.
+- **Inventory counts:** 104 active rows = 87 Available + 17 Rented Out. Production `/health` returned HTTP 200.
+- **Legacy boundaries:** Sheet reconciliation cron is disabled; compatibility Sheet writes and the old WhAPI `NEW` listener remain untouched pending separately agreed cleanup. Raw Property Intake photo/enrichment credentials remain a separate unverified compatibility path.
+- **Notion webhook settings:** all eight Page event selections remain user-confirmed and unchanged. No secret values were exposed or changed.
 
 ### Inventory intake paths — current ownership
 

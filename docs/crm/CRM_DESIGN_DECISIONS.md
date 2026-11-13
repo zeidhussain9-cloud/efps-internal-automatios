@@ -1,6 +1,6 @@
 ## Authoritative current verified state — 2026-11-13
 
-> The latest UI release is live on the remote branch. Local Lambda-source correction is not yet published; see `CRM_CURRENT_VERIFIED_STATE.md` and `HANDOFF.md` for the verified boundary. Older dated checkpoints below remain historical.
+> The latest UI release is live on the remote branch. Notion inventory recovery hardening is deployed (Supabase Edge Function v9, AWS Lambda with 15-minute reconciliation and SQS failure capture). See `CRM_CURRENT_VERIFIED_STATE.md` and `HANDOFF.md` for current evidence. Older dated checkpoints below remain historical.
 
 - Render LIVE: deployment `dep-dbrbc8gjo6nc73etsmr0`, commit `6b206ddf07515cff2df82140d86ee873e4ea2965` on `crm-ui-dashboard`; `/health` and `/` returned HTTP 200.
 - Supabase project qttcutwzehtskfcwxkwj; whapi-crm-webhook ACTIVE v10.
@@ -12,7 +12,7 @@
 - Deterministic scheduler: 923 completed / 0 failed; AI scheduler intentionally paused.
 - CI: build PASS; 139/139 automated tests PASS; browser regression 1/1 PASS. Production-health smoke job skipped.
 - Slack batch: 16 of 17 IDs in the Supabase mirror; NFHV is represented by duplicate/re-entry B42K. WVP3 has an empty property_subtype and remains under review pending operator validation.
-- Inventory Contract failed on the remote commit for reserved Notion fields; the local correction passes repository audit and tests, but publication was rejected by approval review.
+- Historical inventory contract failure on reserved Notion fields was resolved on 2026-11-13: all 104 Housing Listings pages now have blank `source_group` / `inventory_locked`, and live source-to-Supabase reconciliation reports no semantic field mismatches.
 
 See CRM_CURRENT_VERIFIED_STATE.md for current evidence and CRM_RECOVERY_AUDIT_2026-11-12.md for recovery history.
 # EasyFind CRM — Design Decision Register
