@@ -88,7 +88,7 @@ The optional `EFPSNotionIntake` resource in the shared `template.yaml` is legacy
 - The local Linux SAM dependency artifact was reused because Docker is unavailable. All declared packages were present, the updated Lambda source matched the local source hash, and the generated template passed SAM validation. The exact published commit also passed GitHub's fresh SAM container build and dependency packaging checks.
 - Supabase `notion-inventory-state` is ACTIVE v6 with JWT verification enabled. The live test covered create, edit, Listing ID write-back, duplicate suppression, soft-delete, and restore. Delete/restore handlers were directly invoked for the exact test page because webhook delivery for those event types was not independently observed.
 - The test snapshot and intake event were removed. Supabase remains at 104 active Notion rows (87 Available, 17 Rented Out). The temporary Notion page is in Trash; permanent emptying requires signed-in Notion UI access.
-- Render deployment `dep-dbrei8avcj2c73erda3g` is LIVE on `ddb0f6391f99ba9a848fd30c8b03bd5db9c1b53c`; `/` and `/health` returned HTTP 200. The signed-in inventory display has not been visually checked.
+- Render deployment `dep-dbresd8jo6nc73f1r3k0` is LIVE on documentation follow-up commit `cd2060e0817849ec011ec60d399c64b6d11b4cae`; it has the same verified source tree as `ddb0f6391f99ba9a848fd30c8b03bd5db9c1b53c`. `/` and `/health` returned HTTP 200. The signed-in inventory display has not been visually checked.
 
 ## Isolated Notion intake deployment — initial rollout, 2026-11-13
 
