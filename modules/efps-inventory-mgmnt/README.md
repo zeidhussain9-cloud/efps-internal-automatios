@@ -2,7 +2,7 @@
 
 ## Live mirror acceptance note — 2026-11-13
 
-The direct Housing Listings mirror is deployed, but a controlled live test found that new pages without a Listing ID failed after ID allocation because the Supabase Edge Function response omitted that ID. A local response fix and regression test now pass the CRM suite; they are not yet deployed. The live create/edit/replay/archive/restore test and test-record cleanup remain open. See `docs/NOTION_PROPERTY_INTAKE.md` for the current acceptance status. Do not treat the inventory flow as fully accepted until those live checks pass.
+The Edge Function response fix is deployed as version 5, and the test page now has a Supabase row. A live retry then exposed a Lambda recovery gap: it reused the stored Listing ID but left the Notion property blank. A local Lambda fix now repairs that property; targeted tests pass 22/22 and the full Inventory Contract suite passes 129/129, but the fix is not yet deployed. Live edit/replay/archive/restore checks, signed-in dashboard review, and test-record cleanup remain open. See `docs/NOTION_PROPERTY_INTAKE.md` for current acceptance status. Do not treat the flow as fully accepted until these checks pass.
 
 ## Intake entry points
 

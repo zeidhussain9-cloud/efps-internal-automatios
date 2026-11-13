@@ -3,10 +3,11 @@
 ## Notion inventory release follow-up — 2026-11-13
 
 - A live test page (`EFPS TEST ONLY - DO NOT CONTACT - 20261113-101056Z`) reached the AWS intake worker, which allocated `EF-2611-NTX2`, but did not appear in the Supabase snapshot. The event failed because the `notion-inventory-state` allocation response omitted the allocated ID expected by Lambda.
-- A local fix returns the ID for `allocate_listing_id`, and a regression test covers the response. `npm test` passes (142 tests plus production build) and `npm run test:browser` passes (1 test). The fix is not yet published or deployed. Live create/edit/duplicate/delete/restore behavior therefore remains unverified.
-- The test page and its failed Supabase intake event still need cleanup after the fixed path is deployed and the full lifecycle test is completed. Do not count the release as accepted until the test page reaches the dashboard inventory, lifecycle checks pass, and cleanup is confirmed.
+- The Edge Function response fix is published in GitHub `48ac68f` and deployed to Supabase `notion-inventory-state` version 5. Its Inventory Contract CI passed (129/129 tests); CRM tests/build and browser checks also passed on the preceding app commit. The test page now has a Supabase projection, but a retry did not write the already allocated ID back to its blank Notion property.
+- A local Lambda recovery fix now writes a stored Listing ID back to Notion when the page property is blank; its targeted Notion tests pass 22/22 and Inventory Contract tests pass 129/129. This second fix is not yet published or deployed. Edit, duplicate, delete/restore, final cleanup, and signed-in dashboard checks remain open.
+- The test page and its Supabase inventory/intake rows still need cleanup after the recovery fix is deployed and lifecycle testing is completed. Do not count the release as accepted until these checks and cleanup are confirmed.
 - The signed-in production inventory display has not been checked; the operator sign-in gate prevents anonymous viewing. A healthy `/` or `/health` response does not prove the authenticated inventory view.
-- This follow-up supersedes the earlier statement below that there were no test listings and that the release was ready for final acceptance. The earlier checks and production evidence remain historical, not evidence for this new code.
+- This follow-up supersedes the earlier statement below that there were no test listings and that the release was ready for final acceptance. The earlier checks and production evidence remain historical, not evidence for the current Lambda recovery fix.
 
 > CRM data snapshot: 2026-10-05 (historical; counts were not re-queried in this inventory task). Current inventory intake deployment status: 2026-11-13.
 
