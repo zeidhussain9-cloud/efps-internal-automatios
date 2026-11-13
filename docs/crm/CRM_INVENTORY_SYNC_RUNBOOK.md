@@ -66,4 +66,5 @@ The eight original Slack warnings were for G5ZS, 6JYX, 97J4, WVP3, NFHV, 9ZZJ, X
 - A failed run must be diagnosed from Render application logs and its net._http_response record; the public endpoint intentionally hides internal exception details.
 - Never write to the compatibility Sheet from the CRM snapshot reconciliation path.
 - Do not treat inventory history before crm_inventory_sync_changes existed as reconstructable.
-- The authenticated inventory UI remains unverified in this follow-up; Supabase mirror presence alone does not prove a user-visible card rendered.
+- Signed-in production UI verification is complete: the edited Notion test listing appeared in the dashboard, and after cleanup the dashboard returned to 104 properties. Supabase mirror checks alone were not used as a substitute for this browser evidence.
+- Live archive/delete was observed through Notion and soft-deleted the Supabase row after about one minute. Restore is not verified: no Lambda or Edge Function request was observed after restoring from Trash, and the projection remained deleted. Retest with a fresh identified test page only; the prior test page has been permanently removed.
