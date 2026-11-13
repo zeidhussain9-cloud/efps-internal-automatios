@@ -2,17 +2,16 @@
 
 ## Notion inventory release follow-up — 2026-11-13
 
-- A live test page (`EFPS TEST ONLY - DO NOT CONTACT - 20261113-101056Z`) reached the AWS intake worker, which allocated `EF-2611-NTX2`, but did not appear in the Supabase snapshot. The event failed because the `notion-inventory-state` allocation response omitted the allocated ID expected by Lambda.
-- The Edge Function response fix is published in GitHub `48ac68f` and deployed to Supabase `notion-inventory-state` version 5. Its Inventory Contract CI passed (129/129 tests); CRM tests/build and browser checks also passed on the preceding app commit. The test page now has a Supabase projection, but a retry did not write the already allocated ID back to its blank Notion property.
-- The Lambda recovery fix that fills a blank Notion Listing ID from the stored event is published in commit `8837388`, but not deployed. A live edit reached Supabase; duplicate replay returned `already_processed` without duplicating the row. The Lambda's `page.deleted` handler soft-deleted the test row. Restore testing then found that duplicate replay does not clear an existing deletion marker.
-- A local fix now includes `deleted_at` in the inventory lookup and allows a duplicate replay to rebuild a soft-deleted row. The targeted Notion intake tests pass 22/22 and the full Inventory Contract suite passed 129/129 before this newest restore fix; rerun those checks and publish it before deploying. Final cleanup and signed-in dashboard checks remain open.
-- The test page and its Supabase inventory/intake rows still need cleanup after restore handling is fixed and verified. Do not count the release as accepted until these checks and cleanup are confirmed.
-- The signed-in production inventory display has not been checked; the operator sign-in gate prevents anonymous viewing. A healthy `/` or `/health` response does not prove the authenticated inventory view.
-- This follow-up supersedes the earlier statement below that there were no test listings and that the release was ready for final acceptance. The earlier checks and production evidence remain historical, not evidence for the current Lambda recovery fix.
+- Supabase `notion-inventory-state` version 6 is ACTIVE with JWT verification enabled. The isolated AWS stack `efps-notion-property-intake` is `UPDATE_COMPLETE`; Lambda `efps-notion-intake` is Active with `LastUpdateStatus=Successful`, last modified `2026-11-13T10:46:00Z`, CodeSha256 `+b4hBplC+2CGZag7HnpSDdmfwDqwuvHqtuSSLoGd/6c=`. Existing secret parameters were reused without printing or changing secret values.
+- GitHub `crm-ui-dashboard` commit `ddb0f6391f99ba9a848fd30c8b03bd5db9c1b53c` has passing `test`, `verify`, `validate-build`, and `Production health smoke` checks. The Inventory Contract job passed 130/130 tests. Render deployment `dep-dbrei8avcj2c73erda3g` is LIVE on that commit; production `/` and `/health` returned HTTP 200.
+- A controlled Notion test created a listing, allocated and wrote `EF-2611-NTX2` back to the Notion page, synced it to Supabase, accepted an edit, suppressed duplicate delivery (`already_processed`), soft-deleted it, and restored it with `deleted_at=null`. Duplicate and lifecycle handler checks used direct Lambda worker invokes for the exact test page; webhook delivery for delete/restore was not independently confirmed.
+- The temporary Supabase snapshot and intake rows were deleted; current active inventory is 104 rows (87 Available, 17 Rented), and no test rows remain in either Supabase table. The Notion test page was moved to Trash. The Notion connector cannot permanently empty Trash; its SQL query still counts the trashed page. A signed-in CRM inventory display was not checked because the browser session is at the operator sign-in gate.
+- Google Sheets is no longer the dashboard inventory source and its reconciliation cron is removed. Legacy Slack/raw-intake Sheet writes remain; WhAPI stays until final cleanup. Raw photo/enrichment credential validity remains unchecked.
+- This follow-up supersedes the earlier deployment and acceptance statements below. Dashboard flow is not called fully ready until an operator signs in to verify the live inventory view and the test page is permanently removed from Notion Trash.
 
 > CRM data snapshot: 2026-10-05 (historical; counts were not re-queried in this inventory task). Current inventory intake deployment status: 2026-11-13.
 
-## Inventory workflow — 2026-11-13
+## Initial inventory workflow checkpoint — 2026-11-13 (superseded above)
 
 - Render: `dep-dbrbc8gjo6nc73etsmr0` is LIVE on commit `6b206ddf07515cff2df82140d86ee873e4ea2965`; `/health` and `/` both returned HTTP 200, with no error logs since deployment. GitHub Actions on that commit passed SAM validation, CRM synthetic CI, and CRM UI verification; the Inventory Contract audit failed on reserved-field references, now fixed in local commit `6e16562` and validated locally. Publishing the fix and handoff was rejected by automatic approval review; the remote branch remains at the deployed commit. The dashboard reads the existing Supabase `crm_inventory_snapshot` table with `source_kind='housing_notion'` only; display and interaction behavior are unchanged.
 - AWS account `294417174793` in `ap-southeast-2` was confirmed. Isolated stack `efps-notion-property-intake` is `UPDATE_COMPLETE`; Lambda `efps-notion-intake` is Active, Python 3.12, with `LastModified=2026-11-13T07:12:47Z` and CodeSha256 `BWKGDapY+LtrWskHtPWOLr0m8KcS0Ljp83aGkJFYvw4=`.
@@ -20,7 +19,7 @@
 - The five-minute `crm_inventory_sheet_reconcile_5m` Supabase cron was unscheduled. Existing Sheets writes remain in legacy Slack/raw-intake compatibility flows only. The old WhAPI `NEW`-delimited inventory listener remains untouched until final cleanup.
 - All eight Notion Page events remain selected as already verified by the user. Existing AWS secret ARNs were reused; no values were shown, copied, created, rotated, or overwritten.
 - Local checks: production build and 139/139 Node tests, 129 Inventory Contract tests, 88 inventory-module tests, browser regression 1/1, repository audit, projection regression, Python compilation, and SAM lint passed. `git diff --check` is pending final rerun. A fresh container build was unavailable, so the existing Linux SAM dependency artifact was reused.
-- Raw Property Intake with photos still uses legacy Sheet/Cloudinary/Maps compatibility steps. No WhatsApp messages were sent and no test listings were left behind.
+- At that earlier checkpoint, raw Property Intake with photos still used legacy Sheet/Cloudinary/Maps compatibility steps. No WhatsApp messages were sent. The later live acceptance test and its Trash status are recorded above.
 
 ## Production
 

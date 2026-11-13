@@ -1,12 +1,9 @@
 ## Current inventory intake deployment — 2026-11-13
 
-- Isolated AWS stack `efps-notion-property-intake`: `UPDATE_COMPLETE` in `ap-southeast-2`.
-- Lambda `efps-notion-intake`: Active; endpoint `https://ko3771nvei.execute-api.ap-southeast-2.amazonaws.com/Prod/notion/intake`.
-- Invalid Notion handshake/event signatures: HTTP 401; validly signed malformed event: HTTP 400. Controlled create/archive write probes for both Notion databases: HTTP 200. Supabase idempotency claim/replay: PASS.
-- Notion Housing Listings is the canonical editing surface. The isolated `efps-notion-property-intake` Lambda is deployed in AWS account `294417174793` (`ap-southeast-2`) with the direct Supabase projection path. The existing Housing Listings backfill queued 104 pages; Supabase confirms 104 processed pages and 104 active `housing_notion` rows in the dashboard snapshot. The existing EFPS CRM Property Intake Connection was found in Notion Developer Connections; the user confirmed its webhook and all eight Page events remain selected.
-- Existing AWS secret ARNs were reused without creating, rotating, overwriting, or displaying secret values. The legacy WhAPI `NEW`-delimited inventory listener remains untouched until final cleanup.
-- Checks: `npm test` (139 passed, includes production build), inventory Python suite (88 passed), browser check (1 passed), and SAM template lint passed. Deployment reused the previously built Linux dependency artifact because no container runtime is installed.
-- The dashboard now reads active `housing_notion` rows only. The old five-minute Sheet reconciliation is disabled. Slack `/efps` and raw photo intake remain legacy compatibility producers while their future Notion handoff is finalized.
+- AWS stack `efps-notion-property-intake` is `UPDATE_COMPLETE`; Lambda `efps-notion-intake` is Active in `ap-southeast-2` with a successful update. Notion Housing Listings is the canonical editor; Supabase `notion-inventory-state` is ACTIVE v6. The existing webhook and all eight Page events remain user-confirmed and unchanged.
+- A controlled test confirmed create, edit, Listing ID write-back, duplicate suppression, soft-delete, and restore clearing the Supabase deletion marker. Delete/restore used direct worker invocations because webhook delivery for those event types was not independently observed. Test rows were deleted from Supabase; the Notion page is in Trash pending permanent removal.
+- Supabase has 104 active Notion-owned rows (87 Available, 17 Rented Out). No test snapshot or intake event remains. Render is live on `ddb0f6391f99ba9a848fd30c8b03bd5db9c1b53c`; `/` and `/health` returned HTTP 200. Authenticated inventory rendering still needs an operator sign-in check.
+- GitHub release checks passed, including Inventory Contract 130/130 and SAM container build. Existing AWS secret ARNs were reused; no secret values were shown or changed. The Sheet reconciliation cron is removed, but compatibility Sheet writes remain. The old WhAPI `NEW` listener remains until final cleanup.
 
 ## CRM production metrics snapshot — 2026-10-05 (historical; not reverified in this task)
 
