@@ -81,10 +81,19 @@ No deployment or cutover is implied by this document.
 
 The optional `EFPSNotionIntake` resource in the shared `template.yaml` is legacy and is not the deployed Notion path; do not enable it. Use only `notion-intake-template.yaml` for Notion intake.
 
-## Isolated Notion intake deployment — 2026-11-13
+## Isolated Notion intake verification — 2026-11-13 follow-up
+
+- Target account/region: AWS `294417174793`, `ap-southeast-2`. Stack `efps-notion-property-intake` is `UPDATE_COMPLETE`; the existing secret ARN parameters were reused without displaying or changing secret values.
+- Lambda `efps-notion-intake` is Active, `LastUpdateStatus=Successful`, `$LATEST`, `LastModified=2026-11-13T10:46:00Z`, CodeSha256 `+b4hBplC+2CGZag7HnpSDdmfwDqwuvHqtuSSLoGd/6c=`.
+- The local Linux SAM dependency artifact was reused because Docker is unavailable. All declared packages were present, the updated Lambda source matched the local source hash, and the generated template passed SAM validation. The exact published commit also passed GitHub's fresh SAM container build and dependency packaging checks.
+- Supabase `notion-inventory-state` is ACTIVE v6 with JWT verification enabled. The live test covered create, edit, Listing ID write-back, duplicate suppression, soft-delete, and restore. Delete/restore handlers were directly invoked for the exact test page because webhook delivery for those event types was not independently observed.
+- The test snapshot and intake event were removed. Supabase remains at 104 active Notion rows (87 Available, 17 Rented Out). The temporary Notion page is in Trash; permanent emptying requires signed-in Notion UI access.
+- Render deployment `dep-dbrei8avcj2c73erda3g` is LIVE on `ddb0f6391f99ba9a848fd30c8b03bd5db9c1b53c`; `/` and `/health` returned HTTP 200. The signed-in inventory display has not been visually checked.
+
+## Isolated Notion intake deployment — initial rollout, 2026-11-13
 
 - Stack: `efps-notion-property-intake` (`ap-southeast-2`) — updated successfully to `UPDATE_COMPLETE` after confirming AWS account `294417174793`.
-- Lambda: `efps-notion-intake` — Active, Python 3.12, 512 MB, 180-second timeout; `$LATEST`, `LastModified=2026-11-13T06:34:51Z`, CodeSha256 `APpVz3ybE2C43rQ/BercbcIKGYVBGeLl9FhAiCKVQEE=`.
+- Lambda: `efps-notion-intake` — Active, Python 3.12, 512 MB, 180-second timeout; `$LATEST`, `LastModified=2026-11-13T07:12:47Z`, CodeSha256 `BWKGDapY+LtrWskHtPWOLr0m8KcS0Ljp83aGkJFYvw4=`.
 - API: `https://ko3771nvei.execute-api.ap-southeast-2.amazonaws.com/Prod/notion/intake`.
 - Invalid `X-Notion-Signature` probe returned HTTP 401.
 - SAM deployment reused the existing four secret ARN parameters and changed no secret values. The existing `efps-whapi-panel-v2` stack was not modified.

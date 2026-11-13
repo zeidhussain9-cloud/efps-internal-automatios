@@ -1,12 +1,12 @@
 # EasyFind CRM — Canonical Data Model
 
-## Authoritative current verified state — 2026-11-12
+## Authoritative current verified state — 2026-11-13
 
-> Current live release revalidated 2026-11-12. Older dated checkpoints below remain historical.
+> The latest UI release is live on the remote branch. Local Lambda-source correction is not yet published; see `CRM_CURRENT_VERIFIED_STATE.md` and `HANDOFF.md` for the verified boundary. Older dated checkpoints below remain historical.
 
-- Render LIVE: deployment dep-dbqod1nf3r2c73fe2gc0, commit d4083c8c33802f33295b090b9b1c4e71453b5090 on crm-ui-dashboard.
+- Render LIVE: deployment `dep-dbrbc8gjo6nc73etsmr0`, commit `6b206ddf07515cff2df82140d86ee873e4ea2965` on `crm-ui-dashboard`; `/health` and `/` returned HTTP 200.
 - Supabase project qttcutwzehtskfcwxkwj; whapi-crm-webhook ACTIVE v10.
-- main and crm-ui-dashboard both point to d4083c8c33802f33295b090b9b1c4e71453b5090; shared tree ba5b62470c4bbb97a155451db18dae17229a3133.
+- Remote `crm-ui-dashboard` is at `6b206ddf07515cff2df82140d86ee873e4ea2965`; remote `main` is at `954b24fc21b8b91a6bd5cae3e24a116e31fbdce7`. Their trees matched before the local follow-up fix.
 - CRM: 371 leads; 138 deterministic auto-qualified; 839 contact classifications; 18,641 messages since 2026-10-05.
 - Webhooks: 18,641/18,641 message events linked to crm_messages; 0 active errors; 43 original errors retained in processing_error_history.
 - Group messages: 13,611 since 2026-10-05; 0 linked to lead timelines.
@@ -14,7 +14,7 @@
 - Deterministic scheduler: 923 completed / 0 failed; AI scheduler intentionally paused.
 - CI: build PASS; 139/139 automated tests PASS; browser regression 1/1 PASS. Production-health smoke job skipped.
 - Slack batch: 16 of 17 IDs in the Supabase mirror; NFHV is represented by duplicate/re-entry B42K. WVP3 has an empty property_subtype and remains under review pending operator validation.
-- The owner deleted all Mac checkouts; none is retained or recreated.
+- Inventory Contract failed on the remote commit for reserved Notion fields; local correction passes repository audit and tests, but publication was rejected by approval review.
 
 See CRM_CURRENT_VERIFIED_STATE.md for current evidence and CRM_RECOVERY_AUDIT_2026-11-12.md for recovery history.
 ### Current operational flow

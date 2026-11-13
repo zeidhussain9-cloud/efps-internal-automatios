@@ -237,8 +237,10 @@ def test_processed_notion_page_repairs_a_missing_inventory_projection():
     page_id = "12345678-1234-1234-1234-123456789abc"
     page = {"id": page_id, "properties": {"listing_id": {"type": "rich_text", "rich_text": []}}}
     class FakeNotion:
+        def __init__(self):
+            self.updates = []
         def update_page(self, page_id, properties):
-            raise AssertionError("existing Listing ID should be reused")
+            self.updates.append((page_id, properties))
     class FakeStore:
         def __init__(self):
             self.synced = []
@@ -252,11 +254,32 @@ def test_processed_notion_page_repairs_a_missing_inventory_projection():
         def finish(self, page_id, state, **kwargs):
             self.finished.append((state, kwargs))
     store = FakeStore()
-    result = intake.process_listing_page(page, notion=FakeNotion(), store=store)
+    notion = FakeNotion()
+    result = intake.process_listing_page(page, notion=notion, store=store)
     assert result == {"status": "synced", "listing_id": "EF-2611-ABCD"}
     assert len(store.synced) == 1
     assert store.synced[0][1]["listing_id"] == "EF-2611-ABCD"
+    assert notion.updates == [(page_id, {"listing_id": intake._rich("EF-2611-ABCD")})]
     assert store.finished[0][0] == "processed"
+
+def test_duplicate_notion_page_restore_reactivates_soft_deleted_projection():
+    page_id = "12345678-1234-1234-1234-123456789abc"
+    page = {"id": page_id, "properties": {"listing_id": {"type": "rich_text", "rich_text": []}}}
+    class FakeNotion:
+        def __init__(self): self.updates = []
+        def update_page(self, page_id, properties): self.updates.append((page_id, properties))
+    class FakeStore:
+        def __init__(self): self.synced = []
+        def claim(self, page_id, payload_hash): return "duplicate", {"listing_id": "EF-2611-ABCD"}
+        def find_inventory(self, page_id): return {"found": True, "listing_id": "EF-2611-ABCD", "deleted_at": "2026-11-13T10:00:00Z"}
+        def sync_inventory(self, page_id, row, *, deleted=False): self.synced.append((row, deleted))
+        def finish(self, page_id, state, **kwargs): pass
+    notion, store = FakeNotion(), FakeStore()
+    result = intake.process_listing_page(page, notion=notion, store=store)
+    assert result == {"status": "synced", "listing_id": "EF-2611-ABCD"}
+    assert len(store.synced) == 1 and store.synced[0][1] is False
+    assert notion.updates == [(page_id, {"listing_id": intake._rich("EF-2611-ABCD")})]
+
 
 def test_photo_upload_retry_reuses_deterministic_indexes(monkeypatch):
     calls = []

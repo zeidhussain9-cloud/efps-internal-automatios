@@ -190,11 +190,8 @@ def _notion_value(prop: dict) -> str:
 def listing_snapshot(page: dict) -> dict:
     """Project one Housing Listings page into the existing dashboard snapshot contract."""
     properties = page.get("properties") or {}
-    row = {name: _notion_value(properties.get(name) or {}) for name in schema.NAMES}
-    # AU/AV are reserved in the established inventory contract, even if a Notion
-    # page has values in similarly named properties.
-    row["source_group"] = ""
-    row["inventory_locked"] = ""
+    # The last two schema slots are reserved and must not be read from Notion.
+    row = {name: _notion_value(properties.get(name) or {}) for name in schema.NAMES[:-2]}
     for name in ("Property", "WhatsApp Group", "whatsapp_post", "WhatsApp Destination"):
         row[name] = _notion_value(properties.get(name) or {})
     row["notion_page_id"] = str(page.get("id") or "")
@@ -622,7 +619,7 @@ def process_listing_page(page: dict, *, notion: NotionClient, store: SupabaseInt
     claim, item = store.claim(page_id, payload_hash)
     if claim == "duplicate":
         existing = store.find_inventory(page_id)
-        if existing.get("found"):
+        if existing.get("found") and not existing.get("deleted_at"):
             return {"status": "already_processed", "listing_id": existing.get("listing_id") or item.get("listing_id", "")}
         # A completed intake record without its inventory projection can occur
         # after a partial deployment or projection failure. Rebuild the same
@@ -640,6 +637,7 @@ def process_listing_page(page: dict, *, notion: NotionClient, store: SupabaseInt
             listing_id = store.allocate_listing_id(page_id)
             if not listing_id:
                 raise IntakeError("Supabase did not allocate a Listing ID")
+        if row["listing_id"].strip() != listing_id:
             notion.update_page(page_id, {"listing_id": _rich(listing_id)})
         row["listing_id"] = listing_id
         store.sync_inventory(page_id, row, deleted=deleted)

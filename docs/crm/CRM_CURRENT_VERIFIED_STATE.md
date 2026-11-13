@@ -1,13 +1,13 @@
 # EFPS CRM — Current Verified State
 
-> CRM production facts below were revalidated 2026-11-12. Inventory ownership and Notion backfill were verified 2026-11-13.
+> CRM metrics below were last revalidated 2026-11-12. Inventory release, counts, and Render state were rechecked 2026-11-13.
 
 ## Runtime and release
 
 - Production URL: https://easyfind-crm-d01-d05.onrender.com
 - Render service: easyfind-crm-d01-d05 / srv-darsv560tbcc73cu4ip0
-- Live deployment: dep-dbqod1nf3r2c73fe2gc0
-- Live commit: d4083c8c33802f33295b090b9b1c4e71453b5090 on crm-ui-dashboard
+- Live deployment: `dep-dbrei8avcj2c73erda3g`
+- Live commit: `ddb0f6391f99ba9a848fd30c8b03bd5db9c1b53c` on `crm-ui-dashboard`; `/health` and `/` returned HTTP 200. GitHub Production health smoke passed.
 - Supabase project: qttcutwzehtskfcwxkwj
 - Edge Function: whapi-crm-webhook, ACTIVE v10
 - Production source: +919148338801
@@ -26,9 +26,11 @@
 
 ## Inventory synchronization
 
-- Canonical editing surface: Notion Housing Listings. The legacy `Housing_Listings` Sheet remains only for compatibility intake; reserved AU/AV remain outside operational writes. Dashboard reads Notion rows only.
-- Current Supabase mirror: 104 active `housing_notion` rows; all 104 corresponding Notion intake records are processed. The isolated Lambda is deployed and the user confirms the existing webhook plus all eight Page events are verified/selected.
-- The `crm_inventory_sheet_reconcile_5m` cron was unscheduled on 2026-11-13. No active Sheet reconciliation remains. The current snapshot contains 104 active `housing_notion` rows (87 Available, 17 Rented), no `housing_sheet` rows, and no test-like listings.
+- Canonical editing surface: Notion Housing Listings. The legacy `Housing_Listings` Sheet remains only for compatibility intake; dashboard reads active Notion rows from the existing Supabase snapshot.
+- Current Supabase mirror: 104 active `housing_notion` rows (87 Available, 17 Rented). The exact temporary test snapshot and intake record were removed. The test Notion page remains in Trash.
+- `notion-inventory-state` is ACTIVE v6 with JWT verification enabled. Lambda `efps-notion-intake` is Active in AWS account `294417174793`, with a successful SAM update. The user confirms the existing webhook and all eight Page events remain selected.
+- The `crm_inventory_sheet_reconcile_5m` cron is unscheduled. No active Sheet reconciliation exists; legacy Sheet write compatibility remains in Slack/raw intake.
+- Controlled test confirmed Notion create, edit, Listing ID write-back, duplicate suppression, soft-delete, and restore clearing the Supabase deletion marker. Delete/restore handlers were directly invoked for the exact test page; webhook delivery for those events was not independently observed.
 - The Notion backfill replay was accepted for 104 pages; all 104 intake events are processed. Dashboard source reads only active Notion rows.
 - Confirmed 502 cause: crm_inventory_sync_changes child rows were inserted before the parent crm_inventory_sync_runs row, violating the run_id foreign key. The deployed code inserts the parent first in the same transaction.
 - HTTP response history after repair: 12 HTTP 200 responses through 09:55 UTC; the 15 observed HTTP 502 responses were all before 09:10 UTC.
@@ -57,17 +59,16 @@ The 16 IDs are confirmed in Supabase. Source Sheet re-read and authenticated inv
 
 ## CI, UI and verification boundary
 
-- GitHub Actions CRM UI Verification: PASS; build PASS, 139/139 automated tests PASS, browser regression 1/1 PASS.
-- GitHub Actions CRM synthetic CI: PASS; build, unit tests and browser regression passed.
-- Production-health smoke job was skipped.
-- The authenticated production inventory API/UI was not exercised with an operator session in this follow-up. CI browser regression is not a substitute for an authenticated live inventory read.
+- GitHub Actions on current live commit: Inventory Contract PASS (130/130); SAM build/validation PASS; CRM build/tests/browser PASS; Production health smoke PASS.
+- Local repository audit, projection regression, compileall, SAM lint, and Notion intake tests PASS (23/23). The latest CRM browser test passed 1/1.
+- The authenticated production inventory page was not exercised because the browser session requires operator sign-in. A signed-in operator must verify the visual inventory.
 - Earlier npm ci reported 7 dependency advisories (3 moderate, 4 high); no dependency upgrades were applied.
 
 ## Repository and branch state
 
-- main and crm-ui-dashboard both point to commit d4083c8c33802f33295b090b9b1c4e71453b5090, tree ba5b62470c4bbb97a155451db18dae17229a3133.
+- Remote `crm-ui-dashboard` currently points to `ddb0f6391f99ba9a848fd30c8b03bd5db9c1b53c`; remote `main` still requires reconciliation to this verified tree.
 - Four Dependabot refs remain because their PRs are open: #93, #94, #96 and #97. They are automation PR heads, not additional CRM implementation/deployment branches; do not delete them while those PRs remain open.
-- The owner has deleted all Mac checkouts. No local checkout is retained or required for this verification.
+- The local checkout must be aligned to the published `crm-ui-dashboard` head after current documentation changes are published; its tracked tree currently matches the preceding verified release tree.
 
 ## Scheduler policy
 

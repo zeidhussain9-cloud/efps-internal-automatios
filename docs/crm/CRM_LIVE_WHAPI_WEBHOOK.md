@@ -1,12 +1,12 @@
 # CRM live WhAPI webhook — current verified state
 
-> Revalidated 2026-11-12 against production Supabase, the active Edge Function, scheduler state and GitHub release evidence.
+> WhAPI/Supabase metrics were revalidated 2026-11-12. The CRM UI release was subsequently updated 2026-11-13; see `CRM_CURRENT_VERIFIED_STATE.md` for latest deployment and branch evidence.
 
 ## Production identity
 
 - Render: easyfind-crm-d01-d05 / srv-darsv560tbcc73cu4ip0
-- Live deployment: dep-dbqod1nf3r2c73fe2gc0
-- Live commit: d4083c8c33802f33295b090b9b1c4e71453b5090 on crm-ui-dashboard
+- Live deployment: `dep-dbrbc8gjo6nc73etsmr0`
+- Live commit: `6b206ddf07515cff2df82140d86ee873e4ea2965` on `crm-ui-dashboard`
 - Supabase project: qttcutwzehtskfcwxkwj
 - Edge Function: whapi-crm-webhook, ACTIVE v10
 - Production source: +919148338801

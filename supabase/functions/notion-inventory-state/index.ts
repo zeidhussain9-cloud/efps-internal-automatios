@@ -1,5 +1,6 @@
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts'
 import { createClient } from 'npm:@supabase/supabase-js@2.117.2'
+import { responseForOperation } from './response-contract.mjs'
 
 const EXPECTED_INTERNAL_KEY_SHA256 = 'a64a3cb25769eff7c88456645d5196cf5e4fa33fc1c9b80ac309f4a2d605c4c9'
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!
@@ -62,10 +63,10 @@ Deno.serve(async (req) => {
     }
     return Response.json({ ok: true, found: Boolean(existing.data?.listing_id) })
   } else if (operation === 'find_inventory') {
-    const existing = await supabase.from('crm_inventory_snapshot').select('listing_id')
+    const existing = await supabase.from('crm_inventory_snapshot').select('listing_id,deleted_at')
       .eq('source_kind', 'housing_notion').eq('source_record->>notion_page_id', pageId).maybeSingle()
     if (existing.error) return Response.json({ error: 'Inventory lookup failed' }, { status: 500 })
-    return Response.json({ found: Boolean(existing.data?.listing_id), listing_id: existing.data?.listing_id ?? '' })
+    return Response.json({ found: Boolean(existing.data?.listing_id), listing_id: existing.data?.listing_id ?? '', deleted_at: existing.data?.deleted_at ?? null })
   } else if (operation === 'sync_inventory') {
     const listingId = String(body.listing_id ?? '').trim()
     const row = body.row
@@ -114,6 +115,5 @@ Deno.serve(async (req) => {
     console.error('Notion inventory state operation failed', { operation, code: result.error.code })
     return Response.json({ error: 'Inventory state operation failed' }, { status: 500 })
   }
-  if (operation === 'claim') return Response.json(result.data)
-  return Response.json({ ok: true })
+  return Response.json(responseForOperation(operation, result.data))
 })
