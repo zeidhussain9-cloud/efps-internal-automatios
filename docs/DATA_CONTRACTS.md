@@ -5,17 +5,17 @@
 This section is the current verified checkpoint. Older dated figures below are historical and must not be treated as current production metrics.
 
 - **Repository:** `zeidhussain9-cloud/efps-internal-automatios`
-- **CRM branch HEAD:** `bd29293846df3b09fac67fae2f2b0c555c821ec7`
-- **Main branch HEAD:** `9adc3e04174f074f3ccf93c82eea3658ed4b0eb9`
-- **Branch tree equality:** both branches resolve to `c1404c064b12367cec7b54af33604a5b1091d278`.
+- **Active branches:** `main` and `crm-ui-dashboard` only. Their tracked trees were verified identical before this task release; final reconciliation is part of this release close.
 - **Render:** latest `crm-ui-dashboard` deployment is LIVE; production health smoke passed.
 - **Housing inventory mirror:** 104 active rows in `crm_inventory_snapshot`; latest verified sync timestamp `2026-11-12 21:45:01 UTC`.
-- **Inventory validation:** 123 tests passed, including subtype, Maps, intake idempotency, caption, and projection regressions.
+- **Inventory validation:** 118 inventory-module tests passed in the 2026-11-13 rerun (87 Notion-intake tests); 130 combined inventory/webhook-routing tests passed; isolated SAM template/build validation passed.
 - **CRM validation:** 139 unit/server tests passed; browser regression 1/1 passed.
 - **SAM validation:** template validation, clean build, generated-template validation, Python compilation, and Lambda dependency packaging passed.
 - **Subtype:** mandatory supported value; Apartment fallback only when no subtype evidence exists; Penthouse -> Apartment; conflicting/unsupported candidates remain unresolved and require Needs Review.
 - **Maps:** preserve the exact original source URL. Only VERIFIED Maps results may replace conflicting locality/place name; unverified candidates do not overwrite data and route to Needs Review.
-- **Notion intake:** adapter is in the repository; optional `NotionSecretArn` feature gate is not activated. No Notion-to-Sheet/Cloudinary production write has occurred. Automation and end-to-end acceptance remain pending.
+- **WhAPI inventory intake:** deployed EFPSWebhook is Active with live flags enabled; deployed code was last updated 2026-10-04 and routes the two dedicated inventory sender numbers through the NEW delimiter. The current repository webhook handler now uses the explicit INVENTORY_SENDERS allowlist rather than a parser business-property. The shared stack was not redeployed.
+- **Slack inventory intake:** the existing /efps add-property flow collects property details in a thread, writes through the canonical Inventory pipeline to Housing_Listings, and uploads associated thread photos to Cloudinary; /efps photos start handles rows still missing photos.
+- **Notion intake:** isolated AWS stack efps-notion-property-intake is deployed (CREATE_COMPLETE); Lambda efps-notion-intake is Active. Invalid signatures return HTTP 401; a correctly signed malformed event reaches page-ID validation (HTTP 400); Notion API read-only access to both databases returns HTTP 200. End-to-end processing is blocked by the invalid Sheets/Cloudinary/Maps runtime credentials; subscription and controlled acceptance remain pending.
 - **Supabase ownership:** the existing Sheet-to-`crm_inventory_snapshot` sync path is unchanged; the Notion adapter writes only the canonical Sheet and relies on that existing sync path.
 - **WhatsApp:** `whatsapp_post` is generated for Notion from explicit/verified v7.1 facts. The adapter does not send WhatsApp messages.
 

@@ -19,3 +19,11 @@ def test_delivery_parses_messages_without_business_classification():
     parsed=parse_delivery({"messages":[{"id":"m1","chat_id":"919148338801@s.whatsapp.net","from":"919148338801","type":"text","text":{"body":"hello"}}]})
     assert len(parsed)==1
     assert parsed[0].message_type=="text"
+
+
+def test_inventory_source_routing_uses_runtime_allowlist(monkeypatch):
+    monkeypatch.setenv("INVENTORY_SENDERS", "917975102130,919902024973")
+    assert config.is_inventory_source("+91 79751 02130")
+    assert config.is_inventory_source("919902024973")
+    assert not config.is_inventory_source("919148338801")
+    assert not config.is_inventory_source("919999999999")

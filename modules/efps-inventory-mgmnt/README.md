@@ -1,5 +1,11 @@
 # EFPS Inventory Management
 
+## Intake entry points
+
+- Existing Slack intake: /efps add-property collects details in a thread and writes through the canonical pipeline; /efps photos start associates operator-uploaded thread photos with the same Sheet row.
+- Existing WhAPI intake: messages from the two configured inventory sender numbers are accumulated until the next exact NEW boundary; the canonical pipeline closes and processes the prior property session. The runtime allowlist comes from INVENTORY_SENDERS, with the two verified sender numbers as fallback.
+- Notion intake: a separate signed Connection webhook queues a Notion page for the same canonical pipeline. The endpoint is deployed but currently blocked by invalid Sheets/Cloudinary/Maps runtime credentials; see docs/NOTION_PROPERTY_INTAKE.md.
+
 ## Review-status boundary
 
 `Needs Review` is not a normal result of deterministic extraction. A valid deterministic extraction remains `Pending` after `intake_status = Processed`.
@@ -67,7 +73,7 @@ The inventory contract is 48 columns A:AV. Recurring Stage 1/2 updates are restr
 
 `src/notion_intake.py` is the Notion intake adapter. It fetches the submitted Notion page, claims it idempotently in the existing `efps-sessions` DynamoDB table, persists the raw record to the canonical Housing_Listings Sheet, downloads supported Notion-hosted photo attachments, uploads them through the shared Cloudinary helper, and delegates all property processing to `pipeline.process_closed_session()`. It then generates the v7.1 `whatsapp_post` from explicit/verified facts, creates/updates the Housing Listings Notion page, and writes intake status, Listing ID, notes, processed timestamp, and relation back to the intake page. Long Maps URLs are omitted from captions and flagged; pet policy is not inferred. No WhatsApp message is sent.
 
-The adapter does not implement a second extraction engine, operate on AU/AV, or send WhatsApp messages. Its SAM endpoint and required secret contract are documented in `docs/NOTION_PROPERTY_INTAKE.md`. Production activation remains gated on the AWS Secrets Manager Notion credential and webhook secret, SAM deployment, Notion automation configuration, and one controlled end-to-end acceptance test.
+The adapter does not implement a second extraction engine, operate on AU/AV, or send WhatsApp messages. Its SAM endpoint and required secret contract are documented in `docs/NOTION_PROPERTY_INTAKE.md`. The isolated AWS stack is now deployed (`efps-notion-property-intake`, `ap-southeast-2`) and the Lambda/API route is active. Invalid webhook signatures are rejected (HTTP 401). End-to-end processing remains blocked because the deployed Sheets credential resolves to `{}` and Cloudinary/Maps values resolve to `MIGRATION_PLACEHOLDER`; the Notion Connection webhook subscription and controlled acceptance test are also not verified. See `docs/NOTION_PROPERTY_INTAKE.md` for the exact endpoint and remaining gates.
 
 ## Verification
 

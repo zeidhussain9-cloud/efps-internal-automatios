@@ -1,8 +1,8 @@
 # Documentation Update Matrix
 
-## Authoritative current verified state — 2026-10-05
+## Historical CRM production snapshot — 2026-10-05 (not current metrics)
 
-This is the latest repository/production checkpoint. Older dated sections in maintained documents are historical evidence and must not be interpreted as current state.
+The figures below were last verified on 2026-10-05 and are retained as historical evidence, not current production metrics.
 
 - **CRM deployment branch:** `crm-ui-dashboard`
 - **Verified deterministic implementation baseline:** `8996dd32d732b0d8fab17f41b42306c230cd1de1`
@@ -28,7 +28,7 @@ This is the latest repository/production checkpoint. Older dated sections in mai
 - **AWS legacy webhook:** no changes in the audited CRM hardening range.
 - **24-item CRM audit:** GREEN / VERIFIED.
 
-### Current operational flow
+### Historical operational flow snapshot
 
 ```text
 WhAPI +919148338801
@@ -83,6 +83,7 @@ The P1–P5 hardening release added regression coverage for webhook promotion li
 | Documentation structure/role changes | `docs/DOCUMENT_GOVERNANCE.md`, `docs/DOCUMENT_MAP.md` |
 | Module responsibility/behavior changes | Relevant module `README.md` and `GEMINI.md`; canonical docs when cross-module truth changes |
 | Shared capability responsibility/behavior changes | Relevant shared `README.md`; canonical docs when cross-cutting truth changes |
+| Notion inventory intake deployment/authentication/runtime changes | `docs/NOTION_PROPERTY_INTAKE.md`, `docs/ARCHITECTURE.md`, `docs/DATA_CONTRACTS.md`, `docs/INFRASTRUCTURE.md`, `docs/DEPLOYMENT.md`, `modules/efps-inventory-mgmnt/README.md`, root `README.md`, `HANDOFF.md`, `docs/OPEN_POINTERS.md` |
 | Inventory source-extraction behavior changes | `docs/INVENTORY_SOURCE_EXTRACTION.md`, `docs/DETERMINISTIC_FIELD_RESOLUTION.md`, `docs/ARCHITECTURE.md`, `docs/DATA_CONTRACTS.md`, Inventory module `README.md`, affected regression fixtures, `HANDOFF.md` |
 | Inventory validation/normalized-storage contract changes | `docs/DATA_CONTRACTS.md`, `docs/DETERMINISTIC_FIELD_RESOLUTION.md`, `docs/PROJECT_RULES.md`, Inventory module `README.md`, affected validation/regression tests, `HANDOFF.md` |
 | Inventory model-audit/reporting behavior changes | `docs/DETERMINISTIC_FIELD_RESOLUTION.md`, `docs/DATA_CONTRACTS.md`, Inventory module `README.md`, `HANDOFF.md`, affected test tooling |

@@ -21,8 +21,8 @@ WEBHOOK_ENABLED_FLAG = "EFPS_WHAPI_WEBHOOK_ENABLED"
 WEBHOOK_TOKEN_ENV = "EFPS_WEBHOOK_TOKEN"
 WEBHOOK_QUERY_PARAMETER = "t"
 
-# Legacy inventory source numbers are retained only by the standalone inventory
-# module. They are not webhook listeners and are not used by the CRM path.
+# Fallback inventory source allowlist. The deployed SAM template may override it
+# with INVENTORY_SENDERS; message parsing itself remains transport-only.
 INVENTORY_SOURCE_NUMBERS = (
     "917975102130",
     "919902024973",
@@ -56,6 +56,18 @@ def normalise_phone(value: str) -> str:
     if len(digits) == 11 and digits.startswith("0"):
         return "91" + digits[1:]
     return digits
+
+def inventory_source_numbers() -> tuple[str, ...]:
+    """Return normalized inventory sender allowlist, honoring the Lambda env override."""
+    configured = os.environ.get("INVENTORY_SENDERS", "").strip()
+    values = configured.split(",") if configured else INVENTORY_SOURCE_NUMBERS
+    return tuple(normalise_phone(value.strip()) for value in values if value.strip())
+
+
+def is_inventory_source(value: str) -> bool:
+    """Whether a direct-message sender belongs to the configured inventory source allowlist."""
+    return normalise_phone(value) in set(inventory_source_numbers())
+
 
 def webhook_registration_payload(url: str, events: Iterable[Mapping[str, str] | str]) -> dict:
     """Build a WhAPI `/settings` webhook payload from explicitly verified events.

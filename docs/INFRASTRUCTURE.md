@@ -1,12 +1,22 @@
-## Current production audit — 2026-10-01
+## Historical production audit — 2026-10-01
 
 Verified live baseline is recorded in the authoritative current-state block below.
 
 # Infrastructure Registry
 
-## Authoritative current verified state — 2026-10-05
+## Current verified infrastructure update — 2026-11-13
 
-This is the latest repository/production checkpoint. Older dated sections in maintained documents are historical evidence and must not be interpreted as current state.
+- Isolated Notion stack `efps-notion-property-intake` in `ap-southeast-2`: `CREATE_COMPLETE`.
+- Notion Lambda `efps-notion-intake`: Active (Python 3.12; 512 MB; 180-second timeout).
+- Notion endpoint: `https://ko3771nvei.execute-api.ap-southeast-2.amazonaws.com/Prod/notion/intake`; invalid handshake/event signatures returned HTTP 401, a validly signed malformed event reached page validation (HTTP 400), and read-only Notion API checks for both databases returned HTTP 200.
+- Existing Slack inventory operations remain the operator-assisted Sheet/photo producer (/efps add-property and /efps photos start); the sync path remains read-only.
+- Existing WhAPI/CRM CloudFormation stack was not modified. Its EFPSWebhook Lambda is Active with EFPS_WHAPI_LIVE=1 and EFPS_WEBHOOK_LIVE=1; last function code update was 2026-10-04. The deployed artifact routes the two inventory senders (917975102130, 919902024973) via listener classification. The current repository implementation uses INVENTORY_SENDERS explicitly and has two dispatch regression tests; this task did not redeploy the shared stack.
+- Notion intake is not end-to-end operational: Sheets credential resolves to `{}`; Cloudinary and Maps runtime values resolve to `MIGRATION_PLACEHOLDER`. No intake write has been verified. Notion subscription and controlled acceptance remain pending.
+- Repository inventory module tests: 118/118 pass (87 Notion-intake tests); combined inventory + shared webhook routing tests: 130/130 pass; isolated SAM template/build/generated-template validation pass.
+
+### Historical CRM production metrics checkpoint — 2026-10-05
+
+The following CRM and inventory metrics are a dated historical snapshot, not current metrics for 2026-11-13. Re-run the live database/Render audit before treating them as current.
 
 - **CRM deployment branch:** `crm-ui-dashboard`
 - **Verified deterministic implementation baseline:** `8996dd32d732b0d8fab17f41b42306c230cd1de1`
@@ -32,7 +42,7 @@ This is the latest repository/production checkpoint. Older dated sections in mai
 - **AWS legacy webhook:** no changes in the audited CRM hardening range.
 - **24-item CRM audit:** GREEN / VERIFIED.
 
-### Current operational flow
+### Historical operational flow snapshot
 
 ```text
 WhAPI +919148338801
@@ -134,11 +144,15 @@ The Keychain entries are the local-development credential source. They are not a
 ## Notion Property Intake
 
 - Intake database: `Property Intake — Raw Details & Photos` (`89dad7a3990849ca9dc23e5bcb3fa99f`)
-- Housing Listings database: `416fedf9b4e881bd94f8c41c6f82601e`
-- SAM function: `EFPSNotionIntake`; API route: `/notion/intake`
+- Housing Listings database: `bccfd4f55e294b269daa093a928f873a` (verified full-page database; data source `collection://416fedf9-b4e8-804e-8a49-000bf3a015ad`)
+- Isolated SAM stack template: `notion-intake-template.yaml` (separate from the production WhAPI/CRM stack)
+- SAM function: `efps-notion-intake`; API route: `/notion/intake`
 - Existing DynamoDB table: `efps-sessions` (used with a dedicated `notion-intake:` key namespace)
-- Runtime secret: AWS Secrets Manager `NotionSecretArn`, JSON keys `api_token` and `webhook_secret`
-- The endpoint remains inactive until the SAM stack is updated, the Notion automation is configured with the private header token, and a controlled end-to-end intake passes.
+- Runtime secret: AWS Secrets Manager `efps-notion-intake`, JSON keys `api_token` and `webhook_secret`
+- Webhook authentication: Notion verification token captured during subscription handshake; subsequent `X-Notion-Signature` HMAC-SHA256 verification against the raw request body.
+- Endpoint: `https://ko3771nvei.execute-api.ap-southeast-2.amazonaws.com/Prod/notion/intake`.
+- Runtime blocker: Sheets credential `{}`; Cloudinary and Maps environment values `MIGRATION_PLACEHOLDER`. No end-to-end write verified.
+- This isolated stack does not update WhAPI/CRM Lambda functions, schedules, or the existing API Gateway.
 
 ## Google Sheets
 

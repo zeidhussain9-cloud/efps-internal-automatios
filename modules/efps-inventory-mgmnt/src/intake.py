@@ -68,9 +68,9 @@ def is_new_marker(text: str) -> bool:
 
 def is_inventory_message(message: IncomingMessage | dict) -> bool:
     if isinstance(message, IncomingMessage):
-        return config.normalise_phone(message.sender or message.chat_id) in set(config.INVENTORY_SOURCE_NUMBERS)
+        return config.is_inventory_source(message.sender or message.chat_id)
     return (
-        str(message.get("sender", "")).strip() in config.INVENTORY_SOURCE_NUMBERS
+        config.is_inventory_source(str(message.get("sender", "")))
         and not bool(message.get("from_me"))
         and not str(message.get("chat_id", "")).endswith("@g.us")
     )

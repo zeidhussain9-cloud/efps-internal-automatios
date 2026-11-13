@@ -1,6 +1,15 @@
 # EFPS CRM — Handoff
 
-> Current verified snapshot: 2026-10-05. Older dated snapshots below are historical and superseded.
+> CRM data snapshot: 2026-10-05 (historical; counts were not re-queried in this inventory task). Current inventory intake deployment status: 2026-11-13.
+
+## Inventory intake — 2026-11-13
+
+- Isolated stack `efps-notion-property-intake` in `ap-southeast-2`: `CREATE_COMPLETE`.
+- Lambda `efps-notion-intake`: Active; endpoint `https://ko3771nvei.execute-api.ap-southeast-2.amazonaws.com/Prod/notion/intake`.
+- Invalid handshake/event signatures returned HTTP 401; validly signed malformed event reached page-ID validation (HTTP 400); Notion API read access to both databases returned HTTP 200.
+- End-to-end processing is blocked: deployed Sheets credential is `{}`; Cloudinary/Maps runtime values are `MIGRATION_PLACEHOLDER`. No Notion intake Sheet/media write is verified. Notion subscription and controlled acceptance remain pending.
+- Inventory module tests 118/118 (87 Notion-intake tests); combined inventory/webhook-routing tests 130/130; SAM isolated build and validation pass.
+- Existing inventory intake includes Slack /efps add-property and /efps photos start for operator-entered details/photos, plus the WhAPI path from the two dedicated sender numbers and NEW session delimiter. The deployed WhAPI Lambda last code update was 2026-10-04; the current repo routing uses the explicit sender allowlist and has dispatch regression tests. The shared WhAPI/CRM stack was not redeployed.
 
 ## Production
 
@@ -10,12 +19,12 @@
 - Source number: +919148338801
 - Supabase: qttcutwzehtskfcwxkwj
 
-## Current data
+## Historical data snapshot (2026-10-05; not reverified in this task)
 
 253 leads; 9,224 messages; 3,025 persisted WhAPI webhook events; 277 AI runs; 214 drafts; 389 classifications; 88 inventory rows (71 Available / 17 Rented Out).
 Classification status: 239 promoted, 88 classified, 32 excluded, 3 pending.
 
-## Runtime state
+## CRM runtime state (last checked 2026-10-05)
 
 Webhook reconciliation is live through the Supabase Edge Function. A WhatsApp chat_id ending in @g.us is a deterministic Group Message signal for pending contacts. Group Message records remain excluded from CRM leads, while promoted leads are preserved. Automatic WhatsApp sending remains disabled; AI output is operator-reviewed and outbound sending is manual.
 

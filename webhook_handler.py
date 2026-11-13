@@ -44,7 +44,7 @@ def process(payload: dict) -> dict:
     messages=parse_delivery(payload); results=[]; sheets_client=GoogleSheetsClient()
     for message in messages:
         try:
-            if message.is_inventory_listener and not message.is_group and not message.from_me:
+            if whapi_config.is_inventory_source(message.sender or message.chat_id) and not message.is_group and not message.from_me:
                 from inventory_runtime import handle as inventory_handle
                 results.append(inventory_handle(message, client=sheets_client))
             else:
