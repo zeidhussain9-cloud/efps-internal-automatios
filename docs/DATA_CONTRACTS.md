@@ -8,7 +8,7 @@ This section is the current verified checkpoint. Older dated figures below are h
 - **Active branches:** `main` and `crm-ui-dashboard` only. Their tracked trees were reconciled and verified identical at the 2026-11-13 release close; both worktrees are clean.
 - **Render:** latest `crm-ui-dashboard` deployment is LIVE; production health smoke passed.
 - **Housing inventory mirror:** 104 active rows in `crm_inventory_snapshot`; latest verified sync timestamp `2026-11-12 21:45:01 UTC`.
-- **Inventory validation:** 118 inventory-module tests passed in the 2026-11-13 rerun (87 Notion-intake tests); 130 combined inventory/webhook-routing tests passed; isolated SAM template/build validation passed.
+- **Inventory validation:** 118 inventory-module tests passed in the 2026-11-13 rerun (87 Notion-intake tests); 130 combined inventory/webhook-routing tests passed; CRM npm test 139/139; browser regression 1/1; Vite build and isolated/shared SAM template/build validation passed.
 - **CRM validation:** 139 unit/server tests passed; browser regression 1/1 passed.
 - **SAM validation:** template validation, clean build, generated-template validation, Python compilation, and Lambda dependency packaging passed.
 - **Subtype:** mandatory supported value; Apartment fallback only when no subtype evidence exists; Penthouse -> Apartment; conflicting/unsupported candidates remain unresolved and require Needs Review.
