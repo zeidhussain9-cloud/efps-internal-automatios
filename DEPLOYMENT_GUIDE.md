@@ -1,3 +1,5 @@
+> **HISTORICAL / DO NOT USE AS A CURRENT DEPLOYMENT REFERENCE (2026-11-13).** This guide contains the retired AWS account `232812966882`, `us-east-1` resource ARNs, and the legacy WhAPI/Slack/DynamoDB deployment shape. The currently verified Notion intake stack is in AWS account `294417174793`, region `ap-southeast-2`; its deployment and secret contract are documented in `docs/NOTION_PROPERTY_INTAKE.md` and `docs/DEPLOYMENT.md`. The old WhAPI inventory path is retained only until the final cleanup phase. Do not copy the legacy account IDs, secret ARNs, or stack parameters below into new deployments.
+
 ## Scope note — CRM UI production
 
 

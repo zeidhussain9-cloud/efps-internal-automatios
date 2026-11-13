@@ -8,10 +8,10 @@ Verified live baseline is recorded in the authoritative current-state block belo
 
 - Isolated Notion stack `efps-notion-property-intake` in `ap-southeast-2`: `UPDATE_COMPLETE`.
 - Notion Lambda `efps-notion-intake`: Active (Python 3.12; 512 MB; 180-second timeout).
-- Notion endpoint: `https://ko3771nvei.execute-api.ap-southeast-2.amazonaws.com/Prod/notion/intake`; invalid handshake/event signatures returned HTTP 401, a validly signed malformed event reached page validation (HTTP 400), and read-only Notion API checks for both databases returned HTTP 200.
+- Notion endpoint: `https://ko3771nvei.execute-api.ap-southeast-2.amazonaws.com/Prod/notion/intake`; invalid handshake/event signatures returned HTTP 401, a validly signed malformed event reached page validation (HTTP 400), and controlled create/archive probes for both Notion databases returned HTTP 200.
 - Existing Slack inventory operations remain the operator-assisted Sheet/photo producer (/efps add-property and /efps photos start); the sync path remains read-only.
-- Existing WhAPI/CRM CloudFormation stack was not modified. Its EFPSWebhook Lambda is Active with EFPS_WHAPI_LIVE=1 and EFPS_WEBHOOK_LIVE=1; last function code update was 2026-10-04. The deployed artifact routes the two inventory senders (917975102130, 919902024973) via listener classification. The current repository implementation uses INVENTORY_SENDERS explicitly and has two dispatch regression tests; this task did not redeploy the shared stack.
-- Notion intake is not end-to-end operational: Sheets credential resolves to `{}`; Cloudinary and Maps runtime values resolve to `MIGRATION_PLACEHOLDER`. No intake write has been verified. Notion subscription and controlled acceptance remain pending.
+- Existing WhAPI/CRM CloudFormation stack was not modified. Its EFPSWebhook Lambda is Active with EFPS_WHAPI_LIVE=1 and EFPS_WEBHOOK_LIVE=1; last function code update was 2026-10-04. The deployed artifact still contains the two old inventory sender routes (917975102130, 919902024973), but this is legacy inventory logic and is not the current intake workflow. It remains untouched until the final cleanup phase; this task did not redeploy the shared stack.
+- Notion write access to both databases is verified. Local Keychain credentials successfully read the canonical Sheet, passed Cloudinary HTTP 200 ping plus a temporary image upload/delete, and returned VERIFIED Maps resolution. The AWS Secrets Manager records remain invalid (`{}` / placeholders), so the deployed Lambda cannot yet complete intake. Notion Connection subscription and controlled end-to-end acceptance remain pending. The Notion path uses Supabase idempotency and has no DynamoDB dependency.
 - Repository inventory module tests: 118/118 pass (87 Notion-intake tests); combined inventory + shared webhook routing tests: 130/130 pass; CRM npm test 139/139; browser regression 1/1; Vite build and isolated/shared SAM template/build/generated-template validation pass.
 
 ### Historical CRM production metrics checkpoint — 2026-10-05
@@ -147,11 +147,11 @@ The Keychain entries are the local-development credential source. They are not a
 - Housing Listings database: `bccfd4f55e294b269daa093a928f873a` (verified full-page database; data source `collection://416fedf9-b4e8-804e-8a49-000bf3a015ad`)
 - Isolated SAM stack template: `notion-intake-template.yaml` (separate from the production WhAPI/CRM stack)
 - SAM function: `efps-notion-intake`; API route: `/notion/intake`
-- Existing DynamoDB table: `efps-sessions` (used with a dedicated `notion-intake:` key namespace)
+- Idempotency: Supabase `public.crm_inventory_intake_events` via Edge Function `notion-inventory-state`; no DynamoDB dependency in this Notion stack.
 - Runtime secret: AWS Secrets Manager `efps-notion-intake`, JSON keys `api_token` and `webhook_secret`
 - Webhook authentication: Notion verification token captured during subscription handshake; subsequent `X-Notion-Signature` HMAC-SHA256 verification against the raw request body.
 - Endpoint: `https://ko3771nvei.execute-api.ap-southeast-2.amazonaws.com/Prod/notion/intake`.
-- Runtime blocker: Sheets credential `{}`; Cloudinary and Maps environment values `MIGRATION_PLACEHOLDER`. No end-to-end write verified.
+- Runtime blocker: AWS Secrets Manager Sheets record is `{}` and Cloudinary/Maps records are placeholders. Valid credentials are present in local Keychain and passed live checks; AWS secret records must be updated. Notion Connection subscription and end-to-end write are pending.
 - This isolated stack does not update WhAPI/CRM Lambda functions, schedules, or the existing API Gateway.
 
 ## Google Sheets
@@ -241,7 +241,7 @@ The current SAM deployment contract injects `SLACK_BOT_TOKEN` and `SLACK_SIGNING
 
 ## Live-system runtime boundary — 2026-09-16
 
-The repository-level migration uses the latest canonical `main` plus the approved live Stage-1 integration boundary. `modules/efps-inventory-mgmnt/src/inventory_runtime.py` requires the existing `efps-sessions` DynamoDB table and uses it only for durable Stage-1 session state. The SAM integration template requires `SessionsTableArn` for that table and grants the WhAPI webhook Lambda the minimum DynamoDB actions required for session lifecycle operations.
+Historical Stage-1/WhAPI runtime boundary: `modules/efps-inventory-mgmnt/src/inventory_runtime.py` retains the old `efps-sessions` DynamoDB session implementation. This is the legacy WhAPI inventory listener, not the Notion path, and is intentionally retained only until the final cleanup phase. The isolated Notion template has removed all DynamoDB references.
 
 Lead resources and their stream remain externally supplied through the existing template parameters. The migration does not replace current Lead, Slack, WhAPI, Sheets, Maps, or Cloudinary implementations with older migration-branch versions.
 
@@ -252,8 +252,9 @@ Only secret names/ARNs and non-sensitive identifiers may be documented here. Sec
 The credential architecture is now explicitly split:
 
 1. local development/diagnostics → macOS Keychain provider;
-2. deployed Lambda runtime → existing AWS Secrets Manager secrets referenced by `template.yaml` dynamic references;
-3. third-party runtime acceptance → independently verified AWS probes.
+2. isolated Notion Lambda runtime → fetches existing AWS Secrets Manager values directly at runtime using secret ARNs (no plaintext credential environment variables and no CloudFormation dynamic references);
+3. other deployed Lambda runtimes → their existing SAM/Secrets Manager contracts;
+4. third-party runtime acceptance → independently verified API probes.
 
 The migration itself does not prove live third-party connectivity. Each integration requires its own runtime acceptance probe.
 

@@ -291,15 +291,25 @@ def test_v71_caption_does_not_infer_pet_policy_from_inventory_default():
     assert "Pets:" not in intake.build_whatsapp_post(row, "2 BHK Apartment", maps_verified=True)
 
 
-def test_retry_can_reclaim_needs_review_page():
-    class FakeTable:
-        def __init__(self): self.expression = None
-        def update_item(self, **kwargs): self.expression = kwargs["ConditionExpression"]
-        def get_item(self, **kwargs):
-            return {"Item": {"user_id": "notion-intake:abc", "state": "needs_review", "payload_hash": "same", "listing_id": "EF-TEST"}}
-    table = FakeTable()
-    status, _ = intake.DynamoIntakeStore(table).claim("abc", "same")
-    assert status == "claimed" and ":needs_review" in table.expression
+def test_supabase_intake_store_claims_through_supabase_edge_function(monkeypatch):
+    calls = []
+    class Response:
+        ok = True
+        def json(self): return {"status": "claimed", "item": {"listing_id": "EF-TEST"}}
+    class FakeSession:
+        def post(self, url, **kwargs):
+            calls.append((url, kwargs))
+            return Response()
+    monkeypatch.setenv("SUPABASE_URL", "https://project.supabase.co")
+    monkeypatch.setenv("SUPABASE_ANON_KEY", "public-anon-key")
+    store = intake.SupabaseIntakeStore("internal-notion-token", session=FakeSession())
+    status, item = store.claim("12345678-1234-1234-1234-123456789abc", "hash")
+    assert status == "claimed" and item["listing_id"] == "EF-TEST"
+    url, request = calls[0]
+    assert url == "https://project.supabase.co/functions/v1/notion-inventory-state"
+    assert request["headers"]["Authorization"] == "Bearer public-anon-key"
+    assert request["headers"]["X-EFPS-Intake-Auth"] == "internal-notion-token"
+    assert request["json"]["operation"] == "claim"
 
 
 def test_process_page_persists_one_listing_and_reconciles_intake(monkeypatch):

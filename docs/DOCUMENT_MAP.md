@@ -63,7 +63,7 @@ The P1–P5 hardening release added regression coverage for webhook promotion li
 
 ## Current inventory intake deployment — 2026-11-13
 
-The isolated Notion intake stack `efps-notion-property-intake` is deployed in `ap-southeast-2`; Lambda `efps-notion-intake` is Active and its API endpoint is live. Invalid handshake/event signatures return HTTP 401; a validly signed malformed event reaches page validation (HTTP 400); read-only Notion API checks for both databases return HTTP 200. End-to-end processing is blocked by invalid deployed Sheets (`{}`), Cloudinary, and Maps (`MIGRATION_PLACEHOLDER`) credentials; Notion subscription and acceptance test remain pending. See `docs/NOTION_PROPERTY_INTAKE.md`.
+The isolated Notion intake stack `efps-notion-property-intake` is UPDATE_COMPLETE in `ap-southeast-2`; Lambda `efps-notion-intake` is Active. Notion database create/archive probes passed for both databases. Supabase `crm_inventory_intake_events` and the `notion-inventory-state` Edge Function provide idempotency; no DynamoDB is used by this Notion path. Local Keychain Sheet/Cloudinary/Maps credentials passed live checks, but the AWS Secrets Manager copies are `{}`/placeholders. The Notion Connection subscription and end-to-end acceptance remain pending. See `docs/NOTION_PROPERTY_INTAKE.md`.
 
 This document is the canonical map of maintained repository documentation. It tells future AI sessions where a fact, rule, decision, contract, or current-state update belongs.
 
