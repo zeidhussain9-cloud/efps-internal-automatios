@@ -7,12 +7,14 @@ Verified live baseline is recorded in the authoritative current-state block belo
 ## Current verified infrastructure update — 2026-11-13
 
 - Isolated Notion stack `efps-notion-property-intake` in `ap-southeast-2`: `UPDATE_COMPLETE`.
-- Notion Lambda `efps-notion-intake`: Active (Python 3.12; 512 MB; 180-second timeout).
+- Notion Lambda `efps-notion-intake`: Active (Python 3.12; 512 MB; 180-second timeout). Updated via SAM on 2026-11-13; `$LATEST` CodeSha256 `APpVz3ybE2C43rQ/BercbcIKGYVBGeLl9FhAiCKVQEE=`; CloudFormation stack update completed.
 - Notion endpoint: `https://ko3771nvei.execute-api.ap-southeast-2.amazonaws.com/Prod/notion/intake`; invalid handshake/event signatures returned HTTP 401, a validly signed malformed event reached page validation (HTTP 400), and controlled create/archive probes for both Notion databases returned HTTP 200.
-- Existing Slack inventory operations remain the operator-assisted Sheet/photo producer (/efps add-property and /efps photos start); the sync path remains read-only.
+- Canonical editor: Notion Housing Listings. The repository now handles all eight Page event types and upserts/tombstones the existing `public.crm_inventory_snapshot` directly. The database allows `housing_notion`; Notion-owned IDs take precedence over Sheet compatibility sync.
+- Supabase `notion-inventory-state` is ACTIVE v4 with the direct projection, Listing ID allocator, inventory lookup, and lifecycle-safe sync; the source-kind schema change is deployed. The one-time backfill queued 104 Housing Listings pages. Supabase confirms 104 processed intake records and 104 active `housing_notion` snapshot rows, with no remaining `housing_sheet` rows.
+- Existing Slack/raw intake remains a compatibility producer. The dashboard queries active `housing_notion` rows only. Supabase cron `crm_inventory_sheet_reconcile_5m` was unscheduled; no five-minute Sheet reconciliation remains active.
 - Existing WhAPI/CRM CloudFormation stack was not modified. Its EFPSWebhook Lambda is Active with EFPS_WHAPI_LIVE=1 and EFPS_WEBHOOK_LIVE=1; last function code update was 2026-10-04. The deployed artifact still contains the two old inventory sender routes (917975102130, 919902024973), but this is legacy inventory logic and is not the current intake workflow. It remains untouched until the final cleanup phase; this task did not redeploy the shared stack.
-- Notion write access to both databases is verified. Local Keychain credentials successfully read the canonical Sheet, passed Cloudinary HTTP 200 ping plus a temporary image upload/delete, and returned VERIFIED Maps resolution. The AWS Secrets Manager records remain invalid (`{}` / placeholders), so the deployed Lambda cannot yet complete intake. Notion Connection subscription and controlled end-to-end acceptance remain pending. The Notion path uses Supabase idempotency and has no DynamoDB dependency.
-- Repository inventory module tests: 118/118 pass (87 Notion-intake tests); combined inventory + shared webhook routing tests: 130/130 pass; CRM npm test 139/139; browser regression 1/1; Vite build and isolated/shared SAM template/build/generated-template validation pass.
+- The existing `EFPS CRM Property Intake` connection appears in Notion Developer Connections; the user confirms the webhook was already verified and all eight Page events remain selected. AWS identity is verified as account `294417174793` in `ap-southeast-2`. Existing secret ARNs were reused; no values were printed, copied, created, rotated, or overwritten. Direct mirror workers used the existing Notion credential at runtime.
+- `sam validate --template-file notion-intake-template.yaml --lint` and Python source compilation passed. Docker/Finch/Podman are unavailable, so a fresh container build was not possible; the existing Linux SAM dependency artifact was reused with the current `notion_intake.py`. Verification: 139 Node tests, 88 inventory Python tests, and one browser regression passed; production build and SAM template lint passed.
 
 ### Historical CRM production metrics checkpoint — 2026-10-05
 
@@ -65,7 +67,7 @@ CRM lead workspace
 Housing_Listings A:AV
   -> CRM reads operational A:AT only
   -> 88-row operational mirror in crm_inventory_snapshot
-  -> five-minute reconciliation
+  -> event-driven Notion page updates (Sheets reconciliation disabled)
   -> crm_inventory_sync_changes records future field-level changes
 ```
 
@@ -151,7 +153,7 @@ The Keychain entries are the local-development credential source. They are not a
 - Runtime secret: AWS Secrets Manager `efps-notion-intake`, JSON keys `api_token` and `webhook_secret`
 - Webhook authentication: Notion verification token captured during subscription handshake; subsequent `X-Notion-Signature` HMAC-SHA256 verification against the raw request body.
 - Endpoint: `https://ko3771nvei.execute-api.ap-southeast-2.amazonaws.com/Prod/notion/intake`.
-- Runtime blocker: AWS Secrets Manager Sheets record is `{}` and Cloudinary/Maps records are placeholders. Valid credentials are present in local Keychain and passed live checks; AWS secret records must be updated. Notion Connection subscription and end-to-end write are pending.
+- Historical raw Property Intake blocker: the previous acceptance pass recorded the AWS Sheets record as `{}` and Cloudinary/Maps as placeholders. This deployment turn did not re-read or change those values; raw Property Intake with photos may still be blocked. Direct Housing Listings-to-Supabase backfill completed using the existing Notion connection and direct projection path. Do not overwrite existing secret values as part of this workflow.
 - This isolated stack does not update WhAPI/CRM Lambda functions, schedules, or the existing API Gateway.
 
 ## Google Sheets

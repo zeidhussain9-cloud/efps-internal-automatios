@@ -6,19 +6,19 @@ This section supersedes the older dated operational snapshots below. Historical 
 
 - **GitHub repository:** `zeidhussain9-cloud/efps-internal-automatios`
 - **CRM deployment branch:** `crm-ui-dashboard`
-- **Active branches:** `main` and `crm-ui-dashboard` only. Their tracked trees were reconciled and verified identical at the 2026-11-13 release close; both worktrees are clean.
+- **Task checkout:** `crm-ui-dashboard`; this migration is being released to the existing Render service.
 - **Render production service:** `easyfind-crm-d01-d05` / `srv-darsv560tbcc73cu4ip0`
-- **Render deployment:** CRM Dashboard service auto-deploys from `crm-ui-dashboard`; the 2026-11-13 release deployment was verified LIVE after the repository push.
+- **Render deployment:** CRM Dashboard service auto-deploys from `crm-ui-dashboard`; the prior 2026-11-13 release was verified LIVE before this follow-up. The dashboard source changes are included in the current release; Supabase Edge Function v4 and isolated Notion Lambda direct-mirror code are deployed separately.
 - **Production health:** GitHub production health smoke completed successfully after the latest deployment.
 - **Inventory schema:** 48 physical columns A:AV; runtime processing and CRM mirror are restricted to A:AT. Reserved AU/AV are excluded from operational writes and CRM projection.
-- **Inventory/Supabase mirror:** 104 active `housing_sheet` rows; latest verified snapshot sync was `2026-11-12 21:45:01 UTC`.
+- **Inventory/Supabase mirror:** 104 active `housing_notion` rows are confirmed after the idempotent backfill; the 104 intake event records are all processed. No Sheet-owned rows remain in the current snapshot.
 - **Subtype contract:** mandatory supported `property_subtype`; Apartment is the no-evidence fallback; Penthouse maps to Apartment; conflicting/unsupported evidence requires Needs Review.
 - **Maps contract:** only VERIFIED results may override locality/place name; unverified Maps candidates are not applied and require Needs Review. The original source URL remains stored. Captions use only the original short mobile URL; long URLs are omitted and flagged.
 - **Legacy WhAPI inventory listener:** the deployed EFPSWebhook artifact still contains the old two-sender NEW-delimited route, but this path is not the current inventory workflow. It is retained untouched until the final cleanup phase; the shared WhAPI/CRM stack was not redeployed in this task.
-- **Notion intake:** isolated stack efps-notion-property-intake is UPDATE_COMPLETE; Lambda efps-notion-intake is Active. Both Notion databases passed controlled create/archive permission probes. Supabase crm_inventory_intake_events and notion-inventory-state provide idempotency; no DynamoDB is used by this path. Local Keychain Sheet/Cloudinary/Maps credentials passed live checks, but AWS Secrets Manager copies remain `{}`/placeholders and the Notion Connection subscription/end-to-end acceptance are pending.
+- **Notion inventory:** Housing Listings is the canonical operator editing surface. Its page events route to the existing Supabase `crm_inventory_snapshot` with `housing_notion` ownership; the dashboard queries only active `housing_notion` rows; the Sheets reconciliation cron is disabled. The database description, schema migration, Edge Function v4, and isolated Lambda are deployed. The user confirms the existing Connection webhook and all eight Page event selections. The one-time backfill completed for 104 rows. Existing AWS secret ARNs were reused; no secret values were exposed or changed. The old WhAPI listener remains untouched for final cleanup.
 - **WhatsApp:** v7.1 caption generation writes the Notion-only `whatsapp_post` field from explicit/verified facts. No WhatsApp message is sent by the intake adapter.
-- **Verification:** this task reran the inventory module suite (118/118, including 87 Notion-intake tests) and the combined inventory/webhook-routing suite (130/130); isolated SAM template/build/generated-template validation PASS. CRM npm test: 139/139; browser regression: 1/1; Vite production build: PASS; both shared and isolated SAM templates/build artifacts validate.
-- **Production data:** no Notion intake-to-Sheet/Cloudinary write has been verified. The isolated endpoint deployment did not modify the shared WhAPI/CRM stack or existing Housing_Listings rows.
+- **Verification:** this turn verified AWS identity, CloudFormation `UPDATE_COMPLETE`, Lambda `LastUpdateStatus=Successful`, SAM template lint, Python source compilation, backfill acceptance (104 pages), and Supabase processed/active counts (104). 139 Node tests, 88 inventory Python tests, and one browser regression passed. SAM template lint passed. A fresh container build was unavailable; the previously built Linux dependency artifact was reused with hash-matched current source.
+- **Production data:** 104 Housing Listings pages are present as active `housing_notion` rows in the existing snapshot. The current CRM UI source release is being deployed to Render.
 
 ### Inventory intake paths — current ownership
 
@@ -26,19 +26,25 @@ This section supersedes the older dated operational snapshots below. Historical 
 SLACK OPERATOR INTAKE
   /efps add-property and /efps photos start
   -> canonical Inventory pipeline
-  -> Housing_Listings Google Sheet
+  -> legacy Housing_Listings compatibility sheet (not read by dashboard)
 
-NOTION INTAKE (deployed; awaiting AWS secret correction and webhook subscription)
+NOTION PROPERTY INTAKE (raw-details/photos compatibility path; legacy media credentials need separate validation)
   Notion Connection webhook
   -> isolated Lambda signature validation + async worker
   -> Supabase crm_inventory_intake_events idempotency claim
-  -> canonical Inventory pipeline
-  -> Housing_Listings Google Sheet + Cloudinary photo URLs
+  -> canonical Inventory processing pipeline
+  -> compatibility Housing_Listings Sheet + Cloudinary photo URLs
   -> Housing Listings Notion page + intake relation/status
 
-ALL ACTIVE SHEET PRODUCERS
-  -> existing five-minute Sheet-to-Supabase sync
-  -> crm_inventory_snapshot (primary key: listing_id)
+CANONICAL NOTION HOUSING LISTINGS
+  -> signed page events (all eight Page event types retained)
+  -> isolated Lambda + Supabase idempotency claim
+  -> direct upsert/tombstone of public.crm_inventory_snapshot
+  -> dashboard reads active housing_notion rows only
+
+LEGACY SHEET RECONCILIATION
+  -> Supabase cron removed on 2026-11-13
+  -> dashboard ignores housing_sheet rows
 
 LEGACY WHAPI NEW-DELIMITED INVENTORY
   -> retained only pending the final cleanup phase
@@ -51,18 +57,19 @@ The Notion idempotency table and RPCs are in Supabase, not DynamoDB. The existin
 ### Current Notion operational flow
 
 ```text
-Notion Property Intake
-  -> signed page.created / page.properties_updated event
-  -> asynchronous Lambda worker
+Notion Housing Listings
+  -> signed page event
+  -> asynchronous Lambda worker fetches the latest page from Notion
   -> Supabase crm_inventory_intake_events claim/replay protection
-  -> canonical Inventory pipeline
-  -> Housing_Listings A:AT + Cloudinary photo URLs
-  -> Housing Listings Notion page + intake relation/status
-  -> existing Sheet-to-Supabase sync
-  -> crm_inventory_snapshot
+  -> direct housing_notion upsert to crm_inventory_snapshot by immutable listing_id
+  -> CRM dashboard
+
+Notion Property Intake (raw details and photos)
+  -> existing deterministic processing and listing-page creation
+  -> Housing Listings page event feeds the same direct projection
 ```
 
-The old WhAPI `NEW`-delimited inventory path is legacy and retained only until the final cleanup phase. It is not the new Notion workflow.
+The old WhAPI `NEW`-delimited inventory path is legacy and retained only until the final cleanup phase. It is not the new Notion workflow. Remaining Sheets writes are legacy compatibility intake; they do not feed the dashboard inventory.
 
 ### Current WhAPI API safety boundary
 
@@ -90,14 +97,14 @@ CRM lead workspace
 
 Housing_Listings A:AV
   -> CRM reads operational A:AT only
-  -> 88-row operational mirror in crm_inventory_snapshot
-  -> five-minute reconciliation
+  -> Notion-owned operational mirror in crm_inventory_snapshot
+  -> event-driven Notion page sync (Sheet cron disabled)
   -> crm_inventory_sync_changes records future field-level changes
 ```
 
 ### Test-history checkpoint
 
-The P1–P5 hardening release added regression coverage for webhook promotion linkage, reserved AU/AV exclusion, and disposable inventory create/edit/delete history. The current repository verification is 134/134 automated tests, browser 1/1, and production build PASS. Historical earlier test counts in dated handoff/audit sections are retained as historical checkpoints.
+The P1–P5 hardening release added regression coverage for webhook promotion linkage, reserved AU/AV exclusion, and disposable inventory create/edit/delete history. Current migration verification: 139 Node tests, 88 inventory Python tests, browser 1/1, production build, and SAM template lint all PASS. Earlier counts remain historical checkpoints.
 
 
 

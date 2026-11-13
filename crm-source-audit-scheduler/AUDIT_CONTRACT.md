@@ -60,7 +60,7 @@ Point 41 is green only when every qualified lead has valid, deterministic matche
 
 Results are evaluated against the same matcher contract used by the production inventory query:
 
-- inventory source is the canonical housing-sheet snapshot;
+- inventory source is the active Notion-owned rows in the existing Supabase inventory snapshot;
 - only non-deleted `Available` inventory is eligible;
 - BHK, budget, locality, furnishing and pet predicates use the normalized inputs;
 - results are deterministic and ordered by rent then listing ID;
@@ -108,7 +108,7 @@ Verified from production Supabase during the 2026-10-05 reconciliation:
 - normalized requirement profiles: 253
 - missing profiles: 0
 - requirement evidence rows: present as a separate table; this audit does not fabricate or require evidence rows for Point 40
-- active housing-sheet inventory: 71
+- active housing inventory: 71 (historical 2026-10-05 Sheet-backed baseline)
 
 The repository test suite passed 134/134 after the audit implementation. Browser regression passed 1/1.
 

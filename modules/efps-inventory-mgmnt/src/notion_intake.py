@@ -74,6 +74,20 @@ class NotionClient:
         rows = result.get("results") or []
         return rows[0] if rows else None
 
+    def list_listings(self):
+        pages, cursor = [], None
+        while True:
+            payload = {"page_size": 100}
+            if cursor:
+                payload["start_cursor"] = cursor
+            result = self.request("POST", f"databases/{LISTINGS_DATABASE_ID}/query", payload=payload)
+            pages.extend(result.get("results") or [])
+            if not result.get("has_more"):
+                return pages
+            cursor = result.get("next_cursor")
+            if not cursor:
+                raise IntakeError("Notion Housing Listings pagination returned no cursor")
+
     def save_listing(self, row: dict):
         properties = listing_notion_properties(row)
         existing = self.find_listing(str(row["listing_id"]))
@@ -121,6 +135,19 @@ class SupabaseIntakeStore:
     def set_listing_id(self, page_id: str, listing_id: str):
         self._request("set_listing_id", page_id=page_id, listing_id=listing_id)
 
+    def allocate_listing_id(self, page_id: str):
+        return str(self._request("allocate_listing_id", page_id=page_id).get("listing_id") or "")
+
+    def sync_inventory(self, page_id: str, row: dict, *, deleted: bool = False):
+        source_hash = hashlib.sha256(json.dumps(row, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+        self._request("sync_inventory", page_id=page_id, listing_id=row["listing_id"], row=row, source_hash=source_hash, deleted=deleted)
+
+    def delete_inventory(self, page_id: str):
+        return self._request("delete_inventory", page_id=page_id)
+
+    def find_inventory(self, page_id: str):
+        return self._request("find_inventory", page_id=page_id)
+
     def finish(self, page_id: str, state: str, *, listing_page_id: str = "", note: str = ""):
         self._request("finish", page_id=page_id, state=state, listing_page_id=listing_page_id, note=note[:1800])
 
@@ -137,6 +164,43 @@ def _title(page: dict) -> str:
 
 def _photos(page: dict) -> list[dict]:
     return list((page.get("properties") or {}).get("Photos", {}).get("files") or [])
+
+
+def _notion_value(prop: dict) -> str:
+    """Flatten a canonical Housing Listings property without inventing values."""
+    kind = str(prop.get("type") or "")
+    value = prop.get(kind)
+    if kind in {"title", "rich_text"}:
+        return "".join(str(part.get("plain_text") or part.get("text", {}).get("content") or "") for part in (value or []))
+    if kind == "number":
+        return "" if value is None else str(value)
+    if kind == "checkbox":
+        return "Yes" if value else "No"
+    if kind in {"select", "status"}:
+        return str((value or {}).get("name") or "")
+    if kind == "multi_select":
+        return ", ".join(str(part.get("name") or "") for part in (value or []) if part.get("name"))
+    if kind in {"url", "email", "phone_number"}:
+        return str(value or "")
+    if kind == "date":
+        return str((value or {}).get("start") or "")
+    return ""
+
+
+def listing_snapshot(page: dict) -> dict:
+    """Project one Housing Listings page into the existing dashboard snapshot contract."""
+    properties = page.get("properties") or {}
+    row = {name: _notion_value(properties.get(name) or {}) for name in schema.NAMES}
+    # AU/AV are reserved in the established inventory contract, even if a Notion
+    # page has values in similarly named properties.
+    row["source_group"] = ""
+    row["inventory_locked"] = ""
+    for name in ("Property", "WhatsApp Group", "whatsapp_post", "WhatsApp Destination"):
+        row[name] = _notion_value(properties.get(name) or {})
+    row["notion_page_id"] = str(page.get("id") or "")
+    row["notion_url"] = str(page.get("url") or "")
+    row["notion_edited_at"] = str(page.get("last_edited_time") or "")
+    return row
 
 
 def _file_url(item: dict) -> str:
@@ -441,6 +505,7 @@ def _runtime_maps_client() -> GoogleMapsClient:
 def process_page(
     page_id: str,
     *,
+    event_type: str = "",
     notion: NotionClient | None = None,
     store: SupabaseIntakeStore | None = None,
     sheets: GoogleSheetsClient | None = None,
@@ -449,9 +514,25 @@ def process_page(
 ):
     notion = notion or NotionClient(_notion_secret_value("api_token"))
     store = store or SupabaseIntakeStore()
+    if event_type == "page.deleted":
+        existing = store.find_inventory(page_id)
+        if existing.get("found"):
+            store.delete_inventory(page_id)
+            store.finish(page_id, "processed", listing_page_id=page_id, note="Deleted from canonical Notion Housing Listings.")
+            return {"status": "deleted", "listing_id": existing.get("listing_id", "")}
+        return {"status": "ignored", "listing_id": ""}
+    page = notion.get_page(page_id)
+    parent = page.get("parent") or {}
+    parent_database_id = str(parent.get("database_id") or parent.get("data_source_id") or "").replace("-", "").lower()
+    if parent_database_id == LISTINGS_DATABASE_ID:
+        return process_listing_page(page, notion=notion, store=store)
+    if parent_database_id != INTAKE_DATABASE_ID:
+        if event_type in {"page.moved", "page.undeleted"} and store.find_inventory(page_id).get("found"):
+            return process_listing_page(page, notion=notion, store=store, force_deleted=True)
+        return {"status": "ignored", "listing_id": ""}
+
     sheets = sheets or _runtime_sheets_client()
     cloudinary = cloudinary or _runtime_cloudinary_client()
-    page = notion.get_page(page_id)
     props = page.get("properties") or {}
     raw_text = _plain_text(props.get("Raw Property Data") or {})
     if not raw_text:
@@ -530,15 +611,77 @@ def process_page(
         raise
 
 
-def _enqueue_worker(page_id: str, function_arn: str):
+def process_listing_page(page: dict, *, notion: NotionClient, store: SupabaseIntakeStore, force_deleted: bool = False):
+    """Mirror a Housing Listings page directly into the inventory used by the dashboard."""
+    page_id = str(page.get("id") or "").strip()
+    if not re.fullmatch(r"[0-9a-fA-F-]{32,36}", page_id):
+        raise IntakeError("Invalid Housing Listings page ID")
+    row = listing_snapshot(page)
+    deleted = force_deleted or bool(page.get("archived") or page.get("in_trash"))
+    payload_hash = hashlib.sha256(json.dumps({"row": row, "deleted": deleted}, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+    claim, item = store.claim(page_id, payload_hash)
+    if claim == "duplicate":
+        existing = store.find_inventory(page_id)
+        if existing.get("found"):
+            return {"status": "already_processed", "listing_id": existing.get("listing_id") or item.get("listing_id", "")}
+        # A completed intake record without its inventory projection can occur
+        # after a partial deployment or projection failure. Rebuild the same
+        # row from Notion so an idempotent backfill also repairs that gap.
+    if claim == "in_progress":
+        return {"status": "processing", "listing_id": item.get("listing_id", "")}
+
+    listing_id = row["listing_id"].strip() or str((item or {}).get("listing_id") or "").strip()
+    try:
+        if deleted and not listing_id:
+            store.delete_inventory(page_id)
+            store.finish(page_id, "processed", listing_page_id=page_id, note="Archived from canonical Notion Housing Listings.")
+            return {"status": "deleted", "listing_id": ""}
+        if not listing_id:
+            listing_id = store.allocate_listing_id(page_id)
+            if not listing_id:
+                raise IntakeError("Supabase did not allocate a Listing ID")
+            notion.update_page(page_id, {"listing_id": _rich(listing_id)})
+        row["listing_id"] = listing_id
+        store.sync_inventory(page_id, row, deleted=deleted)
+        note = "Synced from canonical Notion Housing Listings."
+        store.finish(page_id, "processed", listing_page_id=page_id, note=note)
+        return {"status": "deleted" if deleted else "synced", "listing_id": listing_id}
+    except Exception as exc:
+        store.finish(page_id, "failed", listing_page_id=page_id, note=f"Notion inventory sync failed: {str(exc)[:1500]}")
+        raise
+
+
+def _enqueue_worker(page_id: str, function_arn: str, *, event_type: str = ""):
     import boto3
     response = boto3.client("lambda").invoke(
         FunctionName=function_arn,
         InvocationType="Event",
-        Payload=json.dumps({"_efps_notion_worker": True, "page_id": page_id}).encode("utf-8"),
+        Payload=json.dumps({"_efps_notion_worker": True, "page_id": page_id, "event_type": event_type}).encode("utf-8"),
     )
     if int(response.get("StatusCode") or 0) != 202:
         raise IntakeError("Notion intake worker enqueue was not accepted")
+
+
+def _enqueue_listing_backfill(function_arn: str):
+    """Queue a one-time full mirror from Notion without adding another AWS resource."""
+    notion = NotionClient(_notion_secret_value("api_token"))
+    pages = notion.list_listings()
+    import boto3
+    client = boto3.client("lambda")
+    accepted = 0
+    for page in pages:
+        page_id = str(page.get("id") or "").strip()
+        if not re.fullmatch(r"[0-9a-fA-F-]{32,36}", page_id):
+            raise IntakeError("Notion backfill returned an invalid page ID")
+        response = client.invoke(
+            FunctionName=function_arn,
+            InvocationType="Event",
+            Payload=json.dumps({"_efps_notion_worker": True, "page_id": page_id}).encode("utf-8"),
+        )
+        if int(response.get("StatusCode") or 0) != 202:
+            raise IntakeError("Notion inventory backfill enqueue was not accepted")
+        accepted += 1
+    return {"accepted": accepted, "database_id": LISTINGS_DATABASE_ID}
 
 
 def _notion_secret_value(key: str, *, update_webhook_token: str = "") -> str:
@@ -562,12 +705,14 @@ def _notion_webhook_secret(*, update_token: str = "") -> str:
 
 
 def lambda_handler(event, context):
+    if event.get("_efps_notion_backfill"):
+        return _enqueue_listing_backfill(context.invoked_function_arn)
     # Internal asynchronous invocation: raise on failure so Lambda retry policy applies.
     if event.get("_efps_notion_worker"):
         page_id = str(event.get("page_id") or "").strip()
         if not re.fullmatch(r"[0-9a-fA-F-]{32,36}", page_id):
             raise IntakeError("Invalid asynchronous intake page ID")
-        return process_page(page_id)
+        return process_page(page_id, event_type=str(event.get("event_type") or ""))
 
     headers = {str(k).lower(): str(v) for k, v in (event.get("headers") or {}).items()}
     raw_body = event.get("body") or "{}"
@@ -609,17 +754,17 @@ def lambda_handler(event, context):
 
     page_id = str(
         payload.get("page_id")
-        or payload.get("id")
+        or (payload.get("entity") or {}).get("id")
+        or (payload.get("data") or {}).get("page", {}).get("id")
+        or (payload.get("data") or {}).get("id")
         or payload.get("page", {}).get("id")
-        or payload.get("data", {}).get("page", {}).get("id")
-        or payload.get("data", {}).get("id")
-        or payload.get("entity", {}).get("id")
+        or payload.get("id")
         or ""
     ).strip()
     if not re.fullmatch(r"[0-9a-fA-F-]{32,36}", page_id):
         return {"statusCode": 400, "headers": {"Content-Type": "application/json"}, "body": json.dumps({"error": "page ID is required"})}
     try:
-        _enqueue_worker(page_id, context.invoked_function_arn)
+        _enqueue_worker(page_id, context.invoked_function_arn, event_type=str(payload.get("type") or ""))
         return {"statusCode": 202, "headers": {"Content-Type": "application/json"}, "body": json.dumps({"ok": True, "accepted": True, "page_id": page_id})}
     except Exception as exc:
         print(json.dumps({"notion_intake_enqueue_error": str(exc)[:1500], "page_id": page_id}))

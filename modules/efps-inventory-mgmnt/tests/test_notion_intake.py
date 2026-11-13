@@ -116,7 +116,7 @@ def test_notion_webhook_validates_native_signature_and_queues_page(monkeypatch):
     queued = []
     monkeypatch.setenv("NOTION_SECRET_ARN", "arn:aws:secretsmanager:ap-southeast-2:123456789012:secret:test")
     monkeypatch.setattr("boto3.client", FakeBoto3.client, raising=False)
-    monkeypatch.setattr(intake, "_enqueue_worker", lambda page_id, arn: queued.append((page_id, arn)))
+    monkeypatch.setattr(intake, "_enqueue_worker", lambda page_id, arn, event_type="": queued.append((page_id, arn)))
     context = type("Context", (), {"invoked_function_arn": "arn:aws:lambda:ap-southeast-2:123456789012:function:test"})()
     result = intake.lambda_handler({"headers": {"X-Notion-Signature": signature}, "body": body}, context)
     assert result["statusCode"] == 202
@@ -157,6 +157,8 @@ def test_process_page_persists_one_listing_and_reconciles_intake(monkeypatch):
             self.saved = []
         def get_page(self, page_id):
             return {
+                "id": page_id,
+                "parent": {"database_id": intake.INTAKE_DATABASE_ID},
                 "created_time": "2026-11-13T00:00:00Z",
                 "properties": {
                     "Raw Property Data": {"rich_text": [{"plain_text": "2 BHK Apartment\\nRent: 50000\\nLocation: Harlur"}]},
@@ -215,10 +217,12 @@ def test_process_page_persists_one_listing_and_reconciles_intake(monkeypatch):
 def test_process_page_duplicate_delivery_does_not_write(monkeypatch):
     class FakeNotion:
         def get_page(self, page_id):
-            return {"properties": {"Raw Property Data": {"rich_text": [{"plain_text": "raw"}]}, "Photos": {"files": []}}}
+            return {"parent": {"database_id": intake.INTAKE_DATABASE_ID}, "properties": {"Raw Property Data": {"rich_text": [{"plain_text": "raw"}]}, "Photos": {"files": []}}}
     class FakeStore:
         def claim(self, page_id, payload_hash):
             return "duplicate", {"listing_id": "EF-EXISTING"}
+        def find_inventory(self, page_id):
+            return {"found": True, "listing_id": "EF-EXISTING"}
     class NoCalls:
         def __getattr__(self, name):
             raise AssertionError(f"unexpected call: {name}")
@@ -227,6 +231,32 @@ def test_process_page_duplicate_delivery_does_not_write(monkeypatch):
         cloudinary=NoCalls(),
     )
     assert result == {"status": "already_processed", "listing_id": "EF-EXISTING"}
+
+
+def test_processed_notion_page_repairs_a_missing_inventory_projection():
+    page_id = "12345678-1234-1234-1234-123456789abc"
+    page = {"id": page_id, "properties": {"listing_id": {"type": "rich_text", "rich_text": []}}}
+    class FakeNotion:
+        def update_page(self, page_id, properties):
+            raise AssertionError("existing Listing ID should be reused")
+    class FakeStore:
+        def __init__(self):
+            self.synced = []
+            self.finished = []
+        def claim(self, page_id, payload_hash):
+            return "duplicate", {"listing_id": "EF-2611-ABCD"}
+        def find_inventory(self, page_id):
+            return {"found": False}
+        def sync_inventory(self, page_id, row, *, deleted=False):
+            self.synced.append((page_id, row, deleted))
+        def finish(self, page_id, state, **kwargs):
+            self.finished.append((state, kwargs))
+    store = FakeStore()
+    result = intake.process_listing_page(page, notion=FakeNotion(), store=store)
+    assert result == {"status": "synced", "listing_id": "EF-2611-ABCD"}
+    assert len(store.synced) == 1
+    assert store.synced[0][1]["listing_id"] == "EF-2611-ABCD"
+    assert store.finished[0][0] == "processed"
 
 def test_photo_upload_retry_reuses_deterministic_indexes(monkeypatch):
     calls = []
@@ -316,7 +346,7 @@ def test_process_page_persists_one_listing_and_reconciles_intake(monkeypatch):
     class FakeNotion:
         def __init__(self): self.updates, self.saved = [], []
         def get_page(self, page_id):
-            return {"created_time": "2026-11-13T00:00:00Z", "properties": {
+            return {"id": page_id, "parent": {"database_id": intake.INTAKE_DATABASE_ID}, "created_time": "2026-11-13T00:00:00Z", "properties": {
                 "Raw Property Data": {"rich_text": [{"plain_text": "2 BHK Apartment\nRent: 50000\nLocation: Harlur"}]},
                 "Photos": {"files": []}, "Listing ID": {"rich_text": []}}}
         def update_page(self, page_id, properties): self.updates.append(properties)
@@ -353,7 +383,7 @@ def test_process_page_persists_one_listing_and_reconciles_intake(monkeypatch):
 def test_process_page_duplicate_delivery_does_not_write():
     class FakeNotion:
         def get_page(self, page_id):
-            return {"properties": {"Raw Property Data": {"rich_text": [{"plain_text": "raw"}]}, "Photos": {"files": []}}}
+            return {"parent": {"database_id": intake.INTAKE_DATABASE_ID}, "properties": {"Raw Property Data": {"rich_text": [{"plain_text": "raw"}]}, "Photos": {"files": []}}}
     class FakeStore:
         def claim(self, page_id, payload_hash): return "duplicate", {"listing_id": "EF-EXISTING"}
     class NoCalls:
@@ -377,7 +407,7 @@ def test_webhook_accepts_notion_event_entity_id(monkeypatch):
     monkeypatch.setenv("NOTION_SECRET_ARN", "arn:aws:secretsmanager:ap-southeast-2:123456789012:secret:test")
     monkeypatch.setattr("boto3.client", FakeBoto3.client, raising=False)
     enqueued = []
-    monkeypatch.setattr(intake, "_enqueue_worker", lambda supplied, arn: enqueued.append((supplied, arn)))
+    monkeypatch.setattr(intake, "_enqueue_worker", lambda supplied, arn, event_type="": enqueued.append((supplied, arn)))
     context = type("Context", (), {"invoked_function_arn": "arn:aws:lambda:ap-southeast-2:123456789012:function:test"})()
     result = intake.lambda_handler({"headers": {"X-Notion-Signature": signature}, "body": body}, context)
     assert result["statusCode"] == 202
@@ -387,7 +417,7 @@ def test_webhook_accepts_notion_event_entity_id(monkeypatch):
 
 def test_async_worker_invocation_runs_page_processor(monkeypatch):
     page_id = "12345678-1234-1234-1234-123456789abc"
-    monkeypatch.setattr(intake, "process_page", lambda supplied: {"status": "Processed", "listing_id": "EF-ASYNC"} if supplied == page_id else {})
+    monkeypatch.setattr(intake, "process_page", lambda supplied, **kwargs: {"status": "Processed", "listing_id": "EF-ASYNC"} if supplied == page_id else {})
     result = intake.lambda_handler({"_efps_notion_worker": True, "page_id": page_id}, None)
     assert result["status"] == "Processed"
     assert result["listing_id"] == "EF-ASYNC"
@@ -396,7 +426,7 @@ def test_blank_raw_property_data_is_marked_needs_review_without_claiming():
     class FakeNotion:
         def __init__(self): self.updates = []
         def get_page(self, page_id):
-            return {"properties": {"Raw Property Data": {"rich_text": []}, "Photos": {"files": []}}}
+            return {"parent": {"database_id": intake.INTAKE_DATABASE_ID}, "properties": {"Raw Property Data": {"rich_text": []}, "Photos": {"files": []}}}
         def update_page(self, page_id, properties): self.updates.append(properties)
     class NoCalls:
         def __getattr__(self, name): raise AssertionError(f"unexpected call: {name}")

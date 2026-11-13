@@ -1,4 +1,3 @@
-import {readHousingSheet} from './housing-sheet-adapter.mjs';
 import pg from 'pg';
 import {auditRequirementAndMatching} from './crm-requirement-match-audit.mjs';
 const {Pool}=pg;
@@ -96,21 +95,29 @@ function countField(rows,index){
   return counts;
 }
 
-export async function housingSheetSnapshot(){
-  const result=await readHousingSheet({env:process.env});
-  const rows=Array.isArray(result.rows)?result.rows:[];
-  const header=rows[0]||[];
-  const dataRows=rows.slice(1).filter(row=>Array.isArray(row)&&String(row?.[0]??'').trim());
-  const statusCounts=countField(dataRows,1);
-  const intakeStatusCounts=countField(dataRows,2);
-  const listingStateCounts=countField(dataRows,4);
-  const metaCatalogStatusCounts=countField(dataRows,45);
-  const metaCatalogIdCount=dataRows.filter(row=>String(row?.[44]??'').trim()).length;
-  const availableCatalogCount=Number(listingStateCounts.Available||0);
-    const mapRow=row=>({listingId:String(row?.[0]??'').trim(),catalogTitle:String(row?.[33]??'').trim(),cloudinaryImages:String(row?.[34]??'').split(',').map(x=>x.trim()).filter(Boolean),metaCatalogId:String(row?.[44]??'').trim(),metaCatalogStatus:String(row?.[45]??'').trim(),postedUrl:String(row?.[41]??'').trim(),bhk:String(row?.[13]??'').trim(),listingState:String(row?.[4]??'').trim()});
-  const allRows=dataRows.map(mapRow);
-  const availableRows=allRows.filter(row=>row.listingState==='Available');
-  return {range:result.range||null,rowCount:dataRows.length,columnCount:header.length,statusCounts,intakeStatusCounts,listingStateCounts,metaCatalogStatusCounts,metaCatalogIdCount,availableCatalogCount,allRows,availableRows,readOnly:true};
+export async function housingNotionSnapshot(){
+  if(!process.env.DATABASE_URL) throw new Error('DATABASE_URL is not configured');
+  const pool=new Pool({connectionString:process.env.DATABASE_URL,ssl:process.env.DATABASE_SSL_CA?{ca:process.env.DATABASE_SSL_CA,rejectUnauthorized:true}:{rejectUnauthorized:true},max:1});
+  const client=await pool.connect();
+  try{
+    await client.query('BEGIN'); await client.query('SET TRANSACTION READ ONLY');
+    const result=await client.query(`select listing_id,listing_state,source_record from crm_inventory_snapshot where source_kind='housing_notion' and deleted_at is null order by listing_id`);
+    await client.query('ROLLBACK');
+    const allRows=result.rows.map(({listing_id,listing_state,source_record={}})=>({
+      listingId:String(listing_id||''),catalogTitle:String(source_record.catalog_title||source_record.Property||''),
+      cloudinaryImages:String(source_record.cloudinary_image_urls||'').split(',').map(x=>x.trim()).filter(Boolean),
+      metaCatalogId:String(source_record.meta_catalog_id||''),metaCatalogStatus:String(source_record.meta_catalog_status||''),
+      postedUrl:String(source_record.posted_url||''),bhk:String(source_record.BHK||''),listingState:String(listing_state||'')
+    }));
+    const availableRows=allRows.filter(row=>row.listingState==='Available');
+    return {sourceKind:'housing_notion',rowCount:allRows.length,columnCount:48,
+      statusCounts:countField(result.rows.map(row=>[row.source_record?.status||''] ),0),
+      intakeStatusCounts:countField(result.rows.map(row=>[row.source_record?.intake_status||''] ),0),
+      listingStateCounts:countField(result.rows.map(row=>[row.listing_state||''] ),0),
+      metaCatalogStatusCounts:countField(result.rows.map(row=>[row.source_record?.meta_catalog_status||''] ),0),
+      metaCatalogIdCount:allRows.filter(row=>row.metaCatalogId).length,availableCatalogCount:availableRows.length,
+      allRows,availableRows,readOnly:true};
+  } finally {client.release();await pool.end();}
 }
 
 function normalizeCatalogTitle(value){return String(value??'').replace(/^\p{Extended_Pictographic}\uFE0F?\s*/u,'').replace(/^\p{Extended_Pictographic}\s*/u,'').replace(/\s+/g,' ').trim();}
@@ -118,17 +125,17 @@ function mediaKey(value){const s=String(value??'').trim();const match=s.match(/(
 function normalizedMediaKeys(values){return [...new Set((values||[]).map(mediaKey).filter(Boolean))].sort();}
 function normalizeCollection(value){return String(value??'').replace(/^\p{Extended_Pictographic}\uFE0F?\s*/u,'').replace(/^\p{Extended_Pictographic}\s*/u,'').replace(/\s+/g,' ').trim();}
 
-function reconcileCatalogToSheet(sheet,catalog){
-  const rows=Array.isArray(sheet?.availableRows)?sheet.availableRows:[];
-  const allRows=Array.isArray(sheet?.allRows)?sheet.allRows:rows;
+function reconcileCatalogToNotion(notion,catalog){
+  const rows=Array.isArray(notion?.availableRows)?notion.availableRows:[];
+  const allRows=Array.isArray(notion?.allRows)?notion.allRows:rows;
   const products=Array.isArray(catalog?.products)?catalog.products:[];
   const byId=new Map(products.map(p=>[String(p.id||'').trim(),p]).filter(([id])=>id));
   const byRetailer=new Map(products.map(p=>[String(p.retailerId||'').trim(),p]).filter(([id])=>id));
-  const matches=[]; const missing=[]; const duplicateSheetIds=[]; const used=new Set();
-  const seenSheetIds=new Set();
+  const matches=[]; const missing=[]; const duplicateNotionIds=[]; const used=new Set();
+  const seenNotionIds=new Set();
   for(const row of rows){
-    if(row.metaCatalogId&&seenSheetIds.has(row.metaCatalogId)) duplicateSheetIds.push(row.metaCatalogId);
-    if(row.metaCatalogId) seenSheetIds.add(row.metaCatalogId);
+    if(row.metaCatalogId&&seenNotionIds.has(row.metaCatalogId)) duplicateNotionIds.push(row.metaCatalogId);
+    if(row.metaCatalogId) seenNotionIds.add(row.metaCatalogId);
     const product=(row.metaCatalogId&&byId.get(row.metaCatalogId))||byRetailer.get(row.listingId)||null;
     if(!product){missing.push(row);continue;}
     used.add(String(product.id));
@@ -146,7 +153,7 @@ function reconcileCatalogToSheet(sheet,catalog){
     for(const [field,a,b] of checks){
       if(field==='url'&&(a===''||a===null||a===undefined||b===null||b===undefined))continue;
       const equal=field==='image_set'?JSON.stringify(a)===JSON.stringify(b):String(a)===String(b);
-      if(!equal)fieldMismatches.push({listingId:row.listingId,productId:product.id,field,sheet:a,whapi:b});
+      if(!equal)fieldMismatches.push({listingId:row.listingId,productId:product.id,field,notion:a,whapi:b});
     }
   }
   const expectedCollection=bhk=>{const s=String(bhk||'').toUpperCase().replace(/\s+/g,'');if(s.includes('1RK')||s.includes('1BHK'))return '1RK & 1BHK';if(s.includes('2BHK'))return '2BHK';if(s.includes('3BHK'))return '3BHK';if(/4\+BHK|4BHK|5BHK|6BHK/.test(s))return '4+ BHK';return null;};
@@ -155,7 +162,7 @@ function reconcileCatalogToSheet(sheet,catalog){
   for(const {row,product} of matches){const expected=expectedCollection(row.bhk);if(expected){const actual=memberships.get(String(product.id))||null;if(actual!==expected)collectionMismatches.push({listingId:row.listingId,productId:product.id,expected,actual});}}
   const removedRows=allRows.filter(row=>row.listingState!=='Available'&&row.metaCatalogId);
   const removedStillCatalog=removedRows.filter(row=>byId.has(row.metaCatalogId)||byRetailer.has(row.listingId));
-  return {sheetAvailable:rows.length,whapiProducts:products.length,identity:{matched:matches.length,missing:missing.length,catalogOnly:catalogOnly.length,duplicateSheetIds:duplicateSheetIds.length},field:{compared:matches.length*4,mismatches:fieldMismatches.length,mismatchDetails:fieldMismatches.slice(0,100)},lifecycle:{sheetAvailableRows:rows.length,productsMarkedInStock:products.filter(p=>p.availability==='in stock'&&!p.isHidden).length,productsHidden:products.filter(p=>p.isHidden===true).length},id:{sheetIds:rows.filter(r=>r.metaCatalogId).length,matchedByMetaId:rows.filter(r=>r.metaCatalogId&&byId.has(r.metaCatalogId)).length,retailerIdFallbackMatches:matches.filter(x=>!x.row.metaCatalogId&&byRetailer.has(x.row.listingId)).length},removed:{nonAvailableSheetRows:removedRows.length,catalogProductsForNonAvailableSheet:removedStillCatalog.length,removedReconciled:removedStillCatalog.length===0},missingProducts:missing.map(r=>({listingId:r.listingId,metaCatalogId:r.metaCatalogId})),catalogOnlyProducts:catalogOnly.map(p=>({id:p.id,retailerId:p.retailerId,name:p.name})),collectionExpectation:{derivableBhk:rows.filter(r=>expectedCollection(r.bhk)).length,mismatches:collectionMismatches.length,details:collectionMismatches.slice(0,100)},complete:matches.length===rows.length&&missing.length===0&&catalogOnly.length===0&&duplicateSheetIds.length===0&&fieldMismatches.length===0&&removedStillCatalog.length===0&&collectionMismatches.length===0};
+  return {notionAvailable:rows.length,whapiProducts:products.length,identity:{matched:matches.length,missing:missing.length,catalogOnly:catalogOnly.length,duplicateNotionIds:duplicateNotionIds.length},field:{compared:matches.length*4,mismatches:fieldMismatches.length,mismatchDetails:fieldMismatches.slice(0,100)},lifecycle:{notionAvailableRows:rows.length,productsMarkedInStock:products.filter(p=>p.availability==='in stock'&&!p.isHidden).length,productsHidden:products.filter(p=>p.isHidden===true).length},id:{notionIds:rows.filter(r=>r.metaCatalogId).length,matchedByMetaId:rows.filter(r=>r.metaCatalogId&&byId.has(r.metaCatalogId)).length,retailerIdFallbackMatches:matches.filter(x=>!x.row.metaCatalogId&&byRetailer.has(x.row.listingId)).length},removed:{nonAvailableNotionRows:removedRows.length,catalogProductsForNonAvailableNotion:removedStillCatalog.length,removedReconciled:removedStillCatalog.length===0},missingProducts:missing.map(r=>({listingId:r.listingId,metaCatalogId:r.metaCatalogId})),catalogOnlyProducts:catalogOnly.map(p=>({id:p.id,retailerId:p.retailerId,name:p.name})),collectionExpectation:{derivableBhk:rows.filter(r=>expectedCollection(r.bhk)).length,mismatches:collectionMismatches.length,details:collectionMismatches.slice(0,100)},complete:matches.length===rows.length&&missing.length===0&&catalogOnly.length===0&&duplicateNotionIds.length===0&&fieldMismatches.length===0&&removedStillCatalog.length===0&&collectionMismatches.length===0};
 }
 
 async function crmSnapshot(){
@@ -170,8 +177,8 @@ async function crmSnapshot(){
       (select count(*) from crm_webhook_events where provider='whapi' and processing_status='error') as webhook_errors,
       (select count(*) from crm_messages) as message_total,
       (select max(message_at) from crm_messages) as message_latest,
-      (select row_count from crm_inventory_sync_runs where source_kind='housing_sheet' order by created_at desc limit 1) as sheet_sync_rows,
-      (select created_at from crm_inventory_sync_runs where source_kind='housing_sheet' order by created_at desc limit 1) as sheet_sync_latest`);
+      (select count(*) from crm_inventory_snapshot where source_kind='housing_notion' and deleted_at is null) as notion_inventory_rows,
+      (select max(last_synced_at) from crm_inventory_snapshot where source_kind='housing_notion' and deleted_at is null) as notion_inventory_latest`);
     const reconciliation=await client.query(`select
       (select count(*) from crm_webhook_events where provider='whapi' and payload->>'chat_id' like '%@s.whatsapp.net' and phone is not null) as eligible_message_events,
       (select count(*) from crm_webhook_events where provider='whapi' and payload->>'chat_id' like '%@s.whatsapp.net' and phone is not null and message_id is not null) as linked_message_events,
@@ -193,11 +200,11 @@ async function crmSnapshot(){
       order by c.lead_id`);
     const inventory=await client.query(`select listing_id,locality,bhk,monthly_rent,furnishing,pet_friendly,listing_state
       from crm_inventory_snapshot
-      where source_kind='housing_sheet' and deleted_at is null and listing_state='Available'`);
+      where source_kind='housing_notion' and deleted_at is null and listing_state='Available'`);
     const media=await client.query(`with active as (
       select listing_id,cloudinary_image_urls
       from crm_inventory_snapshot
-      where source_kind='housing_sheet' and deleted_at is null and listing_state='Available'
+      where source_kind='housing_notion' and deleted_at is null and listing_state='Available'
     ), urls as (
       select listing_id,jsonb_array_elements_text(cloudinary_image_urls) url from active
     )
@@ -247,12 +254,12 @@ async function crmSnapshot(){
 }
 
 export async function sourceAuditSnapshot(){
-  const [whapiHealthResult,whapi,sheet,catalog,crm]=await Promise.allSettled([whapiHealth(),whapiRecentMessages({count:100,fromMe:false}),housingSheetSnapshot(),whapiCatalogAudit(),crmSnapshot()]);
+  const [whapiHealthResult,whapi,notion,catalog,crm]=await Promise.allSettled([whapiHealth(),whapiRecentMessages({count:100,fromMe:false}),housingNotionSnapshot(),whapiCatalogAudit(),crmSnapshot()]);
   const latestWhapi=whapi.status==='fulfilled'?whapi.value.messages.reduce((m,x)=>Math.max(m,Number(x?.timestamp||0)),0):0;
   return {checkedAt:new Date().toISOString(),sourceNumber:SOURCE_NUMBER,
     whapi:whapi.status==='fulfilled'?{ok:true,recentInboundCount:whapi.value.messages.length,total:whapi.value.total,latestMessageTimestamp:latestWhapi||null,health:whapiHealthResult.status==='fulfilled'?whapiHealthResult.value:null}:{ok:false,degraded:true,error:whapi.reason?.message||'WhAPI read failed',health:whapiHealthResult.status==='fulfilled'?whapiHealthResult.value:{error:whapiHealthResult.reason?.message||'WhAPI health read failed'},knownLimitation:'WhAPI /messages/list currently returns HTTP 500; catalog and CRM audits remain independently evaluated'},
-    sheet:sheet.status==='fulfilled'?{ok:true,...sheet.value}:{ok:false,error:sheet.reason?.message||'Sheet read failed'},
+    notion:notion.status==='fulfilled'?{ok:true,...notion.value}:{ok:false,error:notion.reason?.message||'Notion inventory read failed'},
     catalog:catalog.status==='fulfilled'?catalog.value:{ok:false,degraded:true,policyDisabled:!WHAPI_API_ENABLED,error:catalog.reason?.message||'WhAPI catalog read disabled'},
-    catalogReconciliation:WHAPI_API_ENABLED&&catalog.status==='fulfilled'&&sheet.status==='fulfilled'?reconcileCatalogToSheet(sheet.value,catalog.value):{complete:false,policyDisabled:!WHAPI_API_ENABLED,error:WHAPI_API_ENABLED?'Sheet or catalog unavailable':'WhAPI catalog API disabled by policy'},
+    catalogReconciliation:WHAPI_API_ENABLED&&catalog.status==='fulfilled'&&notion.status==='fulfilled'?reconcileCatalogToNotion(notion.value,catalog.value):{complete:false,policyDisabled:!WHAPI_API_ENABLED,error:WHAPI_API_ENABLED?'Notion inventory or catalog unavailable':'WhAPI catalog API disabled by policy'},
     crm:crm.status==='fulfilled'?{ok:true,...crm.value}:{ok:false,error:crm.reason?.message||'CRM read failed'}};
 }

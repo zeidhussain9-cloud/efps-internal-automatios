@@ -1,24 +1,32 @@
 # EFPS CRM — Housing Inventory Sync Runbook
 
-> Revalidated 2026-11-12 against production Supabase, Render, the deployed sync code and the recorded source audit.
+> Historical Sheet scheduler repair revalidated 2026-11-12. Notion ownership and projection updated 2026-11-13.
+
+## Canonical editor transition — 2026-11-13
+
+- Notion Housing Listings is the canonical operator editing surface. New Notion pages and edits are designed to write directly into the existing `public.crm_inventory_snapshot` projection under `source_kind='housing_notion'`.
+- Supabase schema migration, `notion-inventory-state` Edge Function v4, and the isolated Notion Lambda are deployed. The existing Connection webhook and all eight Page event selections are user-confirmed.
+- The one-time backfill accepted 104 Housing Listings pages; Supabase confirms 104 active `housing_notion` rows and 104 processed events.
+- The five-minute Sheet reconciliation cron was unscheduled on 2026-11-13. Dashboard inventory now reads Notion-owned (`housing_notion`) rows only.
+- Keep all eight Notion Page events selected: `page.content_updated`, `page.created`, `page.deleted`, `page.locked`, `page.moved`, `page.properties_updated`, `page.undeleted`, and `page.unlocked`.
+- Existing AWS Secrets Manager records were not changed, duplicated, or rotated. The old WhAPI `NEW`-delimited listener remains untouched until final cleanup.
 
 ## Source and boundary
 
-- Canonical source: Google Sheet tab Housing_Listings. Slack and the new Notion intake converge on this one Sheet. The Notion adapter is deployed and has Supabase idempotency, but production intake remains blocked until the AWS secret copies are corrected and the Notion Connection webhook subscription is configured.
+- Current source: Notion Housing Listings. Historical source: Google Sheet tab Housing_Listings. Legacy Sheet intake writes do not feed the dashboard.
 - CRM reads operational columns A:AT only; reserved AU/AV are excluded.
-- CRM sync is read-only against Google Sheets and never writes the canonical Sheet. Sheet writes are owned by the Slack operator intake and, once enabled, the Notion inventory adapter. The old WhAPI NEW-delimited inventory listener is legacy and retained only until the final cleanup phase; it is not the current Notion workflow. Notion API write permission is verified, but AWS runtime secrets and webhook subscription still block production intake.
+- Dashboard sync reads only active Notion-owned rows. Sheet writes are still performed by the Slack operator intake and raw-intake compatibility flow, but those rows are excluded from the dashboard inventory. The old WhAPI NEW-delimited inventory listener is legacy and retained only until final cleanup; it is not the current Notion workflow. The direct Notion Housing Listings mirror is deployed and its 104-page backfill is verified. Raw Property Intake with photos remains separately dependent on the existing Sheet/Cloudinary/Maps runtime secrets.
 - Supabase snapshot: public.crm_inventory_snapshot.
 - Change history: public.crm_inventory_sync_changes.
 - Render service: srv-darsv560tbcc73cu4ip0; production branch: crm-ui-dashboard.
-- Supabase cron crm_inventory_sheet_reconcile_5m invokes the HMAC-protected endpoint every five minutes.
+- Supabase cron `crm_inventory_sheet_reconcile_5m` was removed on 2026-11-13; Notion page events update the projection directly.
 
 ## Current verified state
 
 - Supabase active snapshot: 104 — 87 Available / 17 Rented Out.
-- Latest successful run observed: 2026-11-12 09:55:01 UTC, 104 rows / 0 changed / 0 removed.
-- The recovery audit recorded a direct source Sheet read of 104 rows. The Google Drive connector is disabled by admin in the current ChatGPT environment, so this follow-up verified the production mirror and sync-run evidence but did not repeat the independent Sheet read.
-- The last observed 502 was at 09:10 UTC. Twelve HTTP 200 responses followed through 09:55 UTC; no later 502 was present in the queried response window.
-- The five-minute cron remains active.
+- Current projection: 104 active Notion rows, 87 Available and 17 Rented; all 104 page intake events are processed. No Sheet-owned or test listings remain.
+- The last observed 502 and twelve following HTTP 200 responses belong to the historical Sheet-reconciliation repair window (2026-11-12); that scheduler has since been removed.
+- The old Sheet cron is disabled; verify future inventory changes through Notion page events and the Supabase projection.
 
 ## Confirmed 502 cause and repair
 
@@ -56,6 +64,6 @@ The eight original Slack warnings were for G5ZS, 6JYX, 97J4, WVP3, NFHV, 9ZZJ, X
 - Empty Sheet snapshots are rejected to prevent mass tombstones.
 - Snapshot upserts, parent sync-run creation, change-ledger inserts and activity logging are transactional and protected by an advisory lock.
 - A failed run must be diagnosed from Render application logs and its net._http_response record; the public endpoint intentionally hides internal exception details.
-- Never write to the canonical Sheet from the CRM sync path.
+- Never write to the compatibility Sheet from the CRM snapshot reconciliation path.
 - Do not treat inventory history before crm_inventory_sync_changes existed as reconstructable.
 - The authenticated inventory UI remains unverified in this follow-up; Supabase mirror presence alone does not prove a user-visible card rendered.

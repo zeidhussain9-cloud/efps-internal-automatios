@@ -1,6 +1,6 @@
 # EFPS CRM — Current Verified State
 
-> Revalidated 2026-11-12 against production Supabase, Render, GitHub and Slack. Direct Google Sheets connector access was unavailable in this follow-up (disabled by admin); source-side evidence from the deployed recovery audit is identified separately below.
+> CRM production facts below were revalidated 2026-11-12. Inventory ownership and Notion backfill were verified 2026-11-13.
 
 ## Runtime and release
 
@@ -26,14 +26,14 @@
 
 ## Inventory synchronization
 
-- Canonical source: Google Sheet Housing_Listings, operational columns A:AT; reserved AU/AV remain outside the CRM projection.
-- Current Supabase mirror: 104 active rows — 87 Available / 17 Rented Out.
-- Cron crm_inventory_sheet_reconcile_5m is active every five minutes.
-- Latest successful run observed: 2026-11-12 09:55:01 UTC, 104 rows / 0 changed / 0 removed.
+- Canonical editing surface: Notion Housing Listings. The legacy `Housing_Listings` Sheet remains only for compatibility intake; reserved AU/AV remain outside operational writes. Dashboard reads Notion rows only.
+- Current Supabase mirror: 104 active `housing_notion` rows; all 104 corresponding Notion intake records are processed. The isolated Lambda is deployed and the user confirms the existing webhook plus all eight Page events are verified/selected.
+- The `crm_inventory_sheet_reconcile_5m` cron was unscheduled on 2026-11-13. No active Sheet reconciliation remains. The current snapshot contains 104 active `housing_notion` rows (87 Available, 17 Rented), no `housing_sheet` rows, and no test-like listings.
+- The Notion backfill replay was accepted for 104 pages; all 104 intake events are processed. Dashboard source reads only active Notion rows.
 - Confirmed 502 cause: crm_inventory_sync_changes child rows were inserted before the parent crm_inventory_sync_runs row, violating the run_id foreign key. The deployed code inserts the parent first in the same transaction.
 - HTTP response history after repair: 12 HTTP 200 responses through 09:55 UTC; the 15 observed HTTP 502 responses were all before 09:10 UTC.
 
-The recovery release audit records a direct read-only source Sheet read of 104 rows. The Google Drive connector is currently disabled by admin in this ChatGPT environment, so I could not independently repeat that Sheet read during this follow-up.
+Notion Housing Listings and its Supabase projection were rechecked during this migration. The Sheets reconciliation schedule is disabled. Existing AWS secret ARNs were reused; secret values were not read, printed, copied, created, rotated, or overwritten.
 
 ## Slack property batch and review boundary
 
@@ -74,7 +74,7 @@ The 16 IDs are confirmed in Supabase. Source Sheet re-read and authenticated inv
 | Process | Schedule | State |
 |---|---|---|
 | crm_webhook_reconcile_1m | Every minute | Active |
-| crm_inventory_sheet_reconcile_5m | Every 5 minutes | Active |
+| crm_inventory_sheet_reconcile_5m | — | Removed 2026-11-13 |
 | crm_deterministic_scheduler_1h | Every hour | Active |
 | AI scheduler | Not scheduled | Intentionally paused |
 

@@ -6,8 +6,8 @@
 2. Confirm Render startup reports the MCP adapter enabled and the audit adapter credentials present.
 3. Run the GitHub Actions workflow manually with workflow_dispatch.
 4. Confirm the workflow exits successfully and prints the source-audit JSON.
-5. Confirm the JSON contains successful WhAPI, Google Sheet, catalog and CRM persistence results.
-6. Confirm Sheet available count equals WhAPI product count.
+5. Confirm the JSON contains successful WhAPI, Notion Housing Listings, catalog and CRM persistence results.
+6. Confirm Notion available count equals WhAPI product count.
 7. Confirm products-with-collections plus products-without-collections equals the WhAPI product count.
 8. Confirm the JSON reports a complete Point 40–42 requirement/matching audit.
 9. Confirm 253/253 qualified leads have valid requirement profiles, inputs, and deterministic result sets; zero-match leads are valid.

@@ -50,7 +50,7 @@ The canonical CRM implementation repository is `efps-internal-automatios`. CRM r
 
 D01–D04 are approved design decisions. D05 is proposed and is now informed by the verified Housing Listings audit. Figma is the working design environment; Canva remains the visual reference.
 
-The CRM has historical lead evidence layers (WhatsApp backups, legacy `leads.db`, and the Leads Tracker spreadsheet `1GfM9lPQSukVpxCEVUlUDxFj_WYg0xQj8Inn7FA4sLVI`) plus the current production CRM runtime. The Leads Tracker is not a current CRM dependency. Current lead ingress is WhAPI → Supabase `crm_webhook_events`/CRM tables; current inventory is the separate `Housing_Listings` Sheet contract. Do not reintroduce the legacy Leads Tracker into the production CRM path without an explicit architecture decision and verification.
+The CRM has historical lead evidence layers (WhatsApp backups, legacy `leads.db`, and the Leads Tracker spreadsheet `1GfM9lPQSukVpxCEVUlUDxFj_WYg0xQj8Inn7FA4sLVI`) plus the current production CRM runtime. The Leads Tracker is not a current CRM dependency. Current lead ingress is WhAPI → Supabase `crm_webhook_events`/CRM tables. Notion Housing Listings is the canonical inventory source and operator editing surface. Dashboard inventory reads `housing_notion` rows only; the existing 48-field `Housing_Listings` Sheet contract remains for legacy compatibility intake, and its reconciliation cron is disabled. Do not reintroduce the legacy Leads Tracker into the production CRM path without an explicit architecture decision and verification.
 
 ## Deterministic Inventory architecture
 
