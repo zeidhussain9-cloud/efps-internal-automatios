@@ -6,9 +6,9 @@ This section supersedes the older dated operational snapshots below. Historical 
 
 - **GitHub repository:** `zeidhussain9-cloud/efps-internal-automatios`
 - **CRM deployment branch:** `crm-ui-dashboard`
-- **Active branches:** `main` and `crm-ui-dashboard` only. Their tracked trees were verified identical before this task release; final reconciliation is part of this release close.
+- **Active branches:** `main` and `crm-ui-dashboard` only. Their tracked trees were reconciled and verified identical at the 2026-11-13 release close; both worktrees are clean.
 - **Render production service:** `easyfind-crm-d01-d05` / `srv-darsv560tbcc73cu4ip0`
-- **Render deployment configuration:** auto-deploy enabled from `crm-ui-dashboard`; the service was verified LIVE before this task release. The post-release deployment is checked during release close.
+- **Render deployment:** CRM Dashboard service auto-deploys from `crm-ui-dashboard`; the 2026-11-13 release deployment was verified LIVE after the repository push.
 - **Production health:** GitHub production health smoke completed successfully after the latest deployment.
 - **Inventory schema:** 48 physical columns A:AV; runtime processing and CRM mirror are restricted to A:AT. Reserved AU/AV are excluded from operational writes and CRM projection.
 - **Inventory/Supabase mirror:** 104 active `housing_sheet` rows; latest verified snapshot sync was `2026-11-12 21:45:01 UTC`.

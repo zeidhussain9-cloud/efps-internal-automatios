@@ -5,7 +5,7 @@
 This section is the current verified checkpoint. Older dated figures below are historical and must not be treated as current production metrics.
 
 - **Repository:** `zeidhussain9-cloud/efps-internal-automatios`
-- **Active branches:** `main` and `crm-ui-dashboard` only. Their tracked trees were verified identical before this task release; final reconciliation is part of this release close.
+- **Active branches:** `main` and `crm-ui-dashboard` only. Their tracked trees were reconciled and verified identical at the 2026-11-13 release close; both worktrees are clean.
 - **Render:** latest `crm-ui-dashboard` deployment is LIVE; production health smoke passed.
 - **Housing inventory mirror:** 104 active rows in `crm_inventory_snapshot`; latest verified sync timestamp `2026-11-12 21:45:01 UTC`.
 - **Inventory validation:** 118 inventory-module tests passed in the 2026-11-13 rerun (87 Notion-intake tests); 130 combined inventory/webhook-routing tests passed; isolated SAM template/build validation passed.
