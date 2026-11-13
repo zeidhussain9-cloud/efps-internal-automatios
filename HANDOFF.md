@@ -4,7 +4,7 @@
 
 ## Inventory intake — 2026-11-13
 
-- Isolated stack `efps-notion-property-intake` in `ap-southeast-2`: `CREATE_COMPLETE`.
+- Isolated stack `efps-notion-property-intake` in `ap-southeast-2`: `UPDATE_COMPLETE`.
 - Lambda `efps-notion-intake`: Active; endpoint `https://ko3771nvei.execute-api.ap-southeast-2.amazonaws.com/Prod/notion/intake`.
 - Invalid handshake/event signatures returned HTTP 401; validly signed malformed event reached page-ID validation (HTTP 400); Notion API read access to both databases returned HTTP 200.
 - End-to-end processing is blocked: deployed Sheets credential is `{}`; Cloudinary/Maps runtime values are `MIGRATION_PLACEHOLDER`. No Notion intake Sheet/media write is verified. Notion subscription and controlled acceptance remain pending.

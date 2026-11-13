@@ -83,7 +83,7 @@ The optional `EFPSNotionIntake` resource in the shared `template.yaml` is legacy
 
 ## Isolated Notion intake deployment — 2026-11-13
 
-- Stack: `efps-notion-property-intake` (`ap-southeast-2`) — `CREATE_COMPLETE`.
+- Stack: `efps-notion-property-intake` (`ap-southeast-2`) — `UPDATE_COMPLETE`.
 - Lambda: `efps-notion-intake` — Active, Python 3.12, 512 MB, 180-second timeout.
 - API: `https://ko3771nvei.execute-api.ap-southeast-2.amazonaws.com/Prod/notion/intake`.
 - Invalid `X-Notion-Signature` probe returned HTTP 401.
