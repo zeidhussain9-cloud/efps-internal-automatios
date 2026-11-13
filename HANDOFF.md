@@ -2,14 +2,15 @@
 
 > CRM data snapshot: 2026-10-05 (historical; counts were not re-queried in this inventory task). Current inventory intake deployment status: 2026-11-13.
 
-## Inventory intake — 2026-11-13
+## Inventory workflow — 2026-11-13
 
-- Isolated stack `efps-notion-property-intake` in `ap-southeast-2`: `UPDATE_COMPLETE`.
-- Lambda `efps-notion-intake`: Active; endpoint `https://ko3771nvei.execute-api.ap-southeast-2.amazonaws.com/Prod/notion/intake`.
-- Invalid handshake/event signatures returned HTTP 401; validly signed malformed event reached page-ID validation (HTTP 400); controlled create/archive write probes for both Notion databases returned HTTP 200. Supabase idempotency claim/replay passed.
-- End-to-end intake remains blocked by AWS Secrets Manager copies (Sheets `{}`, Cloudinary/Maps placeholders) and the unconfigured Notion Connection subscription. Valid local Keychain credentials passed live Sheet, Cloudinary, and Maps checks. The Notion path now uses Supabase `crm_inventory_intake_events`; no DynamoDB is used for Notion.
-- Inventory module tests 118/118 (87 Notion-intake tests); combined inventory/webhook-routing tests 130/130; CRM npm test 139/139; browser regression 1/1; Vite build PASS; SAM isolated build and validation pass.
-- Existing operator-assisted intake includes Slack /efps add-property and /efps photos start. The old WhAPI NEW-delimited inventory listener remains in the deployed artifact but is legacy, not the current inventory workflow, and is retained only until the final cleanup phase. It was not changed or removed in this task.
+- Canonical editor: Notion Housing Listings. The dashboard reads the existing Supabase `crm_inventory_snapshot` table with `source_kind='housing_notion'` only; display and interaction behavior are unchanged.
+- AWS account `294417174793` in `ap-southeast-2` was confirmed. Isolated stack `efps-notion-property-intake` is `UPDATE_COMPLETE`; Lambda `efps-notion-intake` is Active, Python 3.12, with `LastModified=2026-11-13T06:34:51Z` and CodeSha256 `APpVz3ybE2C43rQ/BercbcIKGYVBGeLl9FhAiCKVQEE=`.
+- The idempotent backfill replay accepted 104 pages and repaired the missing projection. Supabase confirms 104 processed events and 104 active Notion rows: 87 Available and 17 Rented. There are no Sheet-owned snapshot rows and no test-like listings.
+- The five-minute `crm_inventory_sheet_reconcile_5m` Supabase cron was unscheduled. Existing Sheets writes remain in legacy Slack/raw-intake compatibility flows only. The old WhAPI `NEW`-delimited inventory listener remains untouched until final cleanup.
+- All eight Notion Page events remain selected as already verified by the user. Existing AWS secret ARNs were reused; no values were shown, copied, created, rotated, or overwritten.
+- Checks: `npm test` (production build plus 139/139 Node tests), 88/88 inventory Python tests, browser regression 1/1, SAM template lint, and `git diff --check` passed. Render deploy is in progress after the user supplied the exact service URL.
+- Raw Property Intake with photos still uses legacy Sheet/Cloudinary/Maps compatibility steps. No WhatsApp messages were sent and no test listings were left behind.
 
 ## Production
 

@@ -24,7 +24,7 @@ test('source audit MCP exposes only read-only audit tools',async()=>{
     const list=await fetch(`http://127.0.0.1:${port}/mcp`,{method:'POST',headers:{Authorization:'Bearer test-token','Content-Type':'application/json','Accept':'application/json, text/event-stream'},body:JSON.stringify({jsonrpc:'2.0',id:2,method:'tools/list',params:{}})});
     assert.equal(list.status,200);
     const text=await list.text();
-    assert.match(text,/whapi_channel_health/); assert.match(text,/whapi_catalog_audit/); assert.match(text,/google_housing_sheet_snapshot/); assert.match(text,/crm_source_audit_snapshot/);
+    assert.match(text,/whapi_channel_health/); assert.match(text,/whapi_catalog_audit/); assert.match(text,/notion_housing_inventory_snapshot/); assert.match(text,/crm_source_audit_snapshot/);
     assert.doesNotMatch(text,/send_text|create_product|edit_collection/);
     const denied=await fetch(`http://127.0.0.1:${port}/mcp`,{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});
     assert.equal(denied.status,401);

@@ -73,8 +73,8 @@ export default function InventoryPanel({data,state,refresh,query,setQuery,sort,s
    </div>
    <div className="inventory-reconcile">
      <div><strong>Inventory reconciliation</strong><span>{Number(summary?.total)||0} total = {statuses.map(s=>`${summary?.statusCounts?.[s]??0} ${s.toLowerCase()}`).join(' + ')}</span></div>
-    <div><strong>Latest completed Sheet sync</strong><span>{data.latestSync?new Date(data.latestSync.created_at).toLocaleString('en-IN',{dateStyle:'medium',timeStyle:'short'}):'Not yet recorded — this is a point-in-time mirror'}</span></div>
-     <div><strong>Geographic coverage</strong><span>{localities.length} localities · Bengaluru. No location is inferred where the Sheet is blank.</span></div>
+    <div><strong>Latest Notion sync</strong><span>{data.latestSync?new Date(data.latestSync.created_at).toLocaleString('en-IN',{dateStyle:'medium',timeStyle:'short'}):'Not yet recorded — this is a point-in-time mirror'}</span></div>
+     <div><strong>Geographic coverage</strong><span>{localities.length} localities · Bengaluru. No location is inferred when Notion is blank.</span></div>
    </div>
    <div className="inventory-controls">
     <label className="inventory-search"><Search size={18}/><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Search ID, locality, society or title…" aria-label="Search inventory"/></label>

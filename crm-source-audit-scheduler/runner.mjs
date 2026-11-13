@@ -60,11 +60,11 @@ if(payload.crm?.mediaReconciliation?.complete!==true) failures.push('crm: Cloudi
 if(payload.crm?.eventReconciliation?.messageReconciled!==true) failures.push('crm event->message reconciliation incomplete');
 if(payload.crm?.eventReconciliation?.contactReconciled!==true) failures.push('crm event->contact reconciliation incomplete');
 if(payload.crm?.requirementMatchAudit?.complete!==true) failures.push('requirement/matching audit incomplete');
-if(!catalogPolicyDisabled&&payload.sheet?.availableCatalogCount!==undefined&&payload.catalog?.productCount!==undefined&&Number(payload.sheet.availableCatalogCount)!==Number(payload.catalog.productCount)){
-  failures.push(`catalog count mismatch: Sheet available=${payload.sheet.availableCatalogCount}, WhAPI products=${payload.catalog.productCount}`);
+if(!catalogPolicyDisabled&&payload.notion?.availableCatalogCount!==undefined&&payload.catalog?.productCount!==undefined&&Number(payload.notion.availableCatalogCount)!==Number(payload.catalog.productCount)){
+  failures.push(`catalog count mismatch: Notion available=${payload.notion.availableCatalogCount}, WhAPI products=${payload.catalog.productCount}`);
 }
 if(failures.length){
-  const evidence={failures,sheet:{availableCatalogCount:payload.sheet?.availableCatalogCount,rowCount:payload.sheet?.rowCount,metaCatalogIdCount:payload.sheet?.metaCatalogIdCount,listingStateCounts:payload.sheet?.listingStateCounts,metaCatalogStatusCounts:payload.sheet?.metaCatalogStatusCounts},catalog:{productCount:payload.catalog?.productCount},catalogReconciliation:{identity:payload.catalogReconciliation?.identity,field:payload.catalogReconciliation?.field?{compared:payload.catalogReconciliation.field.compared,mismatches:payload.catalogReconciliation.field.mismatches,details:payload.catalogReconciliation.field.mismatchDetails?.slice(0,10)}:null,removed:payload.catalogReconciliation?.removed,collectionExpectation:payload.catalogReconciliation?.collectionExpectation},media:payload.crm?.mediaReconciliation};
+  const evidence={failures,notion:{availableCatalogCount:payload.notion?.availableCatalogCount,rowCount:payload.notion?.rowCount,metaCatalogIdCount:payload.notion?.metaCatalogIdCount,listingStateCounts:payload.notion?.listingStateCounts,metaCatalogStatusCounts:payload.notion?.metaCatalogStatusCounts},catalog:{productCount:payload.catalog?.productCount},catalogReconciliation:{identity:payload.catalogReconciliation?.identity,field:payload.catalogReconciliation?.field?{compared:payload.catalogReconciliation.field.compared,mismatches:payload.catalogReconciliation.field.mismatches,details:payload.catalogReconciliation.field.mismatchDetails?.slice(0,10)}:null,removed:payload.catalogReconciliation?.removed,collectionExpectation:payload.catalogReconciliation?.collectionExpectation},media:payload.crm?.mediaReconciliation};
   console.error(JSON.stringify({source_audit_failure:evidence},null,2));
   throw new Error('Source audit failures: '+failures.join('; '));
 }
@@ -74,9 +74,9 @@ console.log(JSON.stringify({
   checked_at:new Date().toISOString(),
   source_audit:payload,
   catalog_reconciliation:{
-    sheet_available:Number(payload.sheet.availableCatalogCount),
+    notion_available:Number(payload.notion.availableCatalogCount),
     whapi_products:Number(payload.catalog.productCount),
-    matched:Number(payload.sheet.availableCatalogCount)===Number(payload.catalog.productCount),
+    matched:Number(payload.notion.availableCatalogCount)===Number(payload.catalog.productCount),
     products_with_collections:Number(payload.catalog.productsWithCollections),
     products_without_collections:Number(payload.catalog.productsWithoutCollections)
   }

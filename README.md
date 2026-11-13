@@ -3,9 +3,10 @@
 - Isolated AWS stack `efps-notion-property-intake`: `UPDATE_COMPLETE` in `ap-southeast-2`.
 - Lambda `efps-notion-intake`: Active; endpoint `https://ko3771nvei.execute-api.ap-southeast-2.amazonaws.com/Prod/notion/intake`.
 - Invalid Notion handshake/event signatures: HTTP 401; validly signed malformed event: HTTP 400. Controlled create/archive write probes for both Notion databases: HTTP 200. Supabase idempotency claim/replay: PASS.
-- Notion end-to-end intake is not yet accepted: valid local Keychain Sheet/Cloudinary/Maps credentials passed API checks, but the AWS Secrets Manager copies are still `{}`/placeholders and the Notion Connection subscription is not verified. No production inventory record was created in the permission probes.
-- Inventory module tests: 118/118; combined inventory/webhook-routing tests: 130/130; CRM npm test: 139/139; browser regression: 1/1; Vite build: PASS; isolated SAM build and template validation pass.
-- Existing operator-assisted intake uses Slack /efps add-property and /efps photos start. The old WhAPI NEW-delimited inventory listener remains in the deployed artifact but is legacy and not the current inventory workflow; it is retained only until the final cleanup phase. It was not changed or removed in this task.
+- Notion Housing Listings is the canonical editing surface. The isolated `efps-notion-property-intake` Lambda is deployed in AWS account `294417174793` (`ap-southeast-2`) with the direct Supabase projection path. The existing Housing Listings backfill queued 104 pages; Supabase confirms 104 processed pages and 104 active `housing_notion` rows in the dashboard snapshot. The existing EFPS CRM Property Intake Connection was found in Notion Developer Connections; the user confirmed its webhook and all eight Page events remain selected.
+- Existing AWS secret ARNs were reused without creating, rotating, overwriting, or displaying secret values. The legacy WhAPI `NEW`-delimited inventory listener remains untouched until final cleanup.
+- Checks: `npm test` (139 passed, includes production build), inventory Python suite (88 passed), browser check (1 passed), and SAM template lint passed. Deployment reused the previously built Linux dependency artifact because no container runtime is installed.
+- The dashboard now reads active `housing_notion` rows only. The old five-minute Sheet reconciliation is disabled. Slack `/efps` and raw photo intake remain legacy compatibility producers while their future Notion handoff is finalized.
 
 ## CRM production metrics snapshot — 2026-10-05 (historical; not reverified in this task)
 

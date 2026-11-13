@@ -94,7 +94,7 @@ Maintenance is a normalized numeric amount with an optional source qualifier; `m
 - D01–D04 are approved design decisions; D05 is proposed until the owner approves it.
 - Figma is the working visual design environment; Canva remains the visual reference.
 - Prototype work uses synthetic data and must not mutate live CRM/inventory records until a later explicit integration gate.
-- Treat historical backups, legacy `leads.db`, and the legacy Leads Tracker as evidence layers only. The current CRM production source is WhAPI → Supabase CRM tables; the separate `Housing_Listings` Sheet is the inventory source. Do not reintroduce legacy lead Sheets into the production CRM path without an explicit architecture decision.
+- Treat historical backups, legacy `leads.db`, and the legacy Leads Tracker as evidence layers only. The current CRM production source is WhAPI → Supabase CRM tables; Notion Housing Listings is the inventory source, projected to Supabase for dashboard reads. Do not reintroduce legacy lead Sheets into the production CRM path without an explicit architecture decision.
 
 ## Security
 

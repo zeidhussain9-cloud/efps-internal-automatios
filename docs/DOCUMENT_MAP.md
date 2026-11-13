@@ -63,7 +63,7 @@ The P1–P5 hardening release added regression coverage for webhook promotion li
 
 ## Current inventory intake deployment — 2026-11-13
 
-The isolated Notion intake stack `efps-notion-property-intake` is UPDATE_COMPLETE in `ap-southeast-2`; Lambda `efps-notion-intake` is Active. Notion database create/archive probes passed for both databases. Supabase `crm_inventory_intake_events` and the `notion-inventory-state` Edge Function provide idempotency; no DynamoDB is used by this Notion path. Local Keychain Sheet/Cloudinary/Maps credentials passed live checks, but the AWS Secrets Manager copies are `{}`/placeholders. The Notion Connection subscription and end-to-end acceptance remain pending. See `docs/NOTION_PROPERTY_INTAKE.md`.
+Notion Housing Listings is the canonical operator editing surface. The existing `crm_inventory_snapshot` table remains the dashboard projection; schema, `notion-inventory-state` Edge Function v4, and the isolated Lambda support direct Notion upserts. The user confirms the existing Connection webhook and all eight Page events. Backfill replay accepted 104 pages; Supabase confirms 104 active `housing_notion` rows, 87 Available and 17 Rented. The dashboard reads only Notion rows. Sheets reconciliation was disabled; Render deployment and production verification are recorded in `HANDOFF.md`. Existing AWS secret ARNs were reused without exposing or changing values. See `docs/NOTION_PROPERTY_INTAKE.md`.
 
 This document is the canonical map of maintained repository documentation. It tells future AI sessions where a fact, rule, decision, contract, or current-state update belongs.
 

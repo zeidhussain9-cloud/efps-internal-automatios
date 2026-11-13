@@ -12,7 +12,7 @@
 
 ## Operational status
 
-The dashboard uses the production Supabase CRM data path. Webhook events are durably recorded before reconciliation. Inventory is a read-only CRM mirror of the canonical Housing_Listings source. AI analysis is persisted and operator-controlled; WhatsApp sending is manual.
+The dashboard uses the production Supabase CRM data path. Webhook events are durably recorded before reconciliation. Inventory is a read-only CRM mirror of the canonical Notion Housing Listings database, projected into the existing Supabase inventory table. AI analysis is persisted and operator-controlled; WhatsApp sending is manual.
 
 ## AI scheduler — intentionally paused
 

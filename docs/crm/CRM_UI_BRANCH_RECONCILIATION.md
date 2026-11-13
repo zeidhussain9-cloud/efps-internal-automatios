@@ -20,7 +20,7 @@ GitHub also lists four Dependabot branch refs associated with open PRs #93, #94,
 - Latest live deployment: dep-dbqod1nf3r2c73fe2gc0, commit d4083c8c33802f33295b090b9b1c4e71453b5090.
 - Supabase Edge Function: whapi-crm-webhook ACTIVE v10.
 - Webhook reconciliation: 18,641/18,641 message events since 2026-10-05 linked; 0 active errors.
-- Inventory: 104 active rows; five-minute cron active; latest successful run 09:55 UTC.
+- Inventory (updated 2026-11-13): 104 active Notion-owned rows (87 Available / 17 Rented); Sheet reconciliation cron removed; dashboard reads Notion only.
 - Deterministic scheduler: 923 completed / 0 failed; AI scheduler remains paused.
 - GitHub Actions: build and automated test workflows passed; 139/139 unit/integration tests and browser 1/1 passed. Production-health smoke job skipped.
 

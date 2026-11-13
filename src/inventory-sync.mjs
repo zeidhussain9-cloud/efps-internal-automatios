@@ -23,7 +23,7 @@ export function projectSheetRows(values){
 export function diffInventory(existing, incoming){
  const incomingIds=new Set(incoming.map(x=>x.row.listing_id));
  let changed=0,removed=0;
- for(const x of incoming) if(existing.get(x.row.listing_id)?.source_hash!==x.sourceHash || existing.get(x.row.listing_id)?.deleted_at) changed++;
+ for(const x of incoming){const old=existing.get(x.row.listing_id);if(old?.source_kind==='housing_notion')continue;if(old?.source_hash!==x.sourceHash || old?.deleted_at) changed++;}
  for(const [id,row] of existing) if(row.source_kind==='housing_sheet'&&!incomingIds.has(id)&&!row.deleted_at) removed++;
  return {changed,removed,total:incoming.length};
 }
@@ -32,6 +32,7 @@ export function inventoryChangeRows(existing, incoming, runId, changedAt){
  const changes=[];const incomingIds=new Set(incoming.map(x=>x.row.listing_id));
  for(const x of incoming){
   const old=existing.get(x.row.listing_id);
+  if(old?.source_kind==='housing_notion')continue;
   if(!old){changes.push({run_id:runId,listing_id:x.row.listing_id,change_type:'created',field_name:null,old_value:null,new_value:x.row,source_hash_before:null,source_hash_after:x.sourceHash,changed_at:changedAt});continue;}
   if(old.deleted_at){changes.push({run_id:runId,listing_id:x.row.listing_id,change_type:'restored',field_name:null,old_value:null,new_value:x.row,source_hash_before:old.source_hash,source_hash_after:x.sourceHash,changed_at:changedAt});continue;}
   if(old.source_hash===x.sourceHash)continue;
@@ -69,7 +70,8 @@ export async function syncInventorySnapshot({rows,connectionString=process.env.D
     await client.query(`WITH incoming AS (SELECT x.* FROM jsonb_to_recordset($1::jsonb) AS x(listing_id text,source_record jsonb,source_hash text,locality text,society_name text,bhk text,monthly_rent numeric,furnishing text,listing_state text,intake_status text,pet_friendly text,cloudinary_image_urls jsonb))
       INSERT INTO crm_inventory_snapshot(listing_id,source_kind,source_tab,source_record,source_hash,locality,society_name,bhk,monthly_rent,furnishing,listing_state,intake_status,pet_friendly,cloudinary_image_urls,source_snapshot_at,last_synced_at,deleted_at)
       SELECT listing_id,'housing_sheet','Housing_Listings',source_record,source_hash,locality,society_name,bhk,monthly_rent,furnishing,listing_state,intake_status,pet_friendly,cloudinary_image_urls,$2::timestamptz,$2::timestamptz,NULL FROM incoming
-      ON CONFLICT(listing_id) DO UPDATE SET source_record=EXCLUDED.source_record,source_hash=EXCLUDED.source_hash,locality=EXCLUDED.locality,society_name=EXCLUDED.society_name,bhk=EXCLUDED.bhk,monthly_rent=EXCLUDED.monthly_rent,furnishing=EXCLUDED.furnishing,listing_state=EXCLUDED.listing_state,intake_status=EXCLUDED.intake_status,pet_friendly=EXCLUDED.pet_friendly,cloudinary_image_urls=EXCLUDED.cloudinary_image_urls,source_snapshot_at=EXCLUDED.source_snapshot_at,last_synced_at=EXCLUDED.last_synced_at,deleted_at=NULL,source_kind='housing_sheet',source_tab='Housing_Listings'`,[
+      ON CONFLICT(listing_id) DO UPDATE SET source_record=EXCLUDED.source_record,source_hash=EXCLUDED.source_hash,locality=EXCLUDED.locality,society_name=EXCLUDED.society_name,bhk=EXCLUDED.bhk,monthly_rent=EXCLUDED.monthly_rent,furnishing=EXCLUDED.furnishing,listing_state=EXCLUDED.listing_state,intake_status=EXCLUDED.intake_status,pet_friendly=EXCLUDED.pet_friendly,cloudinary_image_urls=EXCLUDED.cloudinary_image_urls,source_snapshot_at=EXCLUDED.source_snapshot_at,last_synced_at=EXCLUDED.last_synced_at,deleted_at=NULL,source_kind='housing_sheet',source_tab='Housing_Listings'
+      WHERE crm_inventory_snapshot.source_kind <> 'housing_notion'`,[
       JSON.stringify(rows.map(x=>({listing_id:x.row.listing_id,source_record:x.row,source_hash:x.sourceHash,locality:x.row.locality,society_name:x.row.society_name,bhk:x.row.BHK,monthly_rent:x.row.monthly_rent?Number(x.row.monthly_rent):null,furnishing:x.row.furnish_type,listing_state:x.row.listing_state,intake_status:x.row.intake_status,pet_friendly:x.row.pet_friendly,cloudinary_image_urls:x.row.cloudinary_image_urls}))),now]);
    }
    const incomingIds=[...new Set(rows.map(x=>x.row.listing_id))];

@@ -25,7 +25,7 @@ This document retains the historical SAM deployment contract. It is not the prod
 
 The existing `WebhookToken` parameter remains a `NoEcho` deployment parameter because the current webhook authorization code consumes `EFPS_WEBHOOK_TOKEN` directly. The isolated Notion Lambda uses the dedicated `NotionSecretArn` JSON secret: `api_token` for Notion API access and `webhook_secret` for the Notion Connection webhook verification token. The API token is retrieved from Secrets Manager at worker runtime rather than stored in Lambda environment variables. Neither value is stored in repository files.
 
-The isolated Notion template requires only the Notion, Google Sheets, Cloudinary, and Maps secret ARNs; it has no DynamoDB parameter or DynamoDB IAM permission. The Lambda reads the secret values from Secrets Manager at runtime, so secret updates take effect without redeploying the stack. Current AWS secret records are invalid (`{}` for Sheets and placeholders for Cloudinary/Maps); valid corresponding credentials are present in local macOS Keychain and passed live API checks. Update the existing AWS secret records to those verified values. The repository does not print or commit secret values.
+The isolated Notion template requires only the Notion, Google Sheets, Cloudinary, and Maps secret ARNs; it has no DynamoDB parameter or DynamoDB IAM permission. The Lambda reads the secret values from Secrets Manager at runtime, so secret updates take effect without redeploying the stack. Secret values are not displayed or included in source control. The Notion inventory deployment reused existing secret ARNs and did not read, create, rotate, overwrite, or copy secret values. The status of existing raw photo/enrichment credentials is separate and was not validated in this rollout; do not change them as part of Notion deployment.
 
 AWS CloudFormation supports versionless Secrets Manager dynamic references and resolves them when the resource is created or updated. Updating a secret value alone does not update an existing Lambda environment value; a stack/resource update is required when the resolved environment value must change. See the AWS documentation for the exact dynamic-reference semantics. urlCloudFormation Secrets Manager dynamic referenceshttps://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/dynamic-references-secretsmanager.html
 
@@ -83,9 +83,12 @@ The optional `EFPSNotionIntake` resource in the shared `template.yaml` is legacy
 
 ## Isolated Notion intake deployment — 2026-11-13
 
-- Stack: `efps-notion-property-intake` (`ap-southeast-2`) — `UPDATE_COMPLETE`.
-- Lambda: `efps-notion-intake` — Active, Python 3.12, 512 MB, 180-second timeout.
+- Stack: `efps-notion-property-intake` (`ap-southeast-2`) — updated successfully to `UPDATE_COMPLETE` after confirming AWS account `294417174793`.
+- Lambda: `efps-notion-intake` — Active, Python 3.12, 512 MB, 180-second timeout; `$LATEST`, `LastModified=2026-11-13T06:34:51Z`, CodeSha256 `APpVz3ybE2C43rQ/BercbcIKGYVBGeLl9FhAiCKVQEE=`.
 - API: `https://ko3771nvei.execute-api.ap-southeast-2.amazonaws.com/Prod/notion/intake`.
 - Invalid `X-Notion-Signature` probe returned HTTP 401.
-- Only isolated Notion resources were added; the existing `efps-whapi-panel-v2` stack was not modified.
-- End-to-end inventory processing remains blocked by invalid resolved Sheets, Cloudinary, and Maps runtime credentials. See `docs/NOTION_PROPERTY_INTAKE.md`.
+- SAM deployment reused the existing four secret ARN parameters and changed no secret values. The existing `efps-whapi-panel-v2` stack was not modified.
+- The idempotent `_efps_notion_backfill` replay returned HTTP 200 and `accepted: 104`; Supabase confirms 104 processed intake events and 104 active `housing_notion` rows, with no Sheet-owned snapshot rows.
+- `sam validate --template-file notion-intake-template.yaml --lint` and Python compilation passed. Docker/Finch/Podman were unavailable, so the current source was hash-matched into the previously built Linux dependency artifact for deployment. A fresh container SAM build did not run in this deployment turn.
+- Raw Property Intake with photos may still depend on the existing Sheets, Cloudinary, and Maps runtime secret validity; those values were not inspected or changed during this turn. The direct Housing Listings mirror/backfill succeeded.
+- The user confirms the existing Notion Connection webhook was verified and all eight Page events remain selected. The existing WhAPI stack and legacy listener remain untouched.

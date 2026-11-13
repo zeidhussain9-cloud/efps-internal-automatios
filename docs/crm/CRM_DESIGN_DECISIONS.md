@@ -8,7 +8,7 @@
 - CRM: 371 leads; 138 deterministic auto-qualified; 839 contact classifications; 18,641 messages since 2026-10-05.
 - Webhooks: 18,641/18,641 message events linked to crm_messages; 0 active errors; 43 original errors retained in processing_error_history.
 - Group messages: 13,611 since 2026-10-05; 0 linked to lead timelines.
-- Inventory: 104 active rows (87 Available / 17 Rented Out); five-minute cron active; latest successful run 09:55 UTC.
+- Inventory (updated 2026-11-13): 104 active Notion-owned rows (87 Available / 17 Rented); Sheet reconciliation cron removed; dashboard reads Notion only.
 - Deterministic scheduler: 923 completed / 0 failed; AI scheduler intentionally paused.
 - CI: build PASS; 139/139 automated tests PASS; browser regression 1/1 PASS. Production-health smoke job skipped.
 - Slack batch: 16 of 17 IDs in the Supabase mirror; NFHV is represented by duplicate/re-entry B42K. WVP3 has an empty property_subtype and remains under review pending operator validation.

@@ -7,19 +7,19 @@ Repository-owned scheduled execution path for the production CRM source audit.
 Each run is read-only and reconciles:
 
 - WhAPI channel/message source health
-- canonical Google Housing Sheet inventory
+- canonical Notion Housing Listings inventory (read from the Supabase projection)
 - WhatsApp Business catalog products and collections
 - CRM/Supabase persistence
 
-Catalog reconciliation historically used the Sheet's available inventory count as the expected catalog count and read WhAPI products/collections. As of the 2026-10-05 safety hardening, direct WhAPI API access is policy-disabled and non-catalog operations are hard-blocked. Therefore no current scheduler run may claim live WhAPI catalog reconciliation unless an independently authorized catalog source is explicitly enabled and verified.
+Catalog reconciliation historically used the Notion's available inventory count as the expected catalog count and read WhAPI products/collections. As of the 2026-10-05 safety hardening, direct WhAPI API access is policy-disabled and non-catalog operations are hard-blocked. Therefore no current scheduler run may claim live WhAPI catalog reconciliation unless an independently authorized catalog source is explicitly enabled and verified.
 
-- Sheet available count
+- Notion available count
 - WhAPI product count
 - matched/mismatched state
 - products assigned to at least one collection
 - products with no collection assignment
 
-The runner performs no CRM writes, WhAPI sends, Sheet writes, classification changes, AI execution, or deployment actions.
+The runner performs no CRM writes, WhAPI sends, Notion writes, classification changes, AI execution, or deployment actions.
 
 ## Runtime
 
@@ -49,7 +49,7 @@ The runner exits non-zero when:
 - the source-audit payload is empty or invalid
 - any source layer reports an error
 - the catalog reconciliation is incomplete
-- Sheet available count does not equal the WhAPI product count
+- Notion available count does not equal the WhAPI product count
 - the CRM requirement/matching audit is incomplete
 
 A successful run emits compact JSON evidence including collection assignment counts and the Point 40–42 requirement/matching audit.
