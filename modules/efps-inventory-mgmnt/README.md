@@ -2,7 +2,7 @@
 
 ## Live mirror acceptance note — 2026-11-13
 
-The Edge Function response fix is deployed as version 5, and the test page now has a Supabase row. A live retry then exposed a Lambda recovery gap: it reused the stored Listing ID but left the Notion property blank. A local Lambda fix now repairs that property; targeted tests pass 22/22 and the full Inventory Contract suite passes 129/129, but the fix is not yet deployed. Live edit/replay/archive/restore checks, signed-in dashboard review, and test-record cleanup remain open. See `docs/NOTION_PROPERTY_INTAKE.md` for current acceptance status. Do not treat the flow as fully accepted until these checks pass.
+The Edge Function response fix is deployed as version 5. Live create, edit-to-Supabase, duplicate delivery, and the soft-delete handler have been exercised. Retry still leaves the source Listing ID blank, and restore currently leaves the Supabase deletion marker in place. A Lambda recovery fix is published but not deployed. A local restore fix is being tested. The signed-in dashboard view and test-record cleanup remain open. See `docs/NOTION_PROPERTY_INTAKE.md` for current acceptance status. Do not treat the flow as fully accepted until all checks pass.
 
 ## Intake entry points
 

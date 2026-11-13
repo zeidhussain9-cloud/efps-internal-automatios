@@ -619,7 +619,7 @@ def process_listing_page(page: dict, *, notion: NotionClient, store: SupabaseInt
     claim, item = store.claim(page_id, payload_hash)
     if claim == "duplicate":
         existing = store.find_inventory(page_id)
-        if existing.get("found"):
+        if existing.get("found") and not existing.get("deleted_at"):
             return {"status": "already_processed", "listing_id": existing.get("listing_id") or item.get("listing_id", "")}
         # A completed intake record without its inventory projection can occur
         # after a partial deployment or projection failure. Rebuild the same
