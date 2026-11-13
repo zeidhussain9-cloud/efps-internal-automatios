@@ -9,8 +9,8 @@
 - URL: https://easyfind-crm-d01-d05.onrender.com
 - Branch: crm-ui-dashboard
 - Auto-deploy: enabled on commit
-- Latest live deployment: dep-dbqod1nf3r2c73fe2gc0
-- Live commit: d4083c8c33802f33295b090b9b1c4e71453b5090
+- Latest live deployment: `dep-dbrbc8gjo6nc73etsmr0`
+- Live commit: `6b206ddf07515cff2df82140d86ee873e4ea2965`
 
 ## Runtime boundaries
 
@@ -24,11 +24,11 @@
 
 ## Release verification
 
-- Render reports deployment dep-dbqod1nf3r2c73fe2gc0 LIVE from commit d4083c8c33802f33295b090b9b1c4e71453b5090.
+- Render reports deployment `dep-dbrbc8gjo6nc73etsmr0` LIVE from commit `6b206ddf07515cff2df82140d86ee873e4ea2965`; `/health` and `/` both returned HTTP 200.
 - Inventory projection: 104 active Notion rows (87 Available / 17 Rented); no Sheet-owned rows or test listings.
 - Supabase webhook reconciliation: 18,641/18,641 message events linked, 0 active errors.
 - GitHub Actions CRM UI Verification and CRM synthetic CI passed; 139/139 automated tests and browser 1/1 passed.
-- Production-health smoke job was skipped. An authenticated production inventory browser session was not exercised in this follow-up.
+- Render returned no error logs since the deployment. An authenticated production inventory browser session was not exercised in this follow-up. GitHub Inventory Contract failed on that commit, but the reserved-field audit now passes locally after the Lambda-source fix.
 
 ## External credential hardening
 

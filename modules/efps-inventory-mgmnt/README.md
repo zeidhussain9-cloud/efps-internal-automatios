@@ -1,5 +1,9 @@
 # EFPS Inventory Management
 
+## Live mirror acceptance note — 2026-11-13
+
+The direct Housing Listings mirror is deployed, but a controlled live test found that new pages without a Listing ID failed after ID allocation because the Supabase Edge Function response omitted that ID. A local response fix and regression test now pass the CRM suite; they are not yet deployed. The live create/edit/replay/archive/restore test and test-record cleanup remain open. See `docs/NOTION_PROPERTY_INTAKE.md` for the current acceptance status. Do not treat the inventory flow as fully accepted until those live checks pass.
+
 ## Intake entry points
 
 - Existing Slack intake: /efps add-property collects details in a thread and writes through the canonical pipeline; /efps photos start associates operator-uploaded thread photos with the same Sheet row.

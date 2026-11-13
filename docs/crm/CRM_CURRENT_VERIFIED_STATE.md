@@ -6,8 +6,8 @@
 
 - Production URL: https://easyfind-crm-d01-d05.onrender.com
 - Render service: easyfind-crm-d01-d05 / srv-darsv560tbcc73cu4ip0
-- Live deployment: dep-dbqod1nf3r2c73fe2gc0
-- Live commit: d4083c8c33802f33295b090b9b1c4e71453b5090 on crm-ui-dashboard
+- Live deployment: `dep-dbrbc8gjo6nc73etsmr0`
+- Live commit: `6b206ddf07515cff2df82140d86ee873e4ea2965` on `crm-ui-dashboard`; `/health` and `/` returned HTTP 200.
 - Supabase project: qttcutwzehtskfcwxkwj
 - Edge Function: whapi-crm-webhook, ACTIVE v10
 - Production source: +919148338801
@@ -57,17 +57,17 @@ The 16 IDs are confirmed in Supabase. Source Sheet re-read and authenticated inv
 
 ## CI, UI and verification boundary
 
-- GitHub Actions CRM UI Verification: PASS; build PASS, 139/139 automated tests PASS, browser regression 1/1 PASS.
+- GitHub Actions CRM UI Verification: PASS; build PASS, 139/139 automated tests PASS, browser regression 1/1 PASS. Inventory Contract failed on the remote commit because Notion reserved fields were included in the source projection; corrected local commit `6e16562` passes the 129-test Inventory Contract suite and repository audit.
 - GitHub Actions CRM synthetic CI: PASS; build, unit tests and browser regression passed.
 - Production-health smoke job was skipped.
-- The authenticated production inventory API/UI was not exercised with an operator session in this follow-up. CI browser regression is not a substitute for an authenticated live inventory read.
+- The authenticated production inventory API/UI was not exercised with an operator session in this follow-up. Local browser regression passed; production `/health` and `/` returned HTTP 200.
 - Earlier npm ci reported 7 dependency advisories (3 moderate, 4 high); no dependency upgrades were applied.
 
 ## Repository and branch state
 
-- main and crm-ui-dashboard both point to commit d4083c8c33802f33295b090b9b1c4e71453b5090, tree ba5b62470c4bbb97a155451db18dae17229a3133.
+- Remote `crm-ui-dashboard` points to `6b206ddf07515cff2df82140d86ee873e4ea2965`; remote `main` points to `954b24fc21b8b91a6bd5cae3e24a116e31fbdce7`. Their trees matched at `7cce604603616847c9994fdeb45e432141b5a4ad` before the local unpushed correction.
 - Four Dependabot refs remain because their PRs are open: #93, #94, #96 and #97. They are automation PR heads, not additional CRM implementation/deployment branches; do not delete them while those PRs remain open.
-- The owner has deleted all Mac checkouts. No local checkout is retained or required for this verification.
+- The active local `crm-ui-dashboard` checkout has the reserved-field correction in commit `6e16562`; it is not in the remote refs because the GitHub upload was rejected by approval review.
 
 ## Scheduler policy
 

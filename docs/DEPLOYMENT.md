@@ -84,7 +84,7 @@ The optional `EFPSNotionIntake` resource in the shared `template.yaml` is legacy
 ## Isolated Notion intake deployment — 2026-11-13
 
 - Stack: `efps-notion-property-intake` (`ap-southeast-2`) — updated successfully to `UPDATE_COMPLETE` after confirming AWS account `294417174793`.
-- Lambda: `efps-notion-intake` — Active, Python 3.12, 512 MB, 180-second timeout; `$LATEST`, `LastModified=2026-11-13T06:34:51Z`, CodeSha256 `APpVz3ybE2C43rQ/BercbcIKGYVBGeLl9FhAiCKVQEE=`.
+- Lambda: `efps-notion-intake` — Active, Python 3.12, 512 MB, 180-second timeout; `$LATEST`, `LastModified=2026-11-13T07:12:47Z`, CodeSha256 `BWKGDapY+LtrWskHtPWOLr0m8KcS0Ljp83aGkJFYvw4=`.
 - API: `https://ko3771nvei.execute-api.ap-southeast-2.amazonaws.com/Prod/notion/intake`.
 - Invalid `X-Notion-Signature` probe returned HTTP 401.
 - SAM deployment reused the existing four secret ARN parameters and changed no secret values. The existing `efps-whapi-panel-v2` stack was not modified.

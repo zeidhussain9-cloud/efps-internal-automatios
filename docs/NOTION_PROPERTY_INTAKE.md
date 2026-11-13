@@ -1,10 +1,16 @@
 # Notion Property Intake — Runtime Contract
 
+## Follow-up acceptance status — 2026-11-13
+
+A controlled live Housing Listings test exposed a defect after the earlier deployment evidence recorded below: for a page with no Listing ID, the Supabase `allocate_listing_id` RPC stored an ID, but `notion-inventory-state` returned `{ok:true}` instead of the ID. The Lambda therefore recorded the event as failed and did not create the inventory snapshot row. Local code now returns the ID and has a regression test; local CRM checks pass (142 Node tests/build and one browser test). This fix has not yet been published or deployed. The temporary test page (`417fedf9-b4e8-81ed-b882-df6cf2abd723`, title `EFPS TEST ONLY - DO NOT CONTACT - 20261113-101056Z`) and its failed intake event still require cleanup after deployment and a successful lifecycle test. Do not treat the create/edit/duplicate/archive/restore acceptance gate as passed until then. The production UI also remains unverified while signed out.
+
+The deployment and data counts recorded below are observations from before this follow-up test; they do not demonstrate that the in-progress fix is live.
+
 ## Current verified deployment state — 2026-11-13
 
 - AWS account: `294417174793`; region: `ap-southeast-2`.
 - CloudFormation stack: `efps-notion-property-intake` — `UPDATE_COMPLETE`.
-- Lambda: `efps-notion-intake` — Active, Python 3.12, 512 MB, 180-second timeout; SAM update completed 2026-11-13, `$LATEST`, CodeSha256 `APpVz3ybE2C43rQ/BercbcIKGYVBGeLl9FhAiCKVQEE=`.
+- Lambda: `efps-notion-intake` — Active, Python 3.12, 512 MB, 180-second timeout; SAM update completed 2026-11-13, `$LATEST`, CodeSha256 `BWKGDapY+LtrWskHtPWOLr0m8KcS0Ljp83aGkJFYvw4=`.
 - API endpoint: `https://ko3771nvei.execute-api.ap-southeast-2.amazonaws.com/Prod/notion/intake` (`POST /notion/intake`).
 - The deployed Notion Lambda no longer references DynamoDB: `SessionsTableArn`, DynamoDB IAM actions, and the `DynamoIntakeStore` adapter were removed. The legacy `efps-sessions` table is not used by this Notion path.
 - Supabase production project: `easyfind-crm` (`qttcutwzehtskfcwxkwj`, `ap-south-1`). `public.crm_inventory_intake_events` provides page idempotency. The `notion-inventory-state` Edge Function is ACTIVE v4 with JWT verification enabled; v4 adds inventory lookup and lifecycle-safe direct Housing Listings synchronization. The deployed Lambda contains the direct mirror handler.
@@ -17,7 +23,7 @@
 - The existing `EFPS CRM Property Intake` Connection is present in Notion Developer Connections. The user confirms its webhook was verified and all eight Page events remain selected. Invalid signatures return HTTP 401; signed malformed events reach page-ID validation (HTTP 400).
 - AWS identity was verified as account `294417174793`. The database schema change and Edge Function v4 are deployed. SAM updated the Lambda stack to `UPDATE_COMPLETE`, and Lambda reports `LastUpdateStatus=Successful`. Existing secret ARNs were reused; no secret values were printed, copied, created, rotated, or overwritten.
 - The idempotent backfill replay returned HTTP 200 with `accepted: 104`. Supabase confirms 104 processed intake events and 104 active `housing_notion` rows (87 Available, 17 Rented) in `crm_inventory_snapshot`; no `housing_sheet` or test-like rows remain.
-- Inventory module tests: 88/88 passed. CRM `npm test`: 139/139 plus production build passed; browser regression: 1/1 passed. `sam validate --template-file notion-intake-template.yaml --lint` passed.
+- Inventory module tests: 129/129 Inventory Contract Python tests and 88/88 inventory-module tests passed. CRM `npm test`: 139/139 plus production build passed; browser regression: 1/1 passed. Repository audit, projection regression, Python compilation, and SAM lint passed. The reserved Notion fields are now omitted from the source projection.
 
 ## Data ownership and reconciliation
 
@@ -77,7 +83,7 @@ The Supabase URL and public anon JWT are non-secret Lambda configuration. The Ed
 
 ## Remaining acceptance gates
 
-1. Verify the new Render deployment is live and inspect the inventory page against the Notion-only Supabase projection.
+1. Render deployment `dep-dbrbc8gjo6nc73etsmr0` is LIVE, with production `/health` and `/` returning HTTP 200. A signed-in inventory page check was not performed. The current production UI reads only active `housing_notion` rows; its data source contains 104 active rows.
 2. The migration release includes a replay-recovery test. No disposable test listings were left in Notion or Supabase.
 3. If raw Property Intake with photos is required, separately verify the existing Sheet/Cloudinary/Maps runtime credentials and pipeline. Do not create, rotate, or overwrite secrets without an explicit credential-maintenance task. Confirm no WhatsApp message or catalogue dispatch is sent.
 

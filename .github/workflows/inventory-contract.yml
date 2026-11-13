@@ -7,6 +7,7 @@ on:
       - "shared/whatsapp_whapi/**"
       - "shared/google_maps/**"
       - "modules/efps-inventory-mgmnt/**"
+      - "supabase/functions/notion-inventory-state/**"
       - "tools/**"
       - ".github/workflows/inventory-contract.yml"
   pull_request:
@@ -15,6 +16,7 @@ on:
       - "shared/whatsapp_whapi/**"
       - "shared/google_maps/**"
       - "modules/efps-inventory-mgmnt/**"
+      - "supabase/functions/notion-inventory-state/**"
       - "tools/**"
       - ".github/workflows/inventory-contract.yml"
 

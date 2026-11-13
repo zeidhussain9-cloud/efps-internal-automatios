@@ -1,5 +1,6 @@
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts'
 import { createClient } from 'npm:@supabase/supabase-js@2.117.2'
+import { responseForOperation } from './response-contract.mjs'
 
 const EXPECTED_INTERNAL_KEY_SHA256 = 'a64a3cb25769eff7c88456645d5196cf5e4fa33fc1c9b80ac309f4a2d605c4c9'
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!
@@ -114,6 +115,5 @@ Deno.serve(async (req) => {
     console.error('Notion inventory state operation failed', { operation, code: result.error.code })
     return Response.json({ error: 'Inventory state operation failed' }, { status: 500 })
   }
-  if (operation === 'claim') return Response.json(result.data)
-  return Response.json({ ok: true })
+  return Response.json(responseForOperation(operation, result.data))
 })

@@ -8,8 +8,8 @@ This section supersedes the older dated operational snapshots below. Historical 
 - **CRM deployment branch:** `crm-ui-dashboard`
 - **Task checkout:** `crm-ui-dashboard`; this migration is being released to the existing Render service.
 - **Render production service:** `easyfind-crm-d01-d05` / `srv-darsv560tbcc73cu4ip0`
-- **Render deployment:** CRM Dashboard service auto-deploys from `crm-ui-dashboard`; the prior 2026-11-13 release was verified LIVE before this follow-up. The dashboard source changes are included in the current release; Supabase Edge Function v4 and isolated Notion Lambda direct-mirror code are deployed separately.
-- **Production health:** GitHub production health smoke completed successfully after the latest deployment.
+- **Render deployment:** service `srv-darsv560tbcc73cu4ip0` auto-deploys from `crm-ui-dashboard`; deploy `dep-dbrbc8gjo6nc73etsmr0` is LIVE on commit `6b206ddf07515cff2df82140d86ee873e4ea2965`. The health and root routes returned HTTP 200. The corrected reserved-field Lambda source is in local commit `6e16562`; GitHub publication was blocked by approval review.
+- **Production health:** `/health` and `/` returned HTTP 200 after the latest Render deployment; no Render error logs were returned after deployment.
 - **Inventory schema:** 48 physical columns A:AV; runtime processing and CRM mirror are restricted to A:AT. Reserved AU/AV are excluded from operational writes and CRM projection.
 - **Inventory/Supabase mirror:** 104 active `housing_notion` rows are confirmed after the idempotent backfill; the 104 intake event records are all processed. No Sheet-owned rows remain in the current snapshot.
 - **Subtype contract:** mandatory supported `property_subtype`; Apartment is the no-evidence fallback; Penthouse maps to Apartment; conflicting/unsupported evidence requires Needs Review.
@@ -18,7 +18,7 @@ This section supersedes the older dated operational snapshots below. Historical 
 - **Notion inventory:** Housing Listings is the canonical operator editing surface. Its page events route to the existing Supabase `crm_inventory_snapshot` with `housing_notion` ownership; the dashboard queries only active `housing_notion` rows; the Sheets reconciliation cron is disabled. The database description, schema migration, Edge Function v4, and isolated Lambda are deployed. The user confirms the existing Connection webhook and all eight Page event selections. The one-time backfill completed for 104 rows. Existing AWS secret ARNs were reused; no secret values were exposed or changed. The old WhAPI listener remains untouched for final cleanup.
 - **WhatsApp:** v7.1 caption generation writes the Notion-only `whatsapp_post` field from explicit/verified facts. No WhatsApp message is sent by the intake adapter.
 - **Verification:** this turn verified AWS identity, CloudFormation `UPDATE_COMPLETE`, Lambda `LastUpdateStatus=Successful`, SAM template lint, Python source compilation, backfill acceptance (104 pages), and Supabase processed/active counts (104). 139 Node tests, 88 inventory Python tests, and one browser regression passed. SAM template lint passed. A fresh container build was unavailable; the previously built Linux dependency artifact was reused with hash-matched current source.
-- **Production data:** 104 Housing Listings pages are present as active `housing_notion` rows in the existing snapshot. The current CRM UI source release is being deployed to Render.
+- **Production data:** 104 Housing Listings pages are present as active `housing_notion` rows in the existing snapshot. A follow-up code correction is complete locally but awaits approved GitHub publication.
 
 ### Inventory intake paths — current ownership
 

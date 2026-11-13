@@ -190,11 +190,8 @@ def _notion_value(prop: dict) -> str:
 def listing_snapshot(page: dict) -> dict:
     """Project one Housing Listings page into the existing dashboard snapshot contract."""
     properties = page.get("properties") or {}
-    row = {name: _notion_value(properties.get(name) or {}) for name in schema.NAMES}
-    # AU/AV are reserved in the established inventory contract, even if a Notion
-    # page has values in similarly named properties.
-    row["source_group"] = ""
-    row["inventory_locked"] = ""
+    # The last two schema slots are reserved and must not be read from Notion.
+    row = {name: _notion_value(properties.get(name) or {}) for name in schema.NAMES[:-2]}
     for name in ("Property", "WhatsApp Group", "whatsapp_post", "WhatsApp Destination"):
         row[name] = _notion_value(properties.get(name) or {})
     row["notion_page_id"] = str(page.get("id") or "")
