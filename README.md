@@ -4,7 +4,7 @@
 - Lambda `efps-notion-intake`: Active; endpoint `https://ko3771nvei.execute-api.ap-southeast-2.amazonaws.com/Prod/notion/intake`.
 - Invalid Notion handshake/event signatures: HTTP 401; validly signed malformed event: HTTP 400 at page-ID validation. Notion API read-only access to both databases: HTTP 200.
 - End-to-end Notion intake remains blocked: deployed Google Sheets credential resolves to `{}`; Cloudinary and Maps runtime values resolve to `MIGRATION_PLACEHOLDER`. No Sheet/Cloudinary write is verified; Notion subscription and controlled acceptance remain pending.
-- Inventory module tests: 118/118; combined inventory/webhook-routing tests: 130/130; isolated SAM build and template validation pass.
+- Inventory module tests: 118/118; combined inventory/webhook-routing tests: 130/130; CRM npm test: 139/139; browser regression: 1/1; Vite build: PASS; isolated SAM build and template validation pass.
 - Existing inventory intake routes include the Slack operator-assisted /efps add-property and /efps photos start flows, plus the WhAPI listener from its two dedicated source numbers and NEW session boundary. The deployed WhAPI Lambda was last updated 2026-10-04 and was not redeployed here. The repository handler now uses the explicit sender allowlist and dispatch regression tests. The existing WhAPI/CRM stack was not modified.
 
 ## CRM production metrics snapshot — 2026-10-05 (historical; not reverified in this task)

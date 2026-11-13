@@ -12,7 +12,7 @@ Verified live baseline is recorded in the authoritative current-state block belo
 - Existing Slack inventory operations remain the operator-assisted Sheet/photo producer (/efps add-property and /efps photos start); the sync path remains read-only.
 - Existing WhAPI/CRM CloudFormation stack was not modified. Its EFPSWebhook Lambda is Active with EFPS_WHAPI_LIVE=1 and EFPS_WEBHOOK_LIVE=1; last function code update was 2026-10-04. The deployed artifact routes the two inventory senders (917975102130, 919902024973) via listener classification. The current repository implementation uses INVENTORY_SENDERS explicitly and has two dispatch regression tests; this task did not redeploy the shared stack.
 - Notion intake is not end-to-end operational: Sheets credential resolves to `{}`; Cloudinary and Maps runtime values resolve to `MIGRATION_PLACEHOLDER`. No intake write has been verified. Notion subscription and controlled acceptance remain pending.
-- Repository inventory module tests: 118/118 pass (87 Notion-intake tests); combined inventory + shared webhook routing tests: 130/130 pass; isolated SAM template/build/generated-template validation pass.
+- Repository inventory module tests: 118/118 pass (87 Notion-intake tests); combined inventory + shared webhook routing tests: 130/130 pass; CRM npm test 139/139; browser regression 1/1; Vite build and isolated/shared SAM template/build/generated-template validation pass.
 
 ### Historical CRM production metrics checkpoint — 2026-10-05
 
