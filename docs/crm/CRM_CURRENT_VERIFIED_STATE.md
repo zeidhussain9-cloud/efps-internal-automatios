@@ -6,8 +6,8 @@
 
 - Production URL: https://easyfind-crm-d01-d05.onrender.com
 - Render service: easyfind-crm-d01-d05 / srv-darsv560tbcc73cu4ip0
-- Live deployment: `dep-dbrei8avcj2c73erda3g`
-- Live commit: `ddb0f6391f99ba9a848fd30c8b03bd5db9c1b53c` on `crm-ui-dashboard`; `/health` and `/` returned HTTP 200. GitHub Production health smoke passed.
+- Live deployment: `dep-dbresd8jo6nc73f1r3k0`
+- Live commit: documentation follow-up `cd2060e0817849ec011ec60d399c64b6d11b4cae`, with the same verified source tree as implementation commit `ddb0f6391f99ba9a848fd30c8b03bd5db9c1b53c`; `/health` and `/` returned HTTP 200. GitHub Production health smoke passed.
 - Supabase project: qttcutwzehtskfcwxkwj
 - Edge Function: whapi-crm-webhook, ACTIVE v10
 - Production source: +919148338801
@@ -66,9 +66,9 @@ The 16 IDs are confirmed in Supabase. Source Sheet re-read and authenticated inv
 
 ## Repository and branch state
 
-- Remote `crm-ui-dashboard` currently points to `ddb0f6391f99ba9a848fd30c8b03bd5db9c1b53c`; remote `main` still requires reconciliation to this verified tree.
+- Remote/local `crm-ui-dashboard` point to the published release; remote/local `main` were reconciled with a merge commit. The local and GitHub branch trees are identical.
 - Four Dependabot refs remain because their PRs are open: #93, #94, #96 and #97. They are automation PR heads, not additional CRM implementation/deployment branches; do not delete them while those PRs remain open.
-- The local checkout must be aligned to the published `crm-ui-dashboard` head after current documentation changes are published; its tracked tree currently matches the preceding verified release tree.
+- The active local `crm-ui-dashboard` checkout matches the published GitHub branch head. The local `main` worktree matches the reconciled GitHub main tree.
 
 ## Scheduler policy
 
