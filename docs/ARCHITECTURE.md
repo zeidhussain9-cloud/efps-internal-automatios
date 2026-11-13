@@ -6,25 +6,57 @@ This section supersedes the older dated operational snapshots below. Historical 
 
 - **GitHub repository:** `zeidhussain9-cloud/efps-internal-automatios`
 - **CRM deployment branch:** `crm-ui-dashboard`
-- **CRM branch HEAD:** `bd29293846df3b09fac67fae2f2b0c555c821ec7`
-- **Main branch HEAD:** `9adc3e04174f074f3ccf93c82eea3658ed4b0eb9`
-- **Shared tracked tree:** `c1404c064b12367cec7b54af33604a5b1091d278`; branch trees are identical.
+- **Active branches:** `main` and `crm-ui-dashboard` only. Their tracked trees were verified identical before this task release; final reconciliation is part of this release close.
 - **Render production service:** `easyfind-crm-d01-d05` / `srv-darsv560tbcc73cu4ip0`
-- **Latest Render deployment:** `bd29293846df3b09fac67fae2f2b0c555c821ec7` = LIVE.
+- **Render deployment configuration:** auto-deploy enabled from `crm-ui-dashboard`; the service was verified LIVE before this task release. The post-release deployment is checked during release close.
 - **Production health:** GitHub production health smoke completed successfully after the latest deployment.
 - **Inventory schema:** 48 physical columns A:AV; runtime processing and CRM mirror are restricted to A:AT. Reserved AU/AV are excluded from operational writes and CRM projection.
 - **Inventory/Supabase mirror:** 104 active `housing_sheet` rows; latest verified snapshot sync was `2026-11-12 21:45:01 UTC`.
 - **Subtype contract:** mandatory supported `property_subtype`; Apartment is the no-evidence fallback; Penthouse maps to Apartment; conflicting/unsupported evidence requires Needs Review.
 - **Maps contract:** only VERIFIED results may override locality/place name; unverified Maps candidates are not applied and require Needs Review. The original source URL remains stored. Captions use only the original short mobile URL; long URLs are omitted and flagged.
-- **Notion intake:** repository adapter and optional SAM route are implemented and validated, but not activated in production. The optional `NotionSecretArn` must be configured before the Lambda/API route exists. Notion automation and an end-to-end acceptance test are still pending.
+- **WhAPI inventory intake:** deployed EFPSWebhook is Active with EFPS_WHAPI_LIVE=1 and EFPS_WEBHOOK_LIVE=1; its last Lambda code update was 2026-10-04. The deployed artifact routes the two dedicated inventory senders (917975102130, 919902024973) through the inventory listener and NEW session boundary. The current repository parser is transport-only; the repository webhook handler now uses the explicit INVENTORY_SENDERS allowlist and has dispatch regression coverage. The shared WhAPI/CRM stack was not redeployed in this task.
+- **Notion intake:** isolated stack efps-notion-property-intake is CREATE_COMPLETE; Lambda efps-notion-intake is Active and its API route is deployed. Invalid signatures are rejected; signed malformed events reach page validation; Notion API read access to both databases is verified. End-to-end processing remains blocked by Sheets `{}` and Cloudinary/Maps MIGRATION_PLACEHOLDER values; subscription and acceptance are not verified.
 - **WhatsApp:** v7.1 caption generation writes the Notion-only `whatsapp_post` field from explicit/verified facts. No WhatsApp message is sent by the intake adapter.
-- **Verification:** inventory contract 123/123; CRM unit/server tests 139/139; browser regression 1/1; SAM template validation/build and dependency packaging PASS.
-- **Production data:** this intake rollout has not inserted or modified Housing_Listings rows or historical listing records. Notion reference-page/database descriptions and the intake form-view label were updated.
+- **Verification:** this task reran the inventory module suite (118/118, including 87 Notion-intake tests) and the combined inventory/webhook-routing suite (130/130); isolated SAM template/build/generated-template validation PASS. Earlier inventory-contract 123/123, CRM unit/server 139/139, and browser 1/1 remain the prior verified checkpoints.
+- **Production data:** no Notion intake-to-Sheet/Cloudinary write has been verified. The isolated endpoint deployment did not modify the shared WhAPI/CRM stack or existing Housing_Listings rows.
+
+### Inventory intake paths — verified runtime contract
+
+~~~text
+EXISTING WHAPI INVENTORY
+  authenticated WhAPI webhook
+  -> two dedicated sender numbers: 917975102130 / 919902024973
+  -> exact NEW message opens a sender session
+  -> following text messages accumulate in DynamoDB efps-sessions
+  -> message IDs are deduplicated; first property message allocates Listing ID and Sheet row
+  -> next NEW closes the prior session and opens the next one
+  -> canonical process_closed_session extraction, validation and Maps enrichment
+  -> Housing_Listings A:AT
+
+EXISTING SLACK INVENTORY
+  #eps-wapi-pannel: /efps add-property
+  -> operator enters details in a Slack thread and replies done
+  -> canonical pipeline creates Listing ID and Housing_Listings row
+  -> operator attaches photos in that same thread and replies done
+  -> files upload to Cloudinary; URLs update the same Sheet row
+  -> /efps photos start handles the remaining rows missing photos
+
+NEW NOTION INTAKE (deployed, currently blocked)
+  Notion Connection webhook with X-Notion-Signature
+  -> async Lambda worker and idempotent efps-sessions claim
+  -> same canonical Inventory pipeline
+  -> Housing_Listings A:AT + Cloudinary photos + Notion listing relation/status
+
+ALL INTAKE ROUTES
+  -> existing five-minute Sheet-to-Supabase sync
+~~~
+
+The WhAPI session stores text and message IDs. Media-only WhAPI messages are noted but the current adapter does not upload their binary attachments. Slack is the existing operator-assisted photo route. Notion is an additional image-capable intake route, but its Sheets/Cloudinary/Maps runtime credentials must be corrected before use. The intake adapters do not send WhatsApp messages automatically.
 
 ### Current operational flow
 
 ```text
-Notion Property Intake (activation pending)
+Notion Property Intake (endpoint deployed; runtime credentials / subscription pending)
   -> signed page-ID webhook (202)
   -> asynchronous Lambda worker
   -> idempotent efps-sessions claim
@@ -160,8 +192,8 @@ monthly_rent -> security_deposit (month-based source form)
 ## Stage-1/2 write boundary
 Inventory Stage 1/2 recurring updates write A:D and F:AO. E (`listing_state`) is protected from the recurring Stage-1/2 update; the initial Stage-1 row bootstrap currently sets it to `Available`. AP:AT are downstream-owned by Housing/Meta workflows. AU (`source_group`) and AV (`inventory_locked`) are reserved and must remain blank.
 
-## Runtime boundary
-Inventory Phase-1 runtime verification has completed successfully for the canonical Google Sheets read/write boundary and for Google Maps direct API access plus application-path consumption. WhAPI live channel identity/subscription/deployment, Cloudinary live upload, and Slack live deployment remain separate runtime acceptance items.
+## Historical runtime boundary — 2026-09-16
+This was the acceptance state at the migration checkpoint, not the current runtime state. The current verified WhAPI and Notion inventory deployment facts are recorded in the authoritative 2026-11-13 section at the top of this document.
 
 ## Live-system migration boundary — 2026-09-16
 
@@ -180,7 +212,7 @@ WhAPI webhook
 
 `handler.py` is the scheduled Raw-row adapter and calls the canonical Inventory package directly. The SAM template supplies the existing Lead resources plus the `efps-sessions` table ARN required by the Stage-1 durable session store.
 
-`modules/efps-inventory-mgmnt/src/notion_intake.py` is a separate Notion intake adapter. It claims Notion submissions idempotently in the existing `efps-sessions` table, downloads Notion-hosted photos into the shared Cloudinary upload path, and delegates property processing to the same `pipeline.process_closed_session()` implementation. It persists the resulting A:AT inventory row and reconciles the related Housing Listings Notion page plus intake status/notes/relation. Its SAM route is `/notion/intake`; it does not change the WhAPI webhook or send WhatsApp messages. Activation requires the dedicated Notion Secrets Manager secret, a configured Notion database automation, and an end-to-end acceptance test.
+`modules/efps-inventory-mgmnt/src/notion_intake.py` is a separate Notion intake adapter. It claims Notion submissions idempotently in the existing `efps-sessions` table, downloads Notion-hosted photos into the shared Cloudinary upload path, and delegates property processing to the same `pipeline.process_closed_session()` implementation. It persists the resulting A:AT inventory row and reconciles the related Housing Listings Notion page plus intake status/notes/relation. Its isolated SAM route is `/notion/intake`; the stack is now deployed separately and does not change the WhAPI webhook or send WhatsApp messages. End-to-end processing remains blocked by the currently invalid Sheets/Cloudinary/Maps runtime credentials; the Notion Developer Connection subscription and controlled acceptance test remain unverified. See the current verified state at the top of this document.
 
 No Stage-2 implementation from the legacy system is part of this architecture.
 

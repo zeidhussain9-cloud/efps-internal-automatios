@@ -5,14 +5,14 @@ This document retains the historical SAM deployment contract. It is not the prod
 ## Source of truth
 
 - Repository: `zeidhussain9-cloud/efps-internal-automatios`
-- Canonical branch: `main`
+- Production/deployment branch: `crm-ui-dashboard` (Render auto-deploy); `main` is the reconciled release branch and must have the same tracked tree.
 - SAM template: `template.yaml`
 - Runtime credential resolution: AWS Secrets Manager dynamic references in the SAM function environment.
 - Business rules: V10 deterministic control workbook; this document only defines deployment mechanics.
 
 ## Runtime credential inputs
 
-`template.yaml` requires the existing AWS Secrets Manager ARNs as deployment parameters. The Notion intake integration is optional and remains absent from the deployed stack unless `NotionSecretArn` is supplied. Secret values are never committed to GitHub.
+`template.yaml` requires the existing AWS Secrets Manager ARNs as deployment parameters. The Notion intake is deployed as a separate isolated stack from `notion-intake-template.yaml`; it does not modify the existing WhAPI/CRM stack. Secret values are never committed to GitHub.
 
 | SAM parameter | Environment variable(s) | Required secret shape |
 |---|---|---|
@@ -21,11 +21,11 @@ This document retains the historical SAM deployment contract. It is not the prod
 | `GoogleSheetsSecretArn` | `GOOGLE_SERVICE_ACCOUNT_JSON` | Complete Google service-account JSON as `SecretString` |
 | `CloudinarySecretArn` | `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET` | JSON object with `cloud_name`, `api_key`, and `api_secret` |
 | `MapsSecretArn` | `GOOGLE_MAPS_API_KEY` | API key as `SecretString` |
-| `NotionSecretArn` | `NOTION_API_TOKEN`, `NOTION_WEBHOOK_SECRET` | JSON object with `api_token` and `webhook_secret` |
 
-The existing `WebhookToken` parameter remains a `NoEcho` deployment parameter because the current webhook authorization code consumes `EFPS_WEBHOOK_TOKEN` directly. The Notion intake Lambda uses the separate `NotionSecretArn` JSON secret; its API token and private automation header token are never stored in repository files.
 
-The repository does not create, rotate, or overwrite these secrets. The AWS deployment operator must supply ARNs for existing secrets and ensure their shapes match this contract. This is intentionally separate from proving that the referenced secrets currently exist in AWS.
+The existing `WebhookToken` parameter remains a `NoEcho` deployment parameter because the current webhook authorization code consumes `EFPS_WEBHOOK_TOKEN` directly. The isolated Notion Lambda uses the dedicated `NotionSecretArn` JSON secret: `api_token` for Notion API access and `webhook_secret` for the Notion Connection webhook verification token. The API token is retrieved from Secrets Manager at worker runtime rather than stored in Lambda environment variables. Neither value is stored in repository files.
+
+The isolated Notion template additionally requires `NotionSecretArn`, `SessionsTableArn`, and the existing Google Sheets, Cloudinary, and Maps secret ARNs. Deployment verification on 2026-11-13 confirmed that the stack was created, but the deployed Lambda resolved `GOOGLE_SERVICE_ACCOUNT_JSON` to `{}` and Cloudinary/Maps values to `MIGRATION_PLACEHOLDER`. These are runtime blockers, not deployment failures. Valid secret values must be supplied through authorized secret management, then the isolated stack updated to refresh dynamic references. The repository does not create, rotate, or overwrite secret values.
 
 AWS CloudFormation supports versionless Secrets Manager dynamic references and resolves them when the resource is created or updated. Updating a secret value alone does not update an existing Lambda environment value; a stack/resource update is required when the resolved environment value must change. See the AWS documentation for the exact dynamic-reference semantics. urlCloudFormation Secrets Manager dynamic referenceshttps://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/dynamic-references-secretsmanager.html
 
@@ -33,13 +33,7 @@ AWS CloudFormation supports versionless Secrets Manager dynamic references and r
 
 Every change that can affect the SAM application must pass the dedicated `SAM deployment validation` workflow before it is considered repository-ready for deployment.
 
-The workflow performs:
-
-1. `sam validate --lint` against `template.yaml`.
-2. A clean `sam build --use-container` using the declared Python 3.12 runtime.
-3. Validation of the generated `.aws-sam/build/template.yaml` with `sam validate --lint`.
-4. Python bytecode compilation of repository runtime modules.
-5. A dependency-presence check against the built Lambda artifacts for the externally imported runtime packages.
+The workflow validates and builds both `template.yaml` (the existing shared stack) and `notion-intake-template.yaml` (the isolated Notion stack), validates each generated template, compiles Python runtime modules, and checks dependency packaging for each Lambda artifact set. Both deployments use the declared Python 3.12 runtime.
 
 The workflow does **not** deploy AWS resources and does not require production secret values.
 
@@ -84,3 +78,14 @@ Before production deployment is authorized, record the exact:
 - production traffic/cutover evidence.
 
 No deployment or cutover is implied by this document.
+
+The optional `EFPSNotionIntake` resource in the shared `template.yaml` is legacy and is not the deployed Notion path; do not enable it. Use only `notion-intake-template.yaml` for Notion intake.
+
+## Isolated Notion intake deployment — 2026-11-13
+
+- Stack: `efps-notion-property-intake` (`ap-southeast-2`) — `CREATE_COMPLETE`.
+- Lambda: `efps-notion-intake` — Active, Python 3.12, 512 MB, 180-second timeout.
+- API: `https://ko3771nvei.execute-api.ap-southeast-2.amazonaws.com/Prod/notion/intake`.
+- Invalid `X-Notion-Signature` probe returned HTTP 401.
+- Only isolated Notion resources were added; the existing `efps-whapi-panel-v2` stack was not modified.
+- End-to-end inventory processing remains blocked by invalid resolved Sheets, Cloudinary, and Maps runtime credentials. See `docs/NOTION_PROPERTY_INTAKE.md`.

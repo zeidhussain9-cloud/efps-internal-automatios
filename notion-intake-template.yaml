@@ -1,0 +1,69 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Isolated EFPS Notion property intake endpoint; does not modify the WhAPI/CRM stack.
+
+Parameters:
+  NotionSecretArn:
+    Type: String
+    AllowedPattern: '^arn:[^:]+:secretsmanager:[^:]+:[0-9]{12}:secret:.+$'
+  GoogleSheetsSecretArn:
+    Type: String
+    AllowedPattern: '^arn:[^:]+:secretsmanager:[^:]+:[0-9]{12}:secret:.+$'
+  CloudinarySecretArn:
+    Type: String
+    AllowedPattern: '^arn:[^:]+:secretsmanager:[^:]+:[0-9]{12}:secret:.+$'
+  MapsSecretArn:
+    Type: String
+    AllowedPattern: '^arn:[^:]+:secretsmanager:[^:]+:[0-9]{12}:secret:.+$'
+  SessionsTableArn:
+    Type: String
+    AllowedPattern: '^arn:[^:]+:dynamodb:[^:]+:[0-9]{12}:table/.+$'
+
+Resources:
+  EFPSNotionIntake:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: efps-notion-intake
+      Runtime: python3.12
+      Architectures: [x86_64]
+      Handler: notion_intake.lambda_handler
+      CodeUri: .
+      Timeout: 180
+      MemorySize: 512
+      EventInvokeConfig:
+        MaximumEventAgeInSeconds: 3600
+        MaximumRetryAttempts: 2
+      Environment:
+        Variables:
+          NOTION_SECRET_ARN: !Ref NotionSecretArn
+          GOOGLE_SERVICE_ACCOUNT_JSON: !Sub '{{resolve:secretsmanager:${GoogleSheetsSecretArn}:SecretString}}'
+          CLOUDINARY_CLOUD_NAME: !Sub '{{resolve:secretsmanager:${CloudinarySecretArn}:SecretString:cloud_name}}'
+          CLOUDINARY_API_KEY: !Sub '{{resolve:secretsmanager:${CloudinarySecretArn}:SecretString:api_key}}'
+          CLOUDINARY_API_SECRET: !Sub '{{resolve:secretsmanager:${CloudinarySecretArn}:SecretString:api_secret}}'
+          GOOGLE_MAPS_API_KEY: !Sub '{{resolve:secretsmanager:${MapsSecretArn}:SecretString}}'
+          PYTHONPATH: 'modules/efpd-lead-mgmnt/src:modules/efps-inventory-mgmnt/src'
+      Events:
+        Intake:
+          Type: Api
+          Properties:
+            Path: /notion/intake
+            Method: post
+      Policies:
+        - AWSLambdaBasicExecutionRole
+        - Statement:
+            - Effect: Allow
+              Action: [dynamodb:GetItem, dynamodb:PutItem, dynamodb:UpdateItem]
+              Resource: !Ref SessionsTableArn
+            - Effect: Allow
+              Action: [lambda:InvokeFunction]
+              Resource: !Sub arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:efps-notion-intake
+            - Effect: Allow
+              Action: [secretsmanager:GetSecretValue, secretsmanager:PutSecretValue]
+              Resource: !Ref NotionSecretArn
+
+Outputs:
+  NotionIntakeUrl:
+    Description: Public HTTPS endpoint for the Notion connection webhook
+    Value: !Sub 'https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/notion/intake'
+  NotionIntakeFunctionArn:
+    Value: !GetAtt EFPSNotionIntake.Arn

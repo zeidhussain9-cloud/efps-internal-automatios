@@ -2,9 +2,10 @@ name: SAM Deployment Validation
 
 on:
   push:
-    branches: [main]
+    branches: [main, crm-ui-dashboard]
     paths:
       - "template.yaml"
+      - "notion-intake-template.yaml"
       - "requirements.txt"
       - "webhook_handler.py"
       - "commands_handler.py"
@@ -20,6 +21,7 @@ on:
     branches: [main]
     paths:
       - "template.yaml"
+      - "notion-intake-template.yaml"
       - "requirements.txt"
       - "webhook_handler.py"
       - "commands_handler.py"
@@ -45,11 +47,20 @@ jobs:
       - name: Validate SAM template
         run: sam validate --template-file template.yaml --lint
 
+      - name: Validate isolated Notion intake template
+        run: sam validate --template-file notion-intake-template.yaml --lint
+
       - name: Clean SAM build
         run: sam build --template-file template.yaml --use-container --parallel --no-cached
 
       - name: Validate generated SAM template
         run: sam validate --template-file .aws-sam/build/template.yaml --lint
+
+      - name: Clean isolated Notion intake build
+        run: sam build --template-file notion-intake-template.yaml --build-dir .aws-sam/notion-build --use-container --parallel --no-cached
+
+      - name: Validate generated Notion intake template
+        run: sam validate --template-file .aws-sam/notion-build/template.yaml --lint
 
       - name: Compile Python runtime modules
         run: python -m compileall -q shared modules/efpd-lead-mgmnt/src modules/efps-inventory-mgmnt/src tools webhook_handler.py commands_handler.py events_handler.py interactive_handler.py handler.py leads_worker.py
@@ -80,4 +91,18 @@ jobs:
               if missing:
                   raise SystemExit(f'{function}: missing packaged dependencies: {missing}')
               print(f'{function}: packaged dependencies present')
+          PY
+      - name: Verify isolated Notion Lambda dependency packaging
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          artifact = Path('.aws-sam/notion-build/EFPSNotionIntake')
+          if not artifact.is_dir():
+              raise SystemExit(f'Missing isolated Notion build artifact: {artifact}')
+          names = {entry.name for entry in artifact.iterdir()}
+          required = ['boto3', 'cloudinary', 'cryptography', 'gspread', 'requests']
+          missing = [name for name in required if name not in names]
+          if missing:
+              raise SystemExit(f'EFPSNotionIntake: missing packaged dependencies: {missing}')
+          print('EFPSNotionIntake: packaged dependencies present')
           PY

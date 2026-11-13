@@ -50,19 +50,91 @@ def test_download_image_rejects_non_notion_hosts_before_network():
         intake._download_image("https://example.com/photo.jpg")
 
 
-def test_webhook_requires_configured_secret(monkeypatch):
-    monkeypatch.delenv("NOTION_WEBHOOK_SECRET", raising=False)
-    result = intake.lambda_handler({"headers": {"x-efps-notion-intake-token": "anything"}, "body": "{}"}, None)
+def test_notion_api_token_is_loaded_from_secrets_manager(monkeypatch):
+    class FakeSecrets:
+        def get_secret_value(self, **kwargs):
+            return {"SecretString": json.dumps({"api_token": "runtime-token", "webhook_secret": "webhook-token"})}
+    class FakeBoto3:
+        @staticmethod
+        def client(name):
+            assert name == "secretsmanager"
+            return FakeSecrets()
+    monkeypatch.setenv("NOTION_SECRET_ARN", "arn:aws:secretsmanager:ap-southeast-2:123456789012:secret:test")
+    monkeypatch.setattr("boto3.client", FakeBoto3.client, raising=False)
+    assert intake._notion_secret_value("api_token") == "runtime-token"
+
+
+def test_notion_webhook_verification_handshake_persists_verification_token(monkeypatch):
+    calls = []
+    class FakeSecrets:
+        def get_secret_value(self, **kwargs):
+            return {"SecretString": json.dumps({"api_token": "notion-api", "webhook_secret": "generated-placeholder"})}
+        def put_secret_value(self, **kwargs):
+            calls.append(json.loads(kwargs["SecretString"]))
+    class FakeBoto3:
+        @staticmethod
+        def client(name):
+            assert name == "secretsmanager"
+            return FakeSecrets()
+    monkeypatch.setenv("NOTION_SECRET_ARN", "arn:aws:secretsmanager:ap-southeast-2:123456789012:secret:test")
+    monkeypatch.setattr("boto3.client", FakeBoto3.client, raising=False)
+    body = json.dumps({"verification_token": "notion-verification-token"}, separators=(",", ":"))
+    signature = "sha256=" + hmac.new(b"notion-verification-token", body.encode(), hashlib.sha256).hexdigest()
+    result = intake.lambda_handler({"headers": {"X-Notion-Signature": signature}, "body": body}, None)
+    assert result["statusCode"] == 200
+    assert calls[0]["api_token"] == "notion-api"
+    assert calls[0]["webhook_secret"] == "notion-verification-token"
+
+
+def test_notion_webhook_rejects_invalid_verification_handshake(monkeypatch):
+    class FakeSecrets:
+        def get_secret_value(self, **kwargs):
+            return {"SecretString": json.dumps({"api_token": "notion-api", "webhook_secret": "old-token"})}
+        def put_secret_value(self, **kwargs):
+            raise AssertionError("invalid handshake must not update the secret")
+    class FakeBoto3:
+        @staticmethod
+        def client(name): return FakeSecrets()
+    monkeypatch.setenv("NOTION_SECRET_ARN", "arn:aws:secretsmanager:ap-southeast-2:123456789012:secret:test")
+    monkeypatch.setattr("boto3.client", FakeBoto3.client, raising=False)
+    body = json.dumps({"verification_token": "attacker-token"})
+    result = intake.lambda_handler({"headers": {"X-Notion-Signature": "sha256=wrong"}, "body": body}, None)
     assert result["statusCode"] == 401
 
 
-def test_webhook_rejects_invalid_page_id_after_authorization(monkeypatch):
-    monkeypatch.setenv("NOTION_WEBHOOK_SECRET", "secret-value")
-    result = intake.lambda_handler(
-        {"headers": {"X-EFPS-Notion-Intake-Token": "secret-value"}, "body": json.dumps({"page_id": "not-a-page"})},
-        None,
-    )
-    assert result["statusCode"] == 400
+def test_notion_webhook_validates_native_signature_and_queues_page(monkeypatch):
+    body = json.dumps({"type": "page.created", "entity": {"id": "12345678-1234-1234-1234-123456789abc"}}, separators=(",", ":"))
+    token = "notion-verification-token"
+    signature = "sha256=" + hmac.new(token.encode(), body.encode(), hashlib.sha256).hexdigest()
+    class FakeSecrets:
+        def get_secret_value(self, **kwargs):
+            return {"SecretString": json.dumps({"api_token": "notion-api", "webhook_secret": token})}
+    class FakeBoto3:
+        @staticmethod
+        def client(name):
+            return FakeSecrets()
+    queued = []
+    monkeypatch.setenv("NOTION_SECRET_ARN", "arn:aws:secretsmanager:ap-southeast-2:123456789012:secret:test")
+    monkeypatch.setattr("boto3.client", FakeBoto3.client, raising=False)
+    monkeypatch.setattr(intake, "_enqueue_worker", lambda page_id, arn: queued.append((page_id, arn)))
+    context = type("Context", (), {"invoked_function_arn": "arn:aws:lambda:ap-southeast-2:123456789012:function:test"})()
+    result = intake.lambda_handler({"headers": {"X-Notion-Signature": signature}, "body": body}, context)
+    assert result["statusCode"] == 202
+    assert queued[0][0] == "12345678-1234-1234-1234-123456789abc"
+
+
+def test_notion_webhook_rejects_invalid_native_signature(monkeypatch):
+    class FakeSecrets:
+        def get_secret_value(self, **kwargs):
+            return {"SecretString": json.dumps({"api_token": "notion-api", "webhook_secret": "right-token"})}
+    class FakeBoto3:
+        @staticmethod
+        def client(name):
+            return FakeSecrets()
+    monkeypatch.setenv("NOTION_SECRET_ARN", "arn:aws:secretsmanager:ap-southeast-2:123456789012:secret:test")
+    monkeypatch.setattr("boto3.client", FakeBoto3.client, raising=False)
+    result = intake.lambda_handler({"headers": {"X-Notion-Signature": "sha256=wrong"}, "body": json.dumps({"entity": {"id": "12345678-1234-1234-1234-123456789abc"}})}, None)
+    assert result["statusCode"] == 401
 
 
 def test_photo_resume_reuploads_full_ordered_set_to_deterministic_ids(monkeypatch):
@@ -280,21 +352,28 @@ def test_process_page_duplicate_delivery_does_not_write():
                                  sheets=NoCalls(), cloudinary=NoCalls())
     assert result == {"status": "already_processed", "listing_id": "EF-EXISTING"}
 
-def test_webhook_accepts_notion_automation_page_id_payload(monkeypatch):
-    import uuid
+def test_webhook_accepts_notion_event_entity_id(monkeypatch):
+    import hashlib, hmac, uuid
     page_id = str(uuid.uuid4())
-    monkeypatch.setenv("NOTION_WEBHOOK_SECRET", "secret-value")
-    monkeypatch.setattr(intake, "process_page", lambda supplied: {"status": "Processed", "listing_id": "EF-TEST"} if supplied == page_id else (_ for _ in ()).throw(AssertionError(supplied)))
+    token = "notion-webhook-verification-token"
+    body = json.dumps({"type": "page.created", "entity": {"id": page_id}}, separators=(",", ":"))
+    signature = "sha256=" + hmac.new(token.encode(), body.encode(), hashlib.sha256).hexdigest()
+    class FakeSecrets:
+        def get_secret_value(self, **kwargs):
+            return {"SecretString": json.dumps({"api_token": "notion-api", "webhook_secret": token})}
+    class FakeBoto3:
+        @staticmethod
+        def client(name): return FakeSecrets()
+    monkeypatch.setenv("NOTION_SECRET_ARN", "arn:aws:secretsmanager:ap-southeast-2:123456789012:secret:test")
+    monkeypatch.setattr("boto3.client", FakeBoto3.client, raising=False)
     enqueued = []
     monkeypatch.setattr(intake, "_enqueue_worker", lambda supplied, arn: enqueued.append((supplied, arn)))
-    context = type("Context", (), {"invoked_function_arn": "arn:aws:lambda:ap-southeast-1:123456789012:function:test"})()
-    result = intake.lambda_handler(
-        {"headers": {"X-EFPS-Notion-Intake-Token": "secret-value"}, "body": json.dumps({"id": page_id})},
-        context,
-    )
+    context = type("Context", (), {"invoked_function_arn": "arn:aws:lambda:ap-southeast-2:123456789012:function:test"})()
+    result = intake.lambda_handler({"headers": {"X-Notion-Signature": signature}, "body": body}, context)
     assert result["statusCode"] == 202
     assert enqueued == [(page_id, context.invoked_function_arn)]
     assert json.loads(result["body"])["accepted"] is True
+
 
 def test_async_worker_invocation_runs_page_processor(monkeypatch):
     page_id = "12345678-1234-1234-1234-123456789abc"

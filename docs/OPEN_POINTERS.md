@@ -1,6 +1,14 @@
 # EFPS CRM — Open Pointers
 
-> Verified 2026-10-05. Only active items are listed here; historical release pointers are superseded.
+> CRM operational pointers last verified 2026-10-05; Notion inventory deployment blockers verified 2026-11-13. Historical release pointers are superseded.
+
+## Current inventory intake blockers — 2026-11-13
+
+- Replace the deployed Notion Lambda's invalid Google Sheets service-account secret (`{}`) with the authorized production service-account JSON.
+- Replace the deployed Cloudinary and Google Maps secret values currently resolving to `MIGRATION_PLACEHOLDER` with valid authorized credentials.
+- Update the isolated `efps-notion-property-intake` stack after secret correction so CloudFormation refreshes the dynamic references.
+- Notion API read-only access to the intake database and Housing Listings query is verified (HTTP 200); write permissions remain to be confirmed during acceptance. Configure/verify the Notion Developer Connection webhook subscription and capture its verification token.
+- Run a controlled end-to-end intake and verify Sheet row, photos, Notion listing relation/status, idempotent replay, and subsequent Sheet-to-Supabase sync.
 
 ## External infrastructure prerequisites
 
@@ -26,4 +34,4 @@ Do not reopen historical pre-production/import gates without new regression evid
 
 Points **40 Requirement field correctness**, **41 Property-matching inputs**, and **42 Property-matching results** are governed by the single canonical contract in `crm-source-audit-scheduler/AUDIT_CONTRACT.md` and the shared implementation in `src/crm-requirement-match-audit.mjs`. The scheduled runner fails closed unless the combined requirement/matching audit is complete. Do not duplicate or redefine these rules in this document.
 
-Current live population verified 2026-10-05: **253 promoted qualified leads**, **253 normalized requirement profiles**, **0 missing profiles**, and **71 active canonical inventory listings**. Requirement evidence remains a separate provenance layer and is not fabricated by this audit.
+Historical live population snapshot verified 2026-10-05: **253 promoted qualified leads**, **253 normalized requirement profiles**, **0 missing profiles**, and **71 active canonical inventory listings**. Requirement evidence remains a separate provenance layer and is not fabricated by this audit.

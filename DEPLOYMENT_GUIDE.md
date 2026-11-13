@@ -1,5 +1,8 @@
 ## Scope note — CRM UI production
 
+
+> **Historical deployment record:** This file describes the September 2026 deployment and is not the current production deployment/configuration source. For the current CRM UI deployment use `docs/DEPLOYMENT.md`; for the isolated Notion inventory intake use `docs/NOTION_PROPERTY_INTAKE.md`.
+
 This guide is the historical AWS/SAM deployment guide. It does not govern the production CRM UI. The CRM UI deploys from `crm-ui-dashboard` to Render service `easyfind-crm-d01-d05`; repository `main` is a reconciled source branch but is not the Render deployment branch.
 
 # EFPS Deployment Guide

@@ -2,6 +2,9 @@
 
 **Last Updated:** 2026-09-19 13:30 IST
 
+
+> **Historical deployment record:** This file describes the September 2026 deployment and is not the current production deployment/configuration source. For the current CRM UI deployment use `docs/DEPLOYMENT.md`; for the isolated Notion inventory intake use `docs/NOTION_PROPERTY_INTAKE.md`.
+
 ## Current State
 
 ### ✅ DEPLOYED TO PRODUCTION

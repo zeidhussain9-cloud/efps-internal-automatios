@@ -26,7 +26,7 @@ except ImportError:
 
 NOTION_VERSION = "2022-06-28"
 INTAKE_DATABASE_ID = "89dad7a3990849ca9dc23e5bcb3fa99f"
-LISTINGS_DATABASE_ID = "416fedf9b4e881bd94f8c41c6f82601e"
+LISTINGS_DATABASE_ID = "bccfd4f55e294b269daa093a928f873a"
 SESSION_TABLE = "efps-sessions"
 SESSION_PREFIX = "notion-intake:"
 MAX_IMAGES = 10
@@ -435,7 +435,7 @@ def process_page(
     cloudinary: CloudinaryClient | None = None,
     maps_client=None,
 ):
-    notion = notion or NotionClient(os.environ.get("NOTION_API_TOKEN", ""))
+    notion = notion or NotionClient(_notion_secret_value("api_token"))
     store = store or DynamoIntakeStore()
     sheets = sheets or GoogleSheetsClient()
     cloudinary = cloudinary or CloudinaryClient()
@@ -529,6 +529,26 @@ def _enqueue_worker(page_id: str, function_arn: str):
         raise IntakeError("Notion intake worker enqueue was not accepted")
 
 
+def _notion_secret_value(key: str, *, update_webhook_token: str = "") -> str:
+    """Read Notion credentials at runtime; never expose the API token in Lambda environment config."""
+    import boto3
+    secret_arn = os.environ.get("NOTION_SECRET_ARN", "")
+    if not secret_arn:
+        raise IntakeError("NOTION_SECRET_ARN is not configured")
+    client = boto3.client("secretsmanager")
+    current = json.loads(client.get_secret_value(SecretId=secret_arn)["SecretString"])
+    if update_webhook_token:
+        current["webhook_secret"] = update_webhook_token
+        client.put_secret_value(SecretId=secret_arn, SecretString=json.dumps(current))
+        return update_webhook_token if key == "webhook_secret" else str(current.get(key) or "")
+    return str(current.get(key) or "")
+
+
+def _notion_webhook_secret(*, update_token: str = "") -> str:
+    """Read the Notion webhook verification token; persist it on first subscription handshake."""
+    return _notion_secret_value("webhook_secret", update_webhook_token=update_token)
+
+
 def lambda_handler(event, context):
     # Internal asynchronous invocation: raise on failure so Lambda retry policy applies.
     if event.get("_efps_notion_worker"):
@@ -538,18 +558,43 @@ def lambda_handler(event, context):
         return process_page(page_id)
 
     headers = {str(k).lower(): str(v) for k, v in (event.get("headers") or {}).items()}
-    expected = os.environ.get("NOTION_WEBHOOK_SECRET", "")
-    supplied = headers.get("x-efps-notion-intake-token", "")
-    if not expected or not hmac.compare_digest(expected, supplied):
-        return {"statusCode": 401, "headers": {"Content-Type": "application/json"}, "body": json.dumps({"error": "unauthorized"})}
-    body = event.get("body") or "{}"
+    raw_body = event.get("body") or "{}"
     if event.get("isBase64Encoded"):
         import base64
-        body = base64.b64decode(body).decode("utf-8")
+        raw_body = base64.b64decode(raw_body).decode("utf-8")
     try:
-        payload = json.loads(body)
+        payload = json.loads(raw_body)
     except (json.JSONDecodeError, TypeError, UnicodeDecodeError):
-        return {"statusCode": 400, "body": json.dumps({"error": "invalid JSON"})}
+        return {"statusCode": 400, "headers": {"Content-Type": "application/json"}, "body": json.dumps({"error": "invalid JSON"})}
+
+    # Notion's one-time subscription handshake supplies verification_token in the body.
+    verification_token = str(payload.get("verification_token") or "").strip()
+    if verification_token:
+        # Notion signs the initial handshake with the verification token in its body.
+        supplied = headers.get("x-notion-signature", "")
+        handshake_signature = "sha256=" + hmac.new(verification_token.encode("utf-8"), raw_body.encode("utf-8"), hashlib.sha256).hexdigest()
+        if not supplied or not hmac.compare_digest(handshake_signature, supplied):
+            return {"statusCode": 401, "headers": {"Content-Type": "application/json"}, "body": json.dumps({"error": "invalid verification signature"})}
+        try:
+            _notion_webhook_secret(update_token=verification_token)
+            return {"statusCode": 200, "headers": {"Content-Type": "application/json"}, "body": json.dumps({"ok": True, "verified": True})}
+        except Exception as exc:
+            print(json.dumps({"notion_webhook_verification_store_error": str(exc)[:500]}))
+            return {"statusCode": 500, "headers": {"Content-Type": "application/json"}, "body": json.dumps({"error": "verification token could not be stored"})}
+
+    # Native Notion events are authenticated with X-Notion-Signature = HMAC-SHA256(raw body).
+    supplied = headers.get("x-notion-signature", "")
+    try:
+        expected_token = _notion_webhook_secret()
+    except Exception as exc:
+        print(json.dumps({"notion_webhook_secret_read_error": str(exc)[:500]}))
+        return {"statusCode": 503, "headers": {"Content-Type": "application/json"}, "body": json.dumps({"error": "webhook verification is not configured"})}
+    if not expected_token or not supplied:
+        return {"statusCode": 401, "headers": {"Content-Type": "application/json"}, "body": json.dumps({"error": "unauthorized"})}
+    calculated = "sha256=" + hmac.new(expected_token.encode("utf-8"), raw_body.encode("utf-8"), hashlib.sha256).hexdigest()
+    if not hmac.compare_digest(calculated, supplied):
+        return {"statusCode": 401, "headers": {"Content-Type": "application/json"}, "body": json.dumps({"error": "invalid signature"})}
+
     page_id = str(
         payload.get("page_id")
         or payload.get("id")
@@ -560,7 +605,7 @@ def lambda_handler(event, context):
         or ""
     ).strip()
     if not re.fullmatch(r"[0-9a-fA-F-]{32,36}", page_id):
-        return {"statusCode": 400, "body": json.dumps({"error": "page_id is required"})}
+        return {"statusCode": 400, "headers": {"Content-Type": "application/json"}, "body": json.dumps({"error": "page ID is required"})}
     try:
         _enqueue_worker(page_id, context.invoked_function_arn)
         return {"statusCode": 202, "headers": {"Content-Type": "application/json"}, "body": json.dumps({"ok": True, "accepted": True, "page_id": page_id})}

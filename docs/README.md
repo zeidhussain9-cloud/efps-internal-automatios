@@ -13,6 +13,7 @@
 - `DOCUMENT_MAP.md` — canonical map of maintained documents and their roles.
 - `DOCUMENT_UPDATE_MATRIX.md` — mandatory routing and full-review rule for documentation changes.
 - `OPEN_POINTERS.md` — unresolved decisions and verified unknowns.
+- `NOTION_PROPERTY_INTAKE.md` — Notion inventory intake runtime, webhook authentication, deployment state, and acceptance gates.
 
 Root files are intentionally limited to repository/AI entry points: `README.md`, `CORE_STEERING.md`, `GEMINI.md`, `AGENTS.md`, and `HANDOFF.md`.
 

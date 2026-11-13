@@ -1,8 +1,8 @@
 # Document Map
 
-## Authoritative current verified state — 2026-10-05
+## Historical CRM production snapshot — 2026-10-05 (not current metrics)
 
-This is the latest repository/production checkpoint. Older dated sections in maintained documents are historical evidence and must not be interpreted as current state.
+The figures below were last verified on 2026-10-05 and are retained as historical evidence, not current production metrics.
 
 - **CRM deployment branch:** `crm-ui-dashboard`
 - **Verified deterministic implementation baseline:** `8996dd32d732b0d8fab17f41b42306c230cd1de1`
@@ -28,7 +28,7 @@ This is the latest repository/production checkpoint. Older dated sections in mai
 - **AWS legacy webhook:** no changes in the audited CRM hardening range.
 - **24-item CRM audit:** GREEN / VERIFIED.
 
-### Current operational flow
+### Historical operational flow snapshot
 
 ```text
 WhAPI +919148338801
@@ -61,6 +61,10 @@ The P1–P5 hardening release added regression coverage for webhook promotion li
 
 
 
+## Current inventory intake deployment — 2026-11-13
+
+The isolated Notion intake stack `efps-notion-property-intake` is deployed in `ap-southeast-2`; Lambda `efps-notion-intake` is Active and its API endpoint is live. Invalid handshake/event signatures return HTTP 401; a validly signed malformed event reaches page validation (HTTP 400); read-only Notion API checks for both databases return HTTP 200. End-to-end processing is blocked by invalid deployed Sheets (`{}`), Cloudinary, and Maps (`MIGRATION_PLACEHOLDER`) credentials; Notion subscription and acceptance test remain pending. See `docs/NOTION_PROPERTY_INTAKE.md`.
+
 This document is the canonical map of maintained repository documentation. It tells future AI sessions where a fact, rule, decision, contract, or current-state update belongs.
 
 ## Root: AI/repository operation
@@ -90,6 +94,7 @@ This document is the canonical map of maintained repository documentation. It te
 | `INVENTORY_SOURCE_EXTRACTION.md` | Canonical Stage-2 source segmentation and deterministic extraction contract |
 | `DETERMINISTIC_FIELD_RESOLUTION.md` | Canonical candidate extraction/resolution/normalization contract for deterministic Stage-2 fields |
 | `NEEDS_REVIEW_CONTRACT.md` | Blocking property-detail fields and deterministic `Needs Review` status contract |
+| `NOTION_PROPERTY_INTAKE.md` | Notion inventory intake runtime, webhook authentication, deployment state, and remaining acceptance gates |
 
 ## Local documentation
 
