@@ -1,6 +1,6 @@
 # EFPS CRM — Render Configuration
 
-> Revalidated 2026-11-13 against Render service metadata; current Notion projection was verified directly in Supabase.
+> Revalidated 2026-11-13 against the signed-in production browser, Supabase projection, and prior release health check.
 
 ## Production service
 
@@ -9,8 +9,8 @@
 - URL: https://easyfind-crm-d01-d05.onrender.com
 - Branch: crm-ui-dashboard
 - Auto-deploy: enabled on commit
-- Latest live deployment: `dep-dbrbc8gjo6nc73etsmr0`
-- Live commit: `6b206ddf07515cff2df82140d86ee873e4ea2965`
+- Verified live deployment: `dep-dbrev7ajnfac739de33g`
+- Live commit: `61688164b25f7a7a8e6df8248f91987a9c471ef6`
 
 ## Runtime boundaries
 
@@ -24,11 +24,11 @@
 
 ## Release verification
 
-- Render reports deployment `dep-dbrbc8gjo6nc73etsmr0` LIVE from commit `6b206ddf07515cff2df82140d86ee873e4ea2965`; `/health` and `/` both returned HTTP 200.
-- Inventory projection: 104 active Notion rows (87 Available / 17 Rented); no Sheet-owned rows or test listings.
-- Supabase webhook reconciliation: 18,641/18,641 message events linked, 0 active errors.
-- GitHub Actions CRM UI Verification and CRM synthetic CI passed; 139/139 automated tests and browser 1/1 passed.
-- Render returned no error logs since the deployment. An authenticated production inventory browser session was not exercised in this follow-up. GitHub Inventory Contract failed on that commit, but the reserved-field audit now passes locally after the Lambda-source fix.
+- Render was observed live from `61688164b25f7a7a8e6df8248f91987a9c471ef6`; `/health` and `/` returned HTTP 200 in the release check.
+- Signed-in production inventory showed 104 Notion-owned properties (87 Available / 17 Rented). A real Notion edit appeared through Supabase in the dashboard.
+- A real delete soft-deleted the Supabase projection after about one minute. Restoring from Notion Trash produced no observed Lambda or Supabase Edge Function request; the projection stayed deleted. End-to-end restore is an open blocker.
+- Test snapshot and intake rows were removed, and the test page was permanently deleted from Notion Trash after user approval.
+- Earlier code-bearing release checks passed Inventory Contract (130/130), SAM build/validation, CRM build/tests/browser and production health smoke. A new Inventory Contract pass for the latest documentation-only commit is not evidenced.
 
 ## External credential hardening
 

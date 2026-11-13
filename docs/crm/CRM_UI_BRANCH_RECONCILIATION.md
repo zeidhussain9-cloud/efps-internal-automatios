@@ -16,14 +16,13 @@ GitHub also lists four Dependabot branch refs associated with open PRs #93, #94,
 
 ## Live release evidence
 
-- Render service: srv-darsv560tbcc73cu4ip0.
-- Latest live deployment: `dep-dbresd8jo6nc73f1r3k0` is LIVE on documentation follow-up commit `cd2060e0817849ec011ec60d399c64b6d11b4cae`, with the same verified source tree as `ddb0f6391f99ba9a848fd30c8b03bd5db9c1b53c`; routes `/health` and `/` returned HTTP 200. GitHub Inventory Contract passed 130/130, SAM container build/validation passed, and Production health smoke passed.
-- Supabase inventory: 104 active Notion rows (87 Available / 17 Rented). Create, edit, Listing ID write-back, duplicate suppression, soft-delete, and restore were tested with an identified temporary page. Delete/restore were direct worker invokes, not confirmed webhook deliveries. Its Supabase rows were removed; the Notion page remains in Trash pending permanent removal through signed-in UI.
-- Supabase Edge Function: whapi-crm-webhook ACTIVE v10.
-- Webhook reconciliation: 18,641/18,641 message events since 2026-10-05 linked; 0 active errors.
-- Inventory (updated 2026-11-13): 104 active Notion-owned rows (87 Available / 17 Rented); Sheet reconciliation cron removed; dashboard reads Notion only.
-- Deterministic scheduler: 923 completed / 0 failed; AI scheduler remains paused.
-- GitHub Actions on current release: CRM tests/build/browser passed; Inventory Contract 130/130 passed; SAM container validation passed; Production health smoke passed.
+- Render service: srv-darsv560tbcc73cu4ip0. The signed-in browser showed deployment `dep-dbrev7ajnfac739de33g` LIVE on `61688164b25f7a7a8e6df8248f91987a9c471ef6`; `/health` and `/` returned HTTP 200 in the release check.
+- GitHub `crm-ui-dashboard` is `61688164b25f7a7a8e6df8248f91987a9c471ef6`; `main` is `3c66a89e734d02ade5b4865f05c2dcbc99ec655b`. Both share tree `14717bf1d37afa8d678fc0526026dae357755fdf`.
+- Supabase inventory and signed-in dashboard: 104 listings (87 Available / 17 Rented). A Notion edit visibly propagated through Supabase to the dashboard. A real delete event reached Supabase and soft-deleted the row after about one minute. Earlier duplicate handler replay returned `already_processed`.
+- Restore is an open live-flow failure: restoring the test page in Notion produced no observed Lambda invocation or Edge Function POST, so the Supabase row remained soft-deleted. The direct restore handler was checked separately and is not evidence of webhook delivery.
+- The exact test rows were removed from Supabase; the test page was permanently deleted from Notion Trash after user approval. Dashboard returned to 104 listings.
+- Supabase Edge Function `whapi-crm-webhook`: ACTIVE v10. Inventory Sheet cron is removed; compatibility Sheet writes remain. The old WhAPI inventory path stays until final cleanup.
+- Earlier code-bearing release passed Inventory Contract 130/130, SAM container build/validation, CRM checks, and production health smoke. The latest documentation-only commit's path-filtered Inventory Contract rerun is not established here.
 
 ## Local checkout
 
@@ -31,8 +30,7 @@ The active local checkout is on `crm-ui-dashboard` and tracks the published bran
 
 ## Release gate
 
-1. Sign in to production CRM and verify the authenticated inventory page.
-2. Permanently remove the temporary test page from Notion Trash.
-3. Keep the Sheets compatibility paths and old WhAPI listener until their separately agreed cleanup.
+1. Diagnose why restore did not deliver the selected Notion `page.undeleted` event; safely repeat the end-to-end restore check only with a new identified test record and remove it afterward.
+2. Keep the Sheets compatibility paths and old WhAPI listener until their separately agreed cleanup.
 
 Detailed current evidence is in CRM_CURRENT_VERIFIED_STATE.md and CRM_RECOVERY_AUDIT_2026-11-12.md.

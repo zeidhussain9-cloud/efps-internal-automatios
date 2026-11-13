@@ -2,18 +2,19 @@
 
 > CRM operational pointers last verified 2026-10-05; Notion inventory deployment and backfill verified 2026-11-13. Historical release pointers are superseded.
 
-## Current Notion inventory rollout — 2026-11-13
+## Current Notion inventory rollout — live verification 2026-11-13
 
-- AWS identity is account `294417174793` in `ap-southeast-2`. SAM updated `efps-notion-property-intake` to `UPDATE_COMPLETE`; Lambda `efps-notion-intake` is Active with a successful update and CodeSha256 `+b4hBplC+2CGZag7HnpSDdmfwDqwuvHqtuSSLoGd/6c=`. Supabase `notion-inventory-state` is ACTIVE v6, JWT verification enabled.
-- The user confirms the existing `EFPS CRM Property Intake` Connection webhook remains verified with all eight Page events selected. No Notion settings were changed.
-- Live testing confirmed create, edit, Listing ID write-back, duplicate suppression, soft-delete, and restore clearing the tombstone. Delete/restore used direct Lambda worker invocations; webhook delivery for those events was not independently observed. The test snapshot and intake event were removed. Supabase has 104 active Notion rows (87 Available, 17 Rented), no `housing_sheet` rows, and no test record. The test page remains in Notion Trash; permanent deletion from Trash requires a signed-in Notion UI.
-- GitHub commit `ddb0f6391f99ba9a848fd30c8b03bd5db9c1b53c` passed Inventory Contract (130/130), SAM build/validation, CRM checks, and production health smoke. Render deployment `dep-dbrei8avcj2c73erda3g` is LIVE on that commit; `/health` and `/` returned HTTP 200. Signed-in dashboard inventory rendering remains unchecked because the browser is at the operator sign-in gate.
-- Existing AWS secret ARNs were reused; values were not printed, copied, created, rotated, or overwritten. The Sheet reconciliation cron is removed, but legacy Slack/raw-intake Sheet writes remain. The old WhAPI `NEW`-delimited listener remains until final cleanup. Raw photo intake credential validity remains unverified.
+- AWS account `294417174793` in `ap-southeast-2` has the active Notion intake Lambda. Supabase `notion-inventory-state` is ACTIVE v6 with JWT verification enabled.
+- The user confirms the existing `EFPS CRM Property Intake` webhook is verified with all eight Page events selected. No event settings were changed.
+- The signed-in production dashboard showed 104 Notion-owned properties (87 Available, 17 Rented Out). A live Notion edit propagated through Supabase and appeared in the dashboard. A real Notion delete soft-deleted its Supabase row after about one minute. Earlier duplicate handler verification returned `already_processed`.
+- **Open blocker:** restoring the test page in Notion did not trigger a new Lambda invocation or Supabase Edge Function request; the Supabase row remained soft-deleted. The direct restore worker check passed, but live webhook delivery did not. Keep all Page events as selected; diagnose event delivery without toggling webhook settings.
+- Cleanup is verified: the exact test snapshot and intake rows were removed from Supabase, and the test page was permanently deleted from Notion Trash after user approval. Supabase and the dashboard returned to 104 rows (87 Available, 17 Rented Out).
+- GitHub `crm-ui-dashboard` is `61688164b25f7a7a8e6df8248f91987a9c471ef6`; GitHub `main` is `3c66a89e734d02ade5b4865f05c2dcbc99ec655b`. Both have tree `14717bf1d37afa8d678fc0526026dae357755fdf`. Render was observed live on `61688164`; `/health` and `/` returned HTTP 200 in the release check.
+- Existing AWS secrets remain reused without revealing or changing values. The Sheet reconciliation cron is removed, but legacy Sheet writes remain; WhAPI remains until final cleanup. Raw photo intake credential validity is still unverified.
 
 ## Remaining user actions
 
-- Sign in to the production CRM in the browser so the authenticated inventory page can be visually checked.
-- Sign in to Notion and permanently delete test page `417fedf9-b4e8-81ed-b882-df6cf2abd723` from Trash if zero residual test content is required. The connected API can only move it to Trash; it cannot permanently empty Trash.
+- No immediate operator action is needed. The engineering follow-up is to diagnose why Notion's restore action did not deliver the selected `page.undeleted` event, then repeat a safe live restore test and confirm Supabase and the dashboard recover the listing. Do not alter webhook configuration without separate direction.
 
 ## External infrastructure prerequisites
 

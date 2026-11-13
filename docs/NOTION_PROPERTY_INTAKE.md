@@ -1,8 +1,12 @@
 # Notion Property Intake — Runtime Contract
 
-## Follow-up acceptance status — 2026-11-13
+## Follow-up acceptance status — live test 2026-11-13
 
-Controlled live testing exposed and fixed three issues: the ID allocator response omitted the Listing ID; retries failed to write the already allocated ID back to Notion; and duplicate replay did not restore a soft-deleted projection. The Edge Function is ACTIVE v6 with JWT verification on, and the updated Lambda is deployed. A temporary page was created, edited, duplicate-replayed, soft-deleted, restored, and finally cleaned from Supabase. Duplicate and lifecycle handlers were invoked directly on that test page, so Notion webhook delivery specifically for delete/restore remains unconfirmed. Supabase is back to 104 active Notion rows (87 Available, 17 Rented) with no test snapshot or intake event. The test page `417fedf9-b4e8-81ed-b882-df6cf2abd723` is in Notion Trash; the connected Notion tools cannot permanently empty Trash, and their SQL query still counts the trashed page. The signed-in dashboard view is unverified because the browser session requires operator sign-in.
+Earlier direct worker tests confirmed ID allocation/write-back, duplicate suppression, soft-delete and restore handling. This follow-up exercised the signed-in production flow: a Notion edit reached the Supabase mirror and appeared in the dashboard; a real Notion delete reached Supabase and soft-deleted the row after about one minute. An earlier exact-page duplicate replay returned `already_processed`.
+
+**Restore webhook delivery is the remaining inventory-flow blocker.** The test page was restored in Notion, but no new Lambda invocation or Supabase Edge Function request followed, and `deleted_at` remained set. The direct restore handler check does not establish live event delivery. No webhook event selections were changed.
+
+The exact test snapshot and intake-event rows were removed from Supabase, and the test page was permanently deleted from Notion Trash after the user approved that irreversible cleanup. Supabase and the dashboard returned to 104 listings (87 Available, 17 Rented Out); the exact test ID was absent from the UI and no matching Supabase rows remained.
 
 ## Current verified deployment state — 2026-11-13
 
@@ -20,8 +24,8 @@ Controlled live testing exposed and fixed three issues: the ID allocator respons
 - **Raw Property Intake runtime dependencies:** the previous acceptance pass recorded the AWS Sheets secret as `{}` and Cloudinary/Maps values as placeholders. Those records were not inspected or modified in this deployment turn. This affects raw photo/enrichment intake only; the direct Housing Listings mirror and backfill succeeded with the existing Notion/Supabase path.
 - The existing `EFPS CRM Property Intake` Connection is present in Notion Developer Connections. The user confirms its webhook was verified and all eight Page events remain selected. Invalid signatures return HTTP 401; signed malformed events reach page-ID validation (HTTP 400).
 - AWS identity was verified as account `294417174793`. Edge Function v6 and the updated Lambda are deployed; SAM reports the stack `UPDATE_COMPLETE` and Lambda `LastUpdateStatus=Successful`. Existing secret ARNs were reused; no secret values were printed, copied, created, rotated, or overwritten.
-- Supabase currently has 104 active `housing_notion` rows (87 Available, 17 Rented) in `crm_inventory_snapshot`; exact test snapshot and intake event queries returned zero after cleanup. The test page remains in Notion Trash, so the connected SQL query includes it in raw page counts.
-- Latest published checks passed: Inventory Contract 130/130; CRM build/test and browser checks passed on the release commit; SAM container build, generated-template validation, and Production health smoke passed. The local Notion test suite passed 23/23, repository audit and projection regression passed, and the local `notion-intake-template.yaml` SAM lint passed. Render is live on commit `ddb0f6391f99ba9a848fd30c8b03bd5db9c1b53c`; `/` and `/health` returned HTTP 200.
+- Supabase has 104 active `housing_notion` rows (87 Available, 17 Rented) in `crm_inventory_snapshot`; exact test snapshot and intake event queries returned zero after cleanup. The test page was permanently deleted from Notion Trash after user approval.
+- Earlier published code-release checks passed Inventory Contract 130/130; CRM build/test and browser checks; SAM container build, generated-template validation; and Production health smoke. The local Notion suite passed 23/23, repository audit and projection regression passed, and local SAM lint passed during the implementation work. Render was subsequently observed on commit `61688164b25f7a7a8e6df8248f91987a9c471ef6`; `/` and `/health` returned HTTP 200. Inventory Contract was not shown rerunning on that docs-only commit.
 
 ## Data ownership and reconciliation
 
@@ -81,11 +85,10 @@ The Supabase URL and public anon JWT are non-secret Lambda configuration. The Ed
 
 ## Remaining acceptance gates
 
-1. Sign in to the production dashboard in the browser and visually confirm inventory rows. Anonymous `/` and `/health` checks are HTTP 200, but they do not verify the authenticated inventory view.
-2. Permanently delete the one test page from Notion Trash if the requirement is zero test content in Trash. The connector moved it to Trash but cannot empty Trash; its query still includes that page. Supabase has zero matching test rows.
-3. If raw Property Intake with photos is required, separately verify the existing Sheet/Cloudinary/Maps runtime credentials and pipeline. Do not create, rotate, or overwrite secrets. No WhatsApp message or catalogue dispatch was sent during this test.
+1. Diagnose and safely retest live `page.undeleted` delivery. During this test, restoring a real page from Trash generated no observed Lambda or Edge Function call, leaving the projection soft-deleted. The page used for this check has since been permanently deleted and must not be restored or recreated; use a new clearly identified test record only if needed and clean it completely afterward. Do not change the verified eight-event webhook selection.
+2. If raw Property Intake with photos is required, separately verify the existing Sheet/Cloudinary/Maps runtime credentials and pipeline. Do not create, rotate, or overwrite secrets. No WhatsApp message or catalogue dispatch was sent during this test.
 
-The temporary Housing Listings page is in Notion Trash. The exact test snapshot and intake event were deleted from Supabase. The 104 production inventory rows remain intact.
+The test page was permanently deleted from Notion Trash after approval. Its exact Supabase test snapshot and intake event were removed. The verified production inventory remains at 104 active rows.
 
 ## Legacy boundary
 
