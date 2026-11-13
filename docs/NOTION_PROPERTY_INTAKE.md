@@ -2,7 +2,7 @@
 
 ## Current verified deployment state — 2026-11-13
 
-- CloudFormation stack: `efps-notion-property-intake` in `ap-southeast-2` — `CREATE_COMPLETE`.
+- CloudFormation stack: `efps-notion-property-intake` in `ap-southeast-2` — `UPDATE_COMPLETE`.
 - Lambda: `efps-notion-intake` — `Active`, Python 3.12, 512 MB, 180-second timeout.
 - API endpoint: `https://ko3771nvei.execute-api.ap-southeast-2.amazonaws.com/Prod/notion/intake` (`POST /notion/intake`).
 - Webhook probes: invalid handshake signature and invalid event signature each returned HTTP 401; a request signed with the currently stored verification token passed signature validation and reached page-ID validation (HTTP 400). No worker was queued by these probes.

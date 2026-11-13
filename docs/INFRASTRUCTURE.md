@@ -6,7 +6,7 @@ Verified live baseline is recorded in the authoritative current-state block belo
 
 ## Current verified infrastructure update — 2026-11-13
 
-- Isolated Notion stack `efps-notion-property-intake` in `ap-southeast-2`: `CREATE_COMPLETE`.
+- Isolated Notion stack `efps-notion-property-intake` in `ap-southeast-2`: `UPDATE_COMPLETE`.
 - Notion Lambda `efps-notion-intake`: Active (Python 3.12; 512 MB; 180-second timeout).
 - Notion endpoint: `https://ko3771nvei.execute-api.ap-southeast-2.amazonaws.com/Prod/notion/intake`; invalid handshake/event signatures returned HTTP 401, a validly signed malformed event reached page validation (HTTP 400), and read-only Notion API checks for both databases returned HTTP 200.
 - Existing Slack inventory operations remain the operator-assisted Sheet/photo producer (/efps add-property and /efps photos start); the sync path remains read-only.
