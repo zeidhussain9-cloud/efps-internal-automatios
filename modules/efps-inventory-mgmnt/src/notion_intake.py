@@ -306,6 +306,16 @@ def _rich(value: object) -> dict:
     return {"rich_text": [{"type": "text", "text": {"content": part}} for part in parts[:100]]}
 
 
+def _append_processing_notes(notion: NotionClient, page_id: str, note: str) -> str:
+    """Append one processing outcome to the existing Notion cell without replacing history."""
+    page = notion.get_page(page_id)
+    props = page.get("properties") or {}
+    existing = _plain_text(props.get("Processing Notes") or {}).strip()
+    addition = str(note or "").strip()
+    combined = "\n".join(part for part in (existing, addition) if part)
+    return combined
+
+
 def _bhk_group(bhk: str):
     value = str(bhk or "").strip().upper()
     if value == "1 RK":
@@ -600,9 +610,10 @@ def process_page(
     raw_text = _plain_text(props.get("Raw Property Data") or {})
     if not raw_text:
         note = "Raw Property Data is required before processing."
+        combined_notes = _append_processing_notes(notion, page_id, note)
         notion.update_page(page_id, {
             "Intake Status": {"status": {"name": "Needs Review"}},
-            "Processing Notes": _rich(note),
+            "Processing Notes": _rich(combined_notes),
         })
         return {"status": "Needs Review", "listing_id": "", "issues": [note]}
     photos = _photos(page)
@@ -657,10 +668,11 @@ def process_page(
         listing_page_id = notion.save_listing(processed)
         final_state = "Needs Review" if processed.get("status") == "Needs Review" else "Processed"
         note = "; ".join(issues) if issues else "Processed through the canonical EFPS inventory pipeline."
+        combined_notes = _append_processing_notes(notion, page_id, note)
         notion.update_page(page_id, {
             "Intake Status": {"status": {"name": final_state}},
             "Listing ID": _rich(listing_id),
-            "Processing Notes": _rich(note),
+            "Processing Notes": _rich(combined_notes),
             "Processed At": {"date": {"start": datetime.now(timezone.utc).isoformat()}},
             "Processed Property": {"relation": [{"id": listing_page_id}]},
         })
@@ -669,7 +681,8 @@ def process_page(
     except Exception as exc:
         note = f"Processing failed: {str(exc)[:1500]}"
         try:
-            notion.update_page(page_id, {"Intake Status": {"status": {"name": "Needs Review"}}, "Listing ID": _rich(listing_id), "Processing Notes": _rich(note)})
+            combined_notes = _append_processing_notes(notion, page_id, note)
+            notion.update_page(page_id, {"Intake Status": {"status": {"name": "Needs Review"}}, "Listing ID": _rich(listing_id), "Processing Notes": _rich(combined_notes)})
         finally:
             store.finish(page_id, "failed", note=note)
         raise

@@ -9,7 +9,8 @@
 - Inventory projection: 106 active Notion-owned rows, 1 soft-deleted tombstone, 0 active blank locality/society rows.
 - Two current submissions processed: EF-2611-PAGH (VRR Fortuna) and EF-2611-Y5KC (Shobha Royal Pavilion). Both have raw data, photos, Housing Listings relations and matching active Supabase snapshots.
 - Notion event ledger: 26 observed rows (5 processed, 18 ignored, 2 needs review, 1 rejected). Delivery completeness is not certified.
-- Processing Notes currently overwrite on reprocessing; current examples retain the manual-fallback narrative, but automatic append-only narrative history is not guaranteed. See docs/NOTION_PROPERTY_INTAKE.md.
+- Processing Notes append each attempt as a new line in the existing Notion cell; previous narrative is retained. See docs/NOTION_PROPERTY_INTAKE.md.
+- Google Sheets status boundary: the connected Housing_Listings tab has a column-E dropdown with Available and Rented Out only; it has zero conditional-format rules. The Sheet11 reference lists no listing_state options. No Google Sheets edit-to-Supabase sync is live; existing property edits sync from Notion Housing Listings page events. The separate Sheet 2 source must be identified before copying its full vocabulary or color rules.
 - No database tables deleted. Historical checkpoints below remain historical and must not be read as current metrics.
 
 # Document Map
@@ -201,4 +202,4 @@ If a new maintained document is required, add it to this map and define its role
 
 ## Latest verified inventory intake state — 2026-11-14 (live check)
 
-The live Notion-owned Supabase projection has 106 active rows and 1 soft-deleted tombstone. Two real intake submissions are Processed and reconciled to Housing Listings and Supabase. The Maps fallback is deployed. The Notion event ledger has 26 observed rows (5 processed, 18 ignored, 2 needs review, 1 rejected); complete delivery capture is not certified. Processing Notes overwrite on reprocessing; append-only narrative history remains open. Compatibility Sheet writes for these two submissions were not independently checked.
+The live Notion-owned Supabase projection has 106 active rows and 1 soft-deleted tombstone. Two real intake submissions are Processed and reconciled to Housing Listings and Supabase. The Maps fallback is deployed. The Notion event ledger has 26 observed rows (5 processed, 18 ignored, 2 needs review, 1 rejected); complete delivery capture is not certified. Processing Notes now append each attempt as a new line in the same Notion cell. Compatibility Sheet writes for these two submissions were not independently checked.

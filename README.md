@@ -7,7 +7,8 @@
 - Inventory projection: 106 active Notion-owned rows, 1 soft-deleted tombstone, 0 active rows with blank locality and society name.
 - Two real submissions, EF-2611-PAGH and EF-2611-Y5KC, are Processed and reconciled to Housing Listings and active Supabase snapshots; both have Raw Property Data, Photos and Processed Property relations.
 - Notion event ledger: 26 observed rows (5 processed, 18 ignored, 2 needs review, 1 rejected); complete delivery capture is not certified.
-- Processing Notes on the two current submissions preserve the failure/manual-fallback narrative, but worker/RPC reprocessing overwrites the note. Append-only narrative history is not guaranteed. Event/status/error history is retained separately.
+- Processing Notes now append each processing outcome as a new line in the same Notion cell; previous notes are retained. The change is deployed in AWS Lambda and covered by 141 passing inventory tests.
+- Google Sheets status boundary: the connected Housing_Listings tab has a column-E dropdown with Available and Rented Out only; it has zero conditional-format rules. The Sheet11 reference lists no listing_state options. No Google Sheets edit-to-Supabase sync is live; existing property edits sync from Notion Housing Listings page events. The separate Sheet 2 source must be identified before copying its full vocabulary or color rules.
 - No database tables deleted. The two latest compatibility Sheet writes were not independently verified.
 
 ## Historical initial Notion Property Intake deployment — 2026-11-14 08:14 UTC (v10; superseded)

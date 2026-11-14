@@ -11,7 +11,8 @@
 - Existing property update path: edit the Housing Listings page; its Notion page event is processed by Lambda and notion-inventory-state, which upserts the same Listing ID into crm_inventory_snapshot. Do not resubmit the intake form to edit an existing listing.
 - New property path: Submit New Property → intake worker → Housing Listings page → Supabase snapshot. The compatibility Sheets write was not independently checked for the two latest submissions.
 - 26 Notion event rows observed (5 processed, 18 ignored, 2 needs review, 1 rejected); delivery capture completeness is not certified.
-- Processing Notes currently overwrite on reprocessing. Current two records retain the full manual-fallback narrative, but append-only narrative history is an outstanding hardening item.
+- Processing Notes append each processing outcome as a new line in the existing Notion cell; previous content is retained.
+- Google Sheets status boundary: the connected Housing_Listings tab has a column-E dropdown with Available and Rented Out only; it has zero conditional-format rules. The Sheet11 reference lists no listing_state options. No Google Sheets edit-to-Supabase sync is live; existing property edits sync from Notion Housing Listings page events. The separate Sheet 2 source must be identified before copying its full vocabulary or color rules.
 - No database tables deleted. Historical 104-row checkpoints below remain dated evidence only.
 
 # EFPS CRM — Housing Inventory Sync Runbook
@@ -89,4 +90,4 @@ The eight original Slack warnings were for G5ZS, 6JYX, 97J4, WVP3, NFHV, 9ZZJ, X
 
 ## Latest verified inventory checkpoint — 2026-11-14 (live check)
 
-The live Notion-owned projection contains 106 active rows and 1 soft-deleted tombstone. business_status remains separate from source intake and availability states. Supabase notion-inventory-state is ACTIVE v12. Two real Property Intake submissions are Processed and reconciled to Housing Listings and active Supabase snapshots. Raw intake compatibility Sheet row writes were not independently checked. Processing Notes overwrite on reprocessing; append-only narrative history remains an open hardening item. No tables were deleted.
+The live Notion-owned projection contains 106 active rows and 1 soft-deleted tombstone. business_status remains separate from source intake and availability states. Supabase notion-inventory-state is ACTIVE v12. Two real Property Intake submissions are Processed and reconciled to Housing Listings and active Supabase snapshots. Raw intake compatibility Sheet row writes were not independently checked. Processing Notes now append each attempt as a new line in the same Notion cell. No tables were deleted.

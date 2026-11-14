@@ -1,6 +1,6 @@
 ## Current verified inventory status — 2026-11-14 (live check)
 
-Inventory remains separate from lead/contact classification. Notion Housing Listings is canonical; Supabase crm_inventory_snapshot has 106 active Notion-owned rows and 1 soft-deleted tombstone. No active row has both locality and society name blank. business_status is distinct from intake_status and listing_state. The two latest intake submissions are Processed and reconciled. The Notion event ledger has 26 observed rows (5 processed, 18 ignored, 2 needs review, 1 rejected); complete delivery capture is not certified. Processing Notes are currently replaceable summaries, not append-only narratives. No database tables were deleted.
+Inventory remains separate from lead/contact classification. Notion Housing Listings is canonical; Supabase crm_inventory_snapshot has 106 active Notion-owned rows and 1 soft-deleted tombstone. No active row has both locality and society name blank. business_status is distinct from intake_status and listing_state. The two latest intake submissions are Processed and reconciled. The Notion event ledger has 26 observed rows (5 processed, 18 ignored, 2 needs review, 1 rejected); complete delivery capture is not certified. Processing Notes now append each processing outcome as a new line in the same Notion cell. No database tables were deleted.
 
 ## Historical classification/CRM checkpoint — 2026-11-13
 
@@ -187,4 +187,4 @@ Historical live population snapshot verified 2026-10-05: **253 promoted qualifie
 
 ## Latest verified inventory count — 2026-11-14 (live check)
 
-The active Notion-owned inventory projection has 106 rows and 1 soft-deleted tombstone. Two recent submissions are Processed and reconciled. business_status remains separate from intake_status and listing_state. Processing Notes are replaceable summaries; append-only narrative history is not guaranteed. No tables were deleted.
+The active Notion-owned inventory projection has 106 rows and 1 soft-deleted tombstone. Two recent submissions are Processed and reconciled. business_status remains separate from intake_status and listing_state. Processing Notes append each processing outcome as a new line in the same Notion cell; previous text is retained. No tables were deleted.

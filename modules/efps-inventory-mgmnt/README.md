@@ -6,7 +6,9 @@
 - Notion event history remains in crm_inventory_intake_events; WhatsApp event history remains in crm_webhook_events. No tables deleted.
 - Supabase notion-inventory-state ACTIVE v12; AWS efps-notion-intake updated successfully.
 - Maps API-unavailable fallback deployed: preserve only a supported original short URL, labelled unverified.
-- Python Inventory + Maps tests: 122/122 passed. Full raw intake acceptance still awaits a complete operator submission with Raw Property Data and Photos.
+- Processing Notes append each attempt as a new line in the same Notion cell; no separate activity table was introduced.
+- Current connected Housing_Listings column E has dropdown values Available and Rented Out only, with no conditional-format rules. No Google Sheets edit-to-Supabase synchronization is implemented; current update source is Notion Housing Listings.
+- Python Inventory + Maps tests: 141/141 passed in the current module suite. Two real submissions with Raw Property Data and Photos are Processed and reconciled to Housing Listings and Supabase; one additional operator manual acceptance test is still planned.
 
 ## Historical initial webhook event-history deployment — 2026-11-14 (v10)
 

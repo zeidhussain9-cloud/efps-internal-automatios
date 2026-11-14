@@ -7,7 +7,7 @@
 - Supabase notion-inventory-state ACTIVE v12; AWS efps-notion-intake Active with successful last update.
 - Inventory projection: 106 active Notion-owned rows, 1 soft-deleted tombstone. Two current submissions are Processed and reconciled.
 - Notion event ledger: 26 observed rows (5 processed, 18 ignored, 2 needs review, 1 rejected); complete capture is not certified.
-- Processing Notes overwrite on reprocessing; append-only narrative history is not guaranteed.
+- Processing Notes now append each processing outcome on a new line in the same Notion cell; previous text is retained.
 - No tables deleted.
 
 > Revalidated 2026-11-13 against the signed-in production browser, live Supabase projection, AWS Lambda stack, and current Render deployment.

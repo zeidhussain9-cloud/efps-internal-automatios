@@ -5,9 +5,9 @@
 - Render CRM service srv-darsv560tbcc73cu4ip0 is LIVE; the exact deployment ID and commit are authoritative in Render and are not duplicated here.
 - Local and remote main / crm-ui-dashboard branches share the same tracked tree; GitHub currently advertises exactly these two branch refs.
 - Supabase notion-inventory-state ACTIVE v12; migration 20261114095316_crm_inventory_business_status registered and applied.
-- AWS efps-notion-intake Active; LastUpdateStatus Successful, last modified 2026-11-14T09:46:50Z; Maps fallback deployed.
+- AWS efps-notion-intake Active; LastUpdateStatus Successful, last modified 2026-11-14T12:59:58Z; append-only Processing Notes worker deployed; Maps fallback deployed.
 - Two current operator submissions are Processed and reconciled to Housing Listings and active Supabase snapshots.
-- Notion event ledger has 26 observed rows; complete delivery coverage is not certified. Processing-note narrative is not append-only; see docs/NOTION_PROPERTY_INTAKE.md.
+- Notion event ledger has 26 observed rows; complete delivery coverage is not certified. Processing Notes now append each attempt in the same Notion cell; see docs/NOTION_PROPERTY_INTAKE.md.
 - No database tables deleted.
 
 ## Historical Task 3 local-status note — superseded by the production deployment entries below

@@ -8,7 +8,8 @@
 - Two latest submissions, EF-2611-PAGH and EF-2611-Y5KC, are Processed, have raw text/photos and Processed Property relations, and match active Supabase snapshots.
 - Notion webhook history remains in crm_inventory_intake_events; WhatsApp webhook history remains in crm_webhook_events. No tables deleted.
 - 26 Notion event rows observed (5 processed, 18 ignored, 2 needs review, 1 rejected); capture completeness is not certified.
-- Processing Notes is a replaceable summary, not append-only. The two latest records contain the initial failure/manual fallback narrative, but future reprocessing can overwrite it. Event/status/error history is separately retained.
+- Processing Notes now append each processing outcome as a new line in the same Notion cell; previous text is retained. Event/status/error history is separately retained.
+- Google Sheets status boundary: the connected Housing_Listings tab has a column-E dropdown with Available and Rented Out only; it has zero conditional-format rules. The Sheet11 reference lists no listing_state options. No Google Sheets edit-to-Supabase sync is live; existing property edits sync from Notion Housing Listings page events. The separate Sheet 2 source must be identified before copying its full vocabulary or color rules.
 - The two latest compatibility Sheet writes were not independently verified.
 
 # EasyFind CRM — Canonical Data Model
@@ -211,4 +212,4 @@ Historical population snapshot verified 2026-11-12: **371 CRM leads**, **138 det
 
 ## Latest verified inventory projection — 2026-11-14 (live check)
 
-crm_inventory_snapshot has a first-class business_status column backfilled from source_record.status. It is distinct from intake_status and listing_state. The current projection has 106 active Notion-owned rows and 1 soft-deleted tombstone. Two current submissions are Processed and reconciled. Notion webhook events remain in crm_inventory_intake_events; WhatsApp events remain in crm_webhook_events. Processing Notes overwrite on reprocessing; append-only narrative history is not guaranteed. No table deletions occurred.
+crm_inventory_snapshot has a first-class business_status column backfilled from source_record.status. It is distinct from intake_status and listing_state. The current projection has 106 active Notion-owned rows and 1 soft-deleted tombstone. Two current submissions are Processed and reconciled. Notion webhook events remain in crm_inventory_intake_events; WhatsApp events remain in crm_webhook_events. Processing Notes append each processing outcome as a new line in the same Notion cell; previous text is retained. No table deletions occurred.

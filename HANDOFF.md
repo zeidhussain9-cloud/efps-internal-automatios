@@ -10,9 +10,10 @@
 - Inventory projection: 106 active Notion-owned rows, 1 soft-deleted tombstone, 0 active blank locality/society rows.
 - Two real submissions (EF-2611-PAGH and EF-2611-Y5KC) are Processed and reconciled to Housing Listings and active Supabase snapshots. Both have Raw Property Data, Photos and Processed Property relations.
 - Notion event ledger: 26 observed rows (5 processed, 18 ignored, 2 needs review, 1 rejected). Complete delivery capture is not certified.
-- Processing Notes on the two submissions preserve the full failure/manual-fallback narrative today. However, the worker and Supabase finish RPC replace the note on reprocessing; retries can clear the current summary. Append-only narrative history is not guaranteed.
-- Compatibility Sheet row writes for these two submissions were not independently verified. No synthetic property was created.
-- Local repository validation for this docs-only reconciliation: git diff --check PASS. Software tests were not rerun because application code was not changed.
+- Processing Notes now append each attempt as a new line in the same Notion property cell; previous text is fetched and retained before writing. AWS Lambda deployed 2026-11-14T12:59:58Z, CodeSha256 oADpl6n7dCwDmjcUx94bnoYvd5PNVnt6d+bUaKuP9D4=. Inventory test suite: 141 passed; SAM build and template validation passed.
+- Google Sheets status boundary: the connected Housing_Listings tab has a column-E dropdown with Available and Rented Out only; it has zero conditional-format rules. The Sheet11 reference lists no listing_state options. No Google Sheets edit-to-Supabase sync is live; existing property edits sync from Notion Housing Listings page events. The separate Sheet 2 source must be identified before copying its full vocabulary or color rules.
+- Compatibility Sheet row writes for these two submissions were not independently verified. The separate empty test-only record EF-2611-3MXH remains soft-deleted; it is not an active property.
+- This implementation changes only the Notion intake worker's Processing Notes write behavior; no schema migration or new table was added. git diff --check and the 141-test inventory suite passed.
 
 ## Historical initial Task 3 deployment — 2026-11-14 08:14 UTC (superseded by current v12 state)
 

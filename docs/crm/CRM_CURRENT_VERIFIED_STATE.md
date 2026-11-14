@@ -9,7 +9,8 @@
 - Inventory projection: 106 active Notion-owned rows, 1 soft-deleted tombstone, 0 active blank locality/society rows.
 - Two current submissions are Processed and reconciled: VRR Fortuna EF-2611-PAGH; Shobha Royal Pavilion EF-2611-Y5KC. Both have Raw Property Data, Photos, Processed Property relations and matching active Supabase snapshots.
 - Notion webhook ledger: 26 observed (5 processed, 18 ignored, 2 needs review, 1 rejected); full delivery coverage is not certified.
-- Processing Notes on the two submissions retain the initial failure/manual-fallback narrative. However, current worker/RPC behavior replaces the note on reprocessing; append-only narrative history is not guaranteed. Status and processing errors are separately recorded in the event ledger.
+- Processing Notes now append each processing outcome on a new line in the same Notion cell. Existing text is retained; status and processing errors continue to be recorded separately in the event ledger.
+- Google Sheets status boundary: the connected Housing_Listings tab has a column-E dropdown with Available and Rented Out only; it has zero conditional-format rules. The Sheet11 reference lists no listing_state options. No Google Sheets edit-to-Supabase sync is live; existing property edits sync from Notion Housing Listings page events. The separate Sheet 2 source must be identified before copying its full vocabulary or color rules.
 - No database tables deleted. The intentionally paused AI scheduler remains outside this inventory scope.
 
 # EFPS CRM — Current Verified State

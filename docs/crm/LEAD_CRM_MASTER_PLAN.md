@@ -10,7 +10,7 @@
 - Inventory projection: 106 active Notion-owned rows and 1 soft-deleted tombstone.
 - Two real intake submissions are Processed and reconciled to Housing Listings and active Supabase snapshots.
 - Notion event ledger: 26 observed rows (5 processed, 18 ignored, 2 needs review, 1 rejected); complete delivery capture is not certified.
-- Processing Notes overwrite on reprocessing; append-only narrative history is not guaranteed.
+- Processing Notes now append each processing outcome on a new line in the same Notion cell; previous text is retained.
 - No database tables deleted.
 
 ## Production baseline

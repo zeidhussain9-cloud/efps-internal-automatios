@@ -44,6 +44,24 @@ def test_listing_projection_does_not_guess_missing_values():
     assert "monthly_rent" not in props
 
 
+def test_processing_notes_append_to_existing_notion_cell_without_replacing_history():
+    page_id = "12345678-1234-1234-1234-123456789abc"
+    class FakeNotion:
+        def __init__(self):
+            self.page = {"properties": {"Processing Notes": {"rich_text": [
+                {"plain_text": "Initial Maps verification failed.\nManual fallback completed."},
+            ]}}}
+        def get_page(self, supplied_page_id):
+            assert supplied_page_id == page_id
+            return self.page
+    combined = intake._append_processing_notes(FakeNotion(), page_id, "Retry succeeded.")
+    assert combined == (
+        "Initial Maps verification failed.\n"
+        "Manual fallback completed.\n"
+        "Retry succeeded."
+    )
+
+
 def test_download_image_rejects_non_notion_hosts_before_network():
     import pytest
     with pytest.raises(intake.IntakeError, match="Notion-hosted"):

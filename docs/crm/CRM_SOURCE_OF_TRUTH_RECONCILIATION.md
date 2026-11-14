@@ -7,7 +7,7 @@
 - Supabase notion-inventory-state ACTIVE v12; AWS efps-notion-intake Active with successful update.
 - Two current submissions (EF-2611-PAGH, EF-2611-Y5KC) are Processed and match Housing Listings and active Supabase rows.
 - Notion event ledger: 26 observed rows (5 processed, 18 ignored, 2 needs review, 1 rejected); complete delivery capture is not certified.
-- Processing Notes overwrite on reprocessing; append-only narrative history is not guaranteed. No tables deleted.
+- Processing Notes now append each attempt on a new line in the same Notion cell; previous text is retained. No tables deleted.
 
 ## Historical source-of-truth checkpoint — 2026-11-13
 
@@ -225,4 +225,4 @@ These are local data-migration tasks, not reasons to reintroduce the excluded cl
 
 ## Latest verified inventory update — 2026-11-14 (live check)
 
-The active Notion-owned Supabase projection contains 106 rows and 1 soft-deleted tombstone. business_status is a first-class projection of source_record.status, distinct from intake_status and listing_state. Two current submissions are Processed and reconciled to Housing Listings and Supabase. Notion events remain in crm_inventory_intake_events and WhatsApp events in crm_webhook_events. Processing Notes overwrite on reprocessing; append-only narrative history is not guaranteed. No tables were deleted.
+The active Notion-owned Supabase projection contains 106 rows and 1 soft-deleted tombstone. business_status is a first-class projection of source_record.status, distinct from intake_status and listing_state. Two current submissions are Processed and reconciled to Housing Listings and Supabase. Notion events remain in crm_inventory_intake_events and WhatsApp events in crm_webhook_events. Processing Notes append each processing outcome as a new line in the same Notion cell; previous text is retained. No tables were deleted.

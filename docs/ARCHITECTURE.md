@@ -12,14 +12,15 @@ Notion Housing Listings is the canonical operator editor. Supabase public.crm_in
 - Supabase inventory: 106 active rows, 1 soft-deleted row; latest sync 2026-11-14 08:44:18 UTC. The empty deleted row remains only as a tombstone, not an active listing.
 - Notion webhook ledger: 26 observed event rows: 5 processed, 18 ignored non-intake changes, 2 needs-review outcomes, 1 rejected unauthenticated probe. Complete delivery capture is not certified.
 - Notion history remains in crm_inventory_intake_events; WhatsApp history remains in crm_webhook_events. No tables were deleted.
-- Processing-note limitation: current Processing Notes is a replaceable summary, not append-only. The two current submissions contain the full initial-failure/manual-fallback narrative, but worker/RPC reprocessing replaces the field. The event ledger separately retains status/error history. Do not promise automatic preservation of every narrative until append-only note history is implemented.
-- Existing-property edits happen in Housing Listings and sync through page events; Submit New Property is for new intake. Direct update flow: Notion page edit → signed page event → Lambda → notion-inventory-state → existing Supabase snapshot → CRM dashboard.
+- Processing Notes are append-only at the Notion cell level: each processing outcome is added on a new line after reading the existing cell. Previous narrative is retained; no separate activity system or table was introduced.
+- Existing-property edits happen in Notion Housing Listings and sync through page events; Submit New Property is for new intake. Direct update flow: Notion page edit → signed page event → Lambda → notion-inventory-state → existing Supabase snapshot → CRM dashboard.
+- Google Sheets status boundary: the connected Housing_Listings tab has a column-E dropdown with Available and Rented Out only; it has zero conditional-format rules. The Sheet11 reference lists no listing_state options. No Google Sheets edit-to-Supabase sync is live; existing property edits sync from Notion Housing Listings page events. The separate Sheet 2 source must be identified before copying its full vocabulary or color rules.
 
 # EFPS Internal Automations — Architecture
 
 ## Historical pre-deployment implementation note (superseded 2026-11-14)
 
-The repository now contains a local-only Task 3 extension to the existing `crm_inventory_intake_events` ledger, with lifecycle hooks in the existing Notion Edge Function/Lambda path. It does not create a new event table or change `crm_webhook_events` / WhatsApp processing. The migration and function/Lambda code have not been applied or deployed to production; the production architecture therefore remains as recorded in the verified state below until deployment is separately authorized.
+This is a superseded pre-deployment note. The event-history migration and worker integration were subsequently deployed; see the current verified production block above.
 
 ## Historical verified state — 2026-11-13 (superseded by 2026-11-14 state above)
 

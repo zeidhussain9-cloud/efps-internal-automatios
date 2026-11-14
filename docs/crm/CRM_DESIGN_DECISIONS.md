@@ -9,7 +9,7 @@
 - Supabase notion-inventory-state ACTIVE v12; AWS efps-notion-intake Active with successful update; Maps fallback deployed.
 - Two current submissions are Processed and reconciled to Housing Listings and active Supabase snapshots.
 - Notion event ledger: 26 observed rows (5 processed, 18 ignored, 2 needs review, 1 rejected); full delivery coverage is not certified.
-- Processing Notes are replaceable summaries; append-only narrative history remains a hardening item.
+- Processing Notes append each processing outcome as a new line in the same Notion cell; previous text is retained.
 - No tables deleted.
 
 > The latest UI release is live on the remote branch. Notion inventory recovery hardening is deployed (Supabase Edge Function v9, AWS Lambda with 15-minute reconciliation and SQS failure capture). See `CRM_CURRENT_VERIFIED_STATE.md` and `HANDOFF.md` for current evidence. Older dated checkpoints below remain historical.

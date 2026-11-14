@@ -5,7 +5,7 @@
 - Supabase project qttcutwzehtskfcwxkwj; notion-inventory-state ACTIVE v12 with JWT verification enabled.
 - Migration 20261114095316_crm_inventory_business_status is registered and applied. No tables deleted.
 - Render CRM service srv-darsv560tbcc73cu4ip0 is LIVE; the exact deployment ID and commit are authoritative in Render and are not duplicated here.
-- AWS account 294417174793, region ap-southeast-2; Lambda efps-notion-intake Active, LastUpdateStatus Successful, last modified 2026-11-14T09:46:50Z, Python 3.12, 512 MB, 180-second timeout, CodeSha256 bx0ZE/aWHFPPIm4AMXcWFablYSPTVPvzj8543mC+s64=.
+- AWS account 294417174793, region ap-southeast-2; Lambda efps-notion-intake Active, LastUpdateStatus Successful, last modified 2026-11-14T12:59:58Z, Python 3.12, 512 MB, 180-second timeout, CodeSha256 oADpl6n7dCwDmjcUx94bnoYvd5PNVnt6d+bUaKuP9D4=.
 - Maps API-unavailable fallback is deployed. The two current property submissions are processed and reflected in Housing Listings and Supabase.
 - No secret values were printed, rotated or overwritten.
 

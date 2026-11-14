@@ -8,7 +8,7 @@
 - Inventory projection: 106 active Notion-owned rows, 1 soft-deleted tombstone, 0 active blank locality/society rows.
 - Two current submissions, EF-2611-PAGH and EF-2611-Y5KC, are Processed and reconciled to Housing Listings and active Supabase snapshots.
 - Notion event ledger: 26 observed rows (5 processed, 18 ignored, 2 needs review, 1 rejected). Complete delivery capture is not certified.
-- Processing Notes currently overwrite on reprocessing; the two current submissions preserve the manual-fallback narrative, but append-only narrative history is not guaranteed.
+- Processing Notes now append each attempt on a new line in the same Notion cell; previous text is retained.
 - No tables deleted.
 
 > Revalidated 2026-11-13 after the Notion inventory release.

@@ -8,7 +8,8 @@
 - Inventory projection: 106 active Notion-owned rows, 1 soft-deleted tombstone, 0 active blank locality/society rows.
 - Two latest intake submissions (EF-2611-PAGH, EF-2611-Y5KC) are Processed and reconciled to Housing Listings and active Supabase snapshots.
 - Notion event ledger: 26 observed rows (5 processed, 18 ignored, 2 needs review, 1 rejected); complete delivery coverage is not certified.
-- Processing Notes preserve the narrative on the two current submissions, but worker/RPC reprocessing overwrites the note; append-only history is not guaranteed. See NOTION_PROPERTY_INTAKE.md.
+- Processing Notes now append each processing outcome as a new line in the same Notion cell; previous text is retained. See NOTION_PROPERTY_INTAKE.md.
+- Google Sheets status boundary: the connected Housing_Listings tab has a column-E dropdown with Available and Rented Out only; it has zero conditional-format rules. The Sheet11 reference lists no listing_state options. No Google Sheets edit-to-Supabase sync is live; existing property edits sync from Notion Housing Listings page events. The separate Sheet 2 source must be identified before copying its full vocabulary or color rules.
 - No database tables deleted. Dated CRM population metrics and earlier inventory checkpoints below remain historical.
 
 # EasyFind CRM Documentation
