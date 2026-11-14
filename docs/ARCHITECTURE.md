@@ -9,7 +9,7 @@ Notion Housing Listings is canonical. Supabase crm_inventory_snapshot is the CRM
 - Supabase notion-inventory-state ACTIVE v12; additive business_status migration registered and applied.
 - AWS efps-notion-intake Active, update successful; Maps API-unavailable fallback deployed.
 - Notion event history remains in crm_inventory_intake_events; WhatsApp history remains in crm_webhook_events. No tables deleted.
-- 12 Notion events observed: 5 processed, 4 ignored non-intake changes, 1 rejected unauthenticated probe, 2 needs-review outcomes. Capture completeness not certified.
+- 17 Notion events observed: 5 processed, 9 ignored non-intake changes, 1 rejected unauthenticated probe, 2 needs-review outcomes. Capture completeness not certified.
 - The live intake form exposes Raw Property Data and Photos. Two existing submissions have photos but no raw text and remain Needs Review; full acceptance awaits a valid operator submission.
 
 # EFPS Internal Automations — Architecture

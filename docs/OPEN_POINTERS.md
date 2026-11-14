@@ -3,7 +3,7 @@
 ## Current verified open pointers — 2026-11-14
 
 - Full Raw Property Intake acceptance remains pending: two existing submissions have photos but blank Raw Property Data and remain Needs Review.
-- Complete Notion webhook delivery coverage is not certified from the 12 observed event records.
+- Complete Notion webhook delivery coverage is not certified from the 17 observed event records.
 - Four ignored event outcomes are non-intake changes; one rejected event is the unauthenticated endpoint probe used during smoke testing. Both are retained in the event ledger.
 - Notion workspace cleanup was limited to clarifying the home and reference pages; no page or database was deleted.
 - No tables deleted. WhatsApp and Notion event histories remain separate in their existing tables.
@@ -76,7 +76,7 @@ Historical live population snapshot verified 2026-10-05: **253 promoted qualifie
 ## Latest verified open pointers — 2026-11-14
 
 - Raw Property Intake full-chain acceptance remains unverified until a real operator submission is processed across Notion webhook, Lambda, Sheets, Cloudinary, Maps, Housing Listings and Supabase.
-- Complete Notion webhook capture coverage is not certified from the 12 observed event rows; audit configured delivery types and retry outcomes before claiming completeness.
+- Complete Notion webhook capture coverage is not certified from the 17 observed event rows; audit configured delivery types and retry outcomes before claiming completeness.
 - Maps fallback and business-status UI changes are deployed.
 - Notion workspace navigation and current-state references were consolidated; no page or database was deleted.
-- Five event rows have failed status (four intentionally ignored non-intake changes and one rejected unauthenticated probe); two remain Needs Review due to missing Raw Property Data. All records are retained for audit.
+- Ten event rows have failed status (nine ignored non-intake changes and one rejected unauthenticated probe); two remain Needs Review due to missing Raw Property Data. All records are retained for audit.
