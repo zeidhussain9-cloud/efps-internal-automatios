@@ -6,7 +6,7 @@
 - Latest Render deployment from crm-ui-dashboard is LIVE; /health HTTP 200.
 - Supabase notion-inventory-state ACTIVE v12; AWS efps-notion-intake update successful.
 - Inventory: 106 active Notion-owned rows; business_status Pending on all 106.
-- Notion events: 12 observed, 5 processed, 4 ignored non-intake changes, 1 rejected unauthenticated probe, 2 needs review. Complete delivery coverage is not certified.
+- Notion events: 12 observed, 5 processed, 9 ignored non-intake changes, 1 rejected unauthenticated probe, 2 needs review. Complete delivery coverage is not certified.
 - No tables deleted. Raw intake end-to-end acceptance awaits a complete operator submission with Raw Property Data and Photos.
 
 # EasyFind CRM Documentation

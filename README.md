@@ -5,7 +5,7 @@
 - Supabase notion-inventory-state is ACTIVE v12 (JWT verification enabled). The additive crm_inventory_snapshot.business_status migration is registered as 20261114095316 and applied.
 - AWS efps-notion-intake is Active; LastUpdateStatus Successful; deployed package CodeSha256 bx0ZE/aWHFPPIm4AMXcWFablYSPTVPvzj8543mC+s64=. Maps API-unavailable fallback is deployed.
 - 106 active Notion-owned inventory rows; business_status Pending on all 106.
-- 12 Notion webhook events observed: 5 processed; 5 failed-status records (4 intentionally ignored non-intake updates, 1 rejected unauthenticated probe); 2 needs-review outcomes due missing Raw Property Data. Complete delivery capture is not certified.
+- 17 Notion webhook events observed: 5 processed; 10 failed-status records (9 ignored non-intake updates, 1 rejected unauthenticated probe); 2 needs-review outcomes due missing Raw Property Data. Complete delivery capture is not certified.
 - The live form has Raw Property Data and Photos questions. Two existing submissions have photos but no Raw Property Data; both remain Needs Review. Full raw intake acceptance is therefore still pending.
 - No database tables were deleted. WhatsApp history remains in crm_webhook_events; Notion event history remains in crm_inventory_intake_events.
 

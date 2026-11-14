@@ -7,7 +7,7 @@
 - Supabase: notion-inventory-state ACTIVE v12; migration 20261114095316_crm_inventory_business_status registered and applied.
 - AWS: efps-notion-intake update successful; Maps API-unavailable fallback deployed.
 - Inventory: 106 active Notion-owned rows; business_status Pending on all 106.
-- Notion webhook event ledger: 12 observed; 5 processed, 4 ignored non-intake changes, 1 rejected unauthenticated probe, 2 needs review. Complete delivery capture not certified.
+- Notion webhook event ledger: 12 observed; 5 processed, 9 ignored non-intake changes, 1 rejected unauthenticated probe, 2 needs review. Complete delivery capture not certified.
 - No database tables deleted. Raw intake acceptance awaits a complete submission with Raw Property Data and Photos.
 
 # Document Map
