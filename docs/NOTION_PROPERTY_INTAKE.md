@@ -1,5 +1,23 @@
 # Notion Property Intake — Runtime Contract
 
+## Webhook event history — deployed 2026-11-14
+
+Task 3 is deployed. The additive migration extends the existing `public.crm_inventory_intake_events` ledger with namespaced Notion webhook event rows and restricted RPCs. It does not create a second event table and does not change the WhatsApp `public.crm_webhook_events` table or processing path.
+
+- Supabase migration `crm_notion_webhook_event_history` is applied to project `qttcutwzehtskfcwxkwj`.
+- Supabase `notion-inventory-state` is ACTIVE v10, JWT verification enabled.
+- AWS `efps-notion-intake` is Active; stack `efps-notion-property-intake` is `UPDATE_COMPLETE`. The Lambda uses the existing Notion, Sheets, Cloudinary and Maps secret ARNs; no values were displayed or rotated.
+- The existing intake ledger remains service-role-only with RLS enabled. Notion event rows use `source_page_id` prefixed with `notion-webhook:`; page-level intake idempotency rows remain keyed by the actual Notion page ID.
+- Event records retain stable event identity, event type/page, sanitized payload, raw-body SHA-256, delivery attempts, lifecycle history, worker attempts/errors/outcome, AWS request ID and Listing ID/page correlation. Validation outcomes are retained separately while the existing processing-status constraint is preserved.
+- The existing Notion form view `Submit New Property` exposes `Raw Property Data` and `Photos`. Both questions were confirmed by fetching the live view after deployment. The data-source description now directs operators to this form.
+- Production end-to-end acceptance is pending the first user-submitted property. No synthetic production property has been created.
+
+## Current acceptance status — awaiting operator submission
+
+The Housing Listings mirror/reconciliation baseline remains as recorded below. Task 3 is deployed, but a real property submission is required to verify the complete raw intake chain. Once the operator confirms the submission, verify: webhook delivery/signature → durable event receipt → Lambda queue/worker → extraction/validation → Google Sheets A:AT row → Cloudinary uploads → Housing Listings page and relation → Supabase `crm_inventory_snapshot` projection and `crm_inventory_intake_events` completion. Any `Needs Review` or `Failed` state must be explained from recorded evidence; do not mark the flow accepted solely because the webhook returned HTTP 202.
+
+## Current acceptance status — live recovery hardening 2026-11-13
+
 ## Current acceptance status — live recovery hardening 2026-11-13
 
 The active Housing Listings mirror is reconciled and operational. The previous restore-delivery gap is covered by a scheduled reconciliation fallback; the actual Notion `page.undeleted` webhook has not yet been independently observed, but a soft-deleted projection for an active Notion page was restored successfully by the scheduled reconciler.

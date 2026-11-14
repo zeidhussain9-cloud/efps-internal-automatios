@@ -1,3 +1,9 @@
+## Notion Property Intake — production deployment 2026-11-14
+
+Task 3 webhook event history is deployed. The existing `crm_inventory_intake_events` ledger was extended; no parallel webhook table was created and WhatsApp `crm_webhook_events` remains untouched. Supabase `notion-inventory-state` is ACTIVE v10; AWS `efps-notion-intake` and its stack are Active/UPDATE_COMPLETE. The live Notion form exposes both Raw Property Data and Photos. Awaiting the first operator-submitted property for end-to-end acceptance across Sheets, Cloudinary, Housing Listings and the Supabase inventory projection. See `docs/NOTION_PROPERTY_INTAKE.md`.
+
+## Current Notion inventory intake — 2026-11-13 (live recovery hardening)
+
 ## Current Notion inventory intake — 2026-11-13 (live recovery hardening)
 
 - Notion Housing Listings is the canonical inventory editor. Supabase `crm_inventory_snapshot` remains the CRM projection; the dashboard reads active `housing_notion` rows only.

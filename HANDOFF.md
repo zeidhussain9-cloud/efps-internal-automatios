@@ -1,5 +1,19 @@
 # EFPS CRM — Handoff
 
+## Notion webhook event history — production deployment 2026-11-14
+
+- Commit `ca05141bec073b87c8617c59bf79a40cd16534f9` is pushed to `crm-ui-dashboard`; Render deployment `dep-dbs1f0m417fc73f0cmig` is LIVE.
+- Supabase migration `crm_notion_webhook_event_history` is applied to project `qttcutwzehtskfcwxkwj`. It extends the existing `crm_inventory_intake_events` ledger; it does not create a new table and does not write into WhatsApp `crm_webhook_events`.
+- Supabase `notion-inventory-state` is ACTIVE v10 with JWT verification enabled. AWS stack `efps-notion-property-intake` is `UPDATE_COMPLETE`; Lambda `efps-notion-intake` is Active, `LastUpdateStatus=Successful`, updated 2026-11-14 08:14:28 UTC. Existing secret ARNs were reused; no secret values were exposed or rotated.
+- SAM template validation and non-container build passed. The existing Linux/Python 3.12 dependency package was reused; only the committed `notion_intake.py` was overlaid and byte-compared before deployment. Docker was not used.
+- Local validation: Inventory Python 106/106, Notion Edge Function response-contract 6/6, repository Node 145/145, browser 1/1, Deno type-check, Python compilation and `git diff --check` passed. SQL lifecycle, retry, duplicate, history and privilege tests passed locally before applying the same migration to production.
+- The Notion `Property Intake — Raw Details & Photos` form view `Submit New Property` was fetched after deployment. It exposes both `Raw Property Data` and `Photos` questions. The data-source description was updated to direct operators to this form and explain processing outcomes.
+- Production acceptance is pending the user's first manual submission. Do not create a synthetic production property. After the user confirms submission, reconcile the Notion page, webhook event row, Lambda/CloudWatch worker, Google Sheet row, Cloudinary media, Housing Listings relation, and Supabase inventory snapshot.
+- No WhatsApp message or catalogue dispatch was sent. WhAPI webhook function v10 and its `crm_webhook_events` table/records were not changed.
+- Production health advisors returned no health findings. Existing security INFO findings for RLS-enabled service-only tables without policies and unrelated unused-index INFO findings predate this migration; they were not broadened or modified here.
+
+## Notion inventory recovery hardening — 2026-11-13
+
 ## Notion inventory recovery hardening — 2026-11-13
 
 - Notion Housing Listings is canonical; Supabase `crm_inventory_snapshot` remains the CRM read model.

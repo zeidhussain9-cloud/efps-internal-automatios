@@ -1,5 +1,5 @@
 export function responseForOperation(operation, result) {
-  if (operation === 'claim') return result
+  if (['claim', 'record_webhook_event', 'update_webhook_event'].includes(operation)) return result
   if (operation === 'allocate_listing_id') return { listing_id: result }
   return { ok: true }
 }

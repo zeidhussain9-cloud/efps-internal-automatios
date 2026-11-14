@@ -1,6 +1,25 @@
 # EFPS CRM — Open Pointers
 
-> CRM operational pointers last verified 2026-10-05; Notion inventory recovery hardening verified 2026-11-13. Historical release pointers are superseded.
+> Operational pointers updated 2026-11-14. Historical snapshots below remain dated evidence, not current state.
+
+## Task 3 — Notion webhook event history (deployed; awaiting live property acceptance)
+
+- Commit `ca05141bec073b87c8617c59bf79a40cd16534f9` is pushed to `crm-ui-dashboard`; Render deployment `dep-dbs1f0m417fc73f0cmig` is LIVE.
+- Supabase migration `crm_notion_webhook_event_history` is applied. It extends existing `crm_inventory_intake_events`; no new table was created and `crm_webhook_events` / WhatsApp processing were not changed.
+- Supabase `notion-inventory-state` ACTIVE v10 (JWT verification on). AWS stack `efps-notion-property-intake` UPDATE_COMPLETE; Lambda `efps-notion-intake` Active and update successful.
+- SAM validate/build, Deno type-check, local SQL lifecycle/security checks, Python 106/106, Node 145/145, Edge contract 6/6 and browser 1/1 passed. Docker was not used.
+- Live Notion form view `Submit New Property` has both `Raw Property Data` and `Photos` questions. Its data-source description was updated to reflect the deployed workflow.
+- **Pending:** operator's first real property submission and evidence-backed end-to-end reconciliation across webhook ledger, Lambda, Sheets, Cloudinary, Housing Listings, and Supabase snapshot. No synthetic production property has been inserted.
+
+## Remaining inventory intake follow-ups
+
+- Verify one real raw-details-and-photos intake end to end after the operator submission. Confirm all source/derived records and terminal processing status.
+- Verify raw Property Intake Sheets, Cloudinary and Maps credentials through the real worker execution; do not expose or rotate secrets.
+- Reconcile the 44 historical long Google Maps URLs across Sheets, Notion and Supabase together; do not update only one platform.
+- Independently observe a real `page.undeleted` webhook delivery; scheduled 15-minute reconciliation already provides the tested recovery fallback.
+- Resolve the five existing listings with missing Cloudinary image URLs only from source media, not substitute imagery.
+
+## Current Notion inventory — recovery hardening verified 2026-11-13
 
 ## Current Notion inventory — recovery hardening verified 2026-11-13
 

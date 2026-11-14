@@ -1,3 +1,13 @@
+## Notion webhook event history — production deployment 2026-11-14
+
+- Supabase migration `crm_notion_webhook_event_history` is applied to `qttcutwzehtskfcwxkwj`. It extends `crm_inventory_intake_events`; it does not create a new event table or modify `crm_webhook_events`.
+- Supabase Edge Function `notion-inventory-state` ACTIVE v10; JWT verification remains enabled.
+- AWS account `294417174793`, region `ap-southeast-2`; stack `efps-notion-property-intake` UPDATE_COMPLETE. Lambda `efps-notion-intake` Active, update successful, last modified `2026-11-14T08:14:28Z`.
+- Existing Secrets Manager ARNs were reused for Notion, Sheets, Cloudinary and Maps. No secret values were exposed, rotated or overwritten.
+- Production end-to-end intake verification is pending a real operator submission. The form has both required questions configured; verify the actual event and downstream records after submission.
+
+## Historical production audit — 2026-10-01
+
 ## Historical production audit — 2026-10-01
 
 Verified live baseline is recorded in the authoritative current-state block below.

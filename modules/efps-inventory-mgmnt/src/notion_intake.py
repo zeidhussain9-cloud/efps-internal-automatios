@@ -173,6 +173,33 @@ class SupabaseIntakeStore:
     def finish(self, page_id: str, state: str, *, listing_page_id: str = "", note: str = ""):
         self._request("finish", page_id=page_id, state=state, listing_page_id=listing_page_id, note=note[:1800])
 
+    def record_webhook_event(self, **event):
+        return self._request("record_webhook_event", **event)
+
+    def update_webhook_event(
+        self,
+        event_row_id: str,
+        status: str,
+        *,
+        aws_request_id: str = "",
+        error: str = "",
+        outcome: dict | None = None,
+        page_id: str = "",
+        listing_id: str = "",
+        listing_page_id: str = "",
+    ):
+        return self._request(
+            "update_webhook_event",
+            event_row_id=event_row_id,
+            status=status,
+            aws_request_id=aws_request_id,
+            error=error[:1800],
+            outcome=outcome,
+            page_id=page_id or None,
+            listing_id=listing_id,
+            listing_page_id=listing_page_id or None,
+        )
+
 
 def _plain_text(value: dict) -> str:
     return "".join(str(x.get("plain_text") or x.get("text", {}).get("content") or "") for x in value.get("rich_text", []))
@@ -560,11 +587,7 @@ def process_page(
         }
         intake_input_ids.discard("")
         if not changed_ids.intersection(intake_input_ids):
-            _log_event(
-                "intake_property_update_ignored",
-                page_id=page_id,
-                updated_property_count=len(changed_ids),
-            )
+            _log_event("intake_property_update_ignored", page_id=page_id, updated_property_count=len(changed_ids))
             return {"status": "ignored", "listing_id": ""}
 
     sheets = sheets or _runtime_sheets_client()
@@ -698,6 +721,8 @@ def _enqueue_worker(
     *,
     event_type: str = "",
     event_id: str = "",
+    event_row_id: str = "",
+    attempt_number: int | None = None,
     updated_property_ids: list[str] | None = None,
 ):
     import boto3
@@ -709,11 +734,86 @@ def _enqueue_worker(
             "page_id": page_id,
             "event_type": event_type,
             "event_id": event_id,
+            "event_row_id": event_row_id,
+            "attempt_number": attempt_number,
             "updated_property_ids": updated_property_ids or [],
         }).encode("utf-8"),
     )
     if int(response.get("StatusCode") or 0) != 202:
         raise IntakeError("Notion intake worker enqueue was not accepted")
+
+
+NOTION_PAGE_EVENT_TYPES = {
+    "page.created", "page.properties_updated", "page.content_updated", "page.moved",
+    "page.deleted", "page.undeleted", "page.locked", "page.unlocked", "page.updated",
+}
+_UUID_PATTERN = re.compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$", re.I)
+_SENSITIVE_EVENT_KEY = re.compile(r"token|secret|password|authorization|api[_-]?key|cookie", re.I)
+
+
+def _is_uuid(value: object) -> bool:
+    return isinstance(value, str) and bool(_UUID_PATTERN.fullmatch(value.strip()))
+
+
+def _safe_event_value(value):
+    """Preserve event data while removing credential-like values before database storage."""
+    if isinstance(value, dict):
+        return {
+            str(key): "[REDACTED]" if _SENSITIVE_EVENT_KEY.search(str(key)) else _safe_event_value(item)
+            for key, item in value.items()
+        }
+    if isinstance(value, list):
+        return [_safe_event_value(item) for item in value]
+    if isinstance(value, (str, int, float, bool)) or value is None:
+        return value
+    return str(value)
+
+
+def _event_record_input(payload: dict, raw_body: str, *, malformed: bool = False) -> dict:
+    payload_sha256 = hashlib.sha256(raw_body.encode("utf-8")).hexdigest()
+    event_id = str(payload.get("id") or payload.get("event_id") or "").strip()
+    notion_event_id = event_id.lower() if _is_uuid(event_id) else None
+    if notion_event_id:
+        event_key = f"event:{notion_event_id}"
+    else:
+        stable_payload = dict(payload)
+        stable_payload.pop("attempt_number", None)
+        stable_fingerprint = hashlib.sha256(json.dumps(stable_payload, sort_keys=True, separators=(",", ":")).encode("utf-8")).hexdigest()
+        event_key = f"sha256:{stable_fingerprint}"
+    entity = payload.get("entity") if isinstance(payload.get("entity"), dict) else {}
+    entity_id = str(entity.get("id") or "").strip()
+    event_type = str(payload.get("type") or payload.get("event_type") or "unknown").strip()[:200] or "unknown"
+    entity_type = str(entity.get("type") or "").strip()[:80]
+    page_id = entity_id.lower() if event_type in NOTION_PAGE_EVENT_TYPES and entity_type == "page" and _is_uuid(entity_id) else None
+    attempt = payload.get("attempt_number")
+    if not isinstance(attempt, int) or isinstance(attempt, bool) or not 1 <= attempt <= 8:
+        attempt = None
+    event_timestamp = payload.get("timestamp")
+    if not isinstance(event_timestamp, str):
+        event_timestamp = None
+    if malformed:
+        safe_payload = {
+            "malformed_json": True,
+            "raw_body_sha256": payload_sha256,
+            "raw_body_size": len(raw_body.encode("utf-8")),
+        }
+    else:
+        safe_payload = _safe_event_value(payload)
+    return {
+        "event_key": event_key,
+        "notion_event_id": notion_event_id,
+        "event_type": event_type,
+        "workspace_id": payload.get("workspace_id") if _is_uuid(payload.get("workspace_id")) else None,
+        "subscription_id": payload.get("subscription_id") if _is_uuid(payload.get("subscription_id")) else None,
+        "integration_id": payload.get("integration_id") if _is_uuid(payload.get("integration_id")) else None,
+        "entity_type": entity_type or None,
+        "entity_id": entity_id.lower() if _is_uuid(entity_id) else None,
+        "page_id": page_id,
+        "event_timestamp": event_timestamp,
+        "attempt_number": attempt,
+        "payload": safe_payload if isinstance(safe_payload, dict) else {"payload": safe_payload},
+        "payload_sha256": payload_sha256,
+    }
 
 
 def _enqueue_listing_backfill(function_arn: str, *, notion=None, store=None, lambda_client=None):
@@ -778,6 +878,34 @@ def _notion_webhook_secret(*, update_token: str = "") -> str:
     return _notion_secret_value("webhook_secret", update_webhook_token=update_token)
 
 
+def _record_unverified_delivery(raw_body: str, reason: str, context) -> bool:
+    """Keep a minimal audit record for unauthenticated requests without storing their body."""
+    digest = hashlib.sha256(raw_body.encode("utf-8")).hexdigest()
+    payload = {
+        "unverified_delivery": True,
+        "reason": reason,
+        "raw_body_sha256": digest,
+        "raw_body_size": len(raw_body.encode("utf-8")),
+    }
+    record = _event_record_input(payload, raw_body)
+    record["event_key"] = f"sha256:unverified:{digest}"
+    record["payload"] = payload
+    store = SupabaseIntakeStore()
+    result = store.record_webhook_event(**record)
+    row_id = str(result.get("id") or "")
+    if not row_id.startswith("notion-webhook:"):
+        raise IntakeError("Supabase returned no Notion event record ID")
+    if result.get("should_enqueue"):
+        store.update_webhook_event(
+            row_id,
+            "rejected",
+            aws_request_id=getattr(context, "aws_request_id", ""),
+            error=f"Webhook authentication failed: {reason}.",
+            outcome={"validation": "rejected", "reason": reason},
+        )
+    return True
+
+
 def lambda_handler(event, context):
     if event.get("_efps_notion_backfill"):
         started = time.monotonic()
@@ -793,22 +921,70 @@ def lambda_handler(event, context):
         page_id = str(event.get("page_id") or "").strip()
         event_type = str(event.get("event_type") or "")
         event_id = str(event.get("event_id") or "")
+        event_row_id = str(event.get("event_row_id") or "").strip()
         updated_property_ids = event.get("updated_property_ids") or []
         if not re.fullmatch(r"[0-9a-fA-F-]{32,36}", page_id):
             raise IntakeError("Invalid asynchronous intake page ID")
         started = time.monotonic()
+        event_store = SupabaseIntakeStore() if event_row_id else None
+        if event_store:
+            start_result = event_store.update_webhook_event(
+                event_row_id,
+                "processing",
+                aws_request_id=getattr(context, "aws_request_id", ""),
+                page_id=page_id,
+            )
+            if start_result.get("status") in {"processed", "needs_review", "rejected", "unsupported", "ignored"}:
+                return {"status": "already_processed", "event_id": event_id, "event_row_id": event_row_id}
         _log_event("worker_started", page_id=page_id, event_type=event_type, event_id=event_id, aws_request_id=getattr(context, "aws_request_id", ""))
         try:
-            result = process_page(
-                page_id,
-                event_type=event_type,
-                updated_property_ids=updated_property_ids,
-            )
+            result = process_page(page_id, event_type=event_type, updated_property_ids=updated_property_ids)
         except Exception as exc:
+            if event_store:
+                try:
+                    event_store.update_webhook_event(
+                        event_row_id,
+                        "failed",
+                        aws_request_id=getattr(context, "aws_request_id", ""),
+                        error=f"{type(exc).__name__}: {str(exc)[:1500]}",
+                        outcome={"exception_type": type(exc).__name__},
+                        page_id=page_id,
+                    )
+                except Exception as ledger_exc:
+                    _log_event("event_history_update_failed", event_row_id=event_row_id, error_type=type(ledger_exc).__name__)
             _log_event("worker_failed", page_id=page_id, event_type=event_type, event_id=event_id,
                        aws_request_id=getattr(context, "aws_request_id", ""), error_type=type(exc).__name__, error=str(exc)[:1000],
                        duration_ms=round((time.monotonic() - started) * 1000))
             raise
+        worker_status = str(result.get("status") or "unknown")
+        if worker_status.lower() in {"processing", "in_progress"}:
+            retry_error = "Inventory page is already being processed; retry this event after the active page claim finishes."
+            if event_store:
+                event_store.update_webhook_event(
+                    event_row_id,
+                    "failed",
+                    aws_request_id=getattr(context, "aws_request_id", ""),
+                    error=retry_error,
+                    outcome={"status": worker_status},
+                    page_id=page_id,
+                )
+            raise IntakeError(retry_error)
+        if worker_status.lower() == "needs review":
+            terminal_status = "needs_review"
+        elif worker_status.lower() == "ignored":
+            terminal_status = "ignored"
+        else:
+            terminal_status = "processed"
+        if event_store:
+            event_store.update_webhook_event(
+                event_row_id,
+                terminal_status,
+                aws_request_id=getattr(context, "aws_request_id", ""),
+                outcome=result,
+                page_id=page_id,
+                listing_id=str(result.get("listing_id") or ""),
+                listing_page_id=str(result.get("listing_page_id") or (page_id if event_type in NOTION_PAGE_EVENT_TYPES else "")),
+            )
         _log_event("worker_completed", page_id=page_id, event_type=event_type, event_id=event_id,
                    aws_request_id=getattr(context, "aws_request_id", ""), status=result.get("status", "unknown"),
                    listing_id=result.get("listing_id", ""), duration_ms=round((time.monotonic() - started) * 1000))
@@ -821,11 +997,13 @@ def lambda_handler(event, context):
         raw_body = base64.b64decode(raw_body).decode("utf-8")
     try:
         payload = json.loads(raw_body)
+        payload_is_json = True
     except (json.JSONDecodeError, TypeError, UnicodeDecodeError):
-        return {"statusCode": 400, "headers": {"Content-Type": "application/json"}, "body": json.dumps({"error": "invalid JSON"})}
+        payload = None
+        payload_is_json = False
 
     # Notion's one-time subscription handshake supplies verification_token in the body.
-    verification_token = str(payload.get("verification_token") or "").strip()
+    verification_token = str(payload.get("verification_token") or "").strip() if isinstance(payload, dict) else ""
     if verification_token:
         # Notion signs the initial handshake with the verification token in its body.
         supplied = headers.get("x-notion-signature", "")
@@ -844,44 +1022,123 @@ def lambda_handler(event, context):
     try:
         expected_token = _notion_webhook_secret()
     except Exception as exc:
-        print(json.dumps({"notion_webhook_secret_read_error": str(exc)[:500]}))
+        print(json.dumps({"notion_webhook_secret_read_error": type(exc).__name__}))
+        try:
+            _record_unverified_delivery(raw_body, "webhook verification secret unavailable", context)
+        except Exception as ledger_exc:
+            _log_event("webhook_persistence_failed", error_type=type(ledger_exc).__name__)
         return {"statusCode": 503, "headers": {"Content-Type": "application/json"}, "body": json.dumps({"error": "webhook verification is not configured"})}
     if not expected_token or not supplied:
+        try:
+            _record_unverified_delivery(raw_body, "missing signature or verification token", context)
+        except Exception as exc:
+            _log_event("webhook_persistence_failed", error_type=type(exc).__name__)
+            return {"statusCode": 503, "headers": {"Content-Type": "application/json"}, "body": json.dumps({"error": "event history is unavailable"})}
         return {"statusCode": 401, "headers": {"Content-Type": "application/json"}, "body": json.dumps({"error": "unauthorized"})}
     calculated = "sha256=" + hmac.new(expected_token.encode("utf-8"), raw_body.encode("utf-8"), hashlib.sha256).hexdigest()
     if not hmac.compare_digest(calculated, supplied):
+        try:
+            _record_unverified_delivery(raw_body, "invalid signature", context)
+        except Exception as exc:
+            _log_event("webhook_persistence_failed", error_type=type(exc).__name__)
+            return {"statusCode": 503, "headers": {"Content-Type": "application/json"}, "body": json.dumps({"error": "event history is unavailable"})}
+        _log_event("webhook_rejected", reason="invalid_signature", payload_sha256=hashlib.sha256(raw_body.encode("utf-8")).hexdigest())
         return {"statusCode": 401, "headers": {"Content-Type": "application/json"}, "body": json.dumps({"error": "invalid signature"})}
 
-    page_id = str(
-        payload.get("page_id")
-        or (payload.get("entity") or {}).get("id")
-        or (payload.get("data") or {}).get("page", {}).get("id")
-        or (payload.get("data") or {}).get("id")
-        or payload.get("page", {}).get("id")
-        or payload.get("id")
-        or ""
-    ).strip()
-    if not re.fullmatch(r"[0-9a-fA-F-]{32,36}", page_id):
-        return {"statusCode": 400, "headers": {"Content-Type": "application/json"}, "body": json.dumps({"error": "page ID is required"})}
-    event_type = str(payload.get("type") or payload.get("event_type") or "")
-    event_id = str(payload.get("id") or payload.get("event_id") or "")
+    if not payload_is_json or not isinstance(payload, dict):
+        record_payload = {
+            "malformed_json": not payload_is_json,
+            "raw_body_sha256": hashlib.sha256(raw_body.encode("utf-8")).hexdigest(),
+            "raw_body_size": len(raw_body.encode("utf-8")),
+        }
+        record_input = _event_record_input(record_payload, raw_body, malformed=not payload_is_json)
+        record_input["payload"] = record_payload
+        try:
+            store = SupabaseIntakeStore()
+            recorded = store.record_webhook_event(**record_input)
+            row_id = str(recorded.get("id") or "")
+            if not row_id.startswith("notion-webhook:"):
+                raise IntakeError("Supabase returned no Notion event record ID")
+            store.update_webhook_event(row_id, "rejected", error="Webhook body must be a JSON object.", outcome={"validation": "rejected"})
+        except Exception as exc:
+            _log_event("webhook_persistence_failed", error_type=type(exc).__name__)
+            return {"statusCode": 503, "headers": {"Content-Type": "application/json"}, "body": json.dumps({"error": "event history is unavailable"})}
+        return {"statusCode": 202, "headers": {"Content-Type": "application/json"}, "body": json.dumps({"ok": True, "recorded": True, "status": "rejected"})}
+
+    entity = payload.get("entity") if isinstance(payload.get("entity"), dict) else {}
+    event_type = str(payload.get("type") or payload.get("event_type") or "unknown").strip()[:200] or "unknown"
+    event_id = str(payload.get("id") or payload.get("event_id") or "").strip()
+    entity_type = str(entity.get("type") or "").strip()
+    page_id = str(entity.get("id") or "").strip()
     updated_property_ids = []
     if event_type == "page.properties_updated":
-        data = payload.get("data") or {}
+        data = payload.get("data") if isinstance(payload.get("data"), dict) else {}
         changed = data.get("updated_properties") or []
         if isinstance(changed, list):
             updated_property_ids = [value.strip() for value in changed if isinstance(value, str) and value.strip()]
+    record_input = _event_record_input(payload, raw_body)
     try:
-        _log_event("webhook_accepted", page_id=page_id, event_type=event_type, event_id=event_id,
-                   aws_request_id=getattr(context, "aws_request_id", ""))
+        store = SupabaseIntakeStore()
+        recorded = store.record_webhook_event(**record_input)
+        event_row_id = str(recorded.get("id") or "")
+        if not event_row_id.startswith("notion-webhook:"):
+            raise IntakeError("Supabase returned no Notion event record ID")
+    except Exception as exc:
+        _log_event("webhook_persistence_failed", error_type=type(exc).__name__)
+        return {"statusCode": 503, "headers": {"Content-Type": "application/json"}, "body": json.dumps({"error": "event history is unavailable"})}
+
+    def reject_record(status: str, reason: str):
+        store.update_webhook_event(
+            event_row_id,
+            status,
+            aws_request_id=getattr(context, "aws_request_id", ""),
+            error=reason if status == "rejected" else "",
+            outcome={"validation": status, "reason": reason},
+            page_id=record_input.get("page_id") or "",
+        )
+        _log_event("webhook_recorded_without_processing", event_type=event_type, event_id=event_id, status=status)
+        return {"statusCode": 202, "headers": {"Content-Type": "application/json"}, "body": json.dumps({"ok": True, "recorded": True, "status": status, "event_id": event_id or None})}
+
+    if event_id and not _is_uuid(event_id):
+        return reject_record("rejected", "Notion event ID is not a UUID.")
+    if event_type not in NOTION_PAGE_EVENT_TYPES:
+        return reject_record("unsupported", f"Unsupported Notion event type: {event_type}.")
+    if entity_type != "page" or not _is_uuid(page_id):
+        return reject_record("rejected", "Notion page event has no valid page entity ID.")
+    if not recorded.get("should_enqueue"):
+        _log_event("webhook_duplicate", page_id=page_id, event_type=event_type, event_id=event_id, status=recorded.get("status", "unknown"))
+        return {"statusCode": 202, "headers": {"Content-Type": "application/json"}, "body": json.dumps({"ok": True, "accepted": True, "duplicate": True, "page_id": page_id, "event_id": event_id or None})}
+
+    try:
         _enqueue_worker(
             page_id,
             context.invoked_function_arn,
             event_type=event_type,
             event_id=event_id,
+            event_row_id=event_row_id,
+            attempt_number=record_input.get("attempt_number"),
             updated_property_ids=updated_property_ids,
         )
-        return {"statusCode": 202, "headers": {"Content-Type": "application/json"}, "body": json.dumps({"ok": True, "accepted": True, "page_id": page_id, "event_id": event_id})}
     except Exception as exc:
-        print(json.dumps({"notion_intake_enqueue_error": str(exc)[:1500], "page_id": page_id}))
+        try:
+            store.update_webhook_event(
+                event_row_id,
+                "failed",
+                aws_request_id=getattr(context, "aws_request_id", ""),
+                error=f"Worker enqueue failed: {type(exc).__name__}: {str(exc)[:1400]}",
+                outcome={"enqueue": "failed"},
+                page_id=page_id,
+            )
+        except Exception as ledger_exc:
+            _log_event("event_history_update_failed", event_row_id=event_row_id, error_type=type(ledger_exc).__name__)
+        _log_event("notion_intake_enqueue_error", page_id=page_id, event_id=event_id, error_type=type(exc).__name__)
         return {"statusCode": 500, "headers": {"Content-Type": "application/json"}, "body": json.dumps({"error": "intake enqueue failed"})}
+
+    try:
+        store.update_webhook_event(event_row_id, "queued", aws_request_id=getattr(context, "aws_request_id", ""), page_id=page_id)
+    except Exception as exc:
+        _log_event("event_queue_status_update_failed", event_row_id=event_row_id, error_type=type(exc).__name__)
+        return {"statusCode": 503, "headers": {"Content-Type": "application/json"}, "body": json.dumps({"error": "event queue status could not be recorded"})}
+    _log_event("webhook_accepted", page_id=page_id, event_type=event_type, event_id=event_id, event_row_id=event_row_id,
+               aws_request_id=getattr(context, "aws_request_id", ""))
+    return {"statusCode": 202, "headers": {"Content-Type": "application/json"}, "body": json.dumps({"ok": True, "accepted": True, "page_id": page_id, "event_id": event_id or None})}

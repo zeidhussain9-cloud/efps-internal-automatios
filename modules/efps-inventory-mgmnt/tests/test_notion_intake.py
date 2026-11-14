@@ -103,7 +103,7 @@ def test_notion_webhook_rejects_invalid_verification_handshake(monkeypatch):
 
 
 def test_notion_webhook_validates_native_signature_and_queues_page(monkeypatch):
-    body = json.dumps({"type": "page.created", "entity": {"id": "12345678-1234-1234-1234-123456789abc"}}, separators=(",", ":"))
+    body = json.dumps({"id": "22345678-1234-4234-8234-123456789abc", "type": "page.created", "entity": {"id": "12345678-1234-4234-8234-123456789abc", "type": "page"}}, separators=(",", ":"))
     token = "notion-verification-token"
     signature = "sha256=" + hmac.new(token.encode(), body.encode(), hashlib.sha256).hexdigest()
     class FakeSecrets:
@@ -114,13 +114,24 @@ def test_notion_webhook_validates_native_signature_and_queues_page(monkeypatch):
         def client(name):
             return FakeSecrets()
     queued = []
+    calls = []
+    class FakeStore:
+        def record_webhook_event(self, **event):
+            calls.append(("record", event))
+            return {"id": "notion-webhook:event:22345678-1234-4234-8234-123456789abc", "should_enqueue": True, "status": "received"}
+        def update_webhook_event(self, event_row_id, status, **kwargs):
+            calls.append((status, event_row_id, kwargs))
+            return {"status": status, "started": status in {"accepted", "processing"}}
     monkeypatch.setenv("NOTION_SECRET_ARN", "arn:aws:secretsmanager:ap-southeast-2:123456789012:secret:test")
     monkeypatch.setattr("boto3.client", FakeBoto3.client, raising=False)
-    monkeypatch.setattr(intake, "_enqueue_worker", lambda page_id, arn, event_type="", event_id="", updated_property_ids=None: queued.append((page_id, arn, event_type, event_id, updated_property_ids)))
+    monkeypatch.setattr(intake, "SupabaseIntakeStore", FakeStore)
+    monkeypatch.setattr(intake, "_enqueue_worker", lambda page_id, arn, event_type="", event_id="", event_row_id="", attempt_number=None, updated_property_ids=None: (calls.append(("enqueue", event_row_id)), queued.append((page_id, arn, event_type, event_id, event_row_id, updated_property_ids))))
     context = type("Context", (), {"invoked_function_arn": "arn:aws:lambda:ap-southeast-2:123456789012:function:test"})()
     result = intake.lambda_handler({"headers": {"X-Notion-Signature": signature}, "body": body}, context)
     assert result["statusCode"] == 202
-    assert queued == [("12345678-1234-1234-1234-123456789abc", context.invoked_function_arn, "page.created", "", [])]
+    assert queued == [("12345678-1234-4234-8234-123456789abc", context.invoked_function_arn, "page.created", "22345678-1234-4234-8234-123456789abc", "notion-webhook:event:22345678-1234-4234-8234-123456789abc", [])]
+    assert [call[0] for call in calls] == ["record", "enqueue", "queued"]
+    assert calls[0][1]["page_id"] == "12345678-1234-4234-8234-123456789abc"
 
 
 def test_notion_webhook_rejects_invalid_native_signature(monkeypatch):
@@ -131,10 +142,22 @@ def test_notion_webhook_rejects_invalid_native_signature(monkeypatch):
         @staticmethod
         def client(name):
             return FakeSecrets()
+    class FakeStore:
+        def __init__(self): self.recorded = []; self.transitions = []
+        def record_webhook_event(self, **event):
+            self.recorded.append(event)
+            return {"id": "notion-webhook:event:22345678-1234-4234-8234-123456789abc", "should_enqueue": True}
+        def update_webhook_event(self, event_row_id, status, **kwargs):
+            self.transitions.append((event_row_id, status, kwargs))
+            return {"status": status}
+    store = FakeStore()
     monkeypatch.setenv("NOTION_SECRET_ARN", "arn:aws:secretsmanager:ap-southeast-2:123456789012:secret:test")
     monkeypatch.setattr("boto3.client", FakeBoto3.client, raising=False)
+    monkeypatch.setattr(intake, "SupabaseIntakeStore", lambda: store)
     result = intake.lambda_handler({"headers": {"X-Notion-Signature": "sha256=wrong"}, "body": json.dumps({"entity": {"id": "12345678-1234-1234-1234-123456789abc"}})}, None)
     assert result["statusCode"] == 401
+    assert store.recorded[0]["payload"]["unverified_delivery"] is True
+    assert store.transitions[0][1] == "rejected"
 
 
 def test_photo_resume_reuploads_full_ordered_set_to_deterministic_ids(monkeypatch):
@@ -161,9 +184,8 @@ def test_process_page_persists_one_listing_and_reconciles_intake(monkeypatch):
                 "parent": {"database_id": intake.INTAKE_DATABASE_ID},
                 "created_time": "2026-11-13T00:00:00Z",
                 "properties": {
-                    "Raw Property Data": {"id": "raw-property-id", "rich_text": [{"plain_text": "2 BHK Apartment\\nRent: 50000\\nLocation: Harlur"}]},
-                    "Photos": {"id": "photos-property-id", "files": []},
-                    "Intake Status": {"id": "intake-status-id"},
+                    "Raw Property Data": {"rich_text": [{"plain_text": "2 BHK Apartment\\nRent: 50000\\nLocation: Harlur"}]},
+                    "Photos": {"files": []},
                     "Listing ID": {"rich_text": []},
                 },
             }
@@ -203,8 +225,6 @@ def test_process_page_persists_one_listing_and_reconciles_intake(monkeypatch):
     result = intake.process_page(
         "intake-page-id", notion=fake_notion, store=fake_store, sheets=fake_sheets,
         cloudinary=object(), maps_client=object(),
-        event_type="page.properties_updated",
-        updated_property_ids=["raw-property-id", "photos-property-id"],
     )
     assert result["status"] == "Processed"
     assert result["listing_id"] == "EF-TEST-INTAKE"
@@ -462,7 +482,8 @@ def test_webhook_accepts_notion_event_entity_id(monkeypatch):
     import hashlib, hmac, uuid
     page_id = str(uuid.uuid4())
     token = "notion-webhook-verification-token"
-    body = json.dumps({"type": "page.created", "entity": {"id": page_id}}, separators=(",", ":"))
+    event_id = str(uuid.uuid4())
+    body = json.dumps({"id": event_id, "type": "page.created", "entity": {"id": page_id, "type": "page"}}, separators=(",", ":"))
     signature = "sha256=" + hmac.new(token.encode(), body.encode(), hashlib.sha256).hexdigest()
     class FakeSecrets:
         def get_secret_value(self, **kwargs):
@@ -473,22 +494,28 @@ def test_webhook_accepts_notion_event_entity_id(monkeypatch):
     monkeypatch.setenv("NOTION_SECRET_ARN", "arn:aws:secretsmanager:ap-southeast-2:123456789012:secret:test")
     monkeypatch.setattr("boto3.client", FakeBoto3.client, raising=False)
     enqueued = []
-    monkeypatch.setattr(intake, "_enqueue_worker", lambda supplied, arn, event_type="", event_id="", updated_property_ids=None: enqueued.append((supplied, arn, event_type, event_id, updated_property_ids)))
+    class FakeStore:
+        def record_webhook_event(self, **event): return {"id": "notion-webhook:event:" + event_id, "should_enqueue": True, "status": "accepted"}
+        def update_webhook_event(self, *args, **kwargs):
+            status = kwargs.get("status") or args[1]
+            return {"status": status, "started": status in {"accepted", "processing"}}
+    monkeypatch.setattr(intake, "SupabaseIntakeStore", FakeStore)
+    monkeypatch.setattr(intake, "_enqueue_worker", lambda supplied, arn, event_type="", event_id="", event_row_id="", attempt_number=None, updated_property_ids=None: enqueued.append((supplied, arn, event_type, event_id, event_row_id, updated_property_ids)))
     context = type("Context", (), {"invoked_function_arn": "arn:aws:lambda:ap-southeast-2:123456789012:function:test"})()
     result = intake.lambda_handler({"headers": {"X-Notion-Signature": signature}, "body": body}, context)
     assert result["statusCode"] == 202
-    assert enqueued == [(page_id, context.invoked_function_arn, "page.created", "", [])]
+    assert enqueued[0][:4] == (page_id, context.invoked_function_arn, "page.created", event_id)
+    assert enqueued[0][4]
     assert json.loads(result["body"])["accepted"] is True
 
 
-
-
 def test_notion_properties_updated_forwards_changed_property_ids(monkeypatch):
-    page_id = "12345678-1234-1234-1234-123456789abc"
+    page_id = "12345678-1234-4234-8234-123456789abc"
     token = "notion-verification-token"
     body = json.dumps({
+        "id": "22345678-1234-4234-8234-123456789abc",
         "type": "page.properties_updated",
-        "entity": {"id": page_id},
+        "entity": {"id": page_id, "type": "page"},
         "data": {"updated_properties": ["raw-property-id", "photos-property-id"]},
     }, separators=(",", ":"))
     signature = "sha256=" + hmac.new(token.encode(), body.encode(), hashlib.sha256).hexdigest()
@@ -505,19 +532,15 @@ def test_notion_properties_updated_forwards_changed_property_ids(monkeypatch):
     enqueued = []
     monkeypatch.setenv("NOTION_SECRET_ARN", "arn:aws:secretsmanager:ap-southeast-2:123456789012:secret:test")
     monkeypatch.setattr("boto3.client", FakeBoto3.client, raising=False)
-    monkeypatch.setattr(
-        intake,
-        "_enqueue_worker",
-        lambda supplied, arn, event_type="", event_id="", updated_property_ids=None:
-            enqueued.append((supplied, event_type, updated_property_ids)),
-    )
+    monkeypatch.setattr(intake, "SupabaseIntakeStore", lambda: type("Store", (), {
+        "record_webhook_event": lambda self, **event: {"id": "notion-webhook:event:22345678-1234-4234-8234-123456789abc", "should_enqueue": True, "status": "accepted"},
+        "update_webhook_event": lambda self, *args, **kwargs: {"ok": True, "status": args[1]},
+    })())
+    monkeypatch.setattr(intake, "_enqueue_worker", lambda supplied, arn, **kwargs: enqueued.append((supplied, kwargs.get("updated_property_ids"))))
     context = type("Context", (), {"invoked_function_arn": "arn:aws:lambda:ap-southeast-2:123456789012:function:test"})()
-    result = intake.lambda_handler(
-        {"headers": {"X-Notion-Signature": signature}, "body": body},
-        context,
-    )
+    result = intake.lambda_handler({"headers": {"X-Notion-Signature": signature}, "body": body}, context)
     assert result["statusCode"] == 202
-    assert enqueued == [(page_id, "page.properties_updated", ["raw-property-id", "photos-property-id"])]
+    assert enqueued == [(page_id, ["raw-property-id", "photos-property-id"])]
 
 
 def test_async_worker_invocation_runs_page_processor(monkeypatch):

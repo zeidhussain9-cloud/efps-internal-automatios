@@ -7,6 +7,16 @@ test('Notion claim response preserves the full claim result', () => {
   assert.deepEqual(responseForOperation('claim', claim), claim)
 })
 
+test('Notion webhook event receipt returns the durable event identity and enqueue decision', () => {
+  const event = { id: '32345678-1234-4234-8234-123456789abc', status: 'accepted', should_enqueue: true, duplicate: false }
+  assert.deepEqual(responseForOperation('record_webhook_event', event), event)
+})
+
+test('Notion webhook event lifecycle updates return the persisted transition result', () => {
+  const update = { ok: true, id: '32345678-1234-4234-8234-123456789abc', status: 'processed', started: false }
+  assert.deepEqual(responseForOperation('update_webhook_event', update), update)
+})
+
 test('Notion Listing ID allocation returns the ID expected by the Lambda', () => {
   assert.deepEqual(responseForOperation('allocate_listing_id', 'EF-2611-ABCD'), { listing_id: 'EF-2611-ABCD' })
 })
