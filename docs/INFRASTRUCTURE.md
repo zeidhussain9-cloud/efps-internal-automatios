@@ -2,6 +2,8 @@
 
 ## Current verified infrastructure — 2026-11-14 (live check)
 
+- AWS Lambda `efps-notion-intake` was updated 2026-11-14T15:03:52Z; CodeSha256 `AFh+Q+KR4onPTtRLPjyAW6AaMPKM0u0N55322ht3lM0=`. The update changes the existing intake code only; no Supabase schema, secret values, or schedules were changed.
+
 - Supabase project qttcutwzehtskfcwxkwj; notion-inventory-state ACTIVE v12 with JWT verification enabled.
 - Migration 20261114095316_crm_inventory_business_status is registered and applied. No tables deleted.
 - Render CRM service srv-darsv560tbcc73cu4ip0 is LIVE; the exact deployment ID and commit are authoritative in Render and are not duplicated here.

@@ -5,6 +5,8 @@ The canonical Notion Housing Listings data source now defines listing_state as a
 
 ## Current verified production state — 2026-11-14 (live check)
 
+- Raw-intake schema guard is deployed (Lambda CodeSha256 `AFh+Q+KR4onPTtRLPjyAW6AaMPKM0u0N55322ht3lM0=`). Live schema preflight runs before Sheet/media/page-create side effects; `listing_state` uses Select; outgoing payload and select options are checked; Notion API diagnostics retain bounded code/message. Inventory tests 114/114 pass locally. `EF-2611-YA84` was retried: canonical page and active Supabase snapshot exist; status Needs Review due to Maps API unavailability and 18 photos exceeding the 10-image catalogue limit.
+
 - No database tables deleted. WhatsApp history remains in crm_webhook_events; Notion event history remains in crm_inventory_intake_events.
 - Branches main and crm-ui-dashboard are synchronized with identical tracked trees; GitHub advertises exactly these two branch refs.
 - Render CRM service srv-darsv560tbcc73cu4ip0 is LIVE; the exact deployment ID and commit are authoritative in Render and are not duplicated here.

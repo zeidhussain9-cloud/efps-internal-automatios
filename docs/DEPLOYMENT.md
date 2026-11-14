@@ -2,6 +2,8 @@
 
 ## Current verified release state — 2026-11-14 (live check)
 
+- AWS Lambda `efps-notion-intake` updated successfully 2026-11-14T15:03:52Z; CodeSha256 `AFh+Q+KR4onPTtRLPjyAW6AaMPKM0u0N55322ht3lM0=`. The deployed intake worker performs live schema preflight, Select-aware `listing_state` serialization, outgoing-payload validation and bounded Notion API diagnostics. Inventory tests pass 114/114 locally. `EF-2611-YA84` was retried and reconciled to Housing Listings and Supabase; Needs Review remains for Maps API unavailability and photo count above the 10-image limit.
+
 - Render CRM service srv-darsv560tbcc73cu4ip0 is LIVE; the exact deployment ID and commit are authoritative in Render and are not duplicated here.
 - Local and remote main / crm-ui-dashboard branches share the same tracked tree; GitHub currently advertises exactly these two branch refs.
 - Supabase notion-inventory-state ACTIVE v12; migration 20261114095316_crm_inventory_business_status registered and applied.

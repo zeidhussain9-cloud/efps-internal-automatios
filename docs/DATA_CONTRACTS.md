@@ -2,6 +2,8 @@
 
 ## Current verified inventory and event contract — 2026-11-14 (live check)
 
+- Raw-intake write contract: live Housing Listings property types and required Select options are checked before external writes; `listing_state` uses Notion Select, and the outgoing property payload is validated before page create/update. This contract is deployed in the isolated intake Lambda.
+
 crm_inventory_snapshot is the CRM projection of canonical Notion Housing Listings. business_status is distinct from intake_status, listing_state, and crm_inventory_intake_events.processing_status.
 
 - 106 active housing_notion rows; 1 soft-deleted tombstone; 0 active rows with blank locality and society name.

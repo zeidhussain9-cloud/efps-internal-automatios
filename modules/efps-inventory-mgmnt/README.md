@@ -5,6 +5,11 @@ The canonical Notion Housing Listings data source now defines listing_state as a
 
 ## Current verified production state — 2026-11-14
 
+## Raw-intake schema guard — deployed 2026-11-14
+
+The intake adapter checks live Housing Listings property types and required Select options before any Sheet write, photo upload, or canonical page create. `listing_state` is written as a Select, and the final payload is checked before save. Bounded Notion API error code/message are retained. AWS Lambda deployment is Active (CodeSha256 `AFh+Q+KR4onPTtRLPjyAW6AaMPKM0u0N55322ht3lM0=`). Inventory module tests: 114/114 pass locally. `EF-2611-YA84` now has a canonical Housing Listings page and matching active Supabase snapshot; its status is Needs Review because Maps verification was unavailable and 18 photos exceeded the 10-image catalogue limit. No Cloudinary image URLs were published.
+
+
 - 106 active Notion-owned rows in Supabase; business_status Pending on all 106.
 - Notion event history remains in crm_inventory_intake_events; WhatsApp event history remains in crm_webhook_events. No tables deleted.
 - Supabase notion-inventory-state ACTIVE v12; AWS efps-notion-intake updated successfully.

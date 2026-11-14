@@ -44,6 +44,47 @@ def test_listing_projection_does_not_guess_missing_values():
     assert "monthly_rent" not in props
 
 
+
+
+def test_notion_api_error_preserves_bounded_code_and_message():
+    class Response:
+        ok = False
+        status_code = 400
+        content = b'{"code":"validation_error"}'
+        def json(self): return {"code": "validation_error", "message": "listing_state must be select"}
+    class Session:
+        def request(self, *args, **kwargs): return Response()
+    notion = intake.NotionClient("test-token", session=Session())
+    import pytest
+    with pytest.raises(intake.IntakeError, match=r"validation_error: listing_state must be select"):
+        notion.request("POST", "pages", payload={})
+
+
+def test_listing_state_is_serialized_as_a_select():
+    props = intake.listing_notion_properties({"listing_id": "EF-TEST-STATE", "listing_state": "Available"})
+    assert props["listing_state"] == {"select": {"name": "Available"}}
+
+
+def test_live_listing_schema_contract_rejects_type_or_option_drift():
+    schema = {name: {"type": kind} for name, kind in intake.listing_property_types().items()}
+    schema["listing_state"]["select"] = {"options": [{"name": name} for name in ("Available", "Rented Out", "On Hold")]}
+    schema["WhatsApp Group"]["select"] = {"options": [{"name": name} for name in (
+        "1 RK / 1–1.5 BHK", "2 / 2.5 BHK", "3 / 3.5 BHK", "4 / 4.5 BHK", "5+ BHK") ]}
+    intake.validate_listing_schema(schema)
+    schema["listing_state"]["type"] = "rich_text"
+    import pytest
+    with pytest.raises(intake.IntakeError, match="listing_state: expected select, found rich_text"):
+        intake.validate_listing_schema(schema)
+
+
+def test_outgoing_select_values_must_exist_in_live_schema():
+    schema = {name: {"type": kind} for name, kind in intake.listing_property_types().items()}
+    schema["listing_state"]["select"] = {"options": [{"name": name} for name in ("Available", "Rented Out", "On Hold")]}
+    schema["WhatsApp Group"]["select"] = {"options": [{"name": name} for name in (
+        "1 RK / 1–1.5 BHK", "2 / 2.5 BHK", "3 / 3.5 BHK", "4 / 4.5 BHK", "5+ BHK") ]}
+    with __import__("pytest").raises(intake.IntakeError, match="select option.*not defined"):
+        intake.validate_listing_properties(schema, {"listing_state": {"select": {"name": "Unavailable"}}})
+
 def test_processing_notes_append_to_existing_notion_cell_without_replacing_history():
     page_id = "12345678-1234-1234-1234-123456789abc"
     class FakeNotion:
@@ -196,6 +237,8 @@ def test_process_page_persists_one_listing_and_reconciles_intake(monkeypatch):
         def __init__(self):
             self.updates = []
             self.saved = []
+        def validate_listing_schema(self):
+            return None
         def get_page(self, page_id):
             return {
                 "id": page_id,
@@ -460,6 +503,7 @@ def test_supabase_intake_store_claims_through_supabase_edge_function(monkeypatch
 def test_process_page_persists_one_listing_and_reconciles_intake(monkeypatch):
     class FakeNotion:
         def __init__(self): self.updates, self.saved = [], []
+        def validate_listing_schema(self): return None
         def get_page(self, page_id):
             return {"id": page_id, "parent": {"database_id": intake.INTAKE_DATABASE_ID}, "created_time": "2026-11-13T00:00:00Z", "properties": {
                 "Raw Property Data": {"rich_text": [{"plain_text": "2 BHK Apartment\nRent: 50000\nLocation: Harlur"}]},

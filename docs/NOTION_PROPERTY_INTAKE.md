@@ -5,6 +5,13 @@ The canonical Notion Housing Listings data source now defines listing_state as a
 
 ## Current verified acceptance state — 2026-11-14 (live check)
 
+## Intake schema contract hardening — deployed 2026-11-14
+
+The raw-intake worker validates the mapped Housing Listings property types and required Select options against the live Notion database schema before Google Sheets writes, photo uploads, or Housing Listings page creation. `listing_state` is serialized as a Select, and the outgoing payload is validated again before create/update. Bounded Notion API error codes/messages are retained without credentials. This is implemented at the existing adapter boundary; no tables, services, schedulers, or alternate intake paths were added. AWS Lambda `efps-notion-intake` is deployed and Active; CodeSha256 `AFh+Q+KR4onPTtRLPjyAW6AaMPKM0u0N55322ht3lM0=`. Inventory module tests pass 114/114 locally.
+
+The existing failed submission `EF-2611-YA84` was retried successfully through the deployed worker. Its Housing Listings page is `418fedf9-b4e8-8181-8bd5-c94055f39c68`, and its active `housing_notion` Supabase snapshot matches. The record is correctly marked Needs Review—not fully ready—because the Maps API was unavailable and the intake included 18 photos, above the 10-image catalogue limit; no Cloudinary image URLs were published. The raw intake page retains the prior failure notes and the successful retry outcome.
+
+
 - The live Submit New Property intake source exposes Raw Property Data and Photos.
 - Two current submissions have both fields populated and are Processed: EF-2611-PAGH (VRR Fortuna, 3 BHK) and EF-2611-Y5KC (Shobha Royal Pavilion, 4.5 BHK).
 - Both have populated Processed Property relations, matching Housing Listings pages, and matching active Supabase snapshots. Cloudinary image URLs are present in the corresponding inventory projection.

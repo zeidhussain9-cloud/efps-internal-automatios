@@ -61,11 +61,27 @@ class NotionClient:
             timeout=25,
         )
         if not response.ok:
-            raise IntakeError(f"Notion API {method} {path} failed ({response.status_code})")
+            try:
+                error = response.json()
+            except ValueError:
+                error = {}
+            code = str(error.get("code") or "")[:100]
+            message = str(error.get("message") or "")[:600]
+            detail = ": ".join(part for part in (code, message) if part)
+            suffix = f": {detail}" if detail else ""
+            raise IntakeError(f"Notion API {method} {path} failed ({response.status_code}){suffix}")
         return response.json() if response.content else {}
 
     def get_page(self, page_id: str):
         return self.request("GET", f"pages/{page_id}")
+
+    def validate_listing_schema(self):
+        """Fail before external writes if the canonical Housing Listings schema drifted."""
+        database = self.request("GET", f"databases/{LISTINGS_DATABASE_ID}")
+        schema = database.get("properties") or {}
+        validate_listing_schema(schema)
+        self._listing_schema = schema
+        return schema
 
     def update_page(self, page_id: str, properties: dict):
         return self.request("PATCH", f"pages/{page_id}", payload={"properties": properties})
@@ -98,6 +114,8 @@ class NotionClient:
 
     def save_listing(self, row: dict):
         properties = listing_notion_properties(row)
+        schema = getattr(self, "_listing_schema", None) or self.validate_listing_schema()
+        validate_listing_properties(schema, properties)
         existing = self.find_listing(str(row["listing_id"]))
         if existing:
             self.update_page(existing["id"], properties)
@@ -340,7 +358,7 @@ def _bhk_group(bhk: str):
 TEXT_FIELDS = {
     "BHK", "bachelor_preference", "catalog_title", "city", "cloudinary_image_urls",
     "error_notes", "flat_furnishings", "floor_number", "furnish_type", "intake_status",
-    "internal_property_type", "landmark", "listing_id", "listing_state", "locality",
+    "internal_property_type", "landmark", "listing_id", "locality",
     "maintenance", "meta_catalog_id", "meta_catalog_status", "onboarded_on", "open_parking",
     "posted_at", "preferred_tenant_type", "property_highlights", "property_subtype",
     "raw_message_text", "society_amenities", "society_name", "status", "transaction_type",
@@ -353,12 +371,69 @@ NUMBER_FIELDS = {
 URL_FIELDS = {"google_maps_url", "posted_url", "whatsapp_contact_link", "whatsapp_group_link"}
 
 
+def listing_property_types() -> dict[str, str]:
+    return {
+        "Property": "title",
+        **{field: "rich_text" for field in TEXT_FIELDS},
+        **{field: "number" for field in NUMBER_FIELDS},
+        **{field: "url" for field in URL_FIELDS},
+        **{field: "checkbox" for field in ("pet_friendly", "servant_room", "maintenance_included")},
+        "listing_state": "select",
+        "WhatsApp Group": "select",
+        "WhatsApp Destination": "url",
+    }
+
+
+def validate_listing_properties(schema: dict, properties: dict) -> None:
+    errors = []
+    for name, payload in properties.items():
+        expected = next(iter(payload), "")
+        definition = schema.get(name) or {}
+        actual = str(definition.get("type") or "missing")
+        if actual != expected:
+            errors.append(f"{name}: expected {expected}, found {actual}")
+            continue
+        if expected == "select":
+            selected = str((payload.get("select") or {}).get("name") or "").strip()
+            options = {str(option.get("name") or "") for option in (definition.get("select") or {}).get("options", [])}
+            if selected and selected not in options:
+                errors.append(f"{name}: select option {selected!r} is not defined in Notion")
+    if errors:
+        raise IntakeError("Housing Listings schema validation failed: " + "; ".join(errors))
+
+
+def validate_listing_schema(schema: dict) -> None:
+    expected = listing_property_types()
+    errors = [
+        f"{name}: expected {kind}, found {str((schema.get(name) or {}).get('type') or 'missing')}"
+        for name, kind in expected.items()
+        if str((schema.get(name) or {}).get("type") or "missing") != kind
+    ]
+    for name, values in {
+        "listing_state": {"Available", "Rented Out", "On Hold"},
+        "WhatsApp Group": {
+            "1 RK / 1–1.5 BHK", "2 / 2.5 BHK", "3 / 3.5 BHK",
+            "4 / 4.5 BHK", "5+ BHK",
+        },
+    }.items():
+        definition = schema.get(name) or {}
+        options = {str(option.get("name") or "") for option in (definition.get("select") or {}).get("options", [])}
+        missing = sorted(values - options)
+        if missing:
+            errors.append(f"{name}: missing select options {', '.join(missing)}")
+    if errors:
+        raise IntakeError("Housing Listings schema validation failed: " + "; ".join(errors))
+
+
 def listing_notion_properties(row: dict) -> dict:
     """Project only supported Housing Listings fields; AU/AV remain outside this path."""
     title = str(row.get("catalog_title") or row.get("listing_id") or "").strip()[:2000]
     properties = {"Property": {"title": [{"type": "text", "text": {"content": title}}]}}
     for field in TEXT_FIELDS:
         properties[field] = _rich(row.get(field, ""))
+    listing_state = str(row.get("listing_state") or "").strip()
+    if listing_state:
+        properties["listing_state"] = {"select": {"name": listing_state}}
     for field in NUMBER_FIELDS:
         value = _number(row.get(field))
         if value is not None:
@@ -630,6 +705,8 @@ def process_page(
 
     listing_id = str((item or {}).get("listing_id") or _plain_text(props.get("Listing ID") or {})).strip()
     try:
+        # Validate the full write contract before Sheets writes, media uploads or page creation.
+        notion.validate_listing_schema()
         if not listing_id:
             listing_id = pipeline.next_listing_id(sheets)
             store.set_listing_id(page_id, listing_id)

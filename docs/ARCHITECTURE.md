@@ -2,6 +2,8 @@
 
 ## Current verified production state — 2026-11-14 (live check)
 
+- Raw-intake creation uses a live Notion schema preflight at the existing adapter boundary, validating mapped property types and required Select options before Sheet/media/page-create side effects. `listing_state` is serialized as Select; no new service, table, or scheduler was added. The guard is deployed to the isolated intake Lambda.
+
 Notion Housing Listings is the canonical operator editor. Supabase public.crm_inventory_snapshot is the CRM projection. The live projection has 106 active Notion-owned rows, 1 soft-deleted Notion-owned row, and 0 active rows with blank locality and society name.
 
 - Branches main and crm-ui-dashboard are synchronized with identical tracked trees; GitHub advertises exactly these two branch refs.

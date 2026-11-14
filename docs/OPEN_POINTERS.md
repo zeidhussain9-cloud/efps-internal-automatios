@@ -2,6 +2,8 @@
 
 ## Current verified open pointers — 2026-11-14 (live check)
 
+- Raw Property Intake schema-drift fix is deployed; inventory module tests pass 114/114 locally. `EF-2611-YA84` has a canonical page and active Supabase snapshot. Remaining record-level review: Maps API unavailability and 18 photos exceed the 10-image catalogue limit, so no Cloudinary URLs were published.
+
 - Notion Housing Listings listing_state dropdown is complete: exactly Available (green), Rented Out (red), and On Hold (yellow). Schema verified after update. Existing page-event synchronization remains the only property update path; no Google Sheets synchronization was added.
 - Notion webhook coverage: 26 event rows are observed (5 processed, 18 ignored, 2 needs review, 1 rejected); complete delivery capture is not certified.
 - Raw-intake Sheets compatibility: the two current submissions have Photos, Raw Property Data, Housing Listings relations and matching Supabase snapshots; the corresponding compatibility Sheet writes were not independently verified in this check.
