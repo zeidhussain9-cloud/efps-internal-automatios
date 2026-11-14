@@ -1,8 +1,10 @@
 # EFPS Inventory Management
 
-## Notion webhook event history — local only
+## Notion webhook event history — deployed 2026-11-14
 
-Task 3 extends the existing `crm_inventory_intake_events` ledger and connects the existing Notion intake Lambda and `notion-inventory-state` Edge Function to record webhook receipt, validation, queueing, processing, retries, and final outcomes. It follows the repository’s WhAPI event-history conventions while leaving `crm_webhook_events` and WhatsApp processing untouched. The migration and runtime changes have not been applied or deployed; production remains on its existing configuration.
+Task 3 extends the existing `crm_inventory_intake_events` ledger and connects the Notion intake Lambda and `notion-inventory-state` Edge Function to record webhook receipt, validation, delivery attempts, queueing, processing, retries and outcomes. No new webhook table was created; the WhatsApp `crm_webhook_events` table and processing remain untouched. Supabase Edge Function v10 and AWS Lambda are deployed. The live `Submit New Property` form exposes Raw Property Data and Photos. Awaiting the first real property submission for end-to-end verification.
+
+## Live mirror acceptance note — 2026-11-13 (recovery hardening)
 
 ## Live mirror acceptance note — 2026-11-13 (recovery hardening)
 

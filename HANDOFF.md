@@ -1,17 +1,18 @@
 # EFPS CRM — Handoff
 
-## Notion webhook event history — 2026-11-14 (local, not deployed)
+## Notion webhook event history — production deployment 2026-11-14
 
-- Implemented an extension to the existing `crm_inventory_intake_events` ledger and the existing Notion Lambda/Edge Function lifecycle integration in the repository. The change is local and uncommitted; it has not been applied to Supabase or deployed to AWS/Supabase.
-- The existing intake ledger retains its service-role-only RLS boundary; restricted SECURITY DEFINER RPCs append Notion event delivery and lifecycle metadata to namespaced rows in that same table. It captures delivery attempts, sanitized payload evidence, validation decisions, queue/worker transitions, errors/retries, outcomes, and inventory correlation. WhAPI `crm_webhook_events`, WhatsApp processing, schemas, records, AWS infrastructure, Notion form, secrets, and production functions were not changed.
-- Production verification: the Task 3 event-history columns and RPCs are absent; the production migration history has no Task 3 migration; `notion-inventory-state` remains ACTIVE v9 and `whapi-crm-webhook` ACTIVE v10. No Task 3 code was deployed to AWS or Supabase, and no production data/configuration was changed.
-- Verification status (local): Inventory Python suite 106/106 PASS; Notion Edge Function response-contract tests 6/6 PASS; Edge Function TypeScript syntax transform PASS; Python compilation PASS; repository `npm test` 145/145 PASS; browser test 1/1 PASS; `git diff --check` PASS.
-- Tooling installed on the Mac: Supabase CLI 3.1.0, Deno 2.9.8, PostgreSQL 17.12. Docker was not installed or used.
-- Database validation: the migration executed successfully against an isolated local PostgreSQL 17.12 database. RPC tests passed for first receipt, queued → processing → processed, duplicate delivery suppression, retry after failure, delivery/error/status history, and listing correlation. RLS and privilege assertions passed (no anon/authenticated table access or RPC execution; service-role access granted).
-- Runtime validation: `deno check --no-lock --node-modules-dir=auto supabase/functions/notion-inventory-state/index.ts` PASS. A type-only annotation was added to an existing `map` callback so strict Deno checking succeeds; no runtime behavior changed.
-- Full local tests: Inventory Python 106/106 PASS; Notion Edge Function response-contract 6/6 PASS; repository `npm test` 145/145 PASS; browser 1/1 PASS; Python compilation and `git diff --check` PASS.
-- These checks validate the migration and function locally, not against a full Supabase emulator. No production migration, Supabase Edge Function deployment, AWS Lambda deployment, commit or push was performed. Production remains unchanged.
-- Preserve pre-existing untracked `supabase/.temp/` in the primary checkout. Before production deployment, review the final diff and run Supabase production advisors/read-only checks. With separate authorization, deploy in order: migration → `notion-inventory-state` Edge Function → AWS Lambda.
+- Commit `ca05141bec073b87c8617c59bf79a40cd16534f9` is pushed to `crm-ui-dashboard`; Render deployment `dep-dbs1f0m417fc73f0cmig` is LIVE.
+- Supabase migration `crm_notion_webhook_event_history` is applied to project `qttcutwzehtskfcwxkwj`. It extends the existing `crm_inventory_intake_events` ledger; it does not create a new table and does not write into WhatsApp `crm_webhook_events`.
+- Supabase `notion-inventory-state` is ACTIVE v10 with JWT verification enabled. AWS stack `efps-notion-property-intake` is `UPDATE_COMPLETE`; Lambda `efps-notion-intake` is Active, `LastUpdateStatus=Successful`, updated 2026-11-14 08:14:28 UTC. Existing secret ARNs were reused; no secret values were exposed or rotated.
+- SAM template validation and non-container build passed. The existing Linux/Python 3.12 dependency package was reused; only the committed `notion_intake.py` was overlaid and byte-compared before deployment. Docker was not used.
+- Local validation: Inventory Python 106/106, Notion Edge Function response-contract 6/6, repository Node 145/145, browser 1/1, Deno type-check, Python compilation and `git diff --check` passed. SQL lifecycle, retry, duplicate, history and privilege tests passed locally before applying the same migration to production.
+- The Notion `Property Intake — Raw Details & Photos` form view `Submit New Property` was fetched after deployment. It exposes both `Raw Property Data` and `Photos` questions. The data-source description was updated to direct operators to this form and explain processing outcomes.
+- Production acceptance is pending the user's first manual submission. Do not create a synthetic production property. After the user confirms submission, reconcile the Notion page, webhook event row, Lambda/CloudWatch worker, Google Sheet row, Cloudinary media, Housing Listings relation, and Supabase inventory snapshot.
+- No WhatsApp message or catalogue dispatch was sent. WhAPI webhook function v10 and its `crm_webhook_events` table/records were not changed.
+- Production health advisors returned no health findings. Existing security INFO findings for RLS-enabled service-only tables without policies and unrelated unused-index INFO findings predate this migration; they were not broadened or modified here.
+
+## Notion inventory recovery hardening — 2026-11-13
 
 ## Notion inventory recovery hardening — 2026-11-13
 

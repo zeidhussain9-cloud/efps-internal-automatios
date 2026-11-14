@@ -1,12 +1,22 @@
 # Notion Property Intake — Runtime Contract
 
-## Webhook event history — local implementation only
+## Webhook event history — deployed 2026-11-14
 
-Task 3 adds delivery-history columns and restricted RPCs to the existing `public.crm_inventory_intake_events` ledger; it does not create a second webhook table. It is a repository change only: the production migration has not been applied, the `notion-inventory-state` Edge Function has not been deployed, and the AWS Lambda has not been updated. Until those separately authorized deployment steps occur, production webhook events continue using the existing page-level `crm_inventory_intake_events` idempotency state and CloudWatch/SQS failure evidence.
+Task 3 is deployed. The additive migration extends the existing `public.crm_inventory_intake_events` ledger with namespaced Notion webhook event rows and restricted RPCs. It does not create a second event table and does not change the WhatsApp `public.crm_webhook_events` table or processing path.
 
-The ledger stores Notion event/delivery identifiers, event type and entity IDs, timestamps, delivery attempts, a credential-redacted payload, raw-body SHA-256 fingerprint, lifecycle history, processing attempts/errors/outcome, AWS request IDs, and optional inventory Listing ID/page correlation. The existing table remains RLS-protected and service-role-only. The Edge Function calls restricted `SECURITY DEFINER` RPCs granted only to `service_role`. Event lifecycle transitions are retained in `status_history`; the existing processing-status constraint is preserved, while validation outcomes are stored separately. Failures retain error history for retry. Stable Notion event UUIDs deduplicate delivery; fallback payload fingerprints omit the changing attempt number, while each repeat is preserved in `delivery_attempts`.
+- Supabase migration `crm_notion_webhook_event_history` is applied to project `qttcutwzehtskfcwxkwj`.
+- Supabase `notion-inventory-state` is ACTIVE v10, JWT verification enabled.
+- AWS `efps-notion-intake` is Active; stack `efps-notion-property-intake` is `UPDATE_COMPLETE`. The Lambda uses the existing Notion, Sheets, Cloudinary and Maps secret ARNs; no values were displayed or rotated.
+- The existing intake ledger remains service-role-only with RLS enabled. Notion event rows use `source_page_id` prefixed with `notion-webhook:`; page-level intake idempotency rows remain keyed by the actual Notion page ID.
+- Event records retain stable event identity, event type/page, sanitized payload, raw-body SHA-256, delivery attempts, lifecycle history, worker attempts/errors/outcome, AWS request ID and Listing ID/page correlation. Validation outcomes are retained separately while the existing processing-status constraint is preserved.
+- The existing Notion form view `Submit New Property` exposes `Raw Property Data` and `Photos`. Both questions were confirmed by fetching the live view after deployment. The data-source description now directs operators to this form.
+- Production end-to-end acceptance is pending the first user-submitted property. No synthetic production property has been created.
 
-The local changes preserve `crm_webhook_events` and WhAPI unchanged. No production end-to-end event-ledger test has been performed because the migration and processing code remain undeployed. The required deployment order is database migration first, `notion-inventory-state` Edge Function second, and AWS Lambda code last; this prevents the Lambda from calling RPC operations that are not yet available.
+## Current acceptance status — awaiting operator submission
+
+The Housing Listings mirror/reconciliation baseline remains as recorded below. Task 3 is deployed, but a real property submission is required to verify the complete raw intake chain. Once the operator confirms the submission, verify: webhook delivery/signature → durable event receipt → Lambda queue/worker → extraction/validation → Google Sheets A:AT row → Cloudinary uploads → Housing Listings page and relation → Supabase `crm_inventory_snapshot` projection and `crm_inventory_intake_events` completion. Any `Needs Review` or `Failed` state must be explained from recorded evidence; do not mark the flow accepted solely because the webhook returned HTTP 202.
+
+## Current acceptance status — live recovery hardening 2026-11-13
 
 ## Current acceptance status — live recovery hardening 2026-11-13
 

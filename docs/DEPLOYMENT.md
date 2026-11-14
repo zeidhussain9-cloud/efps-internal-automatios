@@ -4,6 +4,19 @@
 
 The Notion webhook event-history migration and ingestion/worker integration are local changes only. The migration passed against isolated local PostgreSQL 17.12 and the Edge Function passed Deno type-check, but neither was applied/deployed to production Supabase or AWS. No production property was submitted for testing, no commit or push was made, and production event-ledger verification remains outstanding until deployment is authorized. When authorized, deploy in dependency order: apply the database migration, deploy `notion-inventory-state`, then deploy the AWS Lambda package. Verify the event lifecycle end to end only after all three are live.
 
+# EFPS SAM Deployment Contract
+
+## Task 3 production deployment — 2026-11-14
+
+- Migration `crm_notion_webhook_event_history` applied to Supabase project `qttcutwzehtskfcwxkwj`.
+- `notion-inventory-state` deployed ACTIVE v10 with JWT verification enabled.
+- AWS SAM stack `efps-notion-property-intake` updated successfully in `ap-southeast-2`; Lambda `efps-notion-intake` Active, `LastUpdateStatus=Successful`, last modified `2026-11-14T08:14:28Z`.
+- Deployment reused the existing secret ARNs. No secret values were changed or printed.
+- SAM validation and non-container build passed. The previously built Linux/Python 3.12 dependency package was reused with the updated committed Notion intake module overlaid and verified.
+- Production event-history acceptance remains pending one real operator-submitted property. Do not use a synthetic production property for validation.
+
+This document retains the historical SAM deployment contract. It is not the production deployment contract for the current CRM UI. Current CRM UI production deploys from `crm-ui-dashboard` to Render service `easyfind-crm-d01-d05`.
+
 This document retains the historical SAM deployment contract. It is not the production deployment contract for the current CRM UI. Current CRM UI production deploys from `crm-ui-dashboard` to Render service `easyfind-crm-d01-d05`.
 
 ## Source of truth
