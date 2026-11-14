@@ -123,6 +123,6 @@ This matrix is the canonical routing baseline. It must be refined when actual im
 The current CRM production truth is maintained in `docs/crm/LEAD_CRM_MASTER_PLAN.md`, `docs/crm/CRM_UI_BRANCH_RECONCILIATION.md`, `docs/crm/CRM_LIVE_WHAPI_WEBHOOK.md`, `docs/crm/CRM_DATA_MODEL.md`, and `HANDOFF.md`. These documents supersede older synthetic-only or pre-WhAPI gate statements while retaining those dated documents as historical evidence.
 
 
-## Latest verified checkpoint — 2026-11-14
+## Latest verified checkpoint — 2026-11-14 (live check)
 
-Inventory review-state changes affect crm_inventory_snapshot.business_status, the Notion Edge Function upsert, CRM repository/API filtering, inventory UI, tests, docs/DATA_CONTRACTS.md, docs/NOTION_PROPERTY_INTAKE.md, docs/INFRASTRUCTURE.md, Inventory module README, HANDOFF.md and current CRM state docs. Maps fallback changes affect shared/google_maps/README.md, Inventory module README, docs/NOTION_PROPERTY_INTAKE.md, relevant tests and HANDOFF.md. These updates are not production-complete until deployment and live verification.
+Current inventory state and flow are reconciled across the architecture, data-contract, deployment, infrastructure, intake, CRM current-state, data-model and runbook documents. Two current property submissions are Processed and reconciled to Housing Listings and Supabase. The live inventory projection has 106 active rows and 1 soft-deleted tombstone. The Maps fallback is deployed. The event ledger has 26 observed rows, but delivery completeness is not certified. Processing Notes overwrite on reprocessing; append-only narrative history remains an open hardening item. No tables were deleted.

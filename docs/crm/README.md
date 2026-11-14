@@ -1,13 +1,15 @@
 # EasyFind CRM Documentation
 
-## Current verified production state — 2026-11-14
+## Current verified production state — 2026-11-14 (live check)
 
-- main and crm-ui-dashboard are synchronized with identical tracked trees.
-- Latest Render deployment from crm-ui-dashboard is LIVE; /health HTTP 200.
-- Supabase notion-inventory-state ACTIVE v12; AWS efps-notion-intake update successful.
-- Inventory: 106 active Notion-owned rows; business_status Pending on all 106.
-- Notion events: 12 observed, 5 processed, 10 ignored non-intake changes, 1 rejected unauthenticated probe, 2 needs review. Complete delivery coverage is not certified.
-- No tables deleted. Raw intake end-to-end acceptance awaits a complete operator submission with Raw Property Data and Photos.
+- Branches main and crm-ui-dashboard are synchronized with identical tracked trees; GitHub advertises exactly these two branch refs.
+- Render CRM service srv-darsv560tbcc73cu4ip0 is LIVE; the exact deployment ID and commit are authoritative in Render and are not duplicated here.
+- Supabase notion-inventory-state ACTIVE v12; AWS efps-notion-intake Active with successful last update.
+- Inventory projection: 106 active Notion-owned rows, 1 soft-deleted tombstone, 0 active blank locality/society rows.
+- Two latest intake submissions (EF-2611-PAGH, EF-2611-Y5KC) are Processed and reconciled to Housing Listings and active Supabase snapshots.
+- Notion event ledger: 26 observed rows (5 processed, 18 ignored, 2 needs review, 1 rejected); complete delivery coverage is not certified.
+- Processing Notes preserve the narrative on the two current submissions, but worker/RPC reprocessing overwrites the note; append-only history is not guaranteed. See NOTION_PROPERTY_INTAKE.md.
+- No database tables deleted. Dated CRM population metrics and earlier inventory checkpoints below remain historical.
 
 # EasyFind CRM Documentation
 
@@ -95,6 +97,6 @@ Points **40 Requirement field correctness**, **41 Property-matching inputs**, an
 
 Historical live population snapshot verified 2026-10-05: **253 promoted qualified leads**, **253 normalized requirement profiles**, **0 missing profiles**, and **71 active canonical inventory listings**. Requirement evidence remains a separate provenance layer and is not fabricated by this audit.
 
-## Latest verified inventory state — 2026-11-14
+## Latest verified inventory state — 2026-11-14 (live check)
 
-106 active Notion-owned rows are present in crm_inventory_snapshot. Business review status is separately projected as business_status; all 106 currently report Pending. The UI change exposing this field is deployed. No tables were deleted. Full raw-intake acceptance remains pending a real operator submission.
+106 active Notion-owned rows and 1 soft-deleted tombstone are present in crm_inventory_snapshot. Two current submissions are Processed and reconciled. business_status is a separate projection from source_record.status. Processing Notes are replaceable summaries, not append-only history. Notion webhook delivery completeness is not certified. No tables were deleted.

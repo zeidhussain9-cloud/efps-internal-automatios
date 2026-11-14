@@ -2,14 +2,17 @@
 
 # EFPS CRM — Housing Inventory Sync Runbook
 
-## Current verified production checkpoint — 2026-11-14
+## Current verified production checkpoint — 2026-11-14 (live check)
 
 - Notion Housing Listings is canonical; crm_inventory_snapshot is the CRM projection.
-- Active Notion-owned projection: 106 rows; business_status Pending on all 106.
-- Supabase notion-inventory-state ACTIVE v12. Render application code commit 2727b38 is LIVE. AWS efps-notion-intake update successful.
-- 18 Notion events observed: 5 processed, 10 ignored non-intake changes, 1 rejected unauthenticated probe, 2 needs-review outcomes. Delivery capture completeness not certified.
-- The form schema includes Raw Property Data and Photos; two existing submissions have photos but no raw text and remain Needs Review.
-- Maps API-unavailable fallback deployed. No database tables deleted.
+- 106 active Notion-owned rows, 1 soft-deleted tombstone, 0 active blank locality/society rows.
+- Render CRM service srv-darsv560tbcc73cu4ip0 is LIVE; the exact deployment ID and commit are authoritative in Render and are not duplicated here.
+- Two recent property submissions have Processed status, raw data, photos, Housing Listings relations and matching active Supabase snapshots: EF-2611-PAGH and EF-2611-Y5KC.
+- Existing property update path: edit the Housing Listings page; its Notion page event is processed by Lambda and notion-inventory-state, which upserts the same Listing ID into crm_inventory_snapshot. Do not resubmit the intake form to edit an existing listing.
+- New property path: Submit New Property → intake worker → Housing Listings page → Supabase snapshot. The compatibility Sheets write was not independently checked for the two latest submissions.
+- 26 Notion event rows observed (5 processed, 18 ignored, 2 needs review, 1 rejected); delivery capture completeness is not certified.
+- Processing Notes currently overwrite on reprocessing. Current two records retain the full manual-fallback narrative, but append-only narrative history is an outstanding hardening item.
+- No database tables deleted. Historical 104-row checkpoints below remain dated evidence only.
 
 # EFPS CRM — Housing Inventory Sync Runbook
 
@@ -84,6 +87,6 @@ The eight original Slack warnings were for G5ZS, 6JYX, 97J4, WVP3, NFHV, 9ZZJ, X
 - Live archive/delete was observed through Notion and soft-deleted the Supabase row after about one minute. Actual `page.undeleted` webhook delivery remains unobserved; however, the 15-minute reconciler successfully restored a soft-deleted active rented listing. Missed restore delivery is therefore recovered automatically without changing the Notion webhook settings.
 
 
-## Latest verified inventory checkpoint — 2026-11-14
+## Latest verified inventory checkpoint — 2026-11-14 (live check)
 
-The live Notion-owned projection contains 106 active rows, not the historical 104-row count in the earlier checkpoint. crm_inventory_snapshot.business_status is a first-class projection field populated from source_record.status; all 106 current rows report Pending. The dashboard review-status filter and card display are deployed. Supabase notion-inventory-state is ACTIVE v12. No tables were deleted. Raw Property Intake end-to-end acceptance remains pending a real operator submission.
+The live Notion-owned projection contains 106 active rows and 1 soft-deleted tombstone. business_status remains separate from source intake and availability states. Supabase notion-inventory-state is ACTIVE v12. Two real Property Intake submissions are Processed and reconciled to Housing Listings and active Supabase snapshots. Raw intake compatibility Sheet row writes were not independently checked. Processing Notes overwrite on reprocessing; append-only narrative history remains an open hardening item. No tables were deleted.

@@ -1,6 +1,17 @@
 # EFPS CRM — Master Plan / Current Execution State
 
-> Current verified snapshot: 2026-11-12 14:45 IST. Older dated checkpoints below are historical evidence and superseded.
+> CRM operational metrics last verified: 2026-11-12 14:45 IST. Inventory/release facts were reverified on 2026-11-14 and are recorded in the current block below. Older dated checkpoints are historical evidence.
+
+## Current verified inventory and release state — 2026-11-14
+
+- Branches main and crm-ui-dashboard are synchronized with identical tracked trees; GitHub advertises exactly these two branch refs.
+- Render CRM service srv-darsv560tbcc73cu4ip0 is LIVE; the exact deployment ID and commit are authoritative in Render and are not duplicated here.
+- Supabase notion-inventory-state ACTIVE v12; AWS efps-notion-intake Active with successful update; Maps fallback deployed.
+- Inventory projection: 106 active Notion-owned rows and 1 soft-deleted tombstone.
+- Two real intake submissions are Processed and reconciled to Housing Listings and active Supabase snapshots.
+- Notion event ledger: 26 observed rows (5 processed, 18 ignored, 2 needs review, 1 rejected); complete delivery capture is not certified.
+- Processing Notes overwrite on reprocessing; append-only narrative history is not guaranteed.
+- No database tables deleted.
 
 ## Production baseline
 
@@ -34,9 +45,9 @@ Webhook durability and reconciliation, classification/promotion, normalized requ
 
 Deterministic OOC assignment and Group Message classification are implemented with controlled gates. D08 current visual/design-system handoff is documented.
 
-## Current production snapshot
+## Historical CRM production snapshot — 2026-11-12 (lead metrics not reverified in this pass)
 
-371 CRM leads; 138 deterministic auto-qualified; 839 contact classifications; 18,641 CRM messages and 18,641 linked WhAPI message events since 2026-10-05; 104 active inventory listings (87 Available / 17 Rented Out).
+371 CRM leads; 138 deterministic auto-qualified; 839 contact classifications; 18,641 CRM messages and 18,641 linked WhAPI message events since 2026-10-05; 104 active inventory listings (87 Available / 17 Rented Out) at the historical 2026-11-12 checkpoint; current verified inventory is 106 active rows plus 1 soft-deleted tombstone.
 Deterministic scheduler: 923 completed / 0 failed since 2026-10-05. AI scheduler remains intentionally paused.
 Live Render commit: `6b206ddf07515cff2df82140d86ee873e4ea2965`; remote `main` and `crm-ui-dashboard` shared a tree before the local unpushed Lambda source correction. The correction publication is blocked by approval review.
 

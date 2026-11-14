@@ -1,6 +1,6 @@
-## Current verified inventory status — 2026-11-14
+## Current verified inventory status — 2026-11-14 (live check)
 
-Inventory remains a separate source-of-truth domain from lead/contact classification. Notion Housing Listings is canonical; Supabase crm_inventory_snapshot contains 106 active Notion-owned rows, all with business_status Pending. This field is distinct from intake_status and listing_state. No database tables were deleted. See CRM_CURRENT_VERIFIED_STATE.md for the latest live release and event evidence.
+Inventory remains separate from lead/contact classification. Notion Housing Listings is canonical; Supabase crm_inventory_snapshot has 106 active Notion-owned rows and 1 soft-deleted tombstone. No active row has both locality and society name blank. business_status is distinct from intake_status and listing_state. The two latest intake submissions are Processed and reconciled. The Notion event ledger has 26 observed rows (5 processed, 18 ignored, 2 needs review, 1 rejected); complete delivery capture is not certified. Processing Notes are currently replaceable summaries, not append-only narratives. No database tables were deleted.
 
 ## Historical classification/CRM checkpoint — 2026-11-13
 
@@ -119,7 +119,7 @@ The P1–P5 hardening release added regression coverage for webhook promotion li
 
 
 
-## Current production behavior — 2026-09-30
+## Historical production behavior — 2026-09-30
 
 The Contact Classification screen is intentionally simple: one queue with two tabs.
 
@@ -185,6 +185,6 @@ Points **40 Requirement field correctness**, **41 Property-matching inputs**, an
 
 Historical live population snapshot verified 2026-10-05: **253 promoted qualified leads**, **253 normalized requirement profiles**, **0 missing profiles**, and **71 active canonical inventory listings**. Requirement evidence remains a separate provenance layer and is not fabricated by this audit.
 
-## Latest verified inventory count — 2026-11-14
+## Latest verified inventory count — 2026-11-14 (live check)
 
-The current active Notion-owned inventory projection is 106 rows (not the historical 104-row count above). All 106 currently have business_status Pending. The CRM UI/API change exposing this review status is deployed. No tables were deleted.
+The active Notion-owned inventory projection has 106 rows and 1 soft-deleted tombstone. Two recent submissions are Processed and reconciled. business_status remains separate from intake_status and listing_state. Processing Notes are replaceable summaries; append-only narrative history is not guaranteed. No tables were deleted.

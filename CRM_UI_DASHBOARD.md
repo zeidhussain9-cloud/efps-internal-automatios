@@ -1,6 +1,6 @@
 # EFPS CRM UI Dashboard — Current State
 
-> CRM operational metrics last revalidated 2026-11-12; Notion inventory and projection revalidated 2026-11-13. Older dated statements in this document are historical evidence.
+> CRM operational metrics last revalidated 2026-11-12; Notion inventory and projection revalidated 2026-11-14. Older dated statements in this document are historical evidence.
 
 ## Production identity
 
@@ -47,10 +47,10 @@ The dashboard uses the production Supabase CRM data path. Webhook events are dur
 
 ## Current database snapshot
 
-- Inventory verified 2026-11-13: 104 active Notion-owned listings (87 Available / 17 Rented Out); 104 matching Supabase snapshots and 104 processed intake events with matching Listing IDs.
+- Inventory verified 2026-11-14: 106 active Notion-owned rows and 1 soft-deleted tombstone in the Supabase projection. Two current intake submissions are Processed and reconciled to Housing Listings and active Supabase snapshots. The 104-row count below this checkpoint is historical.
 - Source media gap (not a sync failure): 99/104 listings have Cloudinary image URLs. Five Rented Out pages have no image URL in Notion: `EF-2609-608J`, `EF-2609-22H0`, `EF-2609-VDWH`, `EF-2609-7JGF`, `EF-2609-MECJ`. The CRM mirrors the blank source values; no substitute images were invented.
 - CRM lead, message, AI and classification metrics are recorded in `docs/crm/CRM_CURRENT_VERIFIED_STATE.md` and must be re-queried separately before reuse.
-Classification status for +919148338801: 253 promoted / 88 classified / 40 excluded / 8 pending.
+Historical classification snapshot for +919148338801 (not reverified in this pass): 253 promoted / 88 classified / 40 excluded / 8 pending.
 
 ## Group Message classification
 
@@ -66,4 +66,4 @@ This document is a point-in-time production statement. Do not copy its values in
 
 Points **40 Requirement field correctness**, **41 Property-matching inputs**, and **42 Property-matching results** are governed by the single canonical contract in `crm-source-audit-scheduler/AUDIT_CONTRACT.md` and the shared implementation in `src/crm-requirement-match-audit.mjs`. The scheduled runner fails closed unless the combined requirement/matching audit is complete. Do not duplicate or redefine these rules in this document.
 
-Current live population verified 2026-10-05: **253 promoted qualified leads**, **253 normalized requirement profiles**, **0 missing profiles**, and **71 active canonical inventory listings**. Requirement evidence remains a separate provenance layer and is not fabricated by this audit.
+Historical live population snapshot verified 2026-10-05: **253 promoted qualified leads**, **253 normalized requirement profiles**, **0 missing profiles**, and **71 active canonical inventory listings**. Requirement evidence remains a separate provenance layer and is not fabricated by this audit.

@@ -1,13 +1,14 @@
 # EFPS CRM — Render Configuration
 
-## Current verified production release — 2026-11-14
+## Current verified production release — 2026-11-14 (live check)
 
 - Service srv-darsv560tbcc73cu4ip0, URL https://easyfind-crm-d01-d05.onrender.com, branch crm-ui-dashboard, auto-deploy enabled.
-- Render application code commit 2727b38 is LIVE; /health HTTP 200; live assets include the Review status filter and card status.
-- Supabase notion-inventory-state ACTIVE v12; AWS efps-notion-intake update successful.
-- Inventory projection: 106 active Notion-owned rows; business_status Pending on all 106.
-- No tables deleted. Raw intake acceptance awaits a complete operator submission.
-
+- Render CRM service srv-darsv560tbcc73cu4ip0 is LIVE; the exact deployment ID and commit are authoritative in Render and are not duplicated here.
+- Supabase notion-inventory-state ACTIVE v12; AWS efps-notion-intake Active with successful last update.
+- Inventory projection: 106 active Notion-owned rows, 1 soft-deleted tombstone. Two current submissions are Processed and reconciled.
+- Notion event ledger: 26 observed rows (5 processed, 18 ignored, 2 needs review, 1 rejected); complete capture is not certified.
+- Processing Notes overwrite on reprocessing; append-only narrative history is not guaranteed.
+- No tables deleted.
 
 > Revalidated 2026-11-13 against the signed-in production browser, live Supabase projection, AWS Lambda stack, and current Render deployment.
 

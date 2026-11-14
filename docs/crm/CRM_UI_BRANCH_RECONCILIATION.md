@@ -1,14 +1,15 @@
 # CRM UI branch and release reconciliation
 
-## Current verified branch and release state — 2026-11-14
+## Current verified branch and release state — 2026-11-14 (live check)
 
-- Only two human-managed release branches: main and crm-ui-dashboard. Both synchronized with identical tracked trees.
-- Render deploys from crm-ui-dashboard. Application code commit 2727b38 is LIVE; later documentation-only merge has the same tracked tree.
-- Render /health returns HTTP 200. Supabase notion-inventory-state ACTIVE v12. AWS efps-notion-intake update successful.
-- Inventory: 106 active Notion-owned rows; business_status Pending on all 106.
-- Notion event ledger: 12 observed; 5 processed, 10 ignored non-intake changes, 1 rejected unauthenticated probe, 2 needs review. Complete capture is not certified.
-- No tables deleted. Raw intake acceptance remains pending a complete operator submission.
-
+- Branches main and crm-ui-dashboard are synchronized with identical tracked trees; GitHub advertises exactly these two branch refs.
+- Render CRM service srv-darsv560tbcc73cu4ip0 is LIVE; the exact deployment ID and commit are authoritative in Render and are not duplicated here.
+- Supabase notion-inventory-state ACTIVE v12; AWS efps-notion-intake Active with successful last update.
+- Inventory projection: 106 active Notion-owned rows, 1 soft-deleted tombstone, 0 active blank locality/society rows.
+- Two current submissions, EF-2611-PAGH and EF-2611-Y5KC, are Processed and reconciled to Housing Listings and active Supabase snapshots.
+- Notion event ledger: 26 observed rows (5 processed, 18 ignored, 2 needs review, 1 rejected). Complete delivery capture is not certified.
+- Processing Notes currently overwrite on reprocessing; the two current submissions preserve the manual-fallback narrative, but append-only narrative history is not guaranteed.
+- No tables deleted.
 
 > Revalidated 2026-11-13 after the Notion inventory release.
 

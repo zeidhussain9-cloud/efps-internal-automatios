@@ -1,14 +1,16 @@
 # EFPS CRM — Current Verified State
 
-## Current release and inventory status — 2026-11-14
+## Current release and inventory status — 2026-11-14 (live check)
 
-- Git branches main and crm-ui-dashboard are synchronized with identical tracked trees.
-- Latest Render deployment from crm-ui-dashboard is LIVE; /health HTTP 200.
-- Supabase notion-inventory-state ACTIVE v12; business_status migration registered and applied.
-- AWS efps-notion-intake Active; code update successful; Maps fallback deployed.
-- Inventory: 106 active Notion-owned rows; business_status Pending on all 106. This remains distinct from intake_status and listing_state.
-- Notion events: 12 observed; 5 processed, 10 ignored non-intake changes, 1 rejected unauthenticated probe, 2 needs review. Complete event capture not certified.
-- Full Raw Property Intake acceptance remains pending because two existing submissions have Photos but blank Raw Property Data. No tables deleted.
+- Branches main and crm-ui-dashboard are synchronized with identical tracked trees; GitHub advertises exactly these two branch refs.
+- Render CRM service srv-darsv560tbcc73cu4ip0 is LIVE; the exact deployment ID and commit are authoritative in Render and are not duplicated here.
+- Supabase notion-inventory-state ACTIVE v12; business-status migration registered/applied.
+- AWS efps-notion-intake Active; last update successful at 2026-11-14T09:46:50Z; Maps fallback deployed.
+- Inventory projection: 106 active Notion-owned rows, 1 soft-deleted tombstone, 0 active blank locality/society rows.
+- Two current submissions are Processed and reconciled: VRR Fortuna EF-2611-PAGH; Shobha Royal Pavilion EF-2611-Y5KC. Both have Raw Property Data, Photos, Processed Property relations and matching active Supabase snapshots.
+- Notion webhook ledger: 26 observed (5 processed, 18 ignored, 2 needs review, 1 rejected); full delivery coverage is not certified.
+- Processing Notes on the two submissions retain the initial failure/manual-fallback narrative. However, current worker/RPC behavior replaces the note on reprocessing; append-only narrative history is not guaranteed. Status and processing errors are separately recorded in the event ledger.
+- No database tables deleted. The intentionally paused AI scheduler remains outside this inventory scope.
 
 # EFPS CRM — Current Verified State
 
@@ -36,7 +38,7 @@
 - Deterministic scheduler: 923 completed / 0 failed since 2026-10-05; cumulative run totals 319 candidates, 118 qualified, 8 unqualified, 193 pending.
 - AI scheduler remains intentionally paused. No automatic WhatsApp sending is enabled.
 
-## Inventory synchronization — live recovery hardening 2026-11-13
+## Historical inventory synchronization checkpoint — 2026-11-13 (superseded by the current release block)
 
 - Canonical editor: Notion Housing Listings. The legacy `Housing_Listings` Sheet remains a compatibility path; dashboard reads active Notion rows from the existing Supabase snapshot.
 - Full comparison: 104 active Notion pages, 104 active Supabase rows, 0 missing/orphaned/duplicate records, and 0 semantic field mismatches after normalizing Notion rich-text formatting.

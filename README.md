@@ -1,19 +1,18 @@
-## Current verified production state — 2026-11-14
+## Current verified production state — 2026-11-14 (live check)
 
-- main and crm-ui-dashboard are synchronized with identical tracked trees.
-- Latest Render deployment from crm-ui-dashboard is LIVE; /health returns HTTP 200. The live JS/CSS assets contain the Review status UI.
-- Supabase notion-inventory-state is ACTIVE v12 (JWT verification enabled). The additive crm_inventory_snapshot.business_status migration is registered as 20261114095316 and applied.
-- AWS efps-notion-intake is Active; LastUpdateStatus Successful; deployed package CodeSha256 bx0ZE/aWHFPPIm4AMXcWFablYSPTVPvzj8543mC+s64=. Maps API-unavailable fallback is deployed.
-- 106 active Notion-owned inventory rows; business_status Pending on all 106.
-- 17 Notion webhook events observed: 5 processed; 11 failed-status records (10 ignored non-intake updates, 1 rejected unauthenticated probe); 2 needs-review outcomes due missing Raw Property Data. Complete delivery capture is not certified.
-- The live form has Raw Property Data and Photos questions. Two existing submissions have photos but no Raw Property Data; both remain Needs Review. Full raw intake acceptance is therefore still pending.
-- No database tables were deleted. WhatsApp history remains in crm_webhook_events; Notion event history remains in crm_inventory_intake_events.
+- Branches main and crm-ui-dashboard are synchronized with identical tracked trees; GitHub advertises exactly these two branch refs.
+- Render CRM service srv-darsv560tbcc73cu4ip0 is LIVE; the exact deployment ID and commit are authoritative in Render and are not duplicated here.
+- Supabase notion-inventory-state ACTIVE v12 (JWT verification enabled); migration 20261114095316_crm_inventory_business_status is registered and applied.
+- AWS efps-notion-intake Active; LastUpdateStatus Successful; Maps API-unavailable fallback is deployed.
+- Inventory projection: 106 active Notion-owned rows, 1 soft-deleted tombstone, 0 active rows with blank locality and society name.
+- Two real submissions, EF-2611-PAGH and EF-2611-Y5KC, are Processed and reconciled to Housing Listings and active Supabase snapshots; both have Raw Property Data, Photos and Processed Property relations.
+- Notion event ledger: 26 observed rows (5 processed, 18 ignored, 2 needs review, 1 rejected); complete delivery capture is not certified.
+- Processing Notes on the two current submissions preserve the failure/manual-fallback narrative, but worker/RPC reprocessing overwrites the note. Append-only narrative history is not guaranteed. Event/status/error history is retained separately.
+- No database tables deleted. The two latest compatibility Sheet writes were not independently verified.
 
 ## Historical initial Notion Property Intake deployment — 2026-11-14 08:14 UTC (v10; superseded)
 
 Task 3 webhook event history is deployed. The existing `crm_inventory_intake_events` ledger was extended; no parallel webhook table was created and WhatsApp `crm_webhook_events` remains untouched. Supabase `notion-inventory-state` is ACTIVE v10; AWS `efps-notion-intake` and its stack are Active/UPDATE_COMPLETE. The live Notion form exposes both Raw Property Data and Photos. Awaiting the first operator-submitted property for end-to-end acceptance across Sheets, Cloudinary, Housing Listings and the Supabase inventory projection. See `docs/NOTION_PROPERTY_INTAKE.md`.
-
-## Historical checkpoint — 2026-11-13 (superseded by 2026-11-14 verified state)
 
 ## Historical checkpoint — 2026-11-13 (superseded by 2026-11-14 verified state)
 

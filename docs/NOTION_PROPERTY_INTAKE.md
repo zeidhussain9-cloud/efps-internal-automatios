@@ -1,14 +1,18 @@
 # Notion Property Intake — Runtime Contract
 
-## Current verified acceptance state — 2026-11-14
+## Current verified acceptance state — 2026-11-14 (live check)
 
-- The live Submit New Property form schema contains both Raw Property Data and Photos questions.
-- Two existing submissions have Photos but blank Raw Property Data; both remain Needs Review. The recorded worker outcome explicitly says Raw Property Data is required. No source content was fabricated or altered.
-- 12 Notion webhook event rows observed: 5 processed, 10 ignored non-intake changes, 1 rejected unauthenticated probe, 2 needs-review outcomes. Complete delivery coverage is not certified.
-- AWS efps-notion-intake is Active with successful code update; Maps API-unavailable fallback deployed. Supabase notion-inventory-state ACTIVE v12.
-- Supabase inventory projection has 106 active Notion-owned rows; business_status Pending on all 106.
-- No tables deleted. Notion event history remains in crm_inventory_intake_events; WhatsApp event history remains in crm_webhook_events.
-- Full end-to-end acceptance across raw text extraction, Maps, Cloudinary, Sheets, Housing Listings and Supabase remains pending a complete real operator submission.
+- The live Submit New Property intake source exposes Raw Property Data and Photos.
+- Two current submissions have both fields populated and are Processed: EF-2611-PAGH (VRR Fortuna, 3 BHK) and EF-2611-Y5KC (Shobha Royal Pavilion, 4.5 BHK).
+- Both have populated Processed Property relations, matching Housing Listings pages, and matching active Supabase snapshots. Cloudinary image URLs are present in the corresponding inventory projection.
+- The active Supabase Notion projection has 106 rows; one additional row is soft-deleted. The empty row is not active.
+- The two submission records retain the narrative: initial Google Maps verification failure, reason processing was held, agreed manual fallback, preserved original Maps URL, completion of the Housing Listings record, and the remaining unverified Maps state.
+- IMPORTANT persistence limitation: Processing Notes is overwritten by the worker on subsequent processing. crm_finish_notion_inventory_intake also replaces its summary field, and the event retry path can clear it. The event ledger separately records status transitions, delivery attempts and processing errors. Full append-only narrative history is not guaranteed for future retries yet.
+- 26 Notion webhook event rows observed: 5 processed, 18 ignored non-intake changes, 2 needs-review outcomes, 1 rejected unauthenticated probe. Complete delivery capture is not certified.
+- Supabase notion-inventory-state ACTIVE v12; AWS efps-notion-intake Active with successful last update; Maps API-unavailable fallback deployed.
+- Existing-property update flow: Housing Listings page edit → signed Notion page event → AWS Lambda → notion-inventory-state → existing crm_inventory_snapshot row → CRM dashboard.
+- New property intake is separate: Submit New Property → raw intake worker/enrichment → create or update Housing Listings page → Supabase snapshot. It is not the normal edit path for an existing property.
+- Google Sheets remains a compatibility write in the raw-intake path; its row-level write for these two submissions was not independently checked in this verification.
 
 # Notion Property Intake — Runtime Contract
 
@@ -121,13 +125,13 @@ The test page was permanently deleted from Notion Trash after approval. Its exac
 The old WhAPI `NEW`-delimited inventory listener and its DynamoDB session state are legacy code retained temporarily at the user's direction. It is not the new Notion processing path and is not to be removed until the final cleanup phase is explicitly started.
 
 
-## Latest verified checkpoint — 2026-11-14
+## Historical interim checkpoint — 2026-11-14 (superseded by the live acceptance state at the top)
 
 - No table has been deleted. Notion event history remains in crm_inventory_intake_events; WhatsApp event history remains in crm_webhook_events.
-- Live Notion event rows: 8 (5 processed, 2 ignored/failed outcomes, 1 needs review). This proves logging for those records only; complete delivery capture is not certified.
+- At this interim checkpoint, 8 Notion event rows had been observed. The later live query found 26 rows (5 processed, 18 ignored, 2 needs review, 1 rejected); complete delivery capture is still not certified.
 - Two operator-requested Housing Listings updates were verified back in Notion and Supabase.
 - Live Notion-owned projection: 106 active rows. Older 104-row figures above are historical checkpoints only.
 - crm_inventory_snapshot.business_status is a first-class reporting field backfilled from source_record.status. All 106 active Notion rows currently report Pending.
-- Raw Property Intake with photos has not passed a fresh real-property end-to-end acceptance run. Awaiting operator submission and verification of Sheets, Cloudinary and Maps runtime credentials.
-- Maps API-unavailable fallback is implemented locally but not deployed: preserve only the original supported short URL, label it unverified, and do not infer place/locality/pincode.
+- At this interim checkpoint, fresh real-property acceptance was pending. Two real submissions were subsequently processed and reconciled to Housing Listings and Supabase; exact compatibility Sheet row writes were not independently verified.
+- At this interim checkpoint, the Maps API-unavailable fallback was local-only. It was subsequently deployed; current behavior preserves only the original supported short URL, labels it unverified, and does not infer place/locality/pincode.
 - At that earlier checkpoint, UI/Edge Function/Maps code changes were local; they have since been deployed as recorded at the top of this document.

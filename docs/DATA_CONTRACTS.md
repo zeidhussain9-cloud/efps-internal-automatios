@@ -1,10 +1,15 @@
 # Data Contracts
 
-## Current verified inventory and event contract — 2026-11-14
+## Current verified inventory and event contract — 2026-11-14 (live check)
 
-crm_inventory_snapshot.business_status is the top-level CRM projection of source_record.status. It is distinct from intake_status (intake lifecycle), listing_state (availability), and crm_inventory_intake_events.processing_status (webhook processing outcome). Existing Notion rows were backfilled from source_record.status; all 106 active Notion-owned rows currently report Pending. New Notion inventory upserts populate business_status and default missing/blank values to Not recorded.
+crm_inventory_snapshot is the CRM projection of canonical Notion Housing Listings. business_status is distinct from intake_status, listing_state, and crm_inventory_intake_events.processing_status.
 
-Notion event history is retained in the existing crm_inventory_intake_events table. WhatsApp event history remains in crm_webhook_events. No tables were deleted. The current Notion event audit has 12 observed rows; 5 processed, 10 ignored non-intake changes, 1 rejected unauthenticated probe, and 2 needs-review outcomes. This does not prove complete webhook delivery capture.
+- 106 active housing_notion rows; 1 soft-deleted tombstone; 0 active rows with blank locality and society name.
+- Two recent intake submissions (EF-2611-PAGH, EF-2611-Y5KC) have Processed status, raw property text, photos, Processed Property relations, and matching active snapshots.
+- Notion event history remains in crm_inventory_intake_events; WhatsApp event history remains in crm_webhook_events.
+- 26 Notion event rows observed: 5 processed, 18 ignored, 2 needs-review, 1 rejected. This is an observed ledger count, not proof of complete webhook delivery capture.
+- Processing Notes is a replaceable summary. The current two submissions preserve the failure/fallback narrative, but worker reprocessing replaces the field; append-only narrative history is not yet guaranteed. Event/status/error history is retained separately.
+- No tables were deleted.
 
 # Data Contracts
 
@@ -176,10 +181,6 @@ Production Google Sheets access, the 48-column contract, write boundary, Google 
 The dedicated root `steering.md` instructs the hosted CRM model to return one JSON object with `bhk`, `location`, `budget`, `pets` and `uncertainties`. Unknown scalar values are `null`; uncertainties are a string array. The current adapter parses JSON or fenced JSON and returns the proposal for human Accept/Reject; it does not persist AI-derived values or assert property facts. The provider receives only fixed fictional pilot fixtures. Historical SQLite customer data and Housing_Listings inventory are separate sources and are not added to model context.
 
 
-## Latest verified inventory status contract — 2026-11-14
+## Latest verified inventory status contract — 2026-11-14 (live check)
 
-crm_inventory_snapshot.business_status is the top-level CRM/reporting projection of source_record.status. It is distinct from intake_status (intake lifecycle), listing_state (inventory availability), and webhook processing_status (delivery/worker outcome in crm_inventory_intake_events).
-
-The field is backfilled from source_record.status for existing Notion-owned rows. New Notion inventory upserts must populate business_status from record.status. Do not infer business acceptance from intake_status=Processed.
-
-No table was deleted or renamed. crm_webhook_events remains the WhatsApp ledger. Notion event history remains in the extended crm_inventory_intake_events table.
+crm_inventory_snapshot.business_status is the top-level CRM/reporting projection of source_record.status. It is distinct from intake_status (intake lifecycle), listing_state (inventory availability), and webhook processing_status (delivery/worker outcome in crm_inventory_intake_events). The live projection has 106 active Notion-owned rows and 1 soft-deleted tombstone. Two current intake submissions are Processed and reconciled. Processing Notes remain replaceable summaries; append-only narrative history is not guaranteed. Notion event history and WhatsApp event history remain in their existing separate tables. No tables were deleted.

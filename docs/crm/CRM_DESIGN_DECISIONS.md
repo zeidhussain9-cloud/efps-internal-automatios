@@ -1,14 +1,16 @@
-## Authoritative current verified state — 2026-11-13
+## Historical authoritative state — 2026-11-13 (superseded)
 
-## Current verified inventory and release decisions — 2026-11-14
+## Current verified inventory and release decisions — 2026-11-14 (live check)
 
-- Notion Housing Listings is canonical; Supabase crm_inventory_snapshot remains the CRM projection.
-- business_status is distinct from intake_status and listing_state. All 106 active Notion-owned rows currently report Pending.
-- Notion event history remains in crm_inventory_intake_events; WhatsApp history remains in crm_webhook_events. No tables deleted.
-- main and crm-ui-dashboard synchronized with identical tracked trees. Render application code commit 2727b38 is live.
-- Supabase notion-inventory-state ACTIVE v12; AWS efps-notion-intake updated successfully. Maps fallback deployed.
-- Full raw intake acceptance awaits a complete operator submission with Raw Property Data and Photos.
-
+- Notion Housing Listings is canonical; Supabase crm_inventory_snapshot is the CRM projection.
+- business_status is distinct from intake_status and listing_state. The active projection contains 106 Notion-owned rows and 1 soft-deleted tombstone.
+- Branches main and crm-ui-dashboard are synchronized with identical tracked trees; GitHub advertises exactly these two branch refs.
+- Render CRM service is LIVE; the exact deployment ID and commit are read from Render at verification time.
+- Supabase notion-inventory-state ACTIVE v12; AWS efps-notion-intake Active with successful update; Maps fallback deployed.
+- Two current submissions are Processed and reconciled to Housing Listings and active Supabase snapshots.
+- Notion event ledger: 26 observed rows (5 processed, 18 ignored, 2 needs review, 1 rejected); full delivery coverage is not certified.
+- Processing Notes are replaceable summaries; append-only narrative history remains a hardening item.
+- No tables deleted.
 
 > The latest UI release is live on the remote branch. Notion inventory recovery hardening is deployed (Supabase Edge Function v9, AWS Lambda with 15-minute reconciliation and SQS failure capture). See `CRM_CURRENT_VERIFIED_STATE.md` and `HANDOFF.md` for current evidence. Older dated checkpoints below remain historical.
 

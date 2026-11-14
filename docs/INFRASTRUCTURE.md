@@ -1,13 +1,13 @@
 # Infrastructure Registry
 
-## Current verified infrastructure — 2026-11-14
+## Current verified infrastructure — 2026-11-14 (live check)
 
 - Supabase project qttcutwzehtskfcwxkwj; notion-inventory-state ACTIVE v12 with JWT verification enabled.
-- Migration 20261114095316_crm_inventory_business_status is registered and applied; it adds business_status and a partial index to crm_inventory_snapshot. No tables deleted.
-- Render service srv-darsv560tbcc73cu4ip0: latest deployment from crm-ui-dashboard LIVE; /health HTTP 200.
-- AWS account 294417174793, region ap-southeast-2; efps-notion-intake Active, LastUpdateStatus Successful, package CodeSha256 bx0ZE/aWHFPPIm4AMXcWFablYSPTVPvzj8543mC+s64=.
-- Maps API-unavailable fallback deployed to the existing Lambda. Only supported original short URLs are passed through and explicitly marked unverified.
-- No secret values were printed or rotated.
+- Migration 20261114095316_crm_inventory_business_status is registered and applied. No tables deleted.
+- Render CRM service srv-darsv560tbcc73cu4ip0 is LIVE; the exact deployment ID and commit are authoritative in Render and are not duplicated here.
+- AWS account 294417174793, region ap-southeast-2; Lambda efps-notion-intake Active, LastUpdateStatus Successful, last modified 2026-11-14T09:46:50Z, Python 3.12, 512 MB, 180-second timeout, CodeSha256 bx0ZE/aWHFPPIm4AMXcWFablYSPTVPvzj8543mC+s64=.
+- Maps API-unavailable fallback is deployed. The two current property submissions are processed and reflected in Housing Listings and Supabase.
+- No secret values were printed, rotated or overwritten.
 
 ## Historical initial Task 3 deployment — 2026-11-14 08:14 UTC (superseded by current v12 state)
 
@@ -15,7 +15,7 @@
 - Supabase Edge Function `notion-inventory-state` ACTIVE v10; JWT verification remains enabled.
 - AWS account `294417174793`, region `ap-southeast-2`; stack `efps-notion-property-intake` UPDATE_COMPLETE. Lambda `efps-notion-intake` Active, update successful, last modified `2026-11-14T08:14:28Z`.
 - Existing Secrets Manager ARNs were reused for Notion, Sheets, Cloudinary and Maps. No secret values were exposed, rotated or overwritten.
-- Production end-to-end intake verification is pending a real operator submission. The form has both required questions configured; verify the actual event and downstream records after submission.
+- At this historical 08:14 UTC checkpoint, production end-to-end intake verification was pending. Two real operator submissions were subsequently processed and reconciled; see the current verified block above.
 
 ## Historical production audit — 2026-10-01
 
@@ -306,10 +306,12 @@ Production Render service srv-darsv560tbcc73cu4ip0 is live on crm-ui-dashboard c
 The AWS Bedrock runtime SDK was upgraded to `3.1144.0` after Render exposed a critical transitive `fast-xml-parser` advisory in the previous dependency tree. Local production-dependency audit now reports zero vulnerabilities; the historical automated suite was 71/71; current automated suite is 134/134 and browser regression is 1/1.
 
 
-## Latest verified checkpoint — 2026-11-14
+## Latest verified checkpoint — 2026-11-14 (live check)
 
-- Supabase project qttcutwzehtskfcwxkwj: additive crm_inventory_snapshot.business_status column and partial index applied. No tables deleted.
-- Historical checkpoint before the v12 Edge Function deployment; current runtime is recorded at the top of this document.
-- Render service srv-darsv560tbcc73cu4ip0 remains the CRM production service. Current local UI/API changes are not deployed.
-- AWS Notion intake Lambda remains the existing isolated runtime. Maps fallback code has not yet been deployed to Lambda.
+- Supabase business_status migration and notion-inventory-state v12 are live; no tables deleted.
+- Render CRM service srv-darsv560tbcc73cu4ip0 is LIVE; the exact deployment ID and commit are authoritative in Render and are not duplicated here.
+- AWS efps-notion-intake is Active with successful update; Maps fallback is deployed.
+- Two real intake submissions are Processed and reconciled to Housing Listings and Supabase.
+- The 26 observed Notion event rows do not certify complete delivery capture.
+- Processing Notes are replaceable summaries, not append-only history. Compatibility Sheet row writes for the two latest submissions were not independently checked.
 - Existing secret values were not printed, rotated, created or overwritten.

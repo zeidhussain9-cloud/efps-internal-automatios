@@ -1,11 +1,13 @@
-## Current verified source-of-truth state — 2026-11-14
+## Current verified source-of-truth state — 2026-11-14 (live check)
 
-- Notion Housing Listings remains canonical; Supabase crm_inventory_snapshot is the CRM projection.
-- Active Notion-owned projection: 106 rows; business_status Pending on all 106.
-- main and crm-ui-dashboard synchronized with identical tracked trees. Latest Render deployment from crm-ui-dashboard is LIVE.
-- Supabase notion-inventory-state ACTIVE v12; AWS efps-notion-intake code update successful.
-- Notion event ledger: 17 observed records; 5 processed, 10 ignored non-intake changes, 1 rejected unauthenticated probe, 2 needs review. Complete capture not certified.
-- No tables deleted. Raw intake acceptance awaits a complete real operator submission.
+- Notion Housing Listings is canonical; Supabase crm_inventory_snapshot is the CRM projection.
+- Inventory projection: 106 active Notion-owned rows, 1 soft-deleted tombstone, 0 active blank locality/society rows.
+- Branches main and crm-ui-dashboard are synchronized with identical tracked trees; GitHub advertises exactly these two branch refs.
+- Render CRM service srv-darsv560tbcc73cu4ip0 is LIVE; the exact deployment ID and commit are authoritative in Render and are not duplicated here.
+- Supabase notion-inventory-state ACTIVE v12; AWS efps-notion-intake Active with successful update.
+- Two current submissions (EF-2611-PAGH, EF-2611-Y5KC) are Processed and match Housing Listings and active Supabase rows.
+- Notion event ledger: 26 observed rows (5 processed, 18 ignored, 2 needs review, 1 rejected); complete delivery capture is not certified.
+- Processing Notes overwrite on reprocessing; append-only narrative history is not guaranteed. No tables deleted.
 
 ## Historical source-of-truth checkpoint — 2026-11-13
 
@@ -221,6 +223,6 @@ Before connecting real local data to the UI:
 
 These are local data-migration tasks, not reasons to reintroduce the excluded cloud lead systems.
 
-## Latest verified inventory update — 2026-11-14
+## Latest verified inventory update — 2026-11-14 (live check)
 
-The active Notion-owned Supabase projection contains 106 rows. business_status is now first-class and backfilled from source_record.status; all 106 currently report Pending. This is separate from intake_status and listing_state. The UI/API change is deployed. Notion events remain in crm_inventory_intake_events and WhatsApp events in crm_webhook_events. No tables were deleted.
+The active Notion-owned Supabase projection contains 106 rows and 1 soft-deleted tombstone. business_status is a first-class projection of source_record.status, distinct from intake_status and listing_state. Two current submissions are Processed and reconciled to Housing Listings and Supabase. Notion events remain in crm_inventory_intake_events and WhatsApp events in crm_webhook_events. Processing Notes overwrite on reprocessing; append-only narrative history is not guaranteed. No tables were deleted.

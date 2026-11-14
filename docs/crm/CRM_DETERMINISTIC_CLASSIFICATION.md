@@ -87,4 +87,4 @@ Existing historical property_listing_sent rows remain historical CRM data. The n
 
 Points **40 Requirement field correctness**, **41 Property-matching inputs**, and **42 Property-matching results** are governed by the single canonical contract in `crm-source-audit-scheduler/AUDIT_CONTRACT.md` and the shared implementation in `src/crm-requirement-match-audit.mjs`. The scheduled runner fails closed unless the combined requirement/matching audit is complete. Do not duplicate or redefine these rules in this document.
 
-Current live population verified 2026-11-12: **371 CRM leads**, **138 deterministic auto-qualified leads**, **104 active canonical inventory listings**, and **922 successful deterministic scheduler runs since 2026-10-05**. Requirement evidence remains a separate provenance layer and is not fabricated by this audit.
+Historical population snapshot verified 2026-11-12: **371 CRM leads**, **138 deterministic auto-qualified leads**, **104 active canonical inventory listings**, and **922 successful deterministic scheduler runs since 2026-10-05**. Requirement evidence remains a separate provenance layer and is not fabricated by this audit.

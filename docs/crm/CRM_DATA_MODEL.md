@@ -1,12 +1,15 @@
 # EasyFind CRM — Canonical Data Model
 
-## Current verified inventory contract — 2026-11-14
+## Current verified inventory contract — 2026-11-14 (live check)
 
-- Notion Housing Listings → AWS Lambda efps-notion-intake → Supabase Edge Function notion-inventory-state ACTIVE v12 → crm_inventory_snapshot → CRM dashboard.
-- crm_inventory_snapshot.business_status is projected from source_record.status and is distinct from intake_status and listing_state. All 106 active Notion-owned rows currently report Pending.
+- Existing property edits: Notion Housing Listings page → signed Notion page event → AWS Lambda efps-notion-intake → Supabase Edge Function notion-inventory-state ACTIVE v12 → upsert the existing crm_inventory_snapshot row by immutable Listing ID → CRM dashboard.
+- New property intake is separate: Submit New Property → raw intake worker → Housing Listings page/relation → Supabase projection.
+- The live projection contains 106 active Notion-owned rows and 1 soft-deleted tombstone; no active blank locality/society rows.
+- Two latest submissions, EF-2611-PAGH and EF-2611-Y5KC, are Processed, have raw text/photos and Processed Property relations, and match active Supabase snapshots.
 - Notion webhook history remains in crm_inventory_intake_events; WhatsApp webhook history remains in crm_webhook_events. No tables deleted.
-- Maps API-unavailable fallback is deployed to the isolated Lambda and labels the original short URL as unverified.
-- Full raw intake acceptance remains pending a real submission with non-empty Raw Property Data and Photos.
+- 26 Notion event rows observed (5 processed, 18 ignored, 2 needs review, 1 rejected); capture completeness is not certified.
+- Processing Notes is a replaceable summary, not append-only. The two latest records contain the initial failure/manual fallback narrative, but future reprocessing can overwrite it. Event/status/error history is separately retained.
+- The two latest compatibility Sheet writes were not independently verified.
 
 # EasyFind CRM — Canonical Data Model
 
@@ -204,8 +207,8 @@ The production AI workspace also consumes `crm_ai_runs`, `crm_requirement_eviden
 
 Points **40 Requirement field correctness**, **41 Property-matching inputs**, and **42 Property-matching results** are governed by the single canonical contract in `crm-source-audit-scheduler/AUDIT_CONTRACT.md` and the shared implementation in `src/crm-requirement-match-audit.mjs`. The scheduled runner fails closed unless the combined requirement/matching audit is complete. Do not duplicate or redefine these rules in this document.
 
-Current live population verified 2026-11-12: **371 CRM leads**, **138 deterministic auto-qualified leads**, **104 active canonical inventory listings**, and **0 webhook message events missing a crm_messages link** since 2026-10-05. Requirement evidence remains a separate provenance layer and is not fabricated by this audit.
+Historical population snapshot verified 2026-11-12: **371 CRM leads**, **138 deterministic auto-qualified leads**, **104 active canonical inventory listings**, and **0 webhook message events missing a crm_messages link** since 2026-10-05. Requirement evidence remains a separate provenance layer and is not fabricated by this audit.
 
-## Latest verified inventory projection — 2026-11-14
+## Latest verified inventory projection — 2026-11-14 (live check)
 
-crm_inventory_snapshot has a first-class business_status column backfilled from source_record.status. It is distinct from intake_status and listing_state. The current active Notion-owned projection is 106 rows, all Pending. The CRM API/UI changes were subsequently deployed; see the current verified inventory contract at the top of this document. Notion webhook events remain in crm_inventory_intake_events; WhatsApp webhook events remain in crm_webhook_events. No table deletions occurred.
+crm_inventory_snapshot has a first-class business_status column backfilled from source_record.status. It is distinct from intake_status and listing_state. The current projection has 106 active Notion-owned rows and 1 soft-deleted tombstone. Two current submissions are Processed and reconciled. Notion webhook events remain in crm_inventory_intake_events; WhatsApp events remain in crm_webhook_events. Processing Notes overwrite on reprocessing; append-only narrative history is not guaranteed. No table deletions occurred.

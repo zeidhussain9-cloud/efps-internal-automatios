@@ -1,12 +1,16 @@
 # EFPS SAM Deployment Contract
 
-## Current verified release state — 2026-11-14
+## Current verified release state — 2026-11-14 (live check)
 
-- CRM Render application code commit 2727b38 is LIVE; main and crm-ui-dashboard synchronized with identical tracked trees.
-- Supabase notion-inventory-state ACTIVE v12 with JWT verification enabled; migration 20261114095316_crm_inventory_business_status registered and applied.
-- AWS efps-notion-intake update successful; Maps API-unavailable fallback deployed.
-- No database tables deleted. Full raw intake acceptance awaits a complete real operator submission with Raw Property Data and Photos.
+- Render CRM service srv-darsv560tbcc73cu4ip0 is LIVE; the exact deployment ID and commit are authoritative in Render and are not duplicated here.
+- Local and remote main / crm-ui-dashboard branches share the same tracked tree; GitHub currently advertises exactly these two branch refs.
+- Supabase notion-inventory-state ACTIVE v12; migration 20261114095316_crm_inventory_business_status registered and applied.
+- AWS efps-notion-intake Active; LastUpdateStatus Successful, last modified 2026-11-14T09:46:50Z; Maps fallback deployed.
+- Two current operator submissions are Processed and reconciled to Housing Listings and active Supabase snapshots.
+- Notion event ledger has 26 observed rows; complete delivery coverage is not certified. Processing-note narrative is not append-only; see docs/NOTION_PROPERTY_INTAKE.md.
+- No database tables deleted.
 
+## Historical Task 3 local-status note — superseded by the production deployment entries below
 
 ## Task 3 local status
 
@@ -14,14 +18,14 @@ The Notion webhook event-history migration and ingestion/worker integration are 
 
 # EFPS SAM Deployment Contract
 
-## Task 3 production deployment — 2026-11-14
+## Historical Task 3 production deployment record — 2026-11-14 08:14 UTC (later verified with real submissions)
 
 - Migration `crm_notion_webhook_event_history` applied to Supabase project `qttcutwzehtskfcwxkwj`.
 - `notion-inventory-state` deployed ACTIVE v12 with JWT verification enabled.
 - AWS SAM stack `efps-notion-property-intake` updated successfully in `ap-southeast-2`; Lambda `efps-notion-intake` Active, `LastUpdateStatus=Successful`, last modified `2026-11-14T08:14:28Z`.
 - Deployment reused the existing secret ARNs. No secret values were changed or printed.
 - SAM validation and non-container build passed. The previously built Linux/Python 3.12 dependency package was reused with the updated committed Notion intake module overlaid and verified.
-- Production event-history acceptance remains pending one real operator-submitted property. Do not use a synthetic production property for validation.
+- At this deployment-time checkpoint, real-submission acceptance was pending. Two real operator submissions were subsequently processed and reconciled; see the current live-state block above.
 
 This document retains the historical SAM deployment contract. It is not the production deployment contract for the current CRM UI. Current CRM UI production deploys from `crm-ui-dashboard` to Render service `easyfind-crm-d01-d05`.
 

@@ -1,12 +1,12 @@
 ## Historical Task 3 deployment checkpoint — 2026-11-14 08:14 UTC (superseded by v12)
 
-## Current verified open pointers — 2026-11-14
+## Current verified open pointers — 2026-11-14 (live check)
 
-- Full Raw Property Intake acceptance remains pending: two existing submissions have photos but blank Raw Property Data and remain Needs Review.
-- Complete Notion webhook delivery coverage is not certified from the 18 observed event records.
-- Four ignored event outcomes are non-intake changes; one rejected event is the unauthenticated endpoint probe used during smoke testing. Both are retained in the event ledger.
-- Notion workspace cleanup was limited to clarifying the home and reference pages; no page or database was deleted.
-- No tables deleted. WhatsApp and Notion event histories remain separate in their existing tables.
+- Processing-note durability: the two latest submissions preserve the failure/manual-fallback narrative, but Processing Notes is overwritten by worker/RPC processing and retries can clear the summary. Implement append-only narrative history before promising that every future attempt is preserved.
+- Notion webhook coverage: 26 event rows are observed (5 processed, 18 ignored, 2 needs review, 1 rejected); complete delivery capture is not certified.
+- Raw-intake Sheets compatibility: the two current submissions have Photos, Raw Property Data, Housing Listings relations and matching Supabase snapshots; the corresponding compatibility Sheet writes were not independently verified in this check.
+- Restore event: actual Notion page.undeleted webhook delivery remains unobserved; the scheduled 15-minute reconciliation fallback remains the recovery path.
+- No database tables deleted. Workspace cleanup and CRM review-status visibility are out of scope for this pass.
 
 # EFPS CRM — Open Pointers
 
@@ -21,10 +21,10 @@
 - Live Notion form view `Submit New Property` has both `Raw Property Data` and `Photos` questions. Its data-source description was updated to reflect the deployed workflow.
 - **Pending:** operator's first real property submission and evidence-backed end-to-end reconciliation across webhook ledger, Lambda, Sheets, Cloudinary, Housing Listings, and Supabase snapshot. No synthetic production property has been inserted.
 
-## Remaining inventory intake follow-ups
+## Historical remaining inventory intake follow-ups — reassess against the current live check
 
-- Verify one real raw-details-and-photos intake end to end after the operator submission. Confirm all source/derived records and terminal processing status.
-- Verify raw Property Intake Sheets, Cloudinary and Maps credentials through the real worker execution; do not expose or rotate secrets.
+- The first real raw-details-and-photos submissions have now been processed and reconciled to Housing Listings and Supabase. Exact compatibility Sheet row writes remain unverified.
+- Do not expose or rotate credentials. Cloudinary image URLs and Maps fallback are observed in the current records; the compatibility Sheet write remains the unverified sub-step.
 - Reconcile the 44 historical long Google Maps URLs across Sheets, Notion and Supabase together; do not update only one platform.
 - Independently observe a real `page.undeleted` webhook delivery; scheduled 15-minute reconciliation already provides the tested recovery fallback.
 - Resolve the five existing listings with missing Cloudinary image URLs only from source media, not substitute imagery.
@@ -73,10 +73,10 @@ Points **40 Requirement field correctness**, **41 Property-matching inputs**, an
 Historical live population snapshot verified 2026-10-05: **253 promoted qualified leads**, **253 normalized requirement profiles**, **0 missing profiles**, and **71 active canonical inventory listings**. Requirement evidence remains a separate provenance layer and is not fabricated by this audit.
 
 
-## Latest verified open pointers — 2026-11-14
+## Latest verified open pointers — 2026-11-14 (live check)
 
-- Raw Property Intake full-chain acceptance remains unverified until a real operator submission is processed across Notion webhook, Lambda, Sheets, Cloudinary, Maps, Housing Listings and Supabase.
-- Complete Notion webhook capture coverage is not certified from the 18 observed event rows; audit configured delivery types and retry outcomes before claiming completeness.
-- Maps fallback and business-status UI changes are deployed.
-- Notion workspace navigation and current-state references were consolidated; no page or database was deleted.
-- Eleven event rows have failed status (ten ignored non-intake changes and one rejected unauthenticated probe); two remain Needs Review due to missing Raw Property Data. All records are retained for audit.
+- Processing-note durability: the current note field is overwritten during reprocessing. Implement append-only narrative history before promising every attempt is preserved.
+- Notion webhook delivery completeness is not certified from the 26 observed event rows (5 processed, 18 ignored, 2 needs review, 1 rejected).
+- Compatibility Sheet row writes for the two latest raw property submissions were not independently checked.
+- Actual Notion page.undeleted webhook delivery remains unobserved; the scheduled 15-minute reconciliation fallback remains the recovery path.
+- No database tables deleted. Workspace cleanup and CRM review-status visibility remain out of scope for this pass.

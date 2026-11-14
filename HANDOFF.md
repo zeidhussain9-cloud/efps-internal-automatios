@@ -1,21 +1,18 @@
 # EFPS CRM — Handoff
 
-## Current verified production state — 2026-11-14
+## Current verified production state — 2026-11-14 (live check)
 
 - No database tables deleted. WhatsApp history remains in crm_webhook_events; Notion event history remains in crm_inventory_intake_events.
-- Remote main and crm-ui-dashboard are synchronized with identical tracked trees. The only local untracked path is supabase/.temp/; preserved.
-- Latest Render deployment from crm-ui-dashboard is LIVE; /health HTTP 200; live JS/CSS contain the review-status UI.
+- Branches main and crm-ui-dashboard are synchronized with identical tracked trees; GitHub advertises exactly these two branch refs.
+- Render CRM service srv-darsv560tbcc73cu4ip0 is LIVE; the exact deployment ID and commit are authoritative in Render and are not duplicated here.
 - Supabase notion-inventory-state ACTIVE v12, JWT verification enabled. Migration 20261114095316_crm_inventory_business_status is registered and applied.
-- AWS efps-notion-intake is Active, LastUpdateStatus Successful, deployed package CodeSha256 bx0ZE/aWHFPPIm4AMXcWFablYSPTVPvzj8543mC+s64=.
-- 106 active Notion-owned inventory rows; business_status Pending on all 106. The dashboard has an independent review-status filter and card display.
-- Notion event ledger: 18 observed events — 5 processed, 11 failed-status (10 ignored non-intake changes and 1 rejected unauthenticated probe), 2 needs review. Complete delivery capture is not certified.
-- Live form schema exposes Raw Property Data and Photos. Two existing submissions contain photos but blank Raw Property Data and remain Needs Review. No synthetic property was created.
-- Maps fallback is deployed: preserve only an original supported short Maps URL and label it unverified when the Maps API is unavailable; no place facts are inferred.
-- Local validation before release: Python Inventory + Maps 122/122; Node 146/146; browser 1/1; Vite build PASS; git diff --check PASS.
-- Notion home, workflow and canonical column pages received current runtime notes. No Notion page or database was deleted.
-- Remaining acceptance blocker: a complete real operator submission with Raw Property Data and Photos, then verify Sheets, Cloudinary, Housing Listings and Supabase end to end.
-
-# EFPS CRM — Handoff
+- AWS efps-notion-intake Active, LastUpdateStatus Successful, Maps API-unavailable fallback deployed.
+- Inventory projection: 106 active Notion-owned rows, 1 soft-deleted tombstone, 0 active blank locality/society rows.
+- Two real submissions (EF-2611-PAGH and EF-2611-Y5KC) are Processed and reconciled to Housing Listings and active Supabase snapshots. Both have Raw Property Data, Photos and Processed Property relations.
+- Notion event ledger: 26 observed rows (5 processed, 18 ignored, 2 needs review, 1 rejected). Complete delivery capture is not certified.
+- Processing Notes on the two submissions preserve the full failure/manual-fallback narrative today. However, the worker and Supabase finish RPC replace the note on reprocessing; retries can clear the current summary. Append-only narrative history is not guaranteed.
+- Compatibility Sheet row writes for these two submissions were not independently verified. No synthetic property was created.
+- Local repository validation for this docs-only reconciliation: git diff --check PASS. Software tests were not rerun because application code was not changed.
 
 ## Historical initial Task 3 deployment — 2026-11-14 08:14 UTC (superseded by current v12 state)
 

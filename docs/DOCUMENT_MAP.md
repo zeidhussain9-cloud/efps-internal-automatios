@@ -1,14 +1,16 @@
 # Document Map
 
-## Current verified inventory and release map — 2026-11-14
+## Current verified inventory and release map — 2026-11-14 (live check)
 
-- Repository: main and crm-ui-dashboard synchronized with identical tracked trees.
-- Render: latest deployment from crm-ui-dashboard LIVE; health HTTP 200.
-- Supabase: notion-inventory-state ACTIVE v12; migration 20261114095316_crm_inventory_business_status registered and applied.
-- AWS: efps-notion-intake update successful; Maps API-unavailable fallback deployed.
-- Inventory: 106 active Notion-owned rows; business_status Pending on all 106.
-- Notion webhook event ledger: 12 observed; 5 processed, 10 ignored non-intake changes, 1 rejected unauthenticated probe, 2 needs review. Complete delivery capture not certified.
-- No database tables deleted. Raw intake acceptance awaits a complete submission with Raw Property Data and Photos.
+- Branches main and crm-ui-dashboard are synchronized with identical tracked trees; GitHub advertises exactly these two branch refs.
+- Render CRM service srv-darsv560tbcc73cu4ip0 is LIVE; the exact deployment ID and commit are authoritative in Render and are not duplicated here.
+- Supabase notion-inventory-state ACTIVE v12; business-status migration registered and applied.
+- AWS efps-notion-intake Active, last update successful; Maps fallback deployed.
+- Inventory projection: 106 active Notion-owned rows, 1 soft-deleted tombstone, 0 active blank locality/society rows.
+- Two current submissions processed: EF-2611-PAGH (VRR Fortuna) and EF-2611-Y5KC (Shobha Royal Pavilion). Both have raw data, photos, Housing Listings relations and matching active Supabase snapshots.
+- Notion event ledger: 26 observed rows (5 processed, 18 ignored, 2 needs review, 1 rejected). Delivery completeness is not certified.
+- Processing Notes currently overwrite on reprocessing; current examples retain the manual-fallback narrative, but automatic append-only narrative history is not guaranteed. See docs/NOTION_PROPERTY_INTAKE.md.
+- No database tables deleted. Historical checkpoints below remain historical and must not be read as current metrics.
 
 # Document Map
 
@@ -73,7 +75,7 @@ The P1–P5 hardening release added regression coverage for webhook promotion li
 
 
 
-## Current inventory intake deployment — 2026-11-13
+## Historical inventory intake deployment — 2026-11-13 (superseded by the current release map above)
 
 Notion Housing Listings is the canonical operator editing surface. The `crm_inventory_snapshot` table remains the dashboard projection. Supabase `notion-inventory-state` is ACTIVE v9; AWS `efps-notion-intake` is Active and the isolated stack is `UPDATE_COMPLETE`. Live reconciliation confirms 104 active Notion pages / 104 active Supabase rows, 0 missing/orphaned/duplicate rows and 0 semantic field mismatches. All 104 intake events are processed and have Listing IDs matching their snapshots. The reserved `source_group` and `inventory_locked` fields are blank; 43 populated `inventory_locked` values were cleared. A 15-minute EventBridge reconciler queues only changed/restored pages, repairs event Listing IDs, and soft-deletes missing projections; empty Notion results fail closed. A soft-deleted active rented listing was restored by the fallback. Actual `page.undeleted` webhook delivery remains unobserved, but missed restores are recovered automatically. All eight Page event selections remain user-confirmed and unchanged. Sheet reconciliation is disabled; legacy Sheet writes and the old WhAPI inventory listener remain. See `HANDOFF.md` and `docs/NOTION_PROPERTY_INTAKE.md` for current evidence.
 
@@ -197,6 +199,6 @@ If a new maintained document is required, add it to this map and define its role
 `src/ollama-adapter.mjs` loads only `steering.md` as model system context. Repository agents must still follow `CORE_STEERING.md`; the hosted model does not receive it.
 
 
-## Latest verified inventory intake state — 2026-11-14
+## Latest verified inventory intake state — 2026-11-14 (live check)
 
-Current live Notion-owned Supabase projection: 106 active rows. crm_inventory_snapshot.business_status is a first-class projection/reporting field. Notion webhook history is retained in the existing crm_inventory_intake_events; WhatsApp webhook history remains in crm_webhook_events. No tables were deleted. Current local Maps fallback and UI changes remain undeployed. Full raw-intake acceptance and Notion workspace cleanup remain pending.
+The live Notion-owned Supabase projection has 106 active rows and 1 soft-deleted tombstone. Two real intake submissions are Processed and reconciled to Housing Listings and Supabase. The Maps fallback is deployed. The Notion event ledger has 26 observed rows (5 processed, 18 ignored, 2 needs review, 1 rejected); complete delivery capture is not certified. Processing Notes overwrite on reprocessing; append-only narrative history remains open. Compatibility Sheet writes for these two submissions were not independently checked.
