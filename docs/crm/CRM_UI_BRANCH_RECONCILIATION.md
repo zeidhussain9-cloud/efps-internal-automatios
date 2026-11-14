@@ -6,7 +6,7 @@
 - Render deploys from crm-ui-dashboard. Application code commit 2727b38 is LIVE; later documentation-only merge has the same tracked tree.
 - Render /health returns HTTP 200. Supabase notion-inventory-state ACTIVE v12. AWS efps-notion-intake update successful.
 - Inventory: 106 active Notion-owned rows; business_status Pending on all 106.
-- Notion event ledger: 12 observed; 5 processed, 9 ignored non-intake changes, 1 rejected unauthenticated probe, 2 needs review. Complete capture is not certified.
+- Notion event ledger: 12 observed; 5 processed, 10 ignored non-intake changes, 1 rejected unauthenticated probe, 2 needs review. Complete capture is not certified.
 - No tables deleted. Raw intake acceptance remains pending a complete operator submission.
 
 

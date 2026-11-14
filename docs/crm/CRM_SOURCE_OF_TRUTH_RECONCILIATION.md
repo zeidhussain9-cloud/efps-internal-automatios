@@ -4,7 +4,7 @@
 - Active Notion-owned projection: 106 rows; business_status Pending on all 106.
 - main and crm-ui-dashboard synchronized with identical tracked trees. Latest Render deployment from crm-ui-dashboard is LIVE.
 - Supabase notion-inventory-state ACTIVE v12; AWS efps-notion-intake code update successful.
-- Notion event ledger: 17 observed records; 5 processed, 9 ignored non-intake changes, 1 rejected unauthenticated probe, 2 needs review. Complete capture not certified.
+- Notion event ledger: 17 observed records; 5 processed, 10 ignored non-intake changes, 1 rejected unauthenticated probe, 2 needs review. Complete capture not certified.
 - No tables deleted. Raw intake acceptance awaits a complete real operator submission.
 
 ## Historical source-of-truth checkpoint — 2026-11-13

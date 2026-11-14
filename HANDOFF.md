@@ -8,7 +8,7 @@
 - Supabase notion-inventory-state ACTIVE v12, JWT verification enabled. Migration 20261114095316_crm_inventory_business_status is registered and applied.
 - AWS efps-notion-intake is Active, LastUpdateStatus Successful, deployed package CodeSha256 bx0ZE/aWHFPPIm4AMXcWFablYSPTVPvzj8543mC+s64=.
 - 106 active Notion-owned inventory rows; business_status Pending on all 106. The dashboard has an independent review-status filter and card display.
-- Notion event ledger: 17 observed events — 5 processed, 10 failed-status (9 ignored non-intake changes and 1 rejected unauthenticated probe), 2 needs review. Complete delivery capture is not certified.
+- Notion event ledger: 18 observed events — 5 processed, 11 failed-status (10 ignored non-intake changes and 1 rejected unauthenticated probe), 2 needs review. Complete delivery capture is not certified.
 - Live form schema exposes Raw Property Data and Photos. Two existing submissions contain photos but blank Raw Property Data and remain Needs Review. No synthetic property was created.
 - Maps fallback is deployed: preserve only an original supported short Maps URL and label it unverified when the Maps API is unavailable; no place facts are inferred.
 - Local validation before release: Python Inventory + Maps 122/122; Node 146/146; browser 1/1; Vite build PASS; git diff --check PASS.
