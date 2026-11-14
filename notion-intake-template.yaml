@@ -27,7 +27,7 @@ Resources:
       Runtime: python3.12
       Architectures: [x86_64]
       Handler: notion_intake.lambda_handler
-      CodeUri: .
+      CodeUri: .aws-sam/notion-source
       Timeout: 180
       MemorySize: 512
       EventInvokeConfig:
@@ -44,7 +44,7 @@ Resources:
           MAPS_SECRET_ARN: !Ref MapsSecretArn
           SUPABASE_URL: 'https://qttcutwzehtskfcwxkwj.supabase.co'
           SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF0dGN1dHd6ZWh0c2tmY3d4a3dqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA0MzcxNzksImV4cCI6MjEwNjAxMzE3OX0.C1sk2ZQqLjfvZUlsscrWOEWnqGYOFl6-xEnLmLsojic'
-          PYTHONPATH: 'modules/efpd-lead-mgmnt/src:modules/efps-inventory-mgmnt/src'
+          PYTHONPATH: '.'
       Events:
         Reconcile:
           Type: Schedule

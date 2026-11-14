@@ -5,7 +5,10 @@ from datetime import datetime, timezone
 
 from shared.google_maps import GoogleMapsClient
 from shared.google_sheets import schema
-from shared.google_sheets.client import GoogleSheetsClient
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from shared.google_sheets.client import GoogleSheetsClient
 
 try:
     from . import ai, listing_id, validate
@@ -113,7 +116,7 @@ def process_closed_session(raw_text: str, *, row: dict | None = None, maps_clien
     return out, issues
 
 
-def write_new_property(client: GoogleSheetsClient, row: dict):
+def write_new_property(client: "GoogleSheetsClient", row: dict):
     validate_errors = validate.validate_raw(row)
     if validate_errors:
         raise ValueError("Refusing invalid raw inventory row: " + "; ".join(validate_errors))
@@ -128,7 +131,7 @@ def _phase1_ranges(row_number: int, row: dict) -> list[tuple[str, list[list[str]
     ]
 
 
-def write_phase1_update(client: GoogleSheetsClient, row_number: int, row: dict):
+def write_phase1_update(client: "GoogleSheetsClient", row_number: int, row: dict):
     if row_number < 2:
         raise ValueError("inventory row_number must be >= 2")
     if set(row) != set(schema.NAMES):
@@ -141,6 +144,6 @@ def phase1_ranges_for_row(row_number: int, row: dict) -> list[tuple[str, list[li
     return _phase1_ranges(row_number, row)
 
 
-def next_listing_id(client: GoogleSheetsClient) -> str:
+def next_listing_id(client: "GoogleSheetsClient") -> str:
     rows = client.read_range(schema.SHEET_ID, schema.WORKSHEET_NAME, "A2:A")
     return listing_id.generate((r[0] for r in rows if r))

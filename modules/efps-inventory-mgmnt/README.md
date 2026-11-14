@@ -127,3 +127,12 @@ Regression coverage includes canonical source segmentation, multi-candidate reso
 - Maps API-unavailable fallback is implemented locally: only a supported original short Maps URL may be emitted, with an explicit unverified label. It does not supply verified location facts. Not yet deployed.
 - Python Inventory and shared Maps regression tests: 122/122 passed.
 - Raw Property Intake end-to-end acceptance remains pending a real operator submission and credential verification.
+
+
+## Verified production state — 2026-11-14 (Notion intake decoupled from Sheets)
+
+The `efps-notion-intake` Lambda is deployed from an isolated 21 MB package. Its runtime environment contains only the Notion, Cloudinary, Maps, and Supabase configuration; the Google Sheets secret and Secrets Manager permission are absent. The Notion intake package includes only the legacy field-schema module required by deterministic inventory parsing; it does not package a Google Sheets client or Google Sheets SDK. Listing IDs continue to use the existing locked Supabase allocator, and prior listing values are read from canonical Notion. The original Maps-link fallback remains enabled.
+
+The webhook status correction is live: the 26 historical notifications whose validation and recorded outcome both say `ignored` are stored as `ignored`, and future ignored events retain that status. Other genuine failures are not relabelled.
+
+The isolated Notion Lambda build validates successfully; all 116 inventory tests pass. The deployment is Active with a successful update.

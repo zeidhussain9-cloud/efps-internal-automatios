@@ -44,6 +44,9 @@ jobs:
       - name: Set up AWS SAM CLI
         uses: aws-actions/setup-sam@v2
 
+      - name: Assemble isolated Notion Lambda package
+        run: python scripts/build_notion_intake_package.py
+
       - name: Validate SAM template
         run: sam validate --template-file template.yaml --lint
 
@@ -100,9 +103,13 @@ jobs:
           if not artifact.is_dir():
               raise SystemExit(f'Missing isolated Notion build artifact: {artifact}')
           names = {entry.name for entry in artifact.iterdir()}
-          required = ['boto3', 'cloudinary', 'cryptography', 'gspread', 'requests']
+          required = ['cloudinary', 'google', 'requests']
           missing = [name for name in required if name not in names]
           if missing:
               raise SystemExit(f'EFPSNotionIntake: missing packaged dependencies: {missing}')
-          print('EFPSNotionIntake: packaged dependencies present')
+          forbidden = ['gspread', 'googleapiclient', 'gcloud']
+          present = [name for name in forbidden if name in names]
+          if present:
+              raise SystemExit(f'EFPSNotionIntake: unexpected Google Sheets/Cloud SDK packages: {present}')
+          print('EFPSNotionIntake: minimal isolated dependencies present')
           PY
