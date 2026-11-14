@@ -7,9 +7,19 @@ Maps API verification is optional for raw property intake. Missing/unreadable cr
 The canonical Notion Housing Listings data source now defines listing_state as a SELECT with exactly three options: Available (green), Rented Out (red), and On Hold (yellow). Existing values were preserved: 89 Available and 17 Rented Out at verification; no existing property rows were bulk-edited. This is a Notion schema-only change; no Google Sheets sync, new data flow, Supabase schema change, webhook change, or dashboard code change was introduced. Existing Notion page-property webhook → Lambda → notion-inventory-state → crm_inventory_snapshot → CRM dashboard path remains unchanged.
 # EFPS CRM — Handoff
 
-## Current verified production state — 2026-11-14 (live check)
+## Current verified release — 2026-11-15 (Maps fallback correction)
 
-- **Raw-intake schema compatibility correction deployed:** live Notion locality is Select; the former Lambda incorrectly expected/serialized rich_text. The deployed adapter now reads the live schema before constructing payloads and serializes all string-valued fields according to `rich_text`, Select, or Status; options are checked, and `listing_id` remains rich_text. Lambda CodeSha256 `tuZzYD9Ks55hYm547+HmvaBn4EvwvfuzW0yTqVH2nP4=`, LastModified `2026-11-14T18:40:19Z`, Active / LastUpdateStatus Successful; stack `UPDATE_COMPLETE`.
+- Repository: `zeidhussain9-cloud/efps-internal-automatios`; `main` and `crm-ui-dashboard` both point to `bb52959f2cf89f8609b291e13382eab22ce1b23a`; tracked tree SHA `f701f44edb74c6edb30b047c1912a05ff69fc0b8` is identical in both local worktrees and both GitHub branch refs.
+- AWS: isolated stack `efps-notion-property-intake` is `UPDATE_COMPLETE`; Lambda `efps-notion-intake` Active / LastUpdateStatus Successful, Python 3.12, last modified `2026-11-14T19:48:46Z`, CodeSha256 `oyn+czp4YEH/um4aBdIagC4S+U4RunBq/VHH6IzVnwU=`. The downloaded live Lambda archive hash matches the Lambda CodeSha256. The 15-minute EventBridge reconciliation rule remains ENABLED.
+- Maps behavior: absent/unreadable/placeholder credentials, billing/quota/authorization denials, and request/transport exceptions preserve the supported original short Maps URL as not verified and do not independently create `Needs Review`. Unverified Maps results never supply locality, pincode, coordinates or place name. Partial/mismatched verification, unsupported links, missing required fields/locality, AI conflicts and photo-limit violations remain review conditions.
+- Supabase `notion-inventory-state` remains ACTIVE v12 with JWT verification enabled; no database schema, rows, secrets, or Edge Function were changed by this release. Render CRM UI was not changed or redeployed.
+- Verification: Inventory + shared Maps pytest 174/174; Node 146/146; browser 1/1; production build; Python compileall; SAM lint/validate/build; generated SAM template validation; `git diff --check` all passed.
+- No new production intake row was created. The existing synthetic test listing `EF-2611-SF6F` remains excluded from operational inventory reporting.
+
+
+## Historical production state — 2026-11-14 (superseded by 2026-11-15 release)
+
+- **Raw-intake schema compatibility correction deployed:** live Notion locality is Select; the former Lambda incorrectly expected/serialized rich_text. The deployed adapter now reads the live schema before constructing payloads and serializes all string-valued fields according to `rich_text`, Select, or Status; options are checked, and `listing_id` remains rich_text. Lambda CodeSha256 `oyn+czp4YEH/um4aBdIagC4S+U4RunBq/VHH6IzVnwU=`, LastModified `2026-11-14T19:48:46Z`, Active / LastUpdateStatus Successful; stack `UPDATE_COMPLETE`.
 - Verification: Inventory 126/126, Node 146/146, browser 1/1, production build, Python compilation, SAM validate/build and generated-template validation passed. Deployed Lambda archive was downloaded and inspected. No synthetic production intake was created; fresh operator-submitted raw intake remains the final end-to-end acceptance.
 - Direct Housing Listings page projection supports Select values. Supabase currently has 107 active Notion-owned rows, 107 populated locality values, 0 blank locality values, and 1 soft-deleted tombstone. The earlier 104/107 blank alert was transient during reconciliation; the enabled 15-minute EventBridge reconciler re-synced the changed pages. No manual repair was made.
 - Notion Housing Listings remains canonical; `crm_inventory_snapshot` remains the dashboard projection. Supabase `notion-inventory-state` ACTIVE v12; the corrected AWS Lambda is Active and LastUpdateStatus Successful.
@@ -23,7 +33,7 @@ The canonical Notion Housing Listings data source now defines listing_state as a
 1. Inventory module tests 126/126, Node tests 146/146, browser regression 1/1, production build, Python compilation, SAM validation/build, generated-template validation and diff checks passed.
 2. Maintained root and `docs/` current-state documents were reviewed and updated.
 3. Commit `864c7d2e9decdfd699ec5ac4108ca6f7a614f90d` was pushed to `crm-ui-dashboard` and fast-forwarded to `main`; GitHub refs and local tracked trees are identical.
-4. The isolated `efps-notion-intake` Lambda was deployed through the existing CloudFormation stack. Stack `UPDATE_COMPLETE`; Lambda CodeSha256 verified as `tuZzYD9Ks55hYm547+HmvaBn4EvwvfuzW0yTqVH2nP4=`.
+4. The isolated `efps-notion-intake` Lambda was deployed through the existing CloudFormation stack. Stack `UPDATE_COMPLETE`; Lambda CodeSha256 verified as `oyn+czp4YEH/um4aBdIagC4S+U4RunBq/VHH6IzVnwU=`.
 5. Final acceptance still requires a fresh operator-submitted raw intake. No synthetic production record was created and no existing raw intake record was altered solely for testing.
 
 ## Historical initial Task 3 deployment — 2026-11-14 08:14 UTC (superseded by current v12 state)

@@ -5,12 +5,22 @@ The canonical Notion Housing Listings data source now defines listing_state as a
 
 # EFPS CRM — Housing Inventory Sync Runbook
 
-## Current verified production checkpoint — 2026-11-14 (live check)
+## Current verified release — 2026-11-15 (Maps fallback correction)
+
+- Repository: `zeidhussain9-cloud/efps-internal-automatios`; `main` and `crm-ui-dashboard` both point to `bb52959f2cf89f8609b291e13382eab22ce1b23a`; tracked tree SHA `f701f44edb74c6edb30b047c1912a05ff69fc0b8` is identical in both local worktrees and both GitHub branch refs.
+- AWS: isolated stack `efps-notion-property-intake` is `UPDATE_COMPLETE`; Lambda `efps-notion-intake` Active / LastUpdateStatus Successful, Python 3.12, last modified `2026-11-14T19:48:46Z`, CodeSha256 `oyn+czp4YEH/um4aBdIagC4S+U4RunBq/VHH6IzVnwU=`. The downloaded live Lambda archive hash matches the Lambda CodeSha256. The 15-minute EventBridge reconciliation rule remains ENABLED.
+- Maps behavior: absent/unreadable/placeholder credentials, billing/quota/authorization denials, and request/transport exceptions preserve the supported original short Maps URL as not verified and do not independently create `Needs Review`. Unverified Maps results never supply locality, pincode, coordinates or place name. Partial/mismatched verification, unsupported links, missing required fields/locality, AI conflicts and photo-limit violations remain review conditions.
+- Supabase `notion-inventory-state` remains ACTIVE v12 with JWT verification enabled; no database schema, rows, secrets, or Edge Function were changed by this release. Render CRM UI was not changed or redeployed.
+- Verification: Inventory + shared Maps pytest 174/174; Node 146/146; browser 1/1; production build; Python compileall; SAM lint/validate/build; generated SAM template validation; `git diff --check` all passed.
+- No new production intake row was created. The existing synthetic test listing `EF-2611-SF6F` remains excluded from operational inventory reporting.
+
+
+## Historical production checkpoint — 2026-11-14 (superseded by 2026-11-15 release)
 
 - Notion Housing Listings is canonical; crm_inventory_snapshot is the CRM projection.
 - 107 active Notion-owned rows, 1 soft-deleted tombstone, 0 active blank locality/society rows.
 - Supabase locality projection has recovered to 107/107 active rows populated; the earlier 104/107 blank report was transient during the enabled 15-minute EventBridge reconciliation. No manual repair was applied.
-- Raw-intake schema compatibility is corrected and deployed: the Lambda now serializes string-valued fields according to the live Notion type. CodeSha256 `tuZzYD9Ks55hYm547+HmvaBn4EvwvfuzW0yTqVH2nP4=`. Fresh operator-submitted raw-intake end-to-end acceptance remains pending; no synthetic production property was created.
+- Raw-intake schema compatibility is corrected and deployed: the Lambda now serializes string-valued fields according to the live Notion type. CodeSha256 `oyn+czp4YEH/um4aBdIagC4S+U4RunBq/VHH6IzVnwU=`. Fresh operator-submitted raw-intake end-to-end acceptance remains pending; no synthetic production property was created.
 - Render CRM service srv-darsv560tbcc73cu4ip0 is LIVE; the exact deployment ID and commit are authoritative in Render and are not duplicated here.
 - Two recent property submissions have Processed status, raw data, photos, Housing Listings relations and matching active Supabase snapshots: EF-2611-PAGH and EF-2611-Y5KC.
 - Existing property update path: edit the Housing Listings page; its Notion page event is processed by Lambda and notion-inventory-state, which upserts the same Listing ID into crm_inventory_snapshot. Do not resubmit the intake form to edit an existing listing.

@@ -17,7 +17,7 @@ Google Maps verification is optional enrichment, not an intake prerequisite. If 
 The correction is now committed and deployed. The adapter fetches and validates the live Housing Listings schema before constructing the outgoing listing payload. Every string-valued inventory field is serialized from its actual Notion property type (`rich_text`, `select`, or `status`); Select/Status values are validated against the live options. `listing_id` remains rich_text because it is the immutable identity queried by the existing Listing ID lookup. Unsupported types fail closed.
 
 - Commit: `864c7d2e9decdfd699ec5ac4108ca6f7a614f90d` on `crm-ui-dashboard` and `main`.
-- AWS Lambda `efps-notion-intake`: Active; LastUpdateStatus Successful; last modified `2026-11-14T18:40:19Z`; deployed CodeSha256 `tuZzYD9Ks55hYm547+HmvaBn4EvwvfuzW0yTqVH2nP4=`.
+- AWS Lambda `efps-notion-intake`: Active; LastUpdateStatus Successful; last modified `2026-11-14T19:48:46Z`; deployed CodeSha256 `oyn+czp4YEH/um4aBdIagC4S+U4RunBq/VHH6IzVnwU=`.
 - CloudFormation stack `efps-notion-property-intake`: `UPDATE_COMPLETE`. The enabled 15-minute EventBridge reconciliation rule remains enabled.
 - Inventory module tests: 126 passed. Repository Node tests: 146 passed. Browser regression: 1 passed. Production build, Python compilation, SAM validation, non-container Python 3.12 SAM build, generated-template validation, and `git diff --check` passed.
 - The deployed Lambda archive was downloaded and inspected; it contains the schema-first `save_listing()` path and generic `_serialize_text_field()` implementation.

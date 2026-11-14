@@ -4,9 +4,9 @@ Maps API verification is optional for raw property intake. Missing/unreadable cr
 
 ## Historical Task 3 deployment checkpoint — 2026-11-14 08:14 UTC (superseded by v12)
 
-## Current verified open pointers — 2026-11-14 (live check)
+## Historical open pointers — 2026-11-14 (superseded by 2026-11-15 release)
 
-- Raw-intake locality schema compatibility is corrected and deployed in Lambda CodeSha256 `tuZzYD9Ks55hYm547+HmvaBn4EvwvfuzW0yTqVH2nP4=`. Inventory tests 126/126 and SAM validation/build passed. A fresh operator-submitted raw-intake record remains the final end-to-end acceptance; no synthetic production record was created. `EF-2611-YA84` remains Needs Review due to Maps API unavailability and 18 photos exceeding the 10-image catalogue limit.
+- Raw-intake locality schema compatibility is corrected and deployed in Lambda CodeSha256 `oyn+czp4YEH/um4aBdIagC4S+U4RunBq/VHH6IzVnwU=`. Inventory tests 126/126 and SAM validation/build passed. A fresh operator-submitted raw-intake record remains the final end-to-end acceptance; no synthetic production record was created. `EF-2611-YA84` remains Needs Review because 18 photos exceed the 10-image catalogue limit; Maps API unavailability alone is not a review reason.
 
 - Notion Housing Listings listing_state dropdown is complete: exactly Available (green), Rented Out (red), and On Hold (yellow). Schema verified after update. Existing page-event synchronization remains the only property update path; no Google Sheets synchronization was added.
 - Notion webhook coverage: 26 event rows are observed (5 processed, 18 ignored, 2 needs review, 1 rejected); complete delivery capture is not certified.
@@ -15,6 +15,16 @@ Maps API verification is optional for raw property intake. Missing/unreadable cr
 - No database tables deleted. Workspace cleanup and CRM review-status visibility are out of scope for this pass.
 
 # EFPS CRM — Open Pointers
+
+## Current verified release — 2026-11-15 (Maps fallback correction)
+
+- Repository: `zeidhussain9-cloud/efps-internal-automatios`; `main` and `crm-ui-dashboard` both point to `bb52959f2cf89f8609b291e13382eab22ce1b23a`; tracked tree SHA `f701f44edb74c6edb30b047c1912a05ff69fc0b8` is identical in both local worktrees and both GitHub branch refs.
+- AWS: isolated stack `efps-notion-property-intake` is `UPDATE_COMPLETE`; Lambda `efps-notion-intake` Active / LastUpdateStatus Successful, Python 3.12, last modified `2026-11-14T19:48:46Z`, CodeSha256 `oyn+czp4YEH/um4aBdIagC4S+U4RunBq/VHH6IzVnwU=`. The downloaded live Lambda archive hash matches the Lambda CodeSha256. The 15-minute EventBridge reconciliation rule remains ENABLED.
+- Maps behavior: absent/unreadable/placeholder credentials, billing/quota/authorization denials, and request/transport exceptions preserve the supported original short Maps URL as not verified and do not independently create `Needs Review`. Unverified Maps results never supply locality, pincode, coordinates or place name. Partial/mismatched verification, unsupported links, missing required fields/locality, AI conflicts and photo-limit violations remain review conditions.
+- Supabase `notion-inventory-state` remains ACTIVE v12 with JWT verification enabled; no database schema, rows, secrets, or Edge Function were changed by this release. Render CRM UI was not changed or redeployed.
+- Verification: Inventory + shared Maps pytest 174/174; Node 146/146; browser 1/1; production build; Python compileall; SAM lint/validate/build; generated SAM template validation; `git diff --check` all passed.
+- No new production intake row was created. The existing synthetic test listing `EF-2611-SF6F` remains excluded from operational inventory reporting.
+
 
 > Operational pointers updated 2026-11-14. Historical snapshots below remain dated evidence, not current state.
 
@@ -81,7 +91,7 @@ Historical live population snapshot verified 2026-10-05: **253 promoted qualifie
 
 ## Latest verified open pointers — 2026-11-14 (live check)
 
-- Raw-intake schema compatibility is corrected and deployed in Lambda CodeSha256 `tuZzYD9Ks55hYm547+HmvaBn4EvwvfuzW0yTqVH2nP4=`. Inventory tests 126/126 and SAM validation/build passed. A fresh operator-submitted raw-intake record remains the final end-to-end acceptance; no synthetic production record was created.
+- Raw-intake schema compatibility is corrected and deployed in Lambda CodeSha256 `oyn+czp4YEH/um4aBdIagC4S+U4RunBq/VHH6IzVnwU=`. Inventory tests 126/126 and SAM validation/build passed. A fresh operator-submitted raw-intake record remains the final end-to-end acceptance; no synthetic production record was created.
 - Supabase inventory projection has 107 active Notion-owned rows with 107 populated locality values; the earlier 104/107 blank alert recovered through the 15-minute reconciliation without manual repair.
 - Notion webhook ledger currently contains 96 observed rows: 64 synced, 2 already processed, 26 ignored outcomes, 3 Needs Review, and 1 with no outcome. The 26 ignored outcomes are still stored with processing_status=failed; this status/outcome mismatch is an open ledger issue. Complete webhook delivery capture is not certified.
 - Compatibility Sheet row writes for the three latest raw property submissions were not independently checked.

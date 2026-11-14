@@ -1,8 +1,18 @@
 # Infrastructure Registry
 
-## Current verified infrastructure — 2026-11-14 (live check)
+## Current verified release — 2026-11-15 (Maps fallback correction)
 
-- AWS Lambda `efps-notion-intake` is Active, LastUpdateStatus Successful, last modified `2026-11-14T18:40:19Z`, CodeSha256 `tuZzYD9Ks55hYm547+HmvaBn4EvwvfuzW0yTqVH2nP4=`. The deployed adapter now reads the live Notion schema and serializes string-valued fields by actual `rich_text`, Select, or Status type. CloudFormation stack `efps-notion-property-intake` is `UPDATE_COMPLETE`; the existing 15-minute EventBridge reconciliation rule remains enabled. No Supabase schema or secret values were changed.
+- Repository: `zeidhussain9-cloud/efps-internal-automatios`; `main` and `crm-ui-dashboard` both point to `bb52959f2cf89f8609b291e13382eab22ce1b23a`; tracked tree SHA `f701f44edb74c6edb30b047c1912a05ff69fc0b8` is identical in both local worktrees and both GitHub branch refs.
+- AWS: isolated stack `efps-notion-property-intake` is `UPDATE_COMPLETE`; Lambda `efps-notion-intake` Active / LastUpdateStatus Successful, Python 3.12, last modified `2026-11-14T19:48:46Z`, CodeSha256 `oyn+czp4YEH/um4aBdIagC4S+U4RunBq/VHH6IzVnwU=`. The downloaded live Lambda archive hash matches the Lambda CodeSha256. The 15-minute EventBridge reconciliation rule remains ENABLED.
+- Maps behavior: absent/unreadable/placeholder credentials, billing/quota/authorization denials, and request/transport exceptions preserve the supported original short Maps URL as not verified and do not independently create `Needs Review`. Unverified Maps results never supply locality, pincode, coordinates or place name. Partial/mismatched verification, unsupported links, missing required fields/locality, AI conflicts and photo-limit violations remain review conditions.
+- Supabase `notion-inventory-state` remains ACTIVE v12 with JWT verification enabled; no database schema, rows, secrets, or Edge Function were changed by this release. Render CRM UI was not changed or redeployed.
+- Verification: Inventory + shared Maps pytest 174/174; Node 146/146; browser 1/1; production build; Python compileall; SAM lint/validate/build; generated SAM template validation; `git diff --check` all passed.
+- No new production intake row was created. The existing synthetic test listing `EF-2611-SF6F` remains excluded from operational inventory reporting.
+
+
+## Historical verified infrastructure — 2026-11-14 (superseded by 2026-11-15 release)
+
+- AWS Lambda `efps-notion-intake` is Active, LastUpdateStatus Successful, last modified `2026-11-14T19:48:46Z`, CodeSha256 `oyn+czp4YEH/um4aBdIagC4S+U4RunBq/VHH6IzVnwU=`. The deployed adapter now reads the live Notion schema and serializes string-valued fields by actual `rich_text`, Select, or Status type. CloudFormation stack `efps-notion-property-intake` is `UPDATE_COMPLETE`; the existing 15-minute EventBridge reconciliation rule remains enabled. No Supabase schema or secret values were changed.
 
 - Supabase project qttcutwzehtskfcwxkwj; notion-inventory-state ACTIVE v12 with JWT verification enabled.
 - Migration 20261114095316_crm_inventory_business_status is registered and applied. No tables deleted.

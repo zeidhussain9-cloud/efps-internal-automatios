@@ -7,7 +7,17 @@ Maps API verification is optional for raw property intake. Missing/unreadable cr
 The canonical Notion Housing Listings data source now defines listing_state as a SELECT with exactly three options: Available (green), Rented Out (red), and On Hold (yellow). Existing values were preserved: 89 Available and 17 Rented Out at verification; no existing property rows were bulk-edited. This is a Notion schema-only change; no Google Sheets sync, new data flow, Supabase schema change, webhook change, or dashboard code change was introduced. Existing Notion page-property webhook → Lambda → notion-inventory-state → crm_inventory_snapshot → CRM dashboard path remains unchanged.
 # EFPS CRM — Current Verified State
 
-## Current release and inventory status — 2026-11-14 (live check)
+## Current verified release — 2026-11-15 (Maps fallback correction)
+
+- Repository: `zeidhussain9-cloud/efps-internal-automatios`; `main` and `crm-ui-dashboard` both point to `bb52959f2cf89f8609b291e13382eab22ce1b23a`; tracked tree SHA `f701f44edb74c6edb30b047c1912a05ff69fc0b8` is identical in both local worktrees and both GitHub branch refs.
+- AWS: isolated stack `efps-notion-property-intake` is `UPDATE_COMPLETE`; Lambda `efps-notion-intake` Active / LastUpdateStatus Successful, Python 3.12, last modified `2026-11-14T19:48:46Z`, CodeSha256 `oyn+czp4YEH/um4aBdIagC4S+U4RunBq/VHH6IzVnwU=`. The downloaded live Lambda archive hash matches the Lambda CodeSha256. The 15-minute EventBridge reconciliation rule remains ENABLED.
+- Maps behavior: absent/unreadable/placeholder credentials, billing/quota/authorization denials, and request/transport exceptions preserve the supported original short Maps URL as not verified and do not independently create `Needs Review`. Unverified Maps results never supply locality, pincode, coordinates or place name. Partial/mismatched verification, unsupported links, missing required fields/locality, AI conflicts and photo-limit violations remain review conditions.
+- Supabase `notion-inventory-state` remains ACTIVE v12 with JWT verification enabled; no database schema, rows, secrets, or Edge Function were changed by this release. Render CRM UI was not changed or redeployed.
+- Verification: Inventory + shared Maps pytest 174/174; Node 146/146; browser 1/1; production build; Python compileall; SAM lint/validate/build; generated SAM template validation; `git diff --check` all passed.
+- No new production intake row was created. The existing synthetic test listing `EF-2611-SF6F` remains excluded from operational inventory reporting.
+
+
+## Historical release and inventory status — 2026-11-14 (superseded by 2026-11-15 release)
 
 - Branches main and crm-ui-dashboard are synchronized with identical tracked trees; GitHub advertises exactly these two branch refs.
 - Render CRM service srv-darsv560tbcc73cu4ip0 is LIVE; the exact deployment ID and commit are authoritative in Render and are not duplicated here.

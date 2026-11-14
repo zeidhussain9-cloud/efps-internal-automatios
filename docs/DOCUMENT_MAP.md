@@ -1,6 +1,16 @@
 # Document Map
 
-## Current verified inventory and release map — 2026-11-14 (live check)
+## Current verified release — 2026-11-15 (Maps fallback correction)
+
+- Repository: `zeidhussain9-cloud/efps-internal-automatios`; `main` and `crm-ui-dashboard` both point to `bb52959f2cf89f8609b291e13382eab22ce1b23a`; tracked tree SHA `f701f44edb74c6edb30b047c1912a05ff69fc0b8` is identical in both local worktrees and both GitHub branch refs.
+- AWS: isolated stack `efps-notion-property-intake` is `UPDATE_COMPLETE`; Lambda `efps-notion-intake` Active / LastUpdateStatus Successful, Python 3.12, last modified `2026-11-14T19:48:46Z`, CodeSha256 `oyn+czp4YEH/um4aBdIagC4S+U4RunBq/VHH6IzVnwU=`. The downloaded live Lambda archive hash matches the Lambda CodeSha256. The 15-minute EventBridge reconciliation rule remains ENABLED.
+- Maps behavior: absent/unreadable/placeholder credentials, billing/quota/authorization denials, and request/transport exceptions preserve the supported original short Maps URL as not verified and do not independently create `Needs Review`. Unverified Maps results never supply locality, pincode, coordinates or place name. Partial/mismatched verification, unsupported links, missing required fields/locality, AI conflicts and photo-limit violations remain review conditions.
+- Supabase `notion-inventory-state` remains ACTIVE v12 with JWT verification enabled; no database schema, rows, secrets, or Edge Function were changed by this release. Render CRM UI was not changed or redeployed.
+- Verification: Inventory + shared Maps pytest 174/174; Node 146/146; browser 1/1; production build; Python compileall; SAM lint/validate/build; generated SAM template validation; `git diff --check` all passed.
+- No new production intake row was created. The existing synthetic test listing `EF-2611-SF6F` remains excluded from operational inventory reporting.
+
+
+## Historical inventory and release map — 2026-11-14 (superseded by 2026-11-15 release)
 
 - Branches main and crm-ui-dashboard are synchronized with identical tracked trees; GitHub advertises exactly these two branch refs.
 - Render CRM service srv-darsv560tbcc73cu4ip0 is LIVE; the exact deployment ID and commit are authoritative in Render and are not duplicated here.
@@ -8,7 +18,7 @@
 - AWS efps-notion-intake Active, last update successful; Maps fallback deployed.
 - Inventory projection: 107 active Notion-owned rows, 1 soft-deleted tombstone, 0 active blank locality/society rows.
 - Live Supabase projection currently has 107/107 active Notion-owned rows with populated locality values; the earlier 104/107 blank report was transient during 15-minute reconciliation and recovered without manual repair.
-- Raw-intake schema compatibility is corrected and deployed (Lambda CodeSha256 `tuZzYD9Ks55hYm547+HmvaBn4EvwvfuzW0yTqVH2nP4=`); the adapter serializes string fields from live Notion types. Fresh operator-submitted raw-intake acceptance remains pending; see `docs/NOTION_PROPERTY_INTAKE.md` and `HANDOFF.md`.
+- Raw-intake schema compatibility is corrected and deployed (Lambda CodeSha256 `oyn+czp4YEH/um4aBdIagC4S+U4RunBq/VHH6IzVnwU=`); the adapter serializes string fields from live Notion types. Fresh operator-submitted raw-intake acceptance remains pending; see `docs/NOTION_PROPERTY_INTAKE.md` and `HANDOFF.md`.
 - EF-2611-PAGH and EF-2611-Y5KC are Processed and reconciled. EF-2611-YA84 has a canonical page and active snapshot but remains Needs Review (Maps unavailable; 18 photos exceed the 10-image limit).
 - Notion webhook ledger currently contains 96 observed rows: 64 synced, 2 already processed, 26 ignored outcomes, 3 Needs Review, and 1 with no outcome. The 26 ignored outcomes are still stored with processing_status=failed; this status/outcome mismatch is an open ledger issue. Complete webhook delivery capture is not certified.
 - Processing Notes append each attempt as a new line in the existing Notion cell; previous narrative is retained. See docs/NOTION_PROPERTY_INTAKE.md.
