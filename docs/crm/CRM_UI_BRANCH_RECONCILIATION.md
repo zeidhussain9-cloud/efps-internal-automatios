@@ -1,5 +1,15 @@
 # CRM UI branch and release reconciliation
 
+## Current verified branch and release state — 2026-11-14
+
+- Only two human-managed release branches: main and crm-ui-dashboard. Both synchronized at merge commit 92b4427 / tree 7b745807.
+- Render deploys from crm-ui-dashboard. Application code commit 2727b38 is LIVE; later documentation-only merge has the same tracked tree.
+- Render /health returns HTTP 200. Supabase notion-inventory-state ACTIVE v12. AWS efps-notion-intake update successful.
+- Inventory: 106 active Notion-owned rows; business_status Pending on all 106.
+- Notion event ledger: 12 observed; 5 processed, 4 ignored non-intake changes, 1 rejected unauthenticated probe, 2 needs review. Complete capture is not certified.
+- No tables deleted. Raw intake acceptance remains pending a complete operator submission.
+
+
 > Revalidated 2026-11-13 after the Notion inventory release.
 
 ## Canonical branch model
@@ -10,9 +20,9 @@
 - Render is live on the verified `crm-ui-dashboard` release. Its published source and docs are reconciled into `main`; the tracked trees are identical.
 - No force-push or history rewrite was used.
 
-## Additional branch refs
+## Branch cleanup — 2026-11-14
 
-GitHub also lists four Dependabot branch refs associated with open PRs #93, #94, #96 and #97. They are automated dependency PR heads, not additional human CRM implementation/deployment branches. Retain them while their PRs are open; do not merge dependency upgrades without separate compatibility review.
+Five obsolete/automation branch refs (the prior Codex webhook-loop branch and four Dependabot heads) were removed on 2026-11-14 after confirming there were no open PRs. GitHub now exposes only main and crm-ui-dashboard.
 
 ## Live release evidence
 

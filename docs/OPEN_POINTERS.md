@@ -1,3 +1,13 @@
+## Historical Task 3 deployment checkpoint — 2026-11-14 08:14 UTC (superseded by v12)
+
+## Current verified open pointers — 2026-11-14
+
+- Full Raw Property Intake acceptance remains pending: two existing submissions have photos but blank Raw Property Data and remain Needs Review.
+- Complete Notion webhook delivery coverage is not certified from the 12 observed event records.
+- Four ignored event outcomes are non-intake changes; one rejected event is the unauthenticated endpoint probe used during smoke testing. Both are retained in the event ledger.
+- Notion workspace cleanup was limited to clarifying the home and reference pages; no page or database was deleted.
+- No tables deleted. WhatsApp and Notion event histories remain separate in their existing tables.
+
 # EFPS CRM — Open Pointers
 
 > Operational pointers updated 2026-11-14. Historical snapshots below remain dated evidence, not current state.
@@ -67,6 +77,6 @@ Historical live population snapshot verified 2026-10-05: **253 promoted qualifie
 
 - Raw Property Intake full-chain acceptance remains unverified until a real operator submission is processed across Notion webhook, Lambda, Sheets, Cloudinary, Maps, Housing Listings and Supabase.
 - Complete Notion webhook capture coverage is not certified from the 8 observed event rows; audit configured delivery types and retry outcomes before claiming completeness.
-- Current local Maps fallback and business-status UI changes are not yet deployed.
+- Maps fallback and business-status UI changes are deployed.
 - Notion workspace cleanup remains pending; no obsolete page has been verified safe to archive/delete.
 - Two Notion webhook event rows have ignored/failed outcomes and one needs review; inspect event payloads/outcomes before any retry or status mutation.

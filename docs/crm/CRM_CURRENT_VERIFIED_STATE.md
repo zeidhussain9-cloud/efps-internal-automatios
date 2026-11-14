@@ -2,9 +2,9 @@
 
 ## Current release and inventory status — 2026-11-14
 
-- Git branches main and crm-ui-dashboard are synchronized at commit 86c4389 / tree ccec16e4.
-- Render deployment dep-dbs2qnqjnfac73bq84sg LIVE, commit 2727b38; /health HTTP 200.
-- Supabase notion-inventory-state ACTIVE v11; business_status migration registered and applied.
+- Git branches main and crm-ui-dashboard are synchronized at commit 92b4427 / tree 7b745807.
+- Render deployment dep-dbs30ej0pb7s739klsrg LIVE, merge commit 92b4427 (UI code 2727b38); /health HTTP 200.
+- Supabase notion-inventory-state ACTIVE v12; business_status migration registered and applied.
 - AWS efps-notion-intake Active; code update successful; Maps fallback deployed.
 - Inventory: 106 active Notion-owned rows; business_status Pending on all 106. This remains distinct from intake_status and listing_state.
 - Notion events: 12 observed; 5 processed, 4 ignored non-intake changes, 1 rejected unauthenticated probe, 2 needs review. Complete event capture not certified.
@@ -12,7 +12,7 @@
 
 # EFPS CRM — Current Verified State
 
-> CRM metrics below were last revalidated 2026-11-12. Inventory release, counts, and Render state were rechecked 2026-11-13.
+> Historical CRM metrics below were last revalidated 2026-11-12. The current inventory release is recorded in the 2026-11-14 block above.
 
 ## Runtime and release
 
@@ -21,7 +21,7 @@
 - Signed-in inventory behavior was rechecked against the current live Render deployment; the deployment ID and commit are read from Render at verification time.
 - The current release includes the Notion inventory recovery hardening on the implementation branch. Render auto-deploys from `crm-ui-dashboard`; use the live Render service for the current deployment ID and commit. The CRM dashboard UI itself was not modified by this inventory repair.
 - Supabase project: qttcutwzehtskfcwxkwj
-- Edge Function: whapi-crm-webhook, ACTIVE v10
+- Edge Function: whapi-crm-webhook, ACTIVE v12
 - Production source: +919148338801
 
 ## Production data
@@ -96,6 +96,6 @@ The 16 IDs are confirmed in Supabase. The source Sheet was not reread during thi
 Reactivating the AI scheduler requires a separate explicit operational decision.
 
 
-## Inventory status reporting update — 2026-11-14
+## Historical pre-deployment inventory status note — 2026-11-14 (superseded by the current release block)
 
-The live crm_inventory_snapshot table has an additive business_status column, backfilled from source_record.status. At the latest query, all 106 active Notion-owned rows reported Pending. This is distinct from intake_status and listing_state. The CRM UI/API implementation to filter and display this field is local and has passed the 146-test Node suite and browser regression 1/1, but it is not yet deployed. No tables were deleted.
+The live crm_inventory_snapshot table has an additive business_status column, backfilled from source_record.status. At the latest query, all 106 active Notion-owned rows reported Pending. This is distinct from intake_status and listing_state. The CRM UI/API implementation was subsequently deployed; see the current release block at the top of this document. No tables were deleted.

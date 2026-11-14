@@ -1,5 +1,17 @@
 # Document Map
 
+## Current verified inventory and release map — 2026-11-14
+
+- Repository: main and crm-ui-dashboard synchronized at commit 92b4427 / tree 7b745807.
+- Render: deployment dep-dbs30ej0pb7s739klsrg LIVE on commit 92b4427 (UI implementation 2727b38); health HTTP 200.
+- Supabase: notion-inventory-state ACTIVE v12; migration 20261114095316_crm_inventory_business_status registered and applied.
+- AWS: efps-notion-intake update successful; Maps API-unavailable fallback deployed.
+- Inventory: 106 active Notion-owned rows; business_status Pending on all 106.
+- Notion webhook event ledger: 12 observed; 5 processed, 4 ignored non-intake changes, 1 rejected unauthenticated probe, 2 needs review. Complete delivery capture not certified.
+- No database tables deleted. Raw intake acceptance awaits a complete submission with Raw Property Data and Photos.
+
+# Document Map
+
 ## Historical CRM production snapshot — 2026-10-05 (not current metrics)
 
 The figures below were last verified on 2026-10-05 and are retained as historical evidence, not current production metrics.

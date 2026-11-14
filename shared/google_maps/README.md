@@ -1,3 +1,9 @@
+# Shared Google Maps Client
+
+## Current production fallback — 2026-11-14
+
+Maps API-unavailable fallback is deployed in the existing Notion intake Lambda. When Google returns REQUEST_DENIED, OVER_QUERY_LIMIT or UNKNOWN_ERROR, the pipeline treats the API as unavailable and may preserve only the original supported short mobile Maps URL with an explicit unverified label. It does not infer or claim a verified place, locality, coordinates or pincode. Regression tests are in shared/google_maps/test_google_maps.py.
+
 # Google Maps
 
 Reusable technical capability for Google Maps URL extraction and Geocoding resolution.

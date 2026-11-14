@@ -4,9 +4,9 @@
 
 Notion Housing Listings is canonical. Supabase crm_inventory_snapshot is the CRM projection; 106 active Notion-owned rows currently have business_status Pending. business_status is separate from intake_status and listing_state.
 
-- Main and crm-ui-dashboard are synchronized at commit 86c4389 / tree ccec16e4.
-- Render deployment dep-dbs2qnqjnfac73bq84sg is LIVE on commit 2727b38; /health HTTP 200.
-- Supabase notion-inventory-state ACTIVE v11; additive business_status migration registered and applied.
+- Main and crm-ui-dashboard are synchronized at commit 92b4427 / tree 7b745807.
+- Render deployment dep-dbs30ej0pb7s739klsrg is LIVE on commit 92b4427 (UI implementation commit 2727b38); /health HTTP 200.
+- Supabase notion-inventory-state ACTIVE v12; additive business_status migration registered and applied.
 - AWS efps-notion-intake Active, update successful; Maps API-unavailable fallback deployed.
 - Notion event history remains in crm_inventory_intake_events; WhatsApp history remains in crm_webhook_events. No tables deleted.
 - 12 Notion events observed: 5 processed, 4 ignored non-intake changes, 1 rejected unauthenticated probe, 2 needs-review outcomes. Capture completeness not certified.
@@ -14,11 +14,11 @@ Notion Housing Listings is canonical. Supabase crm_inventory_snapshot is the CRM
 
 # EFPS Internal Automations — Architecture
 
-## Notion webhook event ledger implementation status
+## Historical pre-deployment implementation note (superseded 2026-11-14)
 
 The repository now contains a local-only Task 3 extension to the existing `crm_inventory_intake_events` ledger, with lifecycle hooks in the existing Notion Edge Function/Lambda path. It does not create a new event table or change `crm_webhook_events` / WhatsApp processing. The migration and function/Lambda code have not been applied or deployed to production; the production architecture therefore remains as recorded in the verified state below until deployment is separately authorized.
 
-## Authoritative current verified state — 2026-11-13
+## Historical verified state — 2026-11-13 (superseded by 2026-11-14 state above)
 
 This section supersedes older dated operational snapshots below. Historical checkpoints remain audit history.
 

@@ -2,7 +2,7 @@
 
 ## Current verified inventory contract — 2026-11-14
 
-- Notion Housing Listings → AWS Lambda efps-notion-intake → Supabase Edge Function notion-inventory-state ACTIVE v11 → crm_inventory_snapshot → CRM dashboard.
+- Notion Housing Listings → AWS Lambda efps-notion-intake → Supabase Edge Function notion-inventory-state ACTIVE v12 → crm_inventory_snapshot → CRM dashboard.
 - crm_inventory_snapshot.business_status is projected from source_record.status and is distinct from intake_status and listing_state. All 106 active Notion-owned rows currently report Pending.
 - Notion webhook history remains in crm_inventory_intake_events; WhatsApp webhook history remains in crm_webhook_events. No tables deleted.
 - Maps API-unavailable fallback is deployed to the isolated Lambda and labels the original short URL as unverified.
@@ -10,11 +10,11 @@
 
 # EasyFind CRM — Canonical Data Model
 
-## Authoritative current verified state — 2026-11-13
+## Historical data-model checkpoint — 2026-11-13
 
 > The CRM UI remains deployed on `crm-ui-dashboard`. Current inventory synchronization and runtime evidence is in `CRM_CURRENT_VERIFIED_STATE.md` and `docs/NOTION_PROPERTY_INTAKE.md`.
 
-- Supabase project `qttcutwzehtskfcwxkwj`; `whapi-crm-webhook` ACTIVE v10.
+- Supabase project `qttcutwzehtskfcwxkwj`; `whapi-crm-webhook` ACTIVE v12.
 - Inventory runtime: Notion Housing Listings → AWS Lambda `efps-notion-intake` → Supabase Edge Function `notion-inventory-state` ACTIVE v9 → `crm_inventory_snapshot` → CRM dashboard.
 - Live inventory: 104 active Notion pages / 104 active snapshot rows; 0 missing, orphaned, duplicate or semantic field mismatches; 87 Available / 17 Rented Out.
 - Source media gap (not a sync failure): 99/104 listings have Cloudinary image URLs. Five Rented Out pages have no image URL in Notion: `EF-2609-608J`, `EF-2609-22H0`, `EF-2609-VDWH`, `EF-2609-7JGF`, `EF-2609-MECJ`. The CRM mirrors the blank source values; no substitute images were invented.
@@ -208,4 +208,4 @@ Current live population verified 2026-11-12: **371 CRM leads**, **138 determinis
 
 ## Latest verified inventory projection — 2026-11-14
 
-crm_inventory_snapshot has a first-class business_status column backfilled from source_record.status. It is distinct from intake_status and listing_state. The current active Notion-owned projection is 106 rows, all Pending. The CRM API/UI changes are local and not deployed yet. Notion webhook events remain in crm_inventory_intake_events; WhatsApp webhook events remain in crm_webhook_events. No table deletions occurred.
+crm_inventory_snapshot has a first-class business_status column backfilled from source_record.status. It is distinct from intake_status and listing_state. The current active Notion-owned projection is 106 rows, all Pending. The CRM API/UI changes were subsequently deployed; see the current verified inventory contract at the top of this document. Notion webhook events remain in crm_inventory_intake_events; WhatsApp webhook events remain in crm_webhook_events. No table deletions occurred.

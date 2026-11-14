@@ -2,17 +2,17 @@
 
 - Notion Housing Listings remains canonical; Supabase crm_inventory_snapshot is the CRM projection.
 - Active Notion-owned projection: 106 rows; business_status Pending on all 106.
-- main and crm-ui-dashboard synchronized at commit 86c4389 / tree ccec16e4. Render dep-dbs2qnqjnfac73bq84sg LIVE on commit 2727b38.
-- Supabase notion-inventory-state ACTIVE v11; AWS efps-notion-intake code update successful.
+- main and crm-ui-dashboard synchronized at commit 92b4427 / tree 7b745807. Render dep-dbs30ej0pb7s739klsrg LIVE on commit 92b4427; UI code commit 2727b38.
+- Supabase notion-inventory-state ACTIVE v12; AWS efps-notion-intake code update successful.
 - Notion event ledger: 12 observed records; 5 processed, 4 ignored non-intake changes, 1 rejected unauthenticated probe, 2 needs review. Complete capture not certified.
 - No tables deleted. Raw intake acceptance awaits a complete real operator submission.
 
-## Authoritative current verified state — 2026-11-13
+## Historical source-of-truth checkpoint — 2026-11-13
 
 > The latest UI release is live on the remote branch. Notion inventory recovery hardening is deployed (Supabase Edge Function v9, AWS Lambda with 15-minute reconciliation and SQS failure capture). See `CRM_CURRENT_VERIFIED_STATE.md` and `HANDOFF.md` for current evidence. Older dated checkpoints below remain historical.
 
 - Render LIVE: deployment `dep-dbrbc8gjo6nc73etsmr0`, commit `6b206ddf07515cff2df82140d86ee873e4ea2965` on `crm-ui-dashboard`; `/health` and `/` returned HTTP 200.
-- Supabase project qttcutwzehtskfcwxkwj; whapi-crm-webhook ACTIVE v10.
+- Supabase project qttcutwzehtskfcwxkwj; whapi-crm-webhook ACTIVE v12.
 - Remote `crm-ui-dashboard` is at `6b206ddf07515cff2df82140d86ee873e4ea2965`; remote `main` is at `954b24fc21b8b91a6bd5cae3e24a116e31fbdce7`. Their trees matched before the local follow-up fix.
 - CRM: 371 leads; 138 deterministic auto-qualified; 839 contact classifications; 18,641 messages since 2026-10-05.
 - Webhooks: 18,641/18,641 message events linked to crm_messages; 0 active errors; 43 original errors retained in processing_error_history.

@@ -1,12 +1,20 @@
 # EFPS Inventory Management
 
-## Notion webhook event history — deployed 2026-11-14
+## Current verified production state — 2026-11-14
+
+- 106 active Notion-owned rows in Supabase; business_status Pending on all 106.
+- Notion event history remains in crm_inventory_intake_events; WhatsApp event history remains in crm_webhook_events. No tables deleted.
+- Supabase notion-inventory-state ACTIVE v12; AWS efps-notion-intake updated successfully.
+- Maps API-unavailable fallback deployed: preserve only a supported original short URL, labelled unverified.
+- Python Inventory + Maps tests: 122/122 passed. Full raw intake acceptance still awaits a complete operator submission with Raw Property Data and Photos.
+
+## Historical initial webhook event-history deployment — 2026-11-14 (v10)
 
 Task 3 extends the existing `crm_inventory_intake_events` ledger and connects the Notion intake Lambda and `notion-inventory-state` Edge Function to record webhook receipt, validation, delivery attempts, queueing, processing, retries and outcomes. No new webhook table was created; the WhatsApp `crm_webhook_events` table and processing remain untouched. Supabase Edge Function v10 and AWS Lambda are deployed. The live `Submit New Property` form exposes Raw Property Data and Photos. Awaiting the first real property submission for end-to-end verification.
 
-## Live mirror acceptance note — 2026-11-13 (recovery hardening)
+## Historical live mirror acceptance checkpoint — 2026-11-13
 
-## Live mirror acceptance note — 2026-11-13 (recovery hardening)
+## Historical live mirror acceptance checkpoint — 2026-11-13
 
 The direct Housing Listings mirror is deployed with Supabase Edge Function v9 and the isolated Lambda. Full reconciliation confirms 104 active Notion pages and 104 matching Supabase snapshots, with no missing/orphaned/duplicate rows or semantic field mismatches. All 104 intake events are processed and contain the correct Listing ID. The reserved `source_group` and `inventory_locked` fields are blank; 43 populated `inventory_locked` values were cleared.
 
