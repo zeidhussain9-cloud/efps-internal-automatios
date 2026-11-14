@@ -223,4 +223,4 @@ These are local data-migration tasks, not reasons to reintroduce the excluded cl
 
 ## Latest verified inventory update — 2026-11-14
 
-The active Notion-owned Supabase projection contains 106 rows. business_status is now first-class and backfilled from source_record.status; all 106 currently report Pending. This is separate from intake_status and listing_state. The UI/API change is local and undeployed. Notion events remain in crm_inventory_intake_events and WhatsApp events in crm_webhook_events. No tables were deleted.
+The active Notion-owned Supabase projection contains 106 rows. business_status is now first-class and backfilled from source_record.status; all 106 currently report Pending. This is separate from intake_status and listing_state. The UI/API change is deployed. Notion events remain in crm_inventory_intake_events and WhatsApp events in crm_webhook_events. No tables were deleted.
