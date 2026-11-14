@@ -123,6 +123,23 @@ def test_notion_api_token_is_loaded_from_secrets_manager(monkeypatch):
     assert intake._notion_secret_value("api_token") == "runtime-token"
 
 
+def test_unverified_webhook_audit_keeps_safe_gateway_origin_metadata(monkeypatch):
+    captured = {}
+    class FakeStore:
+        def record_webhook_event(self, **event):
+            captured.update(event)
+            return {"id": "notion-webhook:sha256:unverified:test", "should_enqueue": True}
+        def update_webhook_event(self, *args, **kwargs): return {"status": args[1]}
+    monkeypatch.setattr(intake, "SupabaseIntakeStore", FakeStore)
+    context = type("Context", (), {"aws_request_id": "aws-request"})()
+    request = {"requestContext": {"identity": {"sourceIp": "203.0.113.4", "userAgent": "probe/1"},
+                                   "requestId": "gateway-request", "stage": "Prod"}}
+    intake._record_unverified_delivery("{}", "missing signature", context, request)
+    origin = captured["payload"]["request_origin"]
+    assert origin == {"source_ip": "203.0.113.4", "user_agent": "probe/1",
+                      "gateway_request_id": "gateway-request", "stage": "Prod"}
+
+
 def test_notion_webhook_verification_handshake_persists_verification_token(monkeypatch):
     calls = []
     class FakeSecrets:
@@ -337,6 +354,86 @@ def test_process_page_duplicate_delivery_does_not_write(monkeypatch):
     assert result == {"status": "already_processed", "listing_id": "EF-EXISTING"}
     assert store.listing_ids == [("intake-page-id", "EF-EXISTING")]
 
+
+
+def test_worker_marks_missing_notion_page_as_ignored_not_failed(monkeypatch):
+    page_id = "12345678-1234-1234-1234-123456789abc"
+    transitions = []
+    class FakeStore:
+        def update_webhook_event(self, row_id, status, **kwargs):
+            transitions.append((row_id, status, kwargs))
+            return {"status": status}
+    monkeypatch.setattr(intake, "SupabaseIntakeStore", FakeStore)
+    def deleted_page(*args, **kwargs):
+        raise intake.IntakeError(f"Notion API GET pages/{page_id} failed (404): object_not_found")
+    monkeypatch.setattr(intake, "process_page", deleted_page)
+    context = type("Context", (), {"aws_request_id": "aws-test"})()
+    result = intake.lambda_handler({"_efps_notion_worker": True, "page_id": page_id,
+                                    "event_type": "page.properties_updated", "event_id": "event-test",
+                                    "event_row_id": "notion-webhook:event:test"}, context)
+    assert result["status"] == "ignored"
+    assert transitions[-1][1] == "ignored"
+    assert transitions[-1][2]["outcome"]["reason"] == "source_page_missing"
+
+
+def test_process_page_ignores_stale_delivery_for_archived_source_page():
+    page_id = "12345678-1234-1234-1234-123456789abc"
+    class FakeNotion:
+        def get_page(self, supplied):
+            return {"id": supplied, "archived": True, "parent": {"database_id": intake.INTAKE_DATABASE_ID}}
+    class FakeStore:
+        def __init__(self): self.finished = []
+        def finish(self, supplied, state, **kwargs): self.finished.append((supplied, state, kwargs))
+    store = FakeStore()
+    result = intake.process_page(page_id, event_type="page.properties_updated", notion=FakeNotion(), store=store)
+    assert result["status"] == "ignored"
+    assert result["reason"] == "source_page_deleted"
+    assert store.finished[0][1] == "processed"
+
+
+def test_process_page_preserves_primary_error_when_status_patch_also_fails(monkeypatch):
+    import pytest
+    page_id = "12345678-1234-1234-1234-123456789abc"
+    page = {"id": page_id, "parent": {"database_id": intake.INTAKE_DATABASE_ID}, "properties": {"Raw Property Data": {"rich_text": [{"plain_text": "2 BHK Apartment"}]}, "Photos": {"files": []}}}
+    class FakeNotion:
+        def __init__(self): self.reads = 0
+        def get_page(self, supplied):
+            self.reads += 1
+            return page
+        def validate_listing_schema(self): raise RuntimeError("primary schema failure")
+        def update_page(self, supplied, properties): raise RuntimeError("secondary page patch 400")
+    class FakeStore:
+        def __init__(self): self.finished = []
+        def claim(self, supplied, digest): return "claimed", {"listing_id": "EF-TEST-FAIL"}
+        def finish(self, supplied, state, **kwargs): self.finished.append((state, kwargs))
+    monkeypatch.setattr(intake, "_append_processing_notes", lambda notion, supplied, note: note)
+    store = FakeStore()
+    with pytest.raises(RuntimeError, match="primary schema failure"):
+        intake.process_page(page_id, notion=FakeNotion(), store=store, cloudinary=object())
+    assert store.finished[0][0] == "failed"
+    assert "primary schema failure" in store.finished[0][1]["note"]
+
+
+def test_process_page_treats_deleted_page_during_processing_as_ignored(monkeypatch):
+    page_id = "12345678-1234-1234-1234-123456789abc"
+    page = {"id": page_id, "parent": {"database_id": intake.INTAKE_DATABASE_ID}, "properties": {
+        "Raw Property Data": {"rich_text": [{"plain_text": "2 BHK Apartment"}]}, "Photos": {"files": []}}}
+    class FakeNotion:
+        def __init__(self): self.reads = 0
+        def get_page(self, supplied):
+            self.reads += 1
+            if self.reads == 1: return page
+            raise intake.IntakeError("Notion API GET pages/123 failed (404): object_not_found")
+        def validate_listing_schema(self): raise RuntimeError("interrupted by deletion")
+    class FakeStore:
+        def __init__(self): self.finished = []
+        def claim(self, supplied, digest): return "claimed", {"listing_id": "EF-TEST-DELETED"}
+        def finish(self, supplied, state, **kwargs): self.finished.append((state, kwargs))
+    store = FakeStore()
+    result = intake.process_page(page_id, notion=FakeNotion(), store=store, cloudinary=object())
+    assert result["status"] == "ignored"
+    assert result["reason"] == "source_page_missing"
+    assert store.finished[0][0] == "processed"
 
 def test_processed_notion_page_repairs_a_missing_inventory_projection():
     page_id = "12345678-1234-1234-1234-123456789abc"

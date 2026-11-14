@@ -136,3 +136,12 @@ The `efps-notion-intake` Lambda is deployed from an isolated 21 MB package. Its 
 The webhook status correction is live: the 26 historical notifications whose validation and recorded outcome both say `ignored` are stored as `ignored`, and future ignored events retain that status. Other genuine failures are not relabelled.
 
 The isolated Notion Lambda build validates successfully; all 116 inventory tests pass. The deployment is Active with a successful update.
+
+
+## Webhook failure classification and deleted-source handling — 2026-11-14
+
+The production database previously coerced authenticated webhook terminal outcomes `rejected` and `unsupported` into `failed`, while the Python intake adapter correctly sent those statuses. The table constraint also excluded those valid terminal outcomes. This caused an unauthenticated empty-body request (2-byte `{}` body, no Notion event ID) to appear as a processing failure. The database function and constraint now preserve `rejected` and `unsupported` distinctly from execution failures. Rejected deliveries now retain safe API Gateway source IP, user-agent, request ID, and stage metadata for future attribution; request bodies and secrets are not logged. The original caller for the historical empty-body request cannot be established because API Gateway access logging was disabled at the time. New rejected-delivery records now retain the API Gateway source IP, user-agent, request ID, and stage for attribution.
+
+A separate failed row was traced to a deliberately labelled test-only Codex form submission. The raw intake page and its linked Housing Listings page were both deleted; the Supabase inventory snapshot is soft-deleted. Duplicate property-update deliveries racing with source deletion could enter the exception handler, whose best-effort status PATCH could replace the original exception with a secondary Notion 400. Intake now ignores archived/missing source pages, logs failed status updates separately, and preserves the original processing exception. The historical test row is classified as ignored, not a production listing failure.
+
+Regression coverage: 121 inventory tests pass. The SQL migration `20261114155000_preserve_notion_webhook_terminal_statuses.sql` records the database constraint, terminal-state function, and the two historical corrections.

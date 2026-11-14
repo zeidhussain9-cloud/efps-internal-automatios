@@ -40,6 +40,11 @@ def _log_event(event: str, **fields):
     print(json.dumps({"service": "efps-notion-intake", "event": event, **fields}, sort_keys=True, default=str))
 
 
+def _is_missing_notion_page_error(error: Exception) -> bool:
+    text = str(error).lower()
+    return "object_not_found" in text or ("failed (404)" in text and "pages/" in text)
+
+
 class NotionClient:
     def __init__(self, token: str, *, session=None):
         if not token:
@@ -636,6 +641,10 @@ def process_page(
             return {"status": "deleted", "listing_id": existing.get("listing_id", "")}
         return {"status": "ignored", "listing_id": ""}
     page = notion.get_page(page_id)
+    if page.get("archived") or page.get("in_trash"):
+        store.finish(page_id, "processed", note="Source intake page is deleted; stale delivery ignored.")
+        _log_event("intake_deleted_source_ignored", page_id=page_id, event_type=event_type)
+        return {"status": "ignored", "listing_id": "", "reason": "source_page_deleted"}
     parent = page.get("parent") or {}
     parent_database_id = str(parent.get("database_id") or parent.get("data_source_id") or "").replace("-", "").lower()
     if parent_database_id == LISTINGS_DATABASE_ID:
@@ -729,11 +738,28 @@ def process_page(
         return {"status": final_state, "listing_id": listing_id, "listing_page_id": listing_page_id, "issues": issues}
     except Exception as exc:
         note = f"Processing failed: {str(exc)[:1500]}"
+        # A source page can be deleted while an asynchronous duplicate delivery is
+        # still running. Treat a confirmed missing page as a terminal ignored event.
+        try:
+            current_page = notion.get_page(page_id)
+            if current_page.get("archived") or current_page.get("in_trash"):
+                store.finish(page_id, "processed", note="Source intake page was deleted during processing; no further update is required.")
+                _log_event("intake_source_deleted_during_processing", page_id=page_id, listing_id=listing_id)
+                return {"status": "ignored", "listing_id": listing_id, "reason": "source_page_deleted"}
+        except Exception as lookup_error:
+            lookup_text = str(lookup_error).lower()
+            if "object_not_found" in lookup_text or "failed (404)" in lookup_text:
+                store.finish(page_id, "processed", note="Source intake page no longer exists; stale delivery ignored.")
+                _log_event("intake_source_missing_during_processing", page_id=page_id, listing_id=listing_id)
+                return {"status": "ignored", "listing_id": listing_id, "reason": "source_page_missing"}
         try:
             combined_notes = _append_processing_notes(notion, page_id, note)
             notion.update_page(page_id, {"Intake Status": {"status": {"name": "Needs Review"}}, "Listing ID": _rich(listing_id), "Processing Notes": _rich(combined_notes)})
-        finally:
-            store.finish(page_id, "failed", note=note)
+        except Exception as status_error:
+            _log_event("intake_failure_status_update_failed", page_id=page_id, listing_id=listing_id,
+                       original_error_type=type(exc).__name__, status_error_type=type(status_error).__name__,
+                       status_error=str(status_error)[:500])
+        store.finish(page_id, "failed", note=note)
         raise
 
 
@@ -946,14 +972,23 @@ def _notion_webhook_secret(*, update_token: str = "") -> str:
     return _notion_secret_value("webhook_secret", update_webhook_token=update_token)
 
 
-def _record_unverified_delivery(raw_body: str, reason: str, context) -> bool:
-    """Keep a minimal audit record for unauthenticated requests without storing their body."""
+def _record_unverified_delivery(raw_body: str, reason: str, context, request_event: dict | None = None) -> bool:
+    """Audit rejected deliveries without storing their body; retain safe gateway origin metadata."""
     digest = hashlib.sha256(raw_body.encode("utf-8")).hexdigest()
     payload = {
         "unverified_delivery": True,
         "reason": reason,
         "raw_body_sha256": digest,
         "raw_body_size": len(raw_body.encode("utf-8")),
+    }
+    request_context = (request_event or {}).get("requestContext") or {}
+    identity = request_context.get("identity") or {}
+    http = request_context.get("http") or {}
+    payload["request_origin"] = {
+        "source_ip": identity.get("sourceIp") or http.get("sourceIp"),
+        "user_agent": identity.get("userAgent") or http.get("userAgent"),
+        "gateway_request_id": request_context.get("requestId"),
+        "stage": request_context.get("stage"),
     }
     record = _event_record_input(payload, raw_body)
     record["event_key"] = f"sha256:unverified:{digest}"
@@ -1008,6 +1043,19 @@ def lambda_handler(event, context):
         try:
             result = process_page(page_id, event_type=event_type, updated_property_ids=updated_property_ids)
         except Exception as exc:
+            if _is_missing_notion_page_error(exc):
+                if event_store:
+                    event_store.update_webhook_event(
+                        event_row_id,
+                        "ignored",
+                        aws_request_id=getattr(context, "aws_request_id", ""),
+                        outcome={"status": "ignored", "reason": "source_page_missing"},
+                        page_id=page_id,
+                    )
+                _log_event("worker_completed", page_id=page_id, event_type=event_type, event_id=event_id,
+                           aws_request_id=getattr(context, "aws_request_id", ""), status="ignored",
+                           reason="source_page_missing", duration_ms=round((time.monotonic() - started) * 1000))
+                return {"status": "ignored", "listing_id": "", "reason": "source_page_missing"}
             if event_store:
                 try:
                     event_store.update_webhook_event(
@@ -1092,13 +1140,13 @@ def lambda_handler(event, context):
     except Exception as exc:
         print(json.dumps({"notion_webhook_secret_read_error": type(exc).__name__}))
         try:
-            _record_unverified_delivery(raw_body, "webhook verification secret unavailable", context)
+            _record_unverified_delivery(raw_body, "webhook verification secret unavailable", context, event)
         except Exception as ledger_exc:
             _log_event("webhook_persistence_failed", error_type=type(ledger_exc).__name__)
         return {"statusCode": 503, "headers": {"Content-Type": "application/json"}, "body": json.dumps({"error": "webhook verification is not configured"})}
     if not expected_token or not supplied:
         try:
-            _record_unverified_delivery(raw_body, "missing signature or verification token", context)
+            _record_unverified_delivery(raw_body, "missing signature or verification token", context, event)
         except Exception as exc:
             _log_event("webhook_persistence_failed", error_type=type(exc).__name__)
             return {"statusCode": 503, "headers": {"Content-Type": "application/json"}, "body": json.dumps({"error": "event history is unavailable"})}
@@ -1106,7 +1154,7 @@ def lambda_handler(event, context):
     calculated = "sha256=" + hmac.new(expected_token.encode("utf-8"), raw_body.encode("utf-8"), hashlib.sha256).hexdigest()
     if not hmac.compare_digest(calculated, supplied):
         try:
-            _record_unverified_delivery(raw_body, "invalid signature", context)
+            _record_unverified_delivery(raw_body, "invalid signature", context, event)
         except Exception as exc:
             _log_event("webhook_persistence_failed", error_type=type(exc).__name__)
             return {"statusCode": 503, "headers": {"Content-Type": "application/json"}, "body": json.dumps({"error": "event history is unavailable"})}
