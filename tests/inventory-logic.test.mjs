@@ -32,9 +32,18 @@ test('inventory filters, sorting, summaries, facets, and pages compose on the se
  assert.equal(page.offset,1);
  assert.equal(page.hasMore,false);
  assert.deepEqual(page.rows.map(row=>row.listing_id),['INV-3']);
- assert.deepEqual(page.summary,{total:3,available:2,rented:1,withPhotos:2,statusCounts:{Available:2,'Rented Out':1}});
+ assert.deepEqual(page.summary,{total:3,available:2,rented:1,withPhotos:2,statusCounts:{Available:2,'Rented Out':1},businessStatusCounts:{'Not recorded':3}});
  assert.deepEqual(page.facets.statuses,['Available','Rented Out']);
  assert.equal(INVENTORY_PAGE_SIZE,24);
+});
+
+test('business review status is independently filterable and reported',()=>{
+ const source=[{listing_id:'A',listing_state:'Available',business_status:'Pending'},{listing_id:'B',listing_state:'Available',business_status:'Needs Review'},{listing_id:'C',listing_state:'Rented Out',business_status:'Processed'}];
+ const page=buildInventoryPage(source,{businessStatus:'Needs Review'});
+ assert.equal(page.total,1);
+ assert.equal(page.rows[0].listing_id,'B');
+ assert.deepEqual(page.summary.businessStatusCounts,{'Needs Review':1,Pending:1,Processed:1});
+ assert.deepEqual(page.facets.businessStatuses,['Needs Review','Pending','Processed']);
 });
 
 test('inventory pagination rejects invalid limits and offsets',()=>{

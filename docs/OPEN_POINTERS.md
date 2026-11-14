@@ -61,3 +61,12 @@ Do not reopen historical pre-production/import gates without new regression evid
 Points **40 Requirement field correctness**, **41 Property-matching inputs**, and **42 Property-matching results** are governed by the single canonical contract in `crm-source-audit-scheduler/AUDIT_CONTRACT.md` and the shared implementation in `src/crm-requirement-match-audit.mjs`. The scheduled runner fails closed unless the combined requirement/matching audit is complete. Do not duplicate or redefine these rules in this document.
 
 Historical live population snapshot verified 2026-10-05: **253 promoted qualified leads**, **253 normalized requirement profiles**, **0 missing profiles**, and **71 active canonical inventory listings**. Requirement evidence remains a separate provenance layer and is not fabricated by this audit.
+
+
+## Latest verified open pointers — 2026-11-14
+
+- Raw Property Intake full-chain acceptance remains unverified until a real operator submission is processed across Notion webhook, Lambda, Sheets, Cloudinary, Maps, Housing Listings and Supabase.
+- Complete Notion webhook capture coverage is not certified from the 8 observed event rows; audit configured delivery types and retry outcomes before claiming completeness.
+- Current local Maps fallback and business-status UI changes are not yet deployed.
+- Notion workspace cleanup remains pending; no obsolete page has been verified safe to archive/delete.
+- Two Notion webhook event rows have ignored/failed outcomes and one needs review; inspect event payloads/outcomes before any retry or status mutation.

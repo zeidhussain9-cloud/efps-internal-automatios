@@ -69,3 +69,8 @@ The eight original Slack warnings were for G5ZS, 6JYX, 97J4, WVP3, NFHV, 9ZZJ, X
 - Do not treat inventory history before crm_inventory_sync_changes existed as reconstructable.
 - Signed-in production UI verification is complete: the edited Notion test listing appeared in the dashboard, and after cleanup the dashboard returned to 104 properties. Supabase mirror checks alone were not used as a substitute for this browser evidence.
 - Live archive/delete was observed through Notion and soft-deleted the Supabase row after about one minute. Actual `page.undeleted` webhook delivery remains unobserved; however, the 15-minute reconciler successfully restored a soft-deleted active rented listing. Missed restore delivery is therefore recovered automatically without changing the Notion webhook settings.
+
+
+## Latest verified inventory checkpoint — 2026-11-14
+
+The live Notion-owned projection contains 106 active rows, not the historical 104-row count in the earlier checkpoint. crm_inventory_snapshot.business_status is a first-class projection field populated from source_record.status; all 106 current rows report Pending. The dashboard changes to filter and display this field are local and not yet deployed. Supabase notion-inventory-state was ACTIVE v10 before the latest local Edge Function update, which is now ACTIVE v11. No tables were deleted. Raw Property Intake end-to-end acceptance remains pending a real operator submission.

@@ -256,3 +256,8 @@ The AI output is advisory and durable: requirement proposals are accepted/reject
 ## 2026-10-01 — Current AI generation chain
 
 The current production AI provider chain is Bedrock Claude Opus 4.6 (`au.anthropic.claude-opus-4-6-v1`) → Bedrock Claude Sonnet 4.6 (`au.anthropic.claude-sonnet-4-6`) → Ollama `gpt-oss:20b`. Drafts retain provider/model provenance and source-message evidence. Stale drafts are detected from newer CRM messages, and the operator must pass the deterministic pre-send grounding check before opening WhatsApp. Incremental/delta message analysis remains intentionally deferred.
+
+
+## Latest verified Notion inventory boundary — 2026-11-14
+
+Notion Housing Listings remains the canonical operator editor. crm_inventory_snapshot is the CRM projection (106 active Notion-owned rows at the latest audit). Business review status is projected to business_status, separate from intake_status and listing_state. Notion webhook history is recorded in the existing crm_inventory_intake_events; WhatsApp events remain in crm_webhook_events. No tables were deleted. Current code changes for review-state display and Maps API-unavailable fallback are local and undeployed.

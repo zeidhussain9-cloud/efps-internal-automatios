@@ -183,3 +183,8 @@ If a new maintained document is required, add it to this map and define its role
 | `docs/crm/CRM_AI_AND_LEAD_IMPORT_GATE_2026-09-27.md` | Dated verification of hosted model, dedicated steering and remaining real-data gates. |
 
 `src/ollama-adapter.mjs` loads only `steering.md` as model system context. Repository agents must still follow `CORE_STEERING.md`; the hosted model does not receive it.
+
+
+## Latest verified inventory intake state — 2026-11-14
+
+Current live Notion-owned Supabase projection: 106 active rows. crm_inventory_snapshot.business_status is a first-class projection/reporting field. Notion webhook history is retained in the existing crm_inventory_intake_events; WhatsApp webhook history remains in crm_webhook_events. No tables were deleted. Current local Maps fallback and UI changes remain undeployed. Full raw-intake acceptance and Notion workspace cleanup remain pending.

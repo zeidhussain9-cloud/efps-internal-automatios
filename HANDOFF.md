@@ -92,3 +92,18 @@ After runtime verification of this release:
 Points **40 Requirement field correctness**, **41 Property-matching inputs**, and **42 Property-matching results** are governed by the single canonical contract in `crm-source-audit-scheduler/AUDIT_CONTRACT.md` and the shared implementation in `src/crm-requirement-match-audit.mjs`. The scheduled runner fails closed unless the combined requirement/matching audit is complete. Do not duplicate or redefine these rules in this document.
 
 Current live population verified 2026-10-05: **253 promoted qualified leads**, **253 normalized requirement profiles**, **0 missing profiles**, and **71 active canonical inventory listings**. Requirement evidence remains a separate provenance layer and is not fabricated by this audit.
+
+
+## Active six-task execution — 2026-11-14 (latest verified local state)
+
+- User explicitly prohibited table deletion. No table has been deleted. Existing crm_webhook_events and crm_inventory_intake_events remain intact.
+- Notion event history remains in crm_inventory_intake_events; WhatsApp event history remains in crm_webhook_events. Live Notion event rows: 8 (5 processed, 2 ignored/failed outcomes, 1 needs review). This is not proof of complete capture.
+- Production Notion-owned inventory projection: 106 active rows. crm_inventory_snapshot.business_status is now a first-class reporting field, backfilled from source_record.status; all 106 currently report Pending. It is distinct from intake_status and listing_state.
+- Additive migration 20261114093738_crm_inventory_business_status.sql was applied to Supabase project qttcutwzehtskfcwxkwj. It adds one column and a partial index only.
+- Two requested Housing Listings updates were verified in Notion and Supabase. Their business status is Pending; intake status remains Processed; listing availability remains separate.
+- Local code now projects, filters and displays business_status. Maps API-unavailable fallback preserves only an original supported short URL and labels it unverified.
+- Local validation: Python Inventory + Maps 122/122; Node 146/146; browser 1/1; Vite build PASS; diff check PASS.
+- Current UI, Edge Function and Maps fallback changes are uncommitted and not deployed. Render, Supabase Edge Function and AWS Lambda release steps remain.
+- Raw Property Intake full-chain acceptance remains pending a real operator submission and runtime credential verification. No synthetic production property was created.
+- Notion workspace cleanup has not been performed; no page was archived/deleted without verified evidence.
+- Full docs reconciliation, GitHub CI, Render deployment, production smoke tests and main branch reconciliation remain release steps.

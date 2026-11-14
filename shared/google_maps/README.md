@@ -89,3 +89,8 @@ Previously completed runtime probes established live Maps API access for the ver
 Google's supported Maps URL model uses explicit universal Maps URL forms and does not require an API key merely to construct or launch a Maps URL.
 
 See `CREDENTIALS.md` for the non-secret credential registry.
+
+
+## Maps API-unavailable fallback — local implementation 2026-11-14
+
+When the Maps API returns REQUEST_DENIED, OVER_QUERY_LIMIT or UNKNOWN_ERROR, the resolver reports API_UNAVAILABLE rather than claiming the place was not found. The inventory caption builder may preserve only the exact original supported short mobile Maps URL and labels it explicitly as not verified. It does not derive locality, society name, coordinates or pincode from that URL. This fallback is covered by tests but has not yet been deployed to the AWS Notion intake Lambda.

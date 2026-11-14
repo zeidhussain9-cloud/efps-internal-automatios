@@ -54,13 +54,14 @@ function inventoryText(value,fallback=''){
  return value!==null&&value!==undefined&&String(value).trim()?String(value).trim():fallback;
 }
 
-export function filterInventoryRows(rows,{status='All',bhk='All',locality='All',withPhotos=null,search=''}={},hasPhotos=row=>{
+export function filterInventoryRows(rows,{status='All',businessStatus='All',bhk='All',locality='All',withPhotos=null,search=''}={},hasPhotos=row=>{
  const raw=row?.photos??row?.cloudinary_image_urls??[];
  return Array.isArray(raw)?raw.length>0:Boolean(String(raw||'').trim());
 }){
  const query=String(search||'').trim().toLocaleLowerCase();
  return (Array.isArray(rows)?rows:[]).filter(row=>
   (status==='All'||inventoryText(row.listing_state,'Unknown')===status)&&
+  (businessStatus==='All'||inventoryText(row.business_status,'Not recorded')===businessStatus)&&
   (bhk==='All'||String(row.bhk??'')===String(bhk))&&
   (locality==='All'||inventoryText(row.locality,'Unspecified')===locality)&&
   (withPhotos===null||Boolean(hasPhotos(row))===withPhotos)&&
@@ -73,6 +74,7 @@ export function inventoryFacets(rows){
  const bhkNumber=value=>{const match=String(value||'').match(/\d+(?:\.\d+)?/);return match?Number(match[0]):Number.POSITIVE_INFINITY};
  return{
   statuses:[...new Set(values.map(row=>inventoryText(row.listing_state,'Unknown')))].sort(),
+  businessStatuses:[...new Set(values.map(row=>inventoryText(row.business_status,'Not recorded')))].sort(),
   bhks:[...new Set(values.map(row=>row.bhk).filter(Boolean).map(String))].sort((a,b)=>bhkNumber(a)-bhkNumber(b)||a.localeCompare(b)),
   localities:[...new Set(values.map(row=>inventoryText(row.locality,'Unspecified')))].sort((a,b)=>a.localeCompare(b))
  };
@@ -89,18 +91,19 @@ export function summarizeInventoryRows(rows,hasPhotos=row=>{
   available:values.filter(row=>row.listing_state==='Available').length,
   rented:values.filter(row=>row.listing_state==='Rented Out').length,
   withPhotos:values.filter(hasPhotos).length,
-  statusCounts:Object.fromEntries(statuses.map(status=>[status,values.filter(row=>inventoryText(row.listing_state,'Unknown')===status).length]))
+  statusCounts:Object.fromEntries(statuses.map(status=>[status,values.filter(row=>inventoryText(row.listing_state,'Unknown')===status).length])),
+  businessStatusCounts:Object.fromEntries([...new Set(values.map(row=>inventoryText(row.business_status,'Not recorded')))].sort().map(status=>[status,values.filter(row=>inventoryText(row.business_status,'Not recorded')===status).length]))
  };
 }
 
-export function buildInventoryPage(rows,{limit=INVENTORY_PAGE_SIZE,offset=0,sort='latest',status='All',bhk='All',locality='All',withPhotos=null,search=''}={},hasPhotos){
+export function buildInventoryPage(rows,{limit=INVENTORY_PAGE_SIZE,offset=0,sort='latest',status='All',businessStatus='All',bhk='All',locality='All',withPhotos=null,search=''}={},hasPhotos){
  if(!Number.isInteger(limit)||limit<1||limit>100||!Number.isInteger(offset)||offset<0)throw Error('Invalid inventory pagination');
  const values=Array.isArray(rows)?rows:[];
  const photoCheck=hasPhotos||((row)=>{
   const raw=row?.photos??row?.cloudinary_image_urls??[];
   return Array.isArray(raw)?raw.length>0:Boolean(String(raw||'').trim());
  });
- const filtered=sortInventoryRows(filterInventoryRows(values,{status,bhk,locality,withPhotos,search},photoCheck),sort);
+ const filtered=sortInventoryRows(filterInventoryRows(values,{status,businessStatus,bhk,locality,withPhotos,search},photoCheck),sort);
  const pageRows=filtered.slice(offset,offset+limit);
  return{
   rows:pageRows,

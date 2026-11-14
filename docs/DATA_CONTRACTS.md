@@ -166,3 +166,12 @@ Production Google Sheets access, the 48-column contract, write boundary, Google 
 ## CRM fictional AI proposal contract — 2026-09-27
 
 The dedicated root `steering.md` instructs the hosted CRM model to return one JSON object with `bhk`, `location`, `budget`, `pets` and `uncertainties`. Unknown scalar values are `null`; uncertainties are a string array. The current adapter parses JSON or fenced JSON and returns the proposal for human Accept/Reject; it does not persist AI-derived values or assert property facts. The provider receives only fixed fictional pilot fixtures. Historical SQLite customer data and Housing_Listings inventory are separate sources and are not added to model context.
+
+
+## Latest verified inventory status contract — 2026-11-14
+
+crm_inventory_snapshot.business_status is the top-level CRM/reporting projection of source_record.status. It is distinct from intake_status (intake lifecycle), listing_state (inventory availability), and webhook processing_status (delivery/worker outcome in crm_inventory_intake_events).
+
+The field is backfilled from source_record.status for existing Notion-owned rows. New Notion inventory upserts must populate business_status from record.status. Do not infer business acceptance from intake_status=Processed.
+
+No table was deleted or renamed. crm_webhook_events remains the WhatsApp ledger. Notion event history remains in the extended crm_inventory_intake_events table.
