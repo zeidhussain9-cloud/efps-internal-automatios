@@ -2,7 +2,7 @@
 
 ## Current verified open pointers — 2026-11-14 (live check)
 
-- Google Sheets status editing: the connected Housing_Listings column E currently offers only Available and Rented Out and has no conditional-format rules. The Sheet11 reference row lists no allowed values. The requested separate Sheet 2 source has not been identified. There is currently no Google Sheets edit → Supabase sync path; existing property updates sync from Notion Housing Listings page events. Obtain the exact Sheet 2 link, then implement the intended sheet-owned status update path before asking the operator to test it.
+- Notion Housing Listings listing_state dropdown is complete: exactly Available (green), Rented Out (red), and On Hold (yellow). Schema verified after update. Existing page-event synchronization remains the only property update path; no Google Sheets synchronization was added.
 - Notion webhook coverage: 26 event rows are observed (5 processed, 18 ignored, 2 needs review, 1 rejected); complete delivery capture is not certified.
 - Raw-intake Sheets compatibility: the two current submissions have Photos, Raw Property Data, Housing Listings relations and matching Supabase snapshots; the corresponding compatibility Sheet writes were not independently verified in this check.
 - Restore event: actual Notion page.undeleted webhook delivery remains unobserved; the scheduled 15-minute reconciliation fallback remains the recovery path.
