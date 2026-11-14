@@ -2,7 +2,7 @@
 
 ## Current verified inventory and event contract — 2026-11-14 (live check)
 
-- Raw-intake write contract: live Housing Listings property types and required Select options are checked before external writes; `listing_state` uses Notion Select, and the outgoing property payload is validated before page create/update. This contract is deployed in the isolated intake Lambda.
+- Raw-intake write contract: the deployed Lambda currently has a known incompatibility because live `locality` is Select but the worker expects/serializes rich_text. The local correction fetches and validates the live schema before constructing the write payload, selects the matching locality serializer, and validates the selected option; it is tested but not deployed. Do not describe locality compatibility as live until the Lambda hash and controlled intake acceptance prove it.
 
 crm_inventory_snapshot is the CRM projection of canonical Notion Housing Listings. business_status is distinct from intake_status, listing_state, and crm_inventory_intake_events.processing_status.
 

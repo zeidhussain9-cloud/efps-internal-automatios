@@ -85,6 +85,77 @@ def test_outgoing_select_values_must_exist_in_live_schema():
     with __import__("pytest").raises(intake.IntakeError, match="select option.*not defined"):
         intake.validate_listing_properties(schema, {"listing_state": {"select": {"name": "Unavailable"}}})
 
+def test_locality_serialization_uses_live_select_schema_and_validates_option():
+    schema = {name: {"type": kind} for name, kind in intake.listing_property_types().items()}
+    schema["locality"] = {"type": "select", "select": {"options": [{"name": "Kasavanahalli"}]}}
+    schema["listing_state"]["select"] = {"options": [{"name": name} for name in ("Available", "Rented Out", "On Hold")]}
+    schema["WhatsApp Group"]["select"] = {"options": [{"name": name} for name in (
+        "1 RK / 1–1.5 BHK", "2 / 2.5 BHK", "3 / 3.5 BHK", "4 / 4.5 BHK", "5+ BHK") ]}
+    intake.validate_listing_schema(schema)
+    props = intake.listing_notion_properties({"listing_id": "EF-TEST-LOCALITY", "locality": "Kasavanahalli"}, schema=schema)
+    assert props["locality"] == {"select": {"name": "Kasavanahalli"}}
+    intake.validate_listing_properties(schema, props)
+    import pytest
+    with pytest.raises(intake.IntakeError, match="select option.*not defined"):
+        intake.validate_listing_properties(schema, {"locality": {"select": {"name": "Unknown Locality"}}})
+
+
+def test_all_string_fields_follow_their_live_text_property_type():
+    schema = {name: {"type": kind} for name, kind in intake.listing_property_types().items()}
+    schema["locality"] = {"type": "select", "select": {"options": [{"name": "Kasavanahalli"}]}}
+    schema["city"] = {"type": "select", "select": {"options": [{"name": "Bengaluru"}]}}
+    schema["landmark"] = {"type": "status", "status": {"options": [{"name": "Near Metro"}]}}
+    props = intake.listing_notion_properties(
+        {"listing_id": "EF-TEST-TYPE-AWARE", "locality": "Kasavanahalli", "city": "Bengaluru", "landmark": "Near Metro"},
+        schema=schema,
+    )
+    assert props["locality"] == {"select": {"name": "Kasavanahalli"}}
+    assert props["city"] == {"select": {"name": "Bengaluru"}}
+    assert props["landmark"] == {"status": {"name": "Near Metro"}}
+    intake.validate_listing_properties(schema, props)
+
+
+def test_listing_id_keeps_rich_text_contract_for_query_identity():
+    schema = {name: {"type": kind} for name, kind in intake.listing_property_types().items()}
+    schema["listing_id"]["type"] = "select"
+    import pytest
+    with pytest.raises(intake.IntakeError, match="listing_id: expected rich_text, found select"):
+        intake.validate_listing_schema(schema)
+
+
+def test_locality_serializer_uses_rich_text_when_live_schema_says_rich_text():
+    schema = {"locality": {"type": "rich_text"}}
+    props = intake.listing_notion_properties({"listing_id": "EF-TEST-LOCALITY", "locality": "Kasavanahalli"}, schema=schema)
+    assert props["locality"] == {"rich_text": [{"type": "text", "text": {"content": "Kasavanahalli"}}]}
+
+
+def test_save_listing_fetches_live_schema_before_building_outgoing_payload():
+    class SchemaAwareNotion(intake.NotionClient):
+        def __init__(self):
+            super().__init__("test-token")
+            self.calls = []
+        def request(self, method, path, *, payload=None):
+            self.calls.append((method, path, payload))
+            if method == "GET" and path == f"databases/{intake.LISTINGS_DATABASE_ID}":
+                schema = {name: {"type": kind} for name, kind in intake.listing_property_types().items()}
+                schema["locality"] = {"type": "select", "select": {"options": [{"name": "Kasavanahalli"}]}}
+                schema["listing_state"]["select"] = {"options": [{"name": name} for name in ("Available", "Rented Out", "On Hold")]}
+                schema["WhatsApp Group"]["select"] = {"options": [{"name": name} for name in (
+                    "1 RK / 1–1.5 BHK", "2 / 2.5 BHK", "3 / 3.5 BHK", "4 / 4.5 BHK", "5+ BHK") ]}
+                return {"properties": schema}
+            if method == "POST" and path == f"databases/{intake.LISTINGS_DATABASE_ID}/query":
+                return {"results": []}
+            if method == "POST" and path == "pages":
+                self.created_properties = payload["properties"]
+                return {"id": "created-page-id"}
+            raise AssertionError((method, path))
+    notion = SchemaAwareNotion()
+    result = notion.save_listing({"listing_id": "EF-TEST-LOCALITY", "locality": "Kasavanahalli"})
+    assert result == "created-page-id"
+    assert notion.calls[0][0:2] == ("GET", f"databases/{intake.LISTINGS_DATABASE_ID}")
+    assert notion.created_properties["locality"] == {"select": {"name": "Kasavanahalli"}}
+
+
 def test_processing_notes_append_to_existing_notion_cell_without_replacing_history():
     page_id = "12345678-1234-1234-1234-123456789abc"
     class FakeNotion:

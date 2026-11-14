@@ -5,20 +5,22 @@ The canonical Notion Housing Listings data source now defines listing_state as a
 
 ## Current verified production state — 2026-11-14 (live check)
 
-- Raw-intake schema guard is deployed (Lambda CodeSha256 `AFh+Q+KR4onPTtRLPjyAW6AaMPKM0u0N55322ht3lM0=`). Live schema preflight runs before Sheet/media/page-create side effects; `listing_state` uses Select; outgoing payload and select options are checked; Notion API diagnostics retain bounded code/message. Inventory tests 114/114 pass locally. `EF-2611-YA84` was retried: canonical page and active Supabase snapshot exist; status Needs Review due to Maps API unavailability and 18 photos exceeding the 10-image catalogue limit.
+- **Confirmed raw-intake blocker:** live Notion Housing Listings `locality` is Select, but deployed `efps-notion-intake` still includes locality in `TEXT_FIELDS`, expects `rich_text`, and emits `_rich()` payloads. The previous assurance that this path adapted to the live type was incorrect. Deployed Lambda CodeSha256 remains `C6kJ99XzdnZ8Sua9W7iP99gZ1219KMtdWGsT0ROocRw=`; the fix is not deployed.
+- Local corrective implementation validates the live schema before building the outgoing listing payload, serializes every string-valued inventory field from the fetched Notion property type (rich_text, Select, or Status), validates selected options, and has regression tests for both type variants and schema-first create behavior. Inventory module tests: 126 passed. Deployment and controlled real-intake acceptance remain pending.
+- Direct Housing Listings page projection supports Select values. Supabase currently has 107 active Notion-owned rows, 107 populated locality values, 0 blank locality values, and 1 soft-deleted tombstone. The earlier 104/107 blank alert was transient during reconciliation; the enabled 15-minute EventBridge reconciler re-synced the changed pages. No manual repair was made.
+- Notion Housing Listings remains canonical; `crm_inventory_snapshot` remains the dashboard projection. Supabase `notion-inventory-state` ACTIVE v12; AWS Lambda Active, last update successful, but still running the pre-fix code.
+- GitHub `main` and `crm-ui-dashboard` both point to `a9aef7692f1417842a8f7dbaa0ffe5f63334dc49`. The local CRM worktree was clean at that commit before this uncommitted fix. The local main worktree is at a different commit/tree and must be reconciled after the implementation is committed and pushed; preserve local-only material.
+- Render CRM service `srv-darsv560tbcc73cu4ip0` is LIVE. No CRM UI deployment is required for this Lambda-only correction.
+- The Notion Query Data Source allowance warning came from the Notion MCP `query_data_sources` rows-mode audit used to enumerate/group locality values in the Housing Listings data source. It was not an AWS, Supabase, or Notion API quota and did not affect production synchronization.
+- Daily inventory brief has not been created or scheduled. Its contents are awaiting operator review before any recurring delivery is configured.
 
-- No database tables deleted. WhatsApp history remains in crm_webhook_events; Notion event history remains in crm_inventory_intake_events.
-- Branches main and crm-ui-dashboard are synchronized with identical tracked trees; GitHub advertises exactly these two branch refs.
-- Render CRM service srv-darsv560tbcc73cu4ip0 is LIVE; the exact deployment ID and commit are authoritative in Render and are not duplicated here.
-- Supabase notion-inventory-state ACTIVE v12, JWT verification enabled. Migration 20261114095316_crm_inventory_business_status is registered and applied.
-- AWS efps-notion-intake Active, LastUpdateStatus Successful, Maps API-unavailable fallback deployed.
-- Inventory projection: 107 active Notion-owned rows, 1 soft-deleted tombstone, 0 active blank locality/society rows.
-- EF-2611-PAGH and EF-2611-Y5KC are Processed and reconciled. EF-2611-YA84 has a canonical Housing Listings page and active Supabase snapshot, but remains Needs Review because Maps verification was unavailable and 18 photos exceed the 10-image limit.
-- Notion webhook ledger currently contains 96 observed rows: 64 synced, 2 already processed, 26 ignored outcomes, 3 Needs Review, and 1 with no outcome. The 26 ignored outcomes are still stored with processing_status=failed; this status/outcome mismatch is an open ledger issue. Complete webhook delivery capture is not certified.
-- Processing Notes now append each attempt as a new line in the same Notion property cell; previous text is fetched and retained before writing. AWS Lambda deployed 2026-11-14T12:59:58Z, CodeSha256 oADpl6n7dCwDmjcUx94bnoYvd5PNVnt6d+bUaKuP9D4=. Inventory test suite: 141 passed; SAM build and template validation passed.
-- Google Sheets status boundary: the connected Housing_Listings tab has a column-E dropdown with Available and Rented Out only; it has zero conditional-format rules. The Sheet11 reference lists no listing_state options. No Google Sheets edit-to-Supabase sync is live; existing property edits sync from Notion Housing Listings page events. The separate Sheet 2 source must be identified before copying its full vocabulary or color rules.
-- Compatibility Sheet row writes for all three intake submissions have not been independently verified. The separate empty test-only record EF-2611-3MXH remains soft-deleted; it is not an active property.
-- This implementation changes only the Notion intake worker's Processing Notes write behavior; no schema migration or new table was added. git diff --check and the 141-test inventory suite passed.
+## Immediate implementation gate
+
+1. Complete full Inventory module tests, SAM validation/build, Python compilation, and diff checks.
+2. Review maintained root and `docs/` documentation against current verified state.
+3. Commit/push the tested fix to `crm-ui-dashboard`, reconcile the same tracked tree into `main`, and verify remote tree equality.
+4. Deploy only the isolated `efps-notion-intake` Lambda using the existing stack/parameters; verify deployed CodeSha256.
+5. Run a controlled real raw-intake acceptance only after code deployment, then verify Notion page property type/value, Lambda logs, event ledger, and Supabase projection. Do not create a synthetic production property without user approval.
 
 ## Historical initial Task 3 deployment — 2026-11-14 08:14 UTC (superseded by current v12 state)
 

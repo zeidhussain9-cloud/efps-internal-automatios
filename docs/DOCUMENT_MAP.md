@@ -7,6 +7,8 @@
 - Supabase notion-inventory-state ACTIVE v12; business-status migration registered and applied.
 - AWS efps-notion-intake Active, last update successful; Maps fallback deployed.
 - Inventory projection: 107 active Notion-owned rows, 1 soft-deleted tombstone, 0 active blank locality/society rows.
+- Live Supabase projection currently has 107/107 active Notion-owned rows with populated locality values; the earlier 104/107 blank report was transient during 15-minute reconciliation and recovered without manual repair.
+- Raw-intake locality remains a confirmed production blocker: live Notion locality is Select while deployed Lambda still expects/serializes rich_text. A local fix is under test and is not deployed; see `docs/NOTION_PROPERTY_INTAKE.md` and `HANDOFF.md`.
 - EF-2611-PAGH and EF-2611-Y5KC are Processed and reconciled. EF-2611-YA84 has a canonical page and active snapshot but remains Needs Review (Maps unavailable; 18 photos exceed the 10-image limit).
 - Notion webhook ledger currently contains 96 observed rows: 64 synced, 2 already processed, 26 ignored outcomes, 3 Needs Review, and 1 with no outcome. The 26 ignored outcomes are still stored with processing_status=failed; this status/outcome mismatch is an open ledger issue. Complete webhook delivery capture is not certified.
 - Processing Notes append each attempt as a new line in the existing Notion cell; previous narrative is retained. See docs/NOTION_PROPERTY_INTAKE.md.

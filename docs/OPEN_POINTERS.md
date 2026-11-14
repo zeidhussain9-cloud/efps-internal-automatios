@@ -2,7 +2,7 @@
 
 ## Current verified open pointers — 2026-11-14 (live check)
 
-- Raw Property Intake schema-drift fix is deployed; inventory module tests pass 114/114 locally. `EF-2611-YA84` has a canonical page and active Supabase snapshot. Remaining record-level review: Maps API unavailability and 18 photos exceed the 10-image catalogue limit, so no Cloudinary URLs were published.
+- **Open production blocker:** raw Property Intake locality schema drift. Live Notion locality is Select; deployed Lambda still expects/serializes rich_text. Local correction is implemented and tested (126 Inventory tests; SAM validate/build passed) but not deployed. Production acceptance requires deployed hash verification and controlled real-intake verification. `EF-2611-YA84` remains Needs Review due to Maps API unavailability and 18 photos exceeding the 10-image catalogue limit.
 
 - Notion Housing Listings listing_state dropdown is complete: exactly Available (green), Rented Out (red), and On Hold (yellow). Schema verified after update. Existing page-event synchronization remains the only property update path; no Google Sheets synchronization was added.
 - Notion webhook coverage: 26 event rows are observed (5 processed, 18 ignored, 2 needs review, 1 rejected); complete delivery capture is not certified.
@@ -77,8 +77,9 @@ Historical live population snapshot verified 2026-10-05: **253 promoted qualifie
 
 ## Latest verified open pointers — 2026-11-14 (live check)
 
-- Processing-note durability: the current note field is overwritten during reprocessing. Implement append-only narrative history before promising every attempt is preserved.
+- Raw Property Intake locality schema compatibility is the active production blocker: Notion locality is Select; deployed Lambda still expects/serializes rich_text. Local fix is tested (126 Inventory tests, SAM validate/build) but not deployed. Require deployed CodeSha256 and controlled intake acceptance before closure.
+- Supabase inventory projection has 107 active Notion-owned rows with 107 populated locality values; the earlier 104/107 blank alert recovered through the 15-minute reconciliation without manual repair.
 - Notion webhook ledger currently contains 96 observed rows: 64 synced, 2 already processed, 26 ignored outcomes, 3 Needs Review, and 1 with no outcome. The 26 ignored outcomes are still stored with processing_status=failed; this status/outcome mismatch is an open ledger issue. Complete webhook delivery capture is not certified.
-- Compatibility Sheet row writes for the two latest raw property submissions were not independently checked.
+- Compatibility Sheet row writes for the three latest raw property submissions were not independently checked.
 - Actual Notion page.undeleted webhook delivery remains unobserved; the scheduled 15-minute reconciliation fallback remains the recovery path.
 - No database tables deleted. Workspace cleanup and CRM review-status visibility remain out of scope for this pass.

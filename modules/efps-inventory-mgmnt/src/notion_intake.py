@@ -117,8 +117,11 @@ class NotionClient:
                 raise IntakeError("Notion Housing Listings pagination returned no cursor")
 
     def save_listing(self, row: dict):
-        properties = listing_notion_properties(row)
+        # Read and validate the live Notion schema before constructing any write payload.
+        # The serializer uses the actual property type, so a Select conversion cannot
+        # silently be sent as rich_text (or vice versa).
         schema = getattr(self, "_listing_schema", None) or self.validate_listing_schema()
+        properties = listing_notion_properties(row, schema=schema)
         validate_listing_properties(schema, properties)
         existing = self.find_listing(str(row["listing_id"]))
         if existing:
@@ -382,6 +385,7 @@ def listing_property_types() -> dict[str, str]:
         **{field: "number" for field in NUMBER_FIELDS},
         **{field: "url" for field in URL_FIELDS},
         **{field: "checkbox" for field in ("pet_friendly", "servant_room", "maintenance_included")},
+        "locality": "select",
         "listing_state": "select",
         "WhatsApp Group": "select",
         "WhatsApp Destination": "url",
@@ -397,22 +401,34 @@ def validate_listing_properties(schema: dict, properties: dict) -> None:
         if actual != expected:
             errors.append(f"{name}: expected {expected}, found {actual}")
             continue
-        if expected == "select":
-            selected = str((payload.get("select") or {}).get("name") or "").strip()
-            options = {str(option.get("name") or "") for option in (definition.get("select") or {}).get("options", [])}
+        if expected in {"select", "status"}:
+            selected = str((payload.get(expected) or {}).get("name") or "").strip()
+            options = {
+                str(option.get("name") or "")
+                for option in (definition.get(expected) or {}).get("options", [])
+            }
             if selected and selected not in options:
-                errors.append(f"{name}: select option {selected!r} is not defined in Notion")
+                errors.append(f"{name}: {expected} option {selected!r} is not defined in Notion")
     if errors:
         raise IntakeError("Housing Listings schema validation failed: " + "; ".join(errors))
 
 
 def validate_listing_schema(schema: dict) -> None:
     expected = listing_property_types()
+    # String-valued inventory fields can legitimately be represented by different
+    # Notion text-like property types. Validate the live type, then serialize against
+    # that exact type; do not hard-code rich_text for every string field.
+    dynamic_text_fields = TEXT_FIELDS - {"listing_id"}
     errors = [
         f"{name}: expected {kind}, found {str((schema.get(name) or {}).get('type') or 'missing')}"
         for name, kind in expected.items()
-        if str((schema.get(name) or {}).get("type") or "missing") != kind
+        if name not in dynamic_text_fields
+        and str((schema.get(name) or {}).get("type") or "missing") != kind
     ]
+    for name in sorted(dynamic_text_fields):
+        actual = str((schema.get(name) or {}).get("type") or "missing")
+        if actual not in {"rich_text", "select", "status"}:
+            errors.append(f"{name}: expected a supported text-like property (rich_text, select, or status), found {actual}")
     for name, values in {
         "listing_state": {"Available", "Rented Out", "On Hold"},
         "WhatsApp Group": {
@@ -429,12 +445,26 @@ def validate_listing_schema(schema: dict) -> None:
         raise IntakeError("Housing Listings schema validation failed: " + "; ".join(errors))
 
 
-def listing_notion_properties(row: dict) -> dict:
-    """Project only supported Housing Listings fields; AU/AV remain outside this path."""
+def _serialize_text_field(value: object, property_type: str, field: str) -> dict:
+    """Serialize a string-valued field according to its fetched Notion property type."""
+    text = str(value or "").strip()
+    if property_type == "rich_text":
+        return _rich(text)
+    if property_type == "select":
+        return {"select": {"name": text}} if text else {"select": None}
+    if property_type == "status":
+        return {"status": {"name": text}} if text else {"status": None}
+    raise IntakeError(f"Unsupported live Notion text property type for {field}: {property_type}")
+
+
+def listing_notion_properties(row: dict, *, schema: dict | None = None) -> dict:
+    """Project supported fields using the live Notion property types; reserved fields stay omitted."""
     title = str(row.get("catalog_title") or row.get("listing_id") or "").strip()[:2000]
     properties = {"Property": {"title": [{"type": "text", "text": {"content": title}}]}}
+    fallback_types = listing_property_types()
     for field in TEXT_FIELDS:
-        properties[field] = _rich(row.get(field, ""))
+        property_type = str(((schema or {}).get(field) or {}).get("type") or fallback_types[field])
+        properties[field] = _serialize_text_field(row.get(field, ""), property_type, field)
     listing_state = str(row.get("listing_state") or "").strip()
     if listing_state:
         properties["listing_state"] = {"select": {"name": listing_state}}
