@@ -1,5 +1,9 @@
 # EFPS SAM Deployment Contract
 
+## Task 3 local status
+
+The Notion webhook event-history migration and ingestion/worker integration are local changes only. The migration passed against isolated local PostgreSQL 17.12 and the Edge Function passed Deno type-check, but neither was applied/deployed to production Supabase or AWS. No production property was submitted for testing, no commit or push was made, and production event-ledger verification remains outstanding until deployment is authorized. When authorized, deploy in dependency order: apply the database migration, deploy `notion-inventory-state`, then deploy the AWS Lambda package. Verify the event lifecycle end to end only after all three are live.
+
 This document retains the historical SAM deployment contract. It is not the production deployment contract for the current CRM UI. Current CRM UI production deploys from `crm-ui-dashboard` to Render service `easyfind-crm-d01-d05`.
 
 ## Source of truth

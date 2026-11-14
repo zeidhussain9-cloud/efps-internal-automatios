@@ -30,9 +30,63 @@ Deno.serve(async (req) => {
   try { body = await req.json() } catch { return Response.json({ error: 'Invalid JSON' }, { status: 400 }) }
   const pageId = String(body.page_id ?? '')
   const operation = String(body.operation ?? '')
-  if (operation !== 'reconcile_pages' && !uuid(pageId)) return Response.json({ error: 'Invalid Notion page ID' }, { status: 400 })
+  const pageScopedOperations = new Set(['claim', 'set_listing_id', 'finish', 'allocate_listing_id', 'delete_inventory', 'find_inventory', 'sync_inventory'])
+  if (pageScopedOperations.has(operation) && !uuid(pageId)) return Response.json({ error: 'Invalid Notion page ID' }, { status: 400 })
   let result
-  if (operation === 'claim') {
+  if (operation === 'record_webhook_event') {
+    const eventKey = String(body.event_key ?? '')
+    const payloadSha256 = String(body.payload_sha256 ?? '')
+    const eventPayload = body.payload
+    if (!eventKey || eventKey.length > 200 || !/^[a-f0-9]{64}$/i.test(payloadSha256) ||
+      !eventPayload || typeof eventPayload !== 'object' || Array.isArray(eventPayload)) {
+      return Response.json({ error: 'Invalid Notion webhook event' }, { status: 400 })
+    }
+    const optionalUuid = (value: unknown) => value === null || value === undefined || value === '' || uuid(value)
+    if (!optionalUuid(body.notion_event_id) || !optionalUuid(body.workspace_id) ||
+      !optionalUuid(body.subscription_id) || !optionalUuid(body.integration_id) ||
+      !optionalUuid(body.entity_id) || !optionalUuid(body.page_id)) {
+      return Response.json({ error: 'Invalid Notion event identifier' }, { status: 400 })
+    }
+    const attempt = body.attempt_number == null ? null : Number(body.attempt_number)
+    if (attempt !== null && (!Number.isInteger(attempt) || attempt < 1 || attempt > 8)) {
+      return Response.json({ error: 'Invalid Notion delivery attempt' }, { status: 400 })
+    }
+    result = await supabase.rpc('crm_record_notion_webhook_event', {
+      p_event_key: eventKey,
+      p_notion_event_id: body.notion_event_id || null,
+      p_event_type: String(body.event_type ?? 'unknown').slice(0, 200),
+      p_page_id: body.page_id || null,
+      p_event_timestamp: body.event_timestamp || null,
+      p_attempt_number: attempt,
+      p_payload: eventPayload,
+      p_payload_sha256: payloadSha256.toLowerCase(),
+    })
+  } else if (operation === 'update_webhook_event') {
+    const eventSourceKey = String(body.event_row_id ?? '')
+    const status = String(body.status ?? '')
+    if (!eventSourceKey.startsWith('notion-webhook:') || eventSourceKey.length > 240 || !['accepted', 'queued', 'processing', 'processed', 'needs_review', 'failed', 'rejected', 'unsupported', 'ignored'].includes(status)) {
+      return Response.json({ error: 'Invalid Notion webhook event transition' }, { status: 400 })
+    }
+    const optionalUuid = (value: unknown) => value === null || value === undefined || value === '' || uuid(value)
+    if (!optionalUuid(body.page_id) || !optionalUuid(body.listing_page_id)) {
+      return Response.json({ error: 'Invalid Notion webhook page reference' }, { status: 400 })
+    }
+    const outcome = body.outcome
+    if (outcome !== null && outcome !== undefined && (typeof outcome !== 'object' || Array.isArray(outcome))) {
+      return Response.json({ error: 'Invalid Notion webhook outcome' }, { status: 400 })
+    }
+    result = await supabase.rpc('crm_update_notion_webhook_event', {
+      p_event_source_key: eventSourceKey,
+      p_processing_status: status,
+      p_aws_request_id: String(body.aws_request_id ?? '').slice(0, 200) || null,
+      p_processing_error: String(body.error ?? '').slice(0, 1800) || null,
+      p_processing_outcome: outcome ?? null,
+      p_page_id: body.page_id || null,
+      p_listing_id: String(body.listing_id ?? '').slice(0, 200) || null,
+      p_listing_page_id: body.listing_page_id || null,
+      p_validation_status: ['rejected', 'unsupported', 'ignored'].includes(status) ? status : null,
+    })
+  } else if (operation === 'claim') {
     const payloadHash = String(body.payload_hash ?? '')
     if (!/^[a-f0-9]{64}$/i.test(payloadHash)) return Response.json({ error: 'Invalid payload hash' }, { status: 400 })
     result = await supabase.rpc('crm_claim_notion_inventory_intake', { p_source_page_id: pageId, p_payload_hash: payloadHash })
@@ -93,7 +147,7 @@ Deno.serve(async (req) => {
       if (reconciled.error) return Response.json({ error: 'Intake event Listing ID reconciliation failed' }, { status: 500 })
       listingIdsReconciled = Number(reconciled.data ?? 0)
     }
-    const missing = missingActivePageRows(activeIds, current.data ?? []).map((row) => row.listing_id)
+    const missing = missingActivePageRows(activeIds, current.data ?? []).map((row: { listing_id: string }) => row.listing_id)
     if (missing.length) {
       const deletedAt = new Date().toISOString()
       const updated = await supabase.from('crm_inventory_snapshot').update({ deleted_at: deletedAt, last_synced_at: deletedAt })

@@ -1,5 +1,9 @@
 # Data Contracts
 
+## Notion webhook event ledger (local implementation)
+
+The existing `crm_inventory_intake_events` table is extended in place for signed Notion webhook delivery history. Namespaced event rows retain stable event identity, event type/page reference, sanitized payload and raw-body fingerprint, each delivery attempt, lifecycle/status history, processing attempts/errors/outcome, AWS request ID, and optional Listing ID/page correlation. The base page-level intake rows remain keyed by the Notion page ID and continue to drive the existing idempotency contract. Notion event rows use `source_page_id` values prefixed with `notion-webhook:` and do not create a parallel table. Terminal processing states remain within the existing allowed status constraint; validation outcomes are stored separately. Production schema and runtime remain unchanged until deployment.
+
 ## Authoritative current verified state — 2026-11-13
 
 This is the current verified checkpoint; older dated figures below are historical.

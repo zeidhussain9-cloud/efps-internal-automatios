@@ -1,5 +1,9 @@
 # EFPS Internal Automations — Architecture
 
+## Notion webhook event ledger implementation status
+
+The repository now contains a local-only Task 3 extension to the existing `crm_inventory_intake_events` ledger, with lifecycle hooks in the existing Notion Edge Function/Lambda path. It does not create a new event table or change `crm_webhook_events` / WhatsApp processing. The migration and function/Lambda code have not been applied or deployed to production; the production architecture therefore remains as recorded in the verified state below until deployment is separately authorized.
+
 ## Authoritative current verified state — 2026-11-13
 
 This section supersedes older dated operational snapshots below. Historical checkpoints remain audit history.

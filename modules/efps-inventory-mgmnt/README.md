@@ -1,5 +1,9 @@
 # EFPS Inventory Management
 
+## Notion webhook event history — local only
+
+Task 3 extends the existing `crm_inventory_intake_events` ledger and connects the existing Notion intake Lambda and `notion-inventory-state` Edge Function to record webhook receipt, validation, queueing, processing, retries, and final outcomes. It follows the repository’s WhAPI event-history conventions while leaving `crm_webhook_events` and WhatsApp processing untouched. The migration and runtime changes have not been applied or deployed; production remains on its existing configuration.
+
 ## Live mirror acceptance note — 2026-11-13 (recovery hardening)
 
 The direct Housing Listings mirror is deployed with Supabase Edge Function v9 and the isolated Lambda. Full reconciliation confirms 104 active Notion pages and 104 matching Supabase snapshots, with no missing/orphaned/duplicate rows or semantic field mismatches. All 104 intake events are processed and contain the correct Listing ID. The reserved `source_group` and `inventory_locked` fields are blank; 43 populated `inventory_locked` values were cleared.

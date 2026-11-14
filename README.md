@@ -1,3 +1,7 @@
+## Task 3 implementation status — 2026-11-14
+
+The Notion webhook event-history extension to the existing `crm_inventory_intake_events` ledger is present locally only. Its migration and processing code are not deployed; no production database, Edge Function, AWS resource, credential, or record was changed. See `docs/NOTION_PROPERTY_INTAKE.md` for its schema/lifecycle and deployment boundary.
+
 ## Current Notion inventory intake — 2026-11-13 (live recovery hardening)
 
 - Notion Housing Listings is the canonical inventory editor. Supabase `crm_inventory_snapshot` remains the CRM projection; the dashboard reads active `housing_notion` rows only.

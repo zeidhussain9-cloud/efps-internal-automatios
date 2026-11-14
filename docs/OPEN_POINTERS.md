@@ -2,6 +2,16 @@
 
 > CRM operational pointers last verified 2026-10-05; Notion inventory recovery hardening verified 2026-11-13. Historical release pointers are superseded.
 
+## Task 3 — Notion webhook event history (local implementation, not deployed)
+
+- Local `crm_inventory_intake_events` migration and Notion Lambda/Edge Function lifecycle integration are implemented on `crm-ui-dashboard`; no production migration or code deployment has occurred.
+- Production Supabase confirms the existing page-level table is present; the Task 3 event-history extension is not applied. `notion-inventory-state` remains ACTIVE v9; `whapi-crm-webhook` remains ACTIVE v10. Existing `crm_webhook_events` and WhatsApp processing are unchanged.
+- Mac tooling installed: Supabase CLI 3.1.0, Deno 2.9.8 and PostgreSQL 17.12. Docker was deliberately not installed or used.
+- The migration executed successfully against an isolated local PostgreSQL database. SQL lifecycle checks passed for receipt, queue/worker/terminal transitions, duplicate suppression, retry after failure, history retention, and Listing ID correlation. RLS/privilege assertions passed.
+- Deno type-check passed for `notion-inventory-state/index.ts`. Full local checks: Python 106/106, repository Node 145/145, Edge Function contract 6/6, browser 1/1, Python compilation and `git diff --check` pass.
+- Production remains unchanged: no Task 3 migration applied, `notion-inventory-state` ACTIVE v9 and `whapi-crm-webhook` ACTIVE v10. No production end-to-end webhook test has been run.
+- Remaining before production: review final diff and run Supabase production advisors/read-only checks. With separate authorization, deploy in order: migration → `notion-inventory-state` Edge Function → AWS `efps-notion-intake` Lambda.
+
 ## Current Notion inventory — recovery hardening verified 2026-11-13
 
 - AWS `efps-notion-intake` is Active in account `294417174793`, region `ap-southeast-2`; stack `efps-notion-property-intake` is `UPDATE_COMPLETE`. Supabase `notion-inventory-state` is ACTIVE v9 with JWT verification enabled.

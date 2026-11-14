@@ -1,5 +1,13 @@
 # Notion Property Intake — Runtime Contract
 
+## Webhook event history — local implementation only
+
+Task 3 adds delivery-history columns and restricted RPCs to the existing `public.crm_inventory_intake_events` ledger; it does not create a second webhook table. It is a repository change only: the production migration has not been applied, the `notion-inventory-state` Edge Function has not been deployed, and the AWS Lambda has not been updated. Until those separately authorized deployment steps occur, production webhook events continue using the existing page-level `crm_inventory_intake_events` idempotency state and CloudWatch/SQS failure evidence.
+
+The ledger stores Notion event/delivery identifiers, event type and entity IDs, timestamps, delivery attempts, a credential-redacted payload, raw-body SHA-256 fingerprint, lifecycle history, processing attempts/errors/outcome, AWS request IDs, and optional inventory Listing ID/page correlation. The existing table remains RLS-protected and service-role-only. The Edge Function calls restricted `SECURITY DEFINER` RPCs granted only to `service_role`. Event lifecycle transitions are retained in `status_history`; the existing processing-status constraint is preserved, while validation outcomes are stored separately. Failures retain error history for retry. Stable Notion event UUIDs deduplicate delivery; fallback payload fingerprints omit the changing attempt number, while each repeat is preserved in `delivery_attempts`.
+
+The local changes preserve `crm_webhook_events` and WhAPI unchanged. No production end-to-end event-ledger test has been performed because the migration and processing code remain undeployed. The required deployment order is database migration first, `notion-inventory-state` Edge Function second, and AWS Lambda code last; this prevents the Lambda from calling RPC operations that are not yet available.
+
 ## Current acceptance status — live recovery hardening 2026-11-13
 
 The active Housing Listings mirror is reconciled and operational. The previous restore-delivery gap is covered by a scheduled reconciliation fallback; the actual Notion `page.undeleted` webhook has not yet been independently observed, but a soft-deleted projection for an active Notion page was restored successfully by the scheduled reconciler.

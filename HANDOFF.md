@@ -1,5 +1,18 @@
 # EFPS CRM — Handoff
 
+## Notion webhook event history — 2026-11-14 (local, not deployed)
+
+- Implemented an extension to the existing `crm_inventory_intake_events` ledger and the existing Notion Lambda/Edge Function lifecycle integration in the repository. The change is local and uncommitted; it has not been applied to Supabase or deployed to AWS/Supabase.
+- The existing intake ledger retains its service-role-only RLS boundary; restricted SECURITY DEFINER RPCs append Notion event delivery and lifecycle metadata to namespaced rows in that same table. It captures delivery attempts, sanitized payload evidence, validation decisions, queue/worker transitions, errors/retries, outcomes, and inventory correlation. WhAPI `crm_webhook_events`, WhatsApp processing, schemas, records, AWS infrastructure, Notion form, secrets, and production functions were not changed.
+- Production verification: the Task 3 event-history columns and RPCs are absent; the production migration history has no Task 3 migration; `notion-inventory-state` remains ACTIVE v9 and `whapi-crm-webhook` ACTIVE v10. No Task 3 code was deployed to AWS or Supabase, and no production data/configuration was changed.
+- Verification status (local): Inventory Python suite 106/106 PASS; Notion Edge Function response-contract tests 6/6 PASS; Edge Function TypeScript syntax transform PASS; Python compilation PASS; repository `npm test` 145/145 PASS; browser test 1/1 PASS; `git diff --check` PASS.
+- Tooling installed on the Mac: Supabase CLI 3.1.0, Deno 2.9.8, PostgreSQL 17.12. Docker was not installed or used.
+- Database validation: the migration executed successfully against an isolated local PostgreSQL 17.12 database. RPC tests passed for first receipt, queued → processing → processed, duplicate delivery suppression, retry after failure, delivery/error/status history, and listing correlation. RLS and privilege assertions passed (no anon/authenticated table access or RPC execution; service-role access granted).
+- Runtime validation: `deno check --no-lock --node-modules-dir=auto supabase/functions/notion-inventory-state/index.ts` PASS. A type-only annotation was added to an existing `map` callback so strict Deno checking succeeds; no runtime behavior changed.
+- Full local tests: Inventory Python 106/106 PASS; Notion Edge Function response-contract 6/6 PASS; repository `npm test` 145/145 PASS; browser 1/1 PASS; Python compilation and `git diff --check` PASS.
+- These checks validate the migration and function locally, not against a full Supabase emulator. No production migration, Supabase Edge Function deployment, AWS Lambda deployment, commit or push was performed. Production remains unchanged.
+- Preserve pre-existing untracked `supabase/.temp/` in the primary checkout. Before production deployment, review the final diff and run Supabase production advisors/read-only checks. With separate authorization, deploy in order: migration → `notion-inventory-state` Edge Function → AWS Lambda.
+
 ## Notion inventory recovery hardening — 2026-11-13
 
 - Notion Housing Listings is canonical; Supabase `crm_inventory_snapshot` remains the CRM read model.

@@ -1,3 +1,7 @@
+## Notion webhook event history deployment status
+
+The additive `crm_inventory_intake_events` migration and corresponding Edge Function/Lambda changes exist only in the local repository implementation. Production Supabase schema, deployed Edge Function version, AWS Lambda code, API Gateway, Notion subscription, EventBridge, SQS, and credentials have not been changed for Task 3. Applying the migration or deploying code is a separate explicit authorization gate.
+
 ## Historical production audit — 2026-10-01
 
 Verified live baseline is recorded in the authoritative current-state block below.
