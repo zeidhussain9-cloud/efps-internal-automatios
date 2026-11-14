@@ -12,12 +12,12 @@ The canonical Notion Housing Listings data source now defines listing_state as a
 - Render CRM service srv-darsv560tbcc73cu4ip0 is LIVE; the exact deployment ID and commit are authoritative in Render and are not duplicated here.
 - Supabase notion-inventory-state ACTIVE v12, JWT verification enabled. Migration 20261114095316_crm_inventory_business_status is registered and applied.
 - AWS efps-notion-intake Active, LastUpdateStatus Successful, Maps API-unavailable fallback deployed.
-- Inventory projection: 106 active Notion-owned rows, 1 soft-deleted tombstone, 0 active blank locality/society rows.
-- Two real submissions (EF-2611-PAGH and EF-2611-Y5KC) are Processed and reconciled to Housing Listings and active Supabase snapshots. Both have Raw Property Data, Photos and Processed Property relations.
-- Notion event ledger: 26 observed rows (5 processed, 18 ignored, 2 needs review, 1 rejected). Complete delivery capture is not certified.
+- Inventory projection: 107 active Notion-owned rows, 1 soft-deleted tombstone, 0 active blank locality/society rows.
+- EF-2611-PAGH and EF-2611-Y5KC are Processed and reconciled. EF-2611-YA84 has a canonical Housing Listings page and active Supabase snapshot, but remains Needs Review because Maps verification was unavailable and 18 photos exceed the 10-image limit.
+- Notion webhook ledger currently contains 96 observed rows: 64 synced, 2 already processed, 26 ignored outcomes, 3 Needs Review, and 1 with no outcome. The 26 ignored outcomes are still stored with processing_status=failed; this status/outcome mismatch is an open ledger issue. Complete webhook delivery capture is not certified.
 - Processing Notes now append each attempt as a new line in the same Notion property cell; previous text is fetched and retained before writing. AWS Lambda deployed 2026-11-14T12:59:58Z, CodeSha256 oADpl6n7dCwDmjcUx94bnoYvd5PNVnt6d+bUaKuP9D4=. Inventory test suite: 141 passed; SAM build and template validation passed.
 - Google Sheets status boundary: the connected Housing_Listings tab has a column-E dropdown with Available and Rented Out only; it has zero conditional-format rules. The Sheet11 reference lists no listing_state options. No Google Sheets edit-to-Supabase sync is live; existing property edits sync from Notion Housing Listings page events. The separate Sheet 2 source must be identified before copying its full vocabulary or color rules.
-- Compatibility Sheet row writes for these two submissions were not independently verified. The separate empty test-only record EF-2611-3MXH remains soft-deleted; it is not an active property.
+- Compatibility Sheet row writes for all three intake submissions have not been independently verified. The separate empty test-only record EF-2611-3MXH remains soft-deleted; it is not an active property.
 - This implementation changes only the Notion intake worker's Processing Notes write behavior; no schema migration or new table was added. git diff --check and the 141-test inventory suite passed.
 
 ## Historical initial Task 3 deployment — 2026-11-14 08:14 UTC (superseded by current v12 state)
@@ -114,11 +114,11 @@ Points **40 Requirement field correctness**, **41 Property-matching inputs**, an
 Current live population verified 2026-10-05: **253 promoted qualified leads**, **253 normalized requirement profiles**, **0 missing profiles**, and **71 active canonical inventory listings**. Requirement evidence remains a separate provenance layer and is not fabricated by this audit.
 
 
-## Active six-task execution — 2026-11-14 (latest verified local state)
+## Historical six-task execution snapshot — 2026-11-14 (superseded by the current verified state at the top of this handoff)
 
 - User explicitly prohibited table deletion. No table has been deleted. Existing crm_webhook_events and crm_inventory_intake_events remain intact.
 - Notion event history remains in crm_inventory_intake_events; WhatsApp event history remains in crm_webhook_events. Live Notion event rows: 8 (5 processed, 2 ignored/failed outcomes, 1 needs review). This is not proof of complete capture.
-- Production Notion-owned inventory projection: 106 active rows. crm_inventory_snapshot.business_status is now a first-class reporting field, backfilled from source_record.status; all 106 currently report Pending. It is distinct from intake_status and listing_state.
+- Production Notion-owned inventory projection: 107 active rows and 1 soft-deleted tombstone. crm_inventory_snapshot.business_status is distinct from intake_status and listing_state; 106 active rows report Pending and EF-2611-YA84 reports Needs Review.
 - Additive migration 20261114093738_crm_inventory_business_status.sql was applied to Supabase project qttcutwzehtskfcwxkwj. It adds one column and a partial index only.
 - Two requested Housing Listings updates were verified in Notion and Supabase. Their business status is Pending; intake status remains Processed; listing availability remains separate.
 - Local code now projects, filters and displays business_status. Maps API-unavailable fallback preserves only an original supported short URL and labels it unverified.

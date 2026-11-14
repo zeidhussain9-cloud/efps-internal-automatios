@@ -8,7 +8,7 @@
 - Migration 20261114095316_crm_inventory_business_status is registered and applied. No tables deleted.
 - Render CRM service srv-darsv560tbcc73cu4ip0 is LIVE; the exact deployment ID and commit are authoritative in Render and are not duplicated here.
 - AWS account 294417174793, region ap-southeast-2; Lambda efps-notion-intake Active, LastUpdateStatus Successful, last modified 2026-11-14T12:59:58Z, Python 3.12, 512 MB, 180-second timeout, CodeSha256 oADpl6n7dCwDmjcUx94bnoYvd5PNVnt6d+bUaKuP9D4=.
-- Maps API-unavailable fallback is deployed. The two current property submissions are processed and reflected in Housing Listings and Supabase.
+- Maps API-unavailable fallback is deployed. EF-2611-PAGH and EF-2611-Y5KC are Processed; EF-2611-YA84 is reflected in Housing Listings and Supabase with Needs Review.
 - No secret values were printed, rotated or overwritten.
 
 ## Historical initial Task 3 deployment — 2026-11-14 08:14 UTC (superseded by current v12 state)
@@ -313,7 +313,7 @@ The AWS Bedrock runtime SDK was upgraded to `3.1144.0` after Render exposed a cr
 - Supabase business_status migration and notion-inventory-state v12 are live; no tables deleted.
 - Render CRM service srv-darsv560tbcc73cu4ip0 is LIVE; the exact deployment ID and commit are authoritative in Render and are not duplicated here.
 - AWS efps-notion-intake is Active with successful update; Maps fallback is deployed.
-- Two real intake submissions are Processed and reconciled to Housing Listings and Supabase.
-- The 26 observed Notion event rows do not certify complete delivery capture.
-- Processing Notes are replaceable summaries, not append-only history. Compatibility Sheet row writes for the two latest submissions were not independently checked.
+- EF-2611-PAGH and EF-2611-Y5KC are Processed and reconciled; EF-2611-YA84 is reconciled with Needs Review.
+- Notion webhook ledger currently contains 96 observed rows: 64 synced, 2 already processed, 26 ignored outcomes, 3 Needs Review, and 1 with no outcome. The 26 ignored outcomes are still stored with processing_status=failed; this status/outcome mismatch is an open ledger issue. Complete webhook delivery capture is not certified.
+- Processing Notes append each outcome in the same Notion cell. Compatibility Sheet row writes for the three latest submissions were not independently checked.
 - Existing secret values were not printed, rotated, created or overwritten.

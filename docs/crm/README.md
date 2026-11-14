@@ -5,9 +5,9 @@
 - Branches main and crm-ui-dashboard are synchronized with identical tracked trees; GitHub advertises exactly these two branch refs.
 - Render CRM service srv-darsv560tbcc73cu4ip0 is LIVE; the exact deployment ID and commit are authoritative in Render and are not duplicated here.
 - Supabase notion-inventory-state ACTIVE v12; AWS efps-notion-intake Active with successful last update.
-- Inventory projection: 106 active Notion-owned rows, 1 soft-deleted tombstone, 0 active blank locality/society rows.
+- Inventory projection: 107 active Notion-owned rows, 1 soft-deleted tombstone, 0 active blank locality/society rows.
 - Two latest intake submissions (EF-2611-PAGH, EF-2611-Y5KC) are Processed and reconciled to Housing Listings and active Supabase snapshots.
-- Notion event ledger: 26 observed rows (5 processed, 18 ignored, 2 needs review, 1 rejected); complete delivery coverage is not certified.
+- Notion webhook ledger currently contains 96 observed rows: 64 synced, 2 already processed, 26 ignored outcomes, 3 Needs Review, and 1 with no outcome. The 26 ignored outcomes are still stored with processing_status=failed; this status/outcome mismatch is an open ledger issue. Complete webhook delivery capture is not certified.
 - Processing Notes now append each processing outcome as a new line in the same Notion cell; previous text is retained. See NOTION_PROPERTY_INTAKE.md.
 - Google Sheets status boundary: the connected Housing_Listings tab has a column-E dropdown with Available and Rented Out only; it has zero conditional-format rules. The Sheet11 reference lists no listing_state options. No Google Sheets edit-to-Supabase sync is live; existing property edits sync from Notion Housing Listings page events. The separate Sheet 2 source must be identified before copying its full vocabulary or color rules.
 - No database tables deleted. Dated CRM population metrics and earlier inventory checkpoints below remain historical.
@@ -100,4 +100,4 @@ Historical live population snapshot verified 2026-10-05: **253 promoted qualifie
 
 ## Latest verified inventory state — 2026-11-14 (live check)
 
-106 active Notion-owned rows and 1 soft-deleted tombstone are present in crm_inventory_snapshot. Two current submissions are Processed and reconciled. business_status is a separate projection from source_record.status. Processing Notes are replaceable summaries, not append-only history. Notion webhook delivery completeness is not certified. No tables were deleted.
+107 active Notion-owned rows and 1 soft-deleted tombstone are present in crm_inventory_snapshot. EF-2611-PAGH and EF-2611-Y5KC are Processed; EF-2611-YA84 is reconciled with Needs Review. business_status is separate from source_record.status, intake_status and listing_state. Processing Notes append each outcome in the same Notion cell. Webhook delivery completeness is not certified. No tables were deleted.

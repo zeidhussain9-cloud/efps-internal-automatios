@@ -6,9 +6,9 @@
 - Render CRM service srv-darsv560tbcc73cu4ip0 is LIVE; the exact deployment ID and commit are authoritative in Render and are not duplicated here.
 - Supabase notion-inventory-state ACTIVE v12; business-status migration registered and applied.
 - AWS efps-notion-intake Active, last update successful; Maps fallback deployed.
-- Inventory projection: 106 active Notion-owned rows, 1 soft-deleted tombstone, 0 active blank locality/society rows.
-- Two current submissions processed: EF-2611-PAGH (VRR Fortuna) and EF-2611-Y5KC (Shobha Royal Pavilion). Both have raw data, photos, Housing Listings relations and matching active Supabase snapshots.
-- Notion event ledger: 26 observed rows (5 processed, 18 ignored, 2 needs review, 1 rejected). Delivery completeness is not certified.
+- Inventory projection: 107 active Notion-owned rows, 1 soft-deleted tombstone, 0 active blank locality/society rows.
+- EF-2611-PAGH and EF-2611-Y5KC are Processed and reconciled. EF-2611-YA84 has a canonical page and active snapshot but remains Needs Review (Maps unavailable; 18 photos exceed the 10-image limit).
+- Notion webhook ledger currently contains 96 observed rows: 64 synced, 2 already processed, 26 ignored outcomes, 3 Needs Review, and 1 with no outcome. The 26 ignored outcomes are still stored with processing_status=failed; this status/outcome mismatch is an open ledger issue. Complete webhook delivery capture is not certified.
 - Processing Notes append each attempt as a new line in the existing Notion cell; previous narrative is retained. See docs/NOTION_PROPERTY_INTAKE.md.
 - Google Sheets status boundary: the connected Housing_Listings tab has a column-E dropdown with Available and Rented Out only; it has zero conditional-format rules. The Sheet11 reference lists no listing_state options. No Google Sheets edit-to-Supabase sync is live; existing property edits sync from Notion Housing Listings page events. The separate Sheet 2 source must be identified before copying its full vocabulary or color rules.
 - No database tables deleted. Historical checkpoints below remain historical and must not be read as current metrics.
@@ -202,4 +202,4 @@ If a new maintained document is required, add it to this map and define its role
 
 ## Latest verified inventory intake state — 2026-11-14 (live check)
 
-The live Notion-owned Supabase projection has 106 active rows and 1 soft-deleted tombstone. Two real intake submissions are Processed and reconciled to Housing Listings and Supabase. The Maps fallback is deployed. The Notion event ledger has 26 observed rows (5 processed, 18 ignored, 2 needs review, 1 rejected); complete delivery capture is not certified. Processing Notes now append each attempt as a new line in the same Notion cell. Compatibility Sheet writes for these two submissions were not independently checked.
+The live Notion-owned Supabase projection has 107 active rows and 1 soft-deleted tombstone. EF-2611-PAGH and EF-2611-Y5KC are Processed; EF-2611-YA84 is reconciled with Needs Review due to Maps unavailability and 18 photos exceeding the 10-image limit. Processing Notes append each outcome in the same Notion cell. Compatibility Sheet writes for the three submissions have not been independently verified.

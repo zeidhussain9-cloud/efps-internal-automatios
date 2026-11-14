@@ -9,9 +9,9 @@ The canonical Notion Housing Listings data source now defines listing_state as a
 - Render CRM service srv-darsv560tbcc73cu4ip0 is LIVE; the exact deployment ID and commit are authoritative in Render and are not duplicated here.
 - Supabase notion-inventory-state ACTIVE v12 (JWT verification enabled); migration 20261114095316_crm_inventory_business_status is registered and applied.
 - AWS efps-notion-intake Active; LastUpdateStatus Successful; Maps API-unavailable fallback is deployed.
-- Inventory projection: 106 active Notion-owned rows, 1 soft-deleted tombstone, 0 active rows with blank locality and society name.
-- Two real submissions, EF-2611-PAGH and EF-2611-Y5KC, are Processed and reconciled to Housing Listings and active Supabase snapshots; both have Raw Property Data, Photos and Processed Property relations.
-- Notion event ledger: 26 observed rows (5 processed, 18 ignored, 2 needs review, 1 rejected); complete delivery capture is not certified.
+- Inventory projection: 107 active Notion-owned rows, 1 soft-deleted tombstone, 0 active rows with blank locality and society name.
+- EF-2611-PAGH and EF-2611-Y5KC are Processed and reconciled. EF-2611-YA84 now has a canonical Housing Listings page and active Supabase snapshot; it remains Needs Review because Maps verification was unavailable and 18 photos exceed the 10-image limit.
+- Notion webhook ledger currently contains 96 observed rows: 64 synced, 2 already processed, 26 ignored outcomes, 3 Needs Review, and 1 with no outcome. The 26 ignored outcomes are still stored with processing_status=failed; this status/outcome mismatch is an open ledger issue. Complete webhook delivery capture is not certified.
 - Processing Notes now append each processing outcome as a new line in the same Notion cell; previous notes are retained. The change is deployed in AWS Lambda and covered by 141 passing inventory tests.
 - Google Sheets status boundary: the connected Housing_Listings tab has a column-E dropdown with Available and Rented Out only; it has zero conditional-format rules. The Sheet11 reference lists no listing_state options. No Google Sheets edit-to-Supabase sync is live; existing property edits sync from Notion Housing Listings page events. The separate Sheet 2 source must be identified before copying its full vocabulary or color rules.
 - No database tables deleted. The two latest compatibility Sheet writes were not independently verified.
@@ -61,4 +61,4 @@ Historical documents retain dated evidence. Current-state claims in CRM document
 
 ## Latest verified Notion inventory checkpoint — 2026-11-14
 
-The CRM inventory projection currently contains 106 active Notion-owned rows. Review status is represented separately from intake processing and listing availability. No database tables were deleted. The review-state UI and Maps API-unavailable fallback are deployed; the latest release state is recorded at the top of this file. Full raw Property Intake acceptance remains pending a real operator submission.
+The CRM inventory projection currently contains 107 active Notion-owned rows and 1 soft-deleted tombstone. Review status is represented separately from intake processing and listing availability. Raw Property Intake is live: three real submissions have canonical pages and matching active snapshots; YA84 remains Needs Review for Maps/photo-limit reasons. No database tables were deleted.

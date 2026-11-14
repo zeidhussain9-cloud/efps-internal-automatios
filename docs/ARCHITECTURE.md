@@ -4,15 +4,15 @@
 
 - Raw-intake creation uses a live Notion schema preflight at the existing adapter boundary, validating mapped property types and required Select options before Sheet/media/page-create side effects. `listing_state` is serialized as Select; no new service, table, or scheduler was added. The guard is deployed to the isolated intake Lambda.
 
-Notion Housing Listings is the canonical operator editor. Supabase public.crm_inventory_snapshot is the CRM projection. The live projection has 106 active Notion-owned rows, 1 soft-deleted Notion-owned row, and 0 active rows with blank locality and society name.
+Notion Housing Listings is the canonical operator editor. Supabase public.crm_inventory_snapshot is the CRM projection. The live projection has 107 active Notion-owned rows, 1 soft-deleted Notion-owned row, and 0 active rows with blank locality and society name.
 
 - Branches main and crm-ui-dashboard are synchronized with identical tracked trees; GitHub advertises exactly these two branch refs.
 - Render CRM service srv-darsv560tbcc73cu4ip0 is LIVE; the exact deployment ID and commit are authoritative in Render and are not duplicated here.
 - Supabase: notion-inventory-state ACTIVE v12 with JWT verification enabled; migration 20261114095316_crm_inventory_business_status is registered and applied.
 - AWS: efps-notion-intake is Active; LastUpdateStatus Successful, last modified 2026-11-14T09:46:50Z, Python 3.12, 512 MB, 180-second timeout. Maps API-unavailable fallback is deployed.
-- Two current Property Intake submissions are processed: EF-2611-PAGH (VRR Fortuna) and EF-2611-Y5KC (Shobha Royal Pavilion). Both have Raw Property Data, Photos, Processed Property relations, matching Housing Listings pages and matching active Supabase snapshots.
-- Supabase inventory: 106 active rows, 1 soft-deleted row; latest sync 2026-11-14 08:44:18 UTC. The empty deleted row remains only as a tombstone, not an active listing.
-- Notion webhook ledger: 26 observed event rows: 5 processed, 18 ignored non-intake changes, 2 needs-review outcomes, 1 rejected unauthenticated probe. Complete delivery capture is not certified.
+- EF-2611-PAGH (VRR Fortuna) and EF-2611-Y5KC (Shobha Royal Pavilion) are Processed and reconciled. EF-2611-YA84 has a matching Housing Listings page and active Supabase snapshot, with Needs Review due to Maps API unavailability and 18 photos exceeding the 10-image limit.
+- Supabase inventory: 107 active rows, 1 soft-deleted tombstone; YA84 snapshot synchronized 2026-11-14 15:05:23 UTC. The empty deleted row remains only as a tombstone, not an active listing.
+- Notion webhook ledger currently contains 96 observed rows: 64 synced, 2 already processed, 26 ignored outcomes, 3 Needs Review, and 1 with no outcome. The 26 ignored outcomes are still stored with processing_status=failed; this status/outcome mismatch is an open ledger issue. Complete webhook delivery capture is not certified.
 - Notion history remains in crm_inventory_intake_events; WhatsApp history remains in crm_webhook_events. No tables were deleted.
 - Processing Notes are append-only at the Notion cell level: each processing outcome is added on a new line after reading the existing cell. Previous narrative is retained; no separate activity system or table was introduced.
 - Existing-property edits happen in Notion Housing Listings and sync through page events; Submit New Property is for new intake. Direct update flow: Notion page edit → signed page event → Lambda → notion-inventory-state → existing Supabase snapshot → CRM dashboard.
@@ -280,4 +280,4 @@ The current production AI provider chain is Bedrock Claude Opus 4.6 (`au.anthrop
 
 ## Latest verified Notion inventory boundary — 2026-11-14 (live check)
 
-Notion Housing Listings remains the canonical operator editor. The CRM projection has 106 active Notion-owned rows and 1 soft-deleted tombstone. Supabase notion-inventory-state is ACTIVE v12 and the Maps API-unavailable fallback is deployed. Two current intake submissions are Processed and reconciled to Housing Listings and Supabase. Notion webhook history remains in crm_inventory_intake_events; WhatsApp events remain in crm_webhook_events. Processing Notes are replaceable summaries, not append-only narratives. No tables were deleted.
+Notion Housing Listings remains the canonical operator editor. The CRM projection has 107 active Notion-owned rows and 1 soft-deleted tombstone. Supabase notion-inventory-state is ACTIVE v12 and the Maps API-unavailable fallback is deployed. Two intake submissions are Processed and reconciled; EF-2611-YA84 is created and reconciled but remains Needs Review. Notion webhook history remains in crm_inventory_intake_events; WhatsApp events remain in crm_webhook_events. Processing Notes append each processing outcome as a new line in the same Notion cell; previous text is retained. No tables were deleted.

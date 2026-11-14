@@ -6,7 +6,7 @@
 
 - Notion Housing Listings listing_state dropdown is complete: exactly Available (green), Rented Out (red), and On Hold (yellow). Schema verified after update. Existing page-event synchronization remains the only property update path; no Google Sheets synchronization was added.
 - Notion webhook coverage: 26 event rows are observed (5 processed, 18 ignored, 2 needs review, 1 rejected); complete delivery capture is not certified.
-- Raw-intake Sheets compatibility: the two current submissions have Photos, Raw Property Data, Housing Listings relations and matching Supabase snapshots; the corresponding compatibility Sheet writes were not independently verified in this check.
+- Raw-intake Sheets compatibility: all three current submissions have Raw Property Data, Housing Listings relations and matching Supabase snapshots. The two earlier records have Photos; YA84 has 18 source photos but no Cloudinary URLs because it exceeds the 10-image limit. Compatibility Sheet writes were not independently verified.
 - Restore event: actual Notion page.undeleted webhook delivery remains unobserved; the scheduled 15-minute reconciliation fallback remains the recovery path.
 - No database tables deleted. Workspace cleanup and CRM review-status visibility are out of scope for this pass.
 
@@ -78,7 +78,7 @@ Historical live population snapshot verified 2026-10-05: **253 promoted qualifie
 ## Latest verified open pointers — 2026-11-14 (live check)
 
 - Processing-note durability: the current note field is overwritten during reprocessing. Implement append-only narrative history before promising every attempt is preserved.
-- Notion webhook delivery completeness is not certified from the 26 observed event rows (5 processed, 18 ignored, 2 needs review, 1 rejected).
+- Notion webhook ledger currently contains 96 observed rows: 64 synced, 2 already processed, 26 ignored outcomes, 3 Needs Review, and 1 with no outcome. The 26 ignored outcomes are still stored with processing_status=failed; this status/outcome mismatch is an open ledger issue. Complete webhook delivery capture is not certified.
 - Compatibility Sheet row writes for the two latest raw property submissions were not independently checked.
 - Actual Notion page.undeleted webhook delivery remains unobserved; the scheduled 15-minute reconciliation fallback remains the recovery path.
 - No database tables deleted. Workspace cleanup and CRM review-status visibility remain out of scope for this pass.

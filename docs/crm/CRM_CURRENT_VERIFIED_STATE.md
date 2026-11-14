@@ -9,9 +9,9 @@ The canonical Notion Housing Listings data source now defines listing_state as a
 - Render CRM service srv-darsv560tbcc73cu4ip0 is LIVE; the exact deployment ID and commit are authoritative in Render and are not duplicated here.
 - Supabase notion-inventory-state ACTIVE v12; business-status migration registered/applied.
 - AWS efps-notion-intake Active; last update successful at 2026-11-14T09:46:50Z; Maps fallback deployed.
-- Inventory projection: 106 active Notion-owned rows, 1 soft-deleted tombstone, 0 active blank locality/society rows.
-- Two current submissions are Processed and reconciled: VRR Fortuna EF-2611-PAGH; Shobha Royal Pavilion EF-2611-Y5KC. Both have Raw Property Data, Photos, Processed Property relations and matching active Supabase snapshots.
-- Notion webhook ledger: 26 observed (5 processed, 18 ignored, 2 needs review, 1 rejected); full delivery coverage is not certified.
+- Inventory projection: 107 active Notion-owned rows, 1 soft-deleted tombstone, 0 active blank locality/society rows.
+- EF-2611-PAGH (VRR Fortuna) and EF-2611-Y5KC (Shobha Royal Pavilion) are Processed and reconciled. EF-2611-YA84 has Raw Property Data, 18 Photos, a Processed Property relation, canonical Housing Listings page and matching active Supabase snapshot; it remains Needs Review for Maps/photo-limit reasons.
+- Notion webhook ledger currently contains 96 observed rows: 64 synced, 2 already processed, 26 ignored outcomes, 3 Needs Review, and 1 with no outcome. The 26 ignored outcomes are still stored with processing_status=failed; this status/outcome mismatch is an open ledger issue. Complete webhook delivery capture is not certified.
 - Processing Notes now append each processing outcome on a new line in the same Notion cell. Existing text is retained; status and processing errors continue to be recorded separately in the event ledger.
 - Google Sheets status boundary: the connected Housing_Listings tab has a column-E dropdown with Available and Rented Out only; it has zero conditional-format rules. The Sheet11 reference lists no listing_state options. No Google Sheets edit-to-Supabase sync is live; existing property edits sync from Notion Housing Listings page events. The separate Sheet 2 source must be identified before copying its full vocabulary or color rules.
 - No database tables deleted. The intentionally paused AI scheduler remains outside this inventory scope.

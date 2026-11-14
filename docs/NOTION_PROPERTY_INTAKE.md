@@ -13,16 +13,16 @@ The existing failed submission `EF-2611-YA84` was retried successfully through t
 
 
 - The live Submit New Property intake source exposes Raw Property Data and Photos.
-- Two current submissions have both fields populated and are Processed: EF-2611-PAGH (VRR Fortuna, 3 BHK) and EF-2611-Y5KC (Shobha Royal Pavilion, 4.5 BHK).
+- EF-2611-PAGH (VRR Fortuna) and EF-2611-Y5KC (Shobha Royal Pavilion) are Processed. EF-2611-YA84 has Raw Property Data, 18 Photos, a canonical Housing Listings page and active Supabase snapshot; it remains Needs Review because Maps verification was unavailable and the 18 photos exceed the 10-image catalogue limit.
 - Both have populated Processed Property relations, matching Housing Listings pages, and matching active Supabase snapshots. Cloudinary image URLs are present in the corresponding inventory projection.
-- The active Supabase Notion projection has 106 rows; one additional row is soft-deleted. The empty row is not active.
+- The active Supabase Notion projection has 107 rows; one additional row is soft-deleted. The empty row is not active.
 - The two submission records retain the narrative: initial Google Maps verification failure, reason processing was held, agreed manual fallback, preserved original Maps URL, completion of the Housing Listings record, and the remaining unverified Maps state.
 - Processing Notes now append-only at the Notion property level: the worker fetches the current page, reads the existing Processing Notes text, appends the new outcome on a separate line, and writes the combined text back to the same cell. This is applied to missing-input, successful/Needs Review, and failed processing outcomes. No new table or per-activity workflow was added. The event ledger continues to retain structured status/error history.
 - 26 Notion webhook event rows observed: 5 processed, 18 ignored non-intake changes, 2 needs-review outcomes, 1 rejected unauthenticated probe. Complete delivery capture is not certified.
 - Supabase notion-inventory-state ACTIVE v12; AWS efps-notion-intake Active with successful last update; Maps API-unavailable fallback deployed.
 - Existing-property update flow: Housing Listings page edit → signed Notion page event → AWS Lambda → notion-inventory-state → existing crm_inventory_snapshot row → CRM dashboard.
 - New property intake is separate: Submit New Property → raw intake worker/enrichment → create or update Housing Listings page → Supabase snapshot. It is not the normal edit path for an existing property.
-- Google Sheets remains a compatibility write in the raw-intake path; its row-level write for these two submissions was not independently checked in this verification. Column E in the connected Housing_Listings tab currently has only Available/Rented Out dropdown values and no conditional-format rules. Sheet edits do not currently write to Supabase; Notion Housing Listings page events are the supported existing-property update path.
+- Google Sheets remains a compatibility write in the raw-intake path; its row-level writes for these three submissions were not independently checked in this verification. Column E in the connected Housing_Listings tab currently has only Available/Rented Out dropdown values and no conditional-format rules. Sheet edits do not currently write to Supabase; Notion Housing Listings page events are the supported existing-property update path.
 
 # Notion Property Intake — Runtime Contract
 

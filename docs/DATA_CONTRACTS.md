@@ -6,10 +6,10 @@
 
 crm_inventory_snapshot is the CRM projection of canonical Notion Housing Listings. business_status is distinct from intake_status, listing_state, and crm_inventory_intake_events.processing_status.
 
-- 106 active housing_notion rows; 1 soft-deleted tombstone; 0 active rows with blank locality and society name.
-- Two recent intake submissions (EF-2611-PAGH, EF-2611-Y5KC) have Processed status, raw property text, photos, Processed Property relations, and matching active snapshots.
+- 107 active housing_notion rows; 1 soft-deleted tombstone; 0 active rows with blank locality and society name.
+- EF-2611-PAGH and EF-2611-Y5KC are Processed and reconciled. EF-2611-YA84 has a canonical page and active snapshot but remains Needs Review; 18 source photos exceeded the 10-image limit and Maps verification was unavailable.
 - Notion event history remains in crm_inventory_intake_events; WhatsApp event history remains in crm_webhook_events.
-- 26 Notion event rows observed: 5 processed, 18 ignored, 2 needs-review, 1 rejected. This is an observed ledger count, not proof of complete webhook delivery capture.
+- Notion webhook ledger currently contains 96 observed rows: 64 synced, 2 already processed, 26 ignored outcomes, 3 Needs Review, and 1 with no outcome. The 26 ignored outcomes are still stored with processing_status=failed; this status/outcome mismatch is an open ledger issue. Complete webhook delivery capture is not certified.
 - Processing Notes is a single Notion rich-text property that now appends each processing outcome as a new line, preserving previous content. The event ledger separately retains status/error history.
 - Google Sheets status boundary: the connected Housing_Listings tab has a column-E dropdown with Available and Rented Out only; it has zero conditional-format rules. The Sheet11 reference lists no listing_state options. No Google Sheets edit-to-Supabase sync is live; existing property edits sync from Notion Housing Listings page events. The separate Sheet 2 source must be identified before copying its full vocabulary or color rules.
 - No tables were deleted.
@@ -186,4 +186,4 @@ The dedicated root `steering.md` instructs the hosted CRM model to return one JS
 
 ## Latest verified inventory status contract — 2026-11-14 (live check)
 
-crm_inventory_snapshot.business_status is the top-level CRM/reporting projection of source_record.status. It is distinct from intake_status (intake lifecycle), listing_state (inventory availability), and webhook processing_status (delivery/worker outcome in crm_inventory_intake_events). The live projection has 106 active Notion-owned rows and 1 soft-deleted tombstone. Two current intake submissions are Processed and reconciled. Processing Notes now append each processing outcome as a new line in the same Notion cell. Notion event history and WhatsApp event history remain in their existing separate tables. No tables were deleted.
+crm_inventory_snapshot.business_status is the top-level CRM/reporting projection of source_record.status. It is distinct from intake_status (intake lifecycle), listing_state (inventory availability), and webhook processing_status (delivery/worker outcome in crm_inventory_intake_events). The live projection has 107 active Notion-owned rows and 1 soft-deleted tombstone. Two intake submissions are Processed and reconciled; EF-2611-YA84 is reconciled with Needs Review. Processing Notes now append each processing outcome as a new line in the same Notion cell. Notion event history and WhatsApp event history remain in their existing separate tables. No tables were deleted.

@@ -10,13 +10,13 @@ The canonical Notion Housing Listings data source now defines listing_state as a
 The intake adapter checks live Housing Listings property types and required Select options before any Sheet write, photo upload, or canonical page create. `listing_state` is written as a Select, and the final payload is checked before save. Bounded Notion API error code/message are retained. AWS Lambda deployment is Active (CodeSha256 `AFh+Q+KR4onPTtRLPjyAW6AaMPKM0u0N55322ht3lM0=`). Inventory module tests: 114/114 pass locally. `EF-2611-YA84` now has a canonical Housing Listings page and matching active Supabase snapshot; its status is Needs Review because Maps verification was unavailable and 18 photos exceeded the 10-image catalogue limit. No Cloudinary image URLs were published.
 
 
-- 106 active Notion-owned rows in Supabase; business_status Pending on all 106.
+- 107 active Notion-owned rows and 1 soft-deleted tombstone in Supabase; 106 report business_status Pending and EF-2611-YA84 reports Needs Review.
 - Notion event history remains in crm_inventory_intake_events; WhatsApp event history remains in crm_webhook_events. No tables deleted.
 - Supabase notion-inventory-state ACTIVE v12; AWS efps-notion-intake updated successfully.
 - Maps API-unavailable fallback deployed: preserve only a supported original short URL, labelled unverified.
 - Processing Notes append each attempt as a new line in the same Notion cell; no separate activity table was introduced.
 - Current connected Housing_Listings column E has dropdown values Available and Rented Out only, with no conditional-format rules. No Google Sheets edit-to-Supabase synchronization is implemented; current update source is Notion Housing Listings.
-- Python Inventory + Maps tests: 141/141 passed in the current module suite. Two real submissions with Raw Property Data and Photos are Processed and reconciled to Housing Listings and Supabase; one additional operator manual acceptance test is still planned.
+- Python Inventory + Maps tests: 141/141 passed in the current module suite. Two real submissions (EF-2611-PAGH, EF-2611-Y5KC) are Processed and reconciled. EF-2611-YA84 is reconciled with Needs Review; its 18 photos exceed the 10-image limit and Maps verification was unavailable.
 
 ## Historical initial webhook event-history deployment — 2026-11-14 (v10)
 
@@ -114,10 +114,10 @@ The adapter does not operate on AU/AV or send WhatsApp messages. Its SAM endpoin
 Regression coverage includes canonical source segmentation, multi-candidate resolution, later corrections, decimal BHK, maintenance unit normalization/qualifiers/inclusion, positive/negative property-type evidence, singular/decimal balcony source forms, explicit pet negatives, Sheet-independence, dependent defaults, normalized maintenance validation, and Notion intake projection/idempotency boundaries. Production projection gating validates the committed deterministic path against rows 2–26 without Sheet-value feedback or writes; live external-system writes remain a separate acceptance boundary.
 
 
-## Latest verified checkpoint — 2026-11-14
+## Historical interim checkpoint — 2026-11-14 (superseded by the deployed state above)
 
 - No tables deleted. WhatsApp events remain in crm_webhook_events; Notion webhook history remains in crm_inventory_intake_events.
-- Live Notion projection: 106 active rows. business_status is now a first-class Supabase projection column, distinct from intake_status and listing_state.
+- Live Notion projection: 107 active rows. business_status is now a first-class Supabase projection column, distinct from intake_status and listing_state.
 - Maps API-unavailable fallback is implemented locally: only a supported original short Maps URL may be emitted, with an explicit unverified label. It does not supply verified location facts. Not yet deployed.
 - Python Inventory and shared Maps regression tests: 122/122 passed.
 - Raw Property Intake end-to-end acceptance remains pending a real operator submission and credential verification.

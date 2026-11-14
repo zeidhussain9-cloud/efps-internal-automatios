@@ -3,12 +3,12 @@
 ## Current verified inventory and release decisions — 2026-11-14 (live check)
 
 - Notion Housing Listings is canonical; Supabase crm_inventory_snapshot is the CRM projection.
-- business_status is distinct from intake_status and listing_state. The active projection contains 106 Notion-owned rows and 1 soft-deleted tombstone.
+- business_status is distinct from intake_status and listing_state. The active projection contains 107 Notion-owned rows and 1 soft-deleted tombstone.
 - Branches main and crm-ui-dashboard are synchronized with identical tracked trees; GitHub advertises exactly these two branch refs.
 - Render CRM service is LIVE; the exact deployment ID and commit are read from Render at verification time.
 - Supabase notion-inventory-state ACTIVE v12; AWS efps-notion-intake Active with successful update; Maps fallback deployed.
-- Two current submissions are Processed and reconciled to Housing Listings and active Supabase snapshots.
-- Notion event ledger: 26 observed rows (5 processed, 18 ignored, 2 needs review, 1 rejected); full delivery coverage is not certified.
+- EF-2611-PAGH and EF-2611-Y5KC are Processed and reconciled; EF-2611-YA84 is reconciled with Needs Review.
+- Notion webhook ledger: 96 observed rows (64 synced, 2 already processed, 26 ignored outcomes, 3 Needs Review, 1 no outcome). The 26 ignored outcomes still carry processing_status=failed; this mismatch is tracked separately. Delivery completeness is not certified.
 - Processing Notes append each processing outcome as a new line in the same Notion cell; previous text is retained.
 - No tables deleted.
 

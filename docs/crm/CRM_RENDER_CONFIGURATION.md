@@ -5,8 +5,8 @@
 - Service srv-darsv560tbcc73cu4ip0, URL https://easyfind-crm-d01-d05.onrender.com, branch crm-ui-dashboard, auto-deploy enabled.
 - Render CRM service srv-darsv560tbcc73cu4ip0 is LIVE; the exact deployment ID and commit are authoritative in Render and are not duplicated here.
 - Supabase notion-inventory-state ACTIVE v12; AWS efps-notion-intake Active with successful last update.
-- Inventory projection: 106 active Notion-owned rows, 1 soft-deleted tombstone. Two current submissions are Processed and reconciled.
-- Notion event ledger: 26 observed rows (5 processed, 18 ignored, 2 needs review, 1 rejected); complete capture is not certified.
+- Inventory projection: 107 active Notion-owned rows, 1 soft-deleted tombstone. EF-2611-PAGH and EF-2611-Y5KC are Processed; EF-2611-YA84 is reconciled with Needs Review.
+- Notion webhook ledger currently contains 96 observed rows: 64 synced, 2 already processed, 26 ignored outcomes, 3 Needs Review, and 1 with no outcome. The 26 ignored outcomes are still stored with processing_status=failed; this status/outcome mismatch is an open ledger issue. Complete webhook delivery capture is not certified.
 - Processing Notes now append each processing outcome on a new line in the same Notion cell; previous text is retained.
 - No tables deleted.
 
