@@ -129,7 +129,7 @@ def test_notion_webhook_validates_native_signature_and_queues_page(monkeypatch):
     context = type("Context", (), {"invoked_function_arn": "arn:aws:lambda:ap-southeast-2:123456789012:function:test"})()
     result = intake.lambda_handler({"headers": {"X-Notion-Signature": signature}, "body": body}, context)
     assert result["statusCode"] == 202
-    assert queued == [("12345678-1234-4234-8234-123456789abc", context.invoked_function_arn, "page.created", "22345678-1234-4234-8234-123456789abc", "notion-webhook:event:22345678-1234-4234-8234-123456789abc", None)]
+    assert queued == [("12345678-1234-4234-8234-123456789abc", context.invoked_function_arn, "page.created", "22345678-1234-4234-8234-123456789abc", "notion-webhook:event:22345678-1234-4234-8234-123456789abc", [])]
     assert [call[0] for call in calls] == ["record", "enqueue", "queued"]
     assert calls[0][1]["page_id"] == "12345678-1234-4234-8234-123456789abc"
 
@@ -507,6 +507,40 @@ def test_webhook_accepts_notion_event_entity_id(monkeypatch):
     assert enqueued[0][:4] == (page_id, context.invoked_function_arn, "page.created", event_id)
     assert enqueued[0][4]
     assert json.loads(result["body"])["accepted"] is True
+
+
+def test_notion_properties_updated_forwards_changed_property_ids(monkeypatch):
+    page_id = "12345678-1234-4234-8234-123456789abc"
+    token = "notion-verification-token"
+    body = json.dumps({
+        "id": "22345678-1234-4234-8234-123456789abc",
+        "type": "page.properties_updated",
+        "entity": {"id": page_id, "type": "page"},
+        "data": {"updated_properties": ["raw-property-id", "photos-property-id"]},
+    }, separators=(",", ":"))
+    signature = "sha256=" + hmac.new(token.encode(), body.encode(), hashlib.sha256).hexdigest()
+
+    class FakeSecrets:
+        def get_secret_value(self, **kwargs):
+            return {"SecretString": json.dumps({"api_token": "notion-api", "webhook_secret": token})}
+
+    class FakeBoto3:
+        @staticmethod
+        def client(name):
+            return FakeSecrets()
+
+    enqueued = []
+    monkeypatch.setenv("NOTION_SECRET_ARN", "arn:aws:secretsmanager:ap-southeast-2:123456789012:secret:test")
+    monkeypatch.setattr("boto3.client", FakeBoto3.client, raising=False)
+    monkeypatch.setattr(intake, "SupabaseIntakeStore", lambda: type("Store", (), {
+        "record_webhook_event": lambda self, **event: {"id": "notion-webhook:event:22345678-1234-4234-8234-123456789abc", "should_enqueue": True, "status": "accepted"},
+        "update_webhook_event": lambda self, *args, **kwargs: {"ok": True, "status": args[1]},
+    })())
+    monkeypatch.setattr(intake, "_enqueue_worker", lambda supplied, arn, **kwargs: enqueued.append((supplied, kwargs.get("updated_property_ids"))))
+    context = type("Context", (), {"invoked_function_arn": "arn:aws:lambda:ap-southeast-2:123456789012:function:test"})()
+    result = intake.lambda_handler({"headers": {"X-Notion-Signature": signature}, "body": body}, context)
+    assert result["statusCode"] == 202
+    assert enqueued == [(page_id, ["raw-property-id", "photos-property-id"])]
 
 
 def test_async_worker_invocation_runs_page_processor(monkeypatch):

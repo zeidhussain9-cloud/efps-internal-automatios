@@ -723,6 +723,7 @@ def _enqueue_worker(
     event_id: str = "",
     event_row_id: str = "",
     attempt_number: int | None = None,
+    updated_property_ids: list[str] | None = None,
 ):
     import boto3
     response = boto3.client("lambda").invoke(
@@ -735,6 +736,7 @@ def _enqueue_worker(
             "event_id": event_id,
             "event_row_id": event_row_id,
             "attempt_number": attempt_number,
+            "updated_property_ids": updated_property_ids or [],
         }).encode("utf-8"),
     )
     if int(response.get("StatusCode") or 0) != 202:
@@ -1068,6 +1070,12 @@ def lambda_handler(event, context):
     event_id = str(payload.get("id") or payload.get("event_id") or "").strip()
     entity_type = str(entity.get("type") or "").strip()
     page_id = str(entity.get("id") or "").strip()
+    updated_property_ids = []
+    if event_type == "page.properties_updated":
+        data = payload.get("data") if isinstance(payload.get("data"), dict) else {}
+        changed = data.get("updated_properties") or []
+        if isinstance(changed, list):
+            updated_property_ids = [value.strip() for value in changed if isinstance(value, str) and value.strip()]
     record_input = _event_record_input(payload, raw_body)
     try:
         store = SupabaseIntakeStore()
@@ -1109,6 +1117,7 @@ def lambda_handler(event, context):
             event_id=event_id,
             event_row_id=event_row_id,
             attempt_number=record_input.get("attempt_number"),
+            updated_property_ids=updated_property_ids,
         )
     except Exception as exc:
         try:
