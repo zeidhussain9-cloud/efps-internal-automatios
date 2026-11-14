@@ -4,7 +4,7 @@
 
 - Supabase project qttcutwzehtskfcwxkwj; notion-inventory-state ACTIVE v12 with JWT verification enabled.
 - Migration 20261114095316_crm_inventory_business_status is registered and applied; it adds business_status and a partial index to crm_inventory_snapshot. No tables deleted.
-- Render service srv-darsv560tbcc73cu4ip0: deployment dep-dbs30ej0pb7s739klsrg LIVE on merge commit 92b4427; UI implementation commit 2727b38; /health HTTP 200.
+- Render service srv-darsv560tbcc73cu4ip0: latest deployment from crm-ui-dashboard LIVE; /health HTTP 200.
 - AWS account 294417174793, region ap-southeast-2; efps-notion-intake Active, LastUpdateStatus Successful, package CodeSha256 bx0ZE/aWHFPPIm4AMXcWFablYSPTVPvzj8543mC+s64=.
 - Maps API-unavailable fallback deployed to the existing Lambda. Only supported original short URLs are passed through and explicitly marked unverified.
 - No secret values were printed or rotated.

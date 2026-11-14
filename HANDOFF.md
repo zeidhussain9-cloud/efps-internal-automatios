@@ -3,8 +3,8 @@
 ## Current verified production state — 2026-11-14
 
 - No database tables deleted. WhatsApp history remains in crm_webhook_events; Notion event history remains in crm_inventory_intake_events.
-- Remote main and crm-ui-dashboard are synchronized at commit 92b4427 / tree 7b745807. The only local untracked path is supabase/.temp/; preserved.
-- Render deployment dep-dbs30ej0pb7s739klsrg is LIVE on commit 92b4427 (UI implementation commit 2727b38); /health HTTP 200; live JS/CSS contain the review-status UI.
+- Remote main and crm-ui-dashboard are synchronized with identical tracked trees. The only local untracked path is supabase/.temp/; preserved.
+- Latest Render deployment from crm-ui-dashboard is LIVE; /health HTTP 200; live JS/CSS contain the review-status UI.
 - Supabase notion-inventory-state ACTIVE v12, JWT verification enabled. Migration 20261114095316_crm_inventory_business_status is registered and applied.
 - AWS efps-notion-intake is Active, LastUpdateStatus Successful, deployed package CodeSha256 bx0ZE/aWHFPPIm4AMXcWFablYSPTVPvzj8543mC+s64=.
 - 106 active Notion-owned inventory rows; business_status Pending on all 106. The dashboard has an independent review-status filter and card display.

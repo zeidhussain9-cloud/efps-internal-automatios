@@ -34,7 +34,7 @@
 - Render service: `srv-darsv560tbcc73cu4ip0`; production branch: `crm-ui-dashboard`.
 - Supabase cron `crm_inventory_sheet_reconcile_5m` was removed on 2026-11-13. EventBridge Notion reconciliation now runs every 15 minutes.
 
-## Current verified state
+## Historical verified state — 2026-11-13
 
 - Supabase active snapshot: 104 — 87 Available / 17 Rented Out; 0 soft-deleted rows.
 - Source media gap (not a sync failure): 99/104 listings have Cloudinary image URLs. Five Rented Out pages have no image URL in Notion: `EF-2609-608J`, `EF-2609-22H0`, `EF-2609-VDWH`, `EF-2609-7JGF`, `EF-2609-MECJ`. The CRM mirrors the blank source values; no substitute images were invented.

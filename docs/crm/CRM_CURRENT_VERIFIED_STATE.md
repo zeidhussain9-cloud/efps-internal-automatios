@@ -2,8 +2,8 @@
 
 ## Current release and inventory status — 2026-11-14
 
-- Git branches main and crm-ui-dashboard are synchronized at commit 92b4427 / tree 7b745807.
-- Render deployment dep-dbs30ej0pb7s739klsrg LIVE, merge commit 92b4427 (UI code 2727b38); /health HTTP 200.
+- Git branches main and crm-ui-dashboard are synchronized with identical tracked trees.
+- Latest Render deployment from crm-ui-dashboard is LIVE; /health HTTP 200.
 - Supabase notion-inventory-state ACTIVE v12; business_status migration registered and applied.
 - AWS efps-notion-intake Active; code update successful; Maps fallback deployed.
 - Inventory: 106 active Notion-owned rows; business_status Pending on all 106. This remains distinct from intake_status and listing_state.
@@ -21,7 +21,7 @@
 - Signed-in inventory behavior was rechecked against the current live Render deployment; the deployment ID and commit are read from Render at verification time.
 - The current release includes the Notion inventory recovery hardening on the implementation branch. Render auto-deploys from `crm-ui-dashboard`; use the live Render service for the current deployment ID and commit. The CRM dashboard UI itself was not modified by this inventory repair.
 - Supabase project: qttcutwzehtskfcwxkwj
-- Edge Function: whapi-crm-webhook, ACTIVE v12
+- Edge Function: whapi-crm-webhook, ACTIVE v10
 - Production source: +919148338801
 
 ## Production data

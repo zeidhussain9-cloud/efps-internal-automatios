@@ -12,7 +12,7 @@
 
 > Operational pointers updated 2026-11-14. Historical snapshots below remain dated evidence, not current state.
 
-## Task 3 — Notion webhook event history (deployed; awaiting live property acceptance)
+## Historical Task 3 initial deployment checkpoint — 2026-11-14 08:14 UTC (superseded by v12)
 
 - Commit `ca05141bec073b87c8617c59bf79a40cd16534f9` is pushed to `crm-ui-dashboard`; Render deployment `dep-dbs1f0m417fc73f0cmig` is LIVE.
 - Supabase migration `crm_notion_webhook_event_history` is applied. It extends existing `crm_inventory_intake_events`; no new table was created and `crm_webhook_events` / WhatsApp processing were not changed.
@@ -29,9 +29,9 @@
 - Independently observe a real `page.undeleted` webhook delivery; scheduled 15-minute reconciliation already provides the tested recovery fallback.
 - Resolve the five existing listings with missing Cloudinary image URLs only from source media, not substitute imagery.
 
-## Current Notion inventory — recovery hardening verified 2026-11-13
+## Historical Notion inventory recovery checkpoint — 2026-11-13
 
-## Current Notion inventory — recovery hardening verified 2026-11-13
+## Historical Notion inventory recovery checkpoint — 2026-11-13
 
 - AWS `efps-notion-intake` is Active in account `294417174793`, region `ap-southeast-2`; stack `efps-notion-property-intake` is `UPDATE_COMPLETE`. Supabase `notion-inventory-state` is ACTIVE v9 with JWT verification enabled.
 - Notion Housing Listings remains canonical. The CRM projection has 104 active rows (87 Available / 17 Rented Out), matching all 104 active Notion pages. There are 0 missing, orphaned, duplicate or semantically mismatched records.
@@ -76,7 +76,7 @@ Historical live population snapshot verified 2026-10-05: **253 promoted qualifie
 ## Latest verified open pointers — 2026-11-14
 
 - Raw Property Intake full-chain acceptance remains unverified until a real operator submission is processed across Notion webhook, Lambda, Sheets, Cloudinary, Maps, Housing Listings and Supabase.
-- Complete Notion webhook capture coverage is not certified from the 8 observed event rows; audit configured delivery types and retry outcomes before claiming completeness.
+- Complete Notion webhook capture coverage is not certified from the 12 observed event rows; audit configured delivery types and retry outcomes before claiming completeness.
 - Maps fallback and business-status UI changes are deployed.
-- Notion workspace cleanup remains pending; no obsolete page has been verified safe to archive/delete.
-- Two Notion webhook event rows have ignored/failed outcomes and one needs review; inspect event payloads/outcomes before any retry or status mutation.
+- Notion workspace navigation and current-state references were consolidated; no page or database was deleted.
+- Five event rows have failed status (four intentionally ignored non-intake changes and one rejected unauthenticated probe); two remain Needs Review due to missing Raw Property Data. All records are retained for audit.

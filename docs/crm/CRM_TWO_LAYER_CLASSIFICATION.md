@@ -7,7 +7,7 @@ Inventory remains a separate source-of-truth domain from lead/contact classifica
 > The latest UI release is live on the remote branch. Notion inventory recovery hardening is deployed (Supabase Edge Function v9, AWS Lambda with 15-minute reconciliation and SQS failure capture). See `CRM_CURRENT_VERIFIED_STATE.md` and `HANDOFF.md` for current evidence. Older dated checkpoints below remain historical.
 
 - Render LIVE: deployment `dep-dbrbc8gjo6nc73etsmr0`, commit `6b206ddf07515cff2df82140d86ee873e4ea2965` on `crm-ui-dashboard`; `/health` and `/` returned HTTP 200.
-- Supabase project qttcutwzehtskfcwxkwj; whapi-crm-webhook ACTIVE v12.
+- Supabase project qttcutwzehtskfcwxkwj; whapi-crm-webhook ACTIVE v10.
 - Remote `crm-ui-dashboard` is at `6b206ddf07515cff2df82140d86ee873e4ea2965`; remote `main` is at `954b24fc21b8b91a6bd5cae3e24a116e31fbdce7`. Their trees matched before the local follow-up fix.
 - CRM: 371 leads; 138 deterministic auto-qualified; 839 contact classifications; 18,641 messages since 2026-10-05.
 - Webhooks: 18,641/18,641 message events linked to crm_messages; 0 active errors; 43 original errors retained in processing_error_history.

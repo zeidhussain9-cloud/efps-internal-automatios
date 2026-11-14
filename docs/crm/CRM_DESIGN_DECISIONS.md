@@ -5,7 +5,7 @@
 - Notion Housing Listings is canonical; Supabase crm_inventory_snapshot remains the CRM projection.
 - business_status is distinct from intake_status and listing_state. All 106 active Notion-owned rows currently report Pending.
 - Notion event history remains in crm_inventory_intake_events; WhatsApp history remains in crm_webhook_events. No tables deleted.
-- main and crm-ui-dashboard synchronized at commit 92b4427 / tree 7b745807. Render application code commit 2727b38 is live.
+- main and crm-ui-dashboard synchronized with identical tracked trees. Render application code commit 2727b38 is live.
 - Supabase notion-inventory-state ACTIVE v12; AWS efps-notion-intake updated successfully. Maps fallback deployed.
 - Full raw intake acceptance awaits a complete operator submission with Raw Property Data and Photos.
 
@@ -13,7 +13,7 @@
 > The latest UI release is live on the remote branch. Notion inventory recovery hardening is deployed (Supabase Edge Function v9, AWS Lambda with 15-minute reconciliation and SQS failure capture). See `CRM_CURRENT_VERIFIED_STATE.md` and `HANDOFF.md` for current evidence. Older dated checkpoints below remain historical.
 
 - Render LIVE: deployment `dep-dbrbc8gjo6nc73etsmr0`, commit `6b206ddf07515cff2df82140d86ee873e4ea2965` on `crm-ui-dashboard`; `/health` and `/` returned HTTP 200.
-- Supabase project qttcutwzehtskfcwxkwj; whapi-crm-webhook ACTIVE v12.
+- Supabase project qttcutwzehtskfcwxkwj; whapi-crm-webhook ACTIVE v10.
 - Remote `crm-ui-dashboard` is at `6b206ddf07515cff2df82140d86ee873e4ea2965`; remote `main` is at `954b24fc21b8b91a6bd5cae3e24a116e31fbdce7`. Their trees matched before the local follow-up fix.
 - CRM: 371 leads; 138 deterministic auto-qualified; 839 contact classifications; 18,641 messages since 2026-10-05.
 - Webhooks: 18,641/18,641 message events linked to crm_messages; 0 active errors; 43 original errors retained in processing_error_history.

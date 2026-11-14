@@ -40,7 +40,7 @@ The active Housing Listings mirror is reconciled and operational. The previous r
 - A 15-minute scheduled reconciler queues only changed/restored pages and soft-deletes rows missing from the full Notion result. Empty results fail closed. The live run checked 104 pages, queued 0, skipped 104 unchanged, reconciled 104 event Listing IDs and soft-deleted 0 rows.
 - Recovery test: rented listing `EF-2609-09B5` was soft-deleted in Supabase through the worker, then automatically reactivated by scheduled reconciliation. `deleted_at` returned to null.
 
-## Current verified deployment state — 2026-11-13
+## Historical verified deployment state — 2026-11-13
 
 - AWS account `294417174793`; region `ap-southeast-2`; CloudFormation stack `efps-notion-property-intake` is `UPDATE_COMPLETE`.
 - Lambda `efps-notion-intake`: Active, Python 3.12, 512 MB, 180-second timeout; `$LATEST` updated `2026-11-13T15:18:43Z`; CodeSha256 `zZxd6tQPK8D1GriTmqa6rM0KS3An1zHKDsCx/MCs9aU=`.

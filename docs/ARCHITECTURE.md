@@ -4,8 +4,8 @@
 
 Notion Housing Listings is canonical. Supabase crm_inventory_snapshot is the CRM projection; 106 active Notion-owned rows currently have business_status Pending. business_status is separate from intake_status and listing_state.
 
-- Main and crm-ui-dashboard are synchronized at commit 92b4427 / tree 7b745807.
-- Render deployment dep-dbs30ej0pb7s739klsrg is LIVE on commit 92b4427 (UI implementation commit 2727b38); /health HTTP 200.
+- Main and crm-ui-dashboard are synchronized with identical tracked trees.
+- Latest Render deployment from crm-ui-dashboard is LIVE; /health HTTP 200.
 - Supabase notion-inventory-state ACTIVE v12; additive business_status migration registered and applied.
 - AWS efps-notion-intake Active, update successful; Maps API-unavailable fallback deployed.
 - Notion event history remains in crm_inventory_intake_events; WhatsApp history remains in crm_webhook_events. No tables deleted.
