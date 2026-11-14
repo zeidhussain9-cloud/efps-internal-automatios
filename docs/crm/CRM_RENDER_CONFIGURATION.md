@@ -24,14 +24,14 @@
 ## Runtime boundaries
 
 - Supabase is the durable WhatsApp webhook ingress and CRM database.
-- whapi-crm-webhook is ACTIVE v12; phone-null messages are persisted without fake contacts.
+- whapi-crm-webhook is ACTIVE v10; phone-null messages are persisted without fake contacts.
 - Group messages are retained as evidence but never attached to a promoted lead's personal timeline.
 - Notion page events update the existing Supabase inventory projection. A 15-minute EventBridge reconciliation is the recovery backstop for missed create/edit/delete/restore events. The old `crm_inventory_sheet_reconcile_5m` Sheets job was removed on 2026-11-13.
 - Inventory sync inserts the parent crm_inventory_sync_runs row before child crm_inventory_sync_changes rows.
 - Deterministic qualification is invoked hourly by crm_deterministic_scheduler_1h.
 - AI scheduler remains intentionally paused; automatic WhatsApp sending remains disabled.
 
-## Release verification
+## Historical release verification — 2026-11-13
 
 - The signed-in production inventory page shows 104 Notion-owned properties (87 Available / 17 Rented Out). Full source/projection reconciliation reports 0 missing, orphaned, duplicate or semantic field mismatches; all 104 intake events have matching Listing IDs.
 - Signed-in production inventory showed 104 Notion-owned properties (87 Available / 17 Rented). A real Notion edit appeared through Supabase in the dashboard.

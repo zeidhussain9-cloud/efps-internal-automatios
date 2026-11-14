@@ -2,7 +2,7 @@
 
 ## Current verified release state — 2026-11-14
 
-- CRM Render application code commit 2727b38 is LIVE; main and crm-ui-dashboard synchronized at merge commit 92b4427 / tree 7b745807.
+- CRM Render application code commit 2727b38 is LIVE; main and crm-ui-dashboard synchronized with identical tracked trees.
 - Supabase notion-inventory-state ACTIVE v12 with JWT verification enabled; migration 20261114095316_crm_inventory_business_status registered and applied.
 - AWS efps-notion-intake update successful; Maps API-unavailable fallback deployed.
 - No database tables deleted. Full raw intake acceptance awaits a complete real operator submission with Raw Property Data and Photos.

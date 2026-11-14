@@ -1,7 +1,7 @@
 ## Current verified production state — 2026-11-14
 
-- main and crm-ui-dashboard are synchronized at commit 92b4427; both remote branches have identical tree 7b745807.
-- Render deployment dep-dbs30ej0pb7s739klsrg is LIVE on commit 92b4427 (UI implementation commit 2727b38). /health returns HTTP 200. The live JS/CSS assets contain the Review status UI.
+- main and crm-ui-dashboard are synchronized with identical tracked trees.
+- Latest Render deployment from crm-ui-dashboard is LIVE; /health returns HTTP 200. The live JS/CSS assets contain the Review status UI.
 - Supabase notion-inventory-state is ACTIVE v12 (JWT verification enabled). The additive crm_inventory_snapshot.business_status migration is registered as 20261114095316 and applied.
 - AWS efps-notion-intake is Active; LastUpdateStatus Successful; deployed package CodeSha256 bx0ZE/aWHFPPIm4AMXcWFablYSPTVPvzj8543mC+s64=. Maps API-unavailable fallback is deployed.
 - 106 active Notion-owned inventory rows; business_status Pending on all 106.

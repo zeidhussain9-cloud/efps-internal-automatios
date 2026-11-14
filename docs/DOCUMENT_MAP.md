@@ -2,8 +2,8 @@
 
 ## Current verified inventory and release map — 2026-11-14
 
-- Repository: main and crm-ui-dashboard synchronized at commit 92b4427 / tree 7b745807.
-- Render: deployment dep-dbs30ej0pb7s739klsrg LIVE on commit 92b4427 (UI implementation 2727b38); health HTTP 200.
+- Repository: main and crm-ui-dashboard synchronized with identical tracked trees.
+- Render: latest deployment from crm-ui-dashboard LIVE; health HTTP 200.
 - Supabase: notion-inventory-state ACTIVE v12; migration 20261114095316_crm_inventory_business_status registered and applied.
 - AWS: efps-notion-intake update successful; Maps API-unavailable fallback deployed.
 - Inventory: 106 active Notion-owned rows; business_status Pending on all 106.
