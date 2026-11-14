@@ -187,4 +187,4 @@ Historical live population snapshot verified 2026-10-05: **253 promoted qualifie
 
 ## Latest verified inventory count — 2026-11-14
 
-The current active Notion-owned inventory projection is 106 rows (not the historical 104-row count above). All 106 currently have business_status Pending. The CRM UI/API change exposing this review status is local and undeployed. No tables were deleted.
+The current active Notion-owned inventory projection is 106 rows (not the historical 104-row count above). All 106 currently have business_status Pending. The CRM UI/API change exposing this review status is deployed. No tables were deleted.

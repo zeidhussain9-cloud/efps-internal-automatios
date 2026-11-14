@@ -97,4 +97,4 @@ Historical live population snapshot verified 2026-10-05: **253 promoted qualifie
 
 ## Latest verified inventory state — 2026-11-14
 
-106 active Notion-owned rows are present in crm_inventory_snapshot. Business review status is separately projected as business_status; all 106 currently report Pending. Local UI changes expose this field but are not deployed. No tables were deleted. Full raw-intake acceptance remains pending a real operator submission.
+106 active Notion-owned rows are present in crm_inventory_snapshot. Business review status is separately projected as business_status; all 106 currently report Pending. The UI change exposing this field is deployed. No tables were deleted. Full raw-intake acceptance remains pending a real operator submission.
