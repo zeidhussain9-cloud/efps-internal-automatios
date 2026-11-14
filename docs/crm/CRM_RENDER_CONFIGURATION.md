@@ -1,5 +1,14 @@
 # EFPS CRM — Render Configuration
 
+## Current verified production release — 2026-11-14
+
+- Service srv-darsv560tbcc73cu4ip0, URL https://easyfind-crm-d01-d05.onrender.com, branch crm-ui-dashboard, auto-deploy enabled.
+- Render application code commit 2727b38 is LIVE; /health HTTP 200; live assets include the Review status filter and card status.
+- Supabase notion-inventory-state ACTIVE v12; AWS efps-notion-intake update successful.
+- Inventory projection: 106 active Notion-owned rows; business_status Pending on all 106.
+- No tables deleted. Raw intake acceptance awaits a complete operator submission.
+
+
 > Revalidated 2026-11-13 against the signed-in production browser, live Supabase projection, AWS Lambda stack, and current Render deployment.
 
 ## Production service
@@ -15,7 +24,7 @@
 ## Runtime boundaries
 
 - Supabase is the durable WhatsApp webhook ingress and CRM database.
-- whapi-crm-webhook is ACTIVE v10; phone-null messages are persisted without fake contacts.
+- whapi-crm-webhook is ACTIVE v12; phone-null messages are persisted without fake contacts.
 - Group messages are retained as evidence but never attached to a promoted lead's personal timeline.
 - Notion page events update the existing Supabase inventory projection. A 15-minute EventBridge reconciliation is the recovery backstop for missed create/edit/delete/restore events. The old `crm_inventory_sheet_reconcile_5m` Sheets job was removed on 2026-11-13.
 - Inventory sync inserts the parent crm_inventory_sync_runs row before child crm_inventory_sync_changes rows.

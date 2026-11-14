@@ -2,12 +2,12 @@
 
 Inventory remains a separate source-of-truth domain from lead/contact classification. Notion Housing Listings is canonical; Supabase crm_inventory_snapshot contains 106 active Notion-owned rows, all with business_status Pending. This field is distinct from intake_status and listing_state. No database tables were deleted. See CRM_CURRENT_VERIFIED_STATE.md for the latest live release and event evidence.
 
-## Authoritative current verified state — 2026-11-13
+## Historical classification/CRM checkpoint — 2026-11-13
 
 > The latest UI release is live on the remote branch. Notion inventory recovery hardening is deployed (Supabase Edge Function v9, AWS Lambda with 15-minute reconciliation and SQS failure capture). See `CRM_CURRENT_VERIFIED_STATE.md` and `HANDOFF.md` for current evidence. Older dated checkpoints below remain historical.
 
 - Render LIVE: deployment `dep-dbrbc8gjo6nc73etsmr0`, commit `6b206ddf07515cff2df82140d86ee873e4ea2965` on `crm-ui-dashboard`; `/health` and `/` returned HTTP 200.
-- Supabase project qttcutwzehtskfcwxkwj; whapi-crm-webhook ACTIVE v10.
+- Supabase project qttcutwzehtskfcwxkwj; whapi-crm-webhook ACTIVE v12.
 - Remote `crm-ui-dashboard` is at `6b206ddf07515cff2df82140d86ee873e4ea2965`; remote `main` is at `954b24fc21b8b91a6bd5cae3e24a116e31fbdce7`. Their trees matched before the local follow-up fix.
 - CRM: 371 leads; 138 deterministic auto-qualified; 839 contact classifications; 18,641 messages since 2026-10-05.
 - Webhooks: 18,641/18,641 message events linked to crm_messages; 0 active errors; 43 original errors retained in processing_error_history.

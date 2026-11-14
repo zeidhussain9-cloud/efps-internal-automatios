@@ -1,21 +1,21 @@
 ## Current verified production state — 2026-11-14
 
-- CRM branch and main are synchronized at commit 86c4389; both remote branches have identical tree ccec16e4.
-- Render deployment dep-dbs2qnqjnfac73bq84sg is LIVE on commit 2727b38. /health returns HTTP 200. The live JS/CSS assets contain the Review status UI.
-- Supabase notion-inventory-state is ACTIVE v11 (JWT verification enabled). The additive crm_inventory_snapshot.business_status migration is registered as 20261114095316 and applied.
+- main and crm-ui-dashboard are synchronized at commit 92b4427; both remote branches have identical tree 7b745807.
+- Render deployment dep-dbs30ej0pb7s739klsrg is LIVE on commit 92b4427 (UI implementation commit 2727b38). /health returns HTTP 200. The live JS/CSS assets contain the Review status UI.
+- Supabase notion-inventory-state is ACTIVE v12 (JWT verification enabled). The additive crm_inventory_snapshot.business_status migration is registered as 20261114095316 and applied.
 - AWS efps-notion-intake is Active; LastUpdateStatus Successful; deployed package CodeSha256 bx0ZE/aWHFPPIm4AMXcWFablYSPTVPvzj8543mC+s64=. Maps API-unavailable fallback is deployed.
 - 106 active Notion-owned inventory rows; business_status Pending on all 106.
 - 12 Notion webhook events observed: 5 processed; 5 failed-status records (4 intentionally ignored non-intake updates, 1 rejected unauthenticated probe); 2 needs-review outcomes due missing Raw Property Data. Complete delivery capture is not certified.
 - The live form has Raw Property Data and Photos questions. Two existing submissions have photos but no Raw Property Data; both remain Needs Review. Full raw intake acceptance is therefore still pending.
 - No database tables were deleted. WhatsApp history remains in crm_webhook_events; Notion event history remains in crm_inventory_intake_events.
 
-## Notion Property Intake — production deployment 2026-11-14
+## Historical initial Notion Property Intake deployment — 2026-11-14 08:14 UTC (v10; superseded)
 
 Task 3 webhook event history is deployed. The existing `crm_inventory_intake_events` ledger was extended; no parallel webhook table was created and WhatsApp `crm_webhook_events` remains untouched. Supabase `notion-inventory-state` is ACTIVE v10; AWS `efps-notion-intake` and its stack are Active/UPDATE_COMPLETE. The live Notion form exposes both Raw Property Data and Photos. Awaiting the first operator-submitted property for end-to-end acceptance across Sheets, Cloudinary, Housing Listings and the Supabase inventory projection. See `docs/NOTION_PROPERTY_INTAKE.md`.
 
-## Current Notion inventory intake — 2026-11-13 (live recovery hardening)
+## Historical checkpoint — 2026-11-13 (superseded by 2026-11-14 verified state)
 
-## Current Notion inventory intake — 2026-11-13 (live recovery hardening)
+## Historical checkpoint — 2026-11-13 (superseded by 2026-11-14 verified state)
 
 - Notion Housing Listings is the canonical inventory editor. Supabase `crm_inventory_snapshot` remains the CRM projection; the dashboard reads active `housing_notion` rows only.
 - Source-to-projection reconciliation: 104 active Notion pages, 104 active Supabase rows, 0 missing, 0 orphaned, 0 duplicate Listing IDs, and 0 semantic field mismatches after normalizing Notion rich-text formatting.
@@ -56,4 +56,4 @@ Historical documents retain dated evidence. Current-state claims in CRM document
 
 ## Latest verified Notion inventory checkpoint — 2026-11-14
 
-The CRM inventory projection currently contains 106 active Notion-owned rows. Review status is represented separately from intake processing and listing availability. No database tables were deleted. The latest local review-state UI and Maps API-unavailable fallback changes have passed local tests but are not yet deployed. Full raw Property Intake acceptance remains pending a real operator submission.
+The CRM inventory projection currently contains 106 active Notion-owned rows. Review status is represented separately from intake processing and listing availability. No database tables were deleted. The review-state UI and Maps API-unavailable fallback are deployed; the latest release state is recorded at the top of this file. Full raw Property Intake acceptance remains pending a real operator submission.

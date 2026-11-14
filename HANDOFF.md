@@ -3,9 +3,9 @@
 ## Current verified production state — 2026-11-14
 
 - No database tables deleted. WhatsApp history remains in crm_webhook_events; Notion event history remains in crm_inventory_intake_events.
-- Remote main and crm-ui-dashboard are synchronized at commit 86c4389 / tree ccec16e4. The only local untracked path is supabase/.temp/; preserved.
-- Render deployment dep-dbs2qnqjnfac73bq84sg is LIVE on commit 2727b38; /health HTTP 200; live JS/CSS contain the review-status UI.
-- Supabase notion-inventory-state ACTIVE v11, JWT verification enabled. Migration 20261114095316_crm_inventory_business_status is registered and applied.
+- Remote main and crm-ui-dashboard are synchronized at commit 92b4427 / tree 7b745807. The only local untracked path is supabase/.temp/; preserved.
+- Render deployment dep-dbs30ej0pb7s739klsrg is LIVE on commit 92b4427 (UI implementation commit 2727b38); /health HTTP 200; live JS/CSS contain the review-status UI.
+- Supabase notion-inventory-state ACTIVE v12, JWT verification enabled. Migration 20261114095316_crm_inventory_business_status is registered and applied.
 - AWS efps-notion-intake is Active, LastUpdateStatus Successful, deployed package CodeSha256 bx0ZE/aWHFPPIm4AMXcWFablYSPTVPvzj8543mC+s64=.
 - 106 active Notion-owned inventory rows; business_status Pending on all 106. The dashboard has an independent review-status filter and card display.
 - Notion event ledger: 12 observed events — 5 processed, 5 failed-status (4 ignored non-intake changes and 1 rejected unauthenticated probe), 2 needs review. Complete delivery capture is not certified.
@@ -17,7 +17,7 @@
 
 # EFPS CRM — Handoff
 
-## Notion webhook event history — production deployment 2026-11-14
+## Historical initial Task 3 deployment — 2026-11-14 08:14 UTC (superseded by current v12 state)
 
 - Commit `ca05141bec073b87c8617c59bf79a40cd16534f9` is pushed to `crm-ui-dashboard`; Render deployment `dep-dbs1f0m417fc73f0cmig` is LIVE.
 - Supabase migration `crm_notion_webhook_event_history` is applied to project `qttcutwzehtskfcwxkwj`. It extends the existing `crm_inventory_intake_events` ledger; it does not create a new table and does not write into WhatsApp `crm_webhook_events`.
@@ -29,9 +29,9 @@
 - No WhatsApp message or catalogue dispatch was sent. WhAPI webhook function v10 and its `crm_webhook_events` table/records were not changed.
 - Production health advisors returned no health findings. Existing security INFO findings for RLS-enabled service-only tables without policies and unrelated unused-index INFO findings predate this migration; they were not broadened or modified here.
 
-## Notion inventory recovery hardening — 2026-11-13
+## Historical inventory recovery checkpoint — 2026-11-13
 
-## Notion inventory recovery hardening — 2026-11-13
+## Historical inventory recovery checkpoint — 2026-11-13
 
 - Notion Housing Listings is canonical; Supabase `crm_inventory_snapshot` remains the CRM read model.
 - Live source-to-projection comparison: 104 active Notion pages / 104 active Supabase rows; 0 missing, 0 orphaned, 0 duplicate active Listing IDs, 0 semantic field mismatches.

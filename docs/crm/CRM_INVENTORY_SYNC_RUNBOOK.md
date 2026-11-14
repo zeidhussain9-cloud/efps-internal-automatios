@@ -1,10 +1,12 @@
+## Historical inventory reconciliation checkpoint — 2026-11-13 (superseded by 2026-11-14 state)
+
 # EFPS CRM — Housing Inventory Sync Runbook
 
 ## Current verified production checkpoint — 2026-11-14
 
 - Notion Housing Listings is canonical; crm_inventory_snapshot is the CRM projection.
 - Active Notion-owned projection: 106 rows; business_status Pending on all 106.
-- Supabase notion-inventory-state ACTIVE v11. Render deploy dep-dbs2qnqjnfac73bq84sg LIVE on 2727b38. AWS efps-notion-intake update successful.
+- Supabase notion-inventory-state ACTIVE v12. Render application code commit 2727b38 is LIVE. AWS efps-notion-intake update successful.
 - 12 Notion events observed: 5 processed, 4 ignored non-intake changes, 1 rejected unauthenticated probe, 2 needs-review outcomes. Delivery capture completeness not certified.
 - The form schema includes Raw Property Data and Photos; two existing submissions have photos but no raw text and remain Needs Review.
 - Maps API-unavailable fallback deployed. No database tables deleted.
@@ -13,7 +15,7 @@
 
 > Historical Sheet scheduler repair revalidated 2026-11-12. Notion ownership and projection updated 2026-11-13.
 
-## Canonical editor transition — 2026-11-13
+## Historical canonical-editor transition checkpoint — 2026-11-13
 
 - Notion Housing Listings is the canonical operator editing surface. Supabase `public.crm_inventory_snapshot` remains the dashboard projection under `source_kind='housing_notion'`.
 - Supabase `notion-inventory-state` ACTIVE v9 (JWT verification enabled); isolated AWS Lambda `efps-notion-intake` Active; stack `efps-notion-property-intake` `UPDATE_COMPLETE`.
@@ -84,4 +86,4 @@ The eight original Slack warnings were for G5ZS, 6JYX, 97J4, WVP3, NFHV, 9ZZJ, X
 
 ## Latest verified inventory checkpoint — 2026-11-14
 
-The live Notion-owned projection contains 106 active rows, not the historical 104-row count in the earlier checkpoint. crm_inventory_snapshot.business_status is a first-class projection field populated from source_record.status; all 106 current rows report Pending. The dashboard changes to filter and display this field are local and not yet deployed. Supabase notion-inventory-state was ACTIVE v10 before the latest local Edge Function update, which is now ACTIVE v11. No tables were deleted. Raw Property Intake end-to-end acceptance remains pending a real operator submission.
+The live Notion-owned projection contains 106 active rows, not the historical 104-row count in the earlier checkpoint. crm_inventory_snapshot.business_status is a first-class projection field populated from source_record.status; all 106 current rows report Pending. The dashboard review-status filter and card display are deployed. Supabase notion-inventory-state is ACTIVE v12. No tables were deleted. Raw Property Intake end-to-end acceptance remains pending a real operator submission.

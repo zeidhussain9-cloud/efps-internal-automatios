@@ -5,14 +5,14 @@
 - The live Submit New Property form schema contains both Raw Property Data and Photos questions.
 - Two existing submissions have Photos but blank Raw Property Data; both remain Needs Review. The recorded worker outcome explicitly says Raw Property Data is required. No source content was fabricated or altered.
 - 12 Notion webhook event rows observed: 5 processed, 4 ignored non-intake changes, 1 rejected unauthenticated probe, 2 needs-review outcomes. Complete delivery coverage is not certified.
-- AWS efps-notion-intake is Active with successful code update; Maps API-unavailable fallback deployed. Supabase notion-inventory-state ACTIVE v11.
+- AWS efps-notion-intake is Active with successful code update; Maps API-unavailable fallback deployed. Supabase notion-inventory-state ACTIVE v12.
 - Supabase inventory projection has 106 active Notion-owned rows; business_status Pending on all 106.
 - No tables deleted. Notion event history remains in crm_inventory_intake_events; WhatsApp event history remains in crm_webhook_events.
 - Full end-to-end acceptance across raw text extraction, Maps, Cloudinary, Sheets, Housing Listings and Supabase remains pending a complete real operator submission.
 
 # Notion Property Intake — Runtime Contract
 
-## Webhook event history — deployed 2026-11-14
+## Historical initial event-ledger deployment — 2026-11-14 08:14 UTC (superseded by v12)
 
 Task 3 is deployed. The additive migration extends the existing `public.crm_inventory_intake_events` ledger with namespaced Notion webhook event rows and restricted RPCs. It does not create a second event table and does not change the WhatsApp `public.crm_webhook_events` table or processing path.
 
@@ -24,13 +24,13 @@ Task 3 is deployed. The additive migration extends the existing `public.crm_inve
 - The existing Notion form view `Submit New Property` exposes `Raw Property Data` and `Photos`. Both questions were confirmed by fetching the live view after deployment. The data-source description now directs operators to this form.
 - Production end-to-end acceptance is pending the first user-submitted property. No synthetic production property has been created.
 
-## Current acceptance status — awaiting operator submission
+## Historical acceptance plan — awaiting first operator submission (superseded)
 
 The Housing Listings mirror/reconciliation baseline remains as recorded below. Task 3 is deployed, but a real property submission is required to verify the complete raw intake chain. Once the operator confirms the submission, verify: webhook delivery/signature → durable event receipt → Lambda queue/worker → extraction/validation → Google Sheets A:AT row → Cloudinary uploads → Housing Listings page and relation → Supabase `crm_inventory_snapshot` projection and `crm_inventory_intake_events` completion. Any `Needs Review` or `Failed` state must be explained from recorded evidence; do not mark the flow accepted solely because the webhook returned HTTP 202.
 
-## Current acceptance status — live recovery hardening 2026-11-13
+## Historical acceptance checkpoint — 2026-11-13
 
-## Current acceptance status — live recovery hardening 2026-11-13
+## Historical acceptance checkpoint — 2026-11-13
 
 The active Housing Listings mirror is reconciled and operational. The previous restore-delivery gap is covered by a scheduled reconciliation fallback; the actual Notion `page.undeleted` webhook has not yet been independently observed, but a soft-deleted projection for an active Notion page was restored successfully by the scheduled reconciler.
 
@@ -130,4 +130,4 @@ The old WhAPI `NEW`-delimited inventory listener and its DynamoDB session state 
 - crm_inventory_snapshot.business_status is a first-class reporting field backfilled from source_record.status. All 106 active Notion rows currently report Pending.
 - Raw Property Intake with photos has not passed a fresh real-property end-to-end acceptance run. Awaiting operator submission and verification of Sheets, Cloudinary and Maps runtime credentials.
 - Maps API-unavailable fallback is implemented locally but not deployed: preserve only the original supported short URL, label it unverified, and do not infer place/locality/pincode.
-- The latest UI/Edge Function/Maps code changes are local and not yet deployed.
+- At that earlier checkpoint, UI/Edge Function/Maps code changes were local; they have since been deployed as recorded at the top of this document.

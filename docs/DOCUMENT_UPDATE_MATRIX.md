@@ -1,5 +1,11 @@
 # Documentation Update Matrix
 
+## Current verified documentation checkpoint — 2026-11-14
+
+Current operational status is recorded at the top of README.md, HANDOFF.md, docs/ARCHITECTURE.md, docs/DATA_CONTRACTS.md, docs/INFRASTRUCTURE.md, docs/NOTION_PROPERTY_INTAKE.md, docs/crm/CRM_CURRENT_VERIFIED_STATE.md, docs/crm/CRM_DATA_MODEL.md and docs/crm/CRM_INVENTORY_SYNC_RUNBOOK.md. Older dated counts and runtime versions are historical checkpoints, not live state. The business_status contract spans the Supabase migration, Notion Edge Function, CRM repository/API, inventory logic/UI and regression tests. Maps fallback is deployed in the existing Notion intake Lambda. No tables deleted.
+
+# Documentation Update Matrix
+
 ## Historical CRM production snapshot — 2026-10-05 (not current metrics)
 
 The figures below were last verified on 2026-10-05 and are retained as historical evidence, not current production metrics.

@@ -2,14 +2,14 @@
 
 ## Current verified infrastructure — 2026-11-14
 
-- Supabase project qttcutwzehtskfcwxkwj; notion-inventory-state ACTIVE v11 with JWT verification enabled.
+- Supabase project qttcutwzehtskfcwxkwj; notion-inventory-state ACTIVE v12 with JWT verification enabled.
 - Migration 20261114095316_crm_inventory_business_status is registered and applied; it adds business_status and a partial index to crm_inventory_snapshot. No tables deleted.
-- Render service srv-darsv560tbcc73cu4ip0: deployment dep-dbs2qnqjnfac73bq84sg LIVE on commit 2727b38; /health HTTP 200.
+- Render service srv-darsv560tbcc73cu4ip0: deployment dep-dbs30ej0pb7s739klsrg LIVE on merge commit 92b4427; UI implementation commit 2727b38; /health HTTP 200.
 - AWS account 294417174793, region ap-southeast-2; efps-notion-intake Active, LastUpdateStatus Successful, package CodeSha256 bx0ZE/aWHFPPIm4AMXcWFablYSPTVPvzj8543mC+s64=.
 - Maps API-unavailable fallback deployed to the existing Lambda. Only supported original short URLs are passed through and explicitly marked unverified.
 - No secret values were printed or rotated.
 
-## Notion webhook event history — production deployment 2026-11-14
+## Historical initial Task 3 deployment — 2026-11-14 08:14 UTC (superseded by current v12 state)
 
 - Supabase migration `crm_notion_webhook_event_history` is applied to `qttcutwzehtskfcwxkwj`. It extends `crm_inventory_intake_events`; it does not create a new event table or modify `crm_webhook_events`.
 - Supabase Edge Function `notion-inventory-state` ACTIVE v10; JWT verification remains enabled.
@@ -25,7 +25,7 @@ Verified live baseline is recorded in the authoritative current-state block belo
 
 # Infrastructure Registry
 
-## Current verified infrastructure update — 2026-11-13
+## Historical infrastructure checkpoint — 2026-11-13
 
 - AWS account `294417174793`, region `ap-southeast-2`; stack `efps-notion-property-intake` is `UPDATE_COMPLETE`.
 - Lambda `efps-notion-intake` is Active (Python 3.12, 512 MB, 180-second timeout), last updated `2026-11-13T15:18:43Z`, `LastUpdateStatus=Successful`, CodeSha256 `zZxd6tQPK8D1GriTmqa6rM0KS3An1zHKDsCx/MCs9aU=`.
@@ -309,7 +309,7 @@ The AWS Bedrock runtime SDK was upgraded to `3.1144.0` after Render exposed a cr
 ## Latest verified checkpoint — 2026-11-14
 
 - Supabase project qttcutwzehtskfcwxkwj: additive crm_inventory_snapshot.business_status column and partial index applied. No tables deleted.
-- Supabase notion-inventory-state was last independently verified ACTIVE v10 before the current local Edge Function changes; updated projection code is local and not deployed.
+- Historical checkpoint before the v12 Edge Function deployment; current runtime is recorded at the top of this document.
 - Render service srv-darsv560tbcc73cu4ip0 remains the CRM production service. Current local UI/API changes are not deployed.
 - AWS Notion intake Lambda remains the existing isolated runtime. Maps fallback code has not yet been deployed to Lambda.
 - Existing secret values were not printed, rotated, created or overwritten.

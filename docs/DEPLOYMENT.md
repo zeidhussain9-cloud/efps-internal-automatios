@@ -1,5 +1,13 @@
 # EFPS SAM Deployment Contract
 
+## Current verified release state — 2026-11-14
+
+- CRM Render application code commit 2727b38 is LIVE; main and crm-ui-dashboard synchronized at merge commit 92b4427 / tree 7b745807.
+- Supabase notion-inventory-state ACTIVE v12 with JWT verification enabled; migration 20261114095316_crm_inventory_business_status registered and applied.
+- AWS efps-notion-intake update successful; Maps API-unavailable fallback deployed.
+- No database tables deleted. Full raw intake acceptance awaits a complete real operator submission with Raw Property Data and Photos.
+
+
 ## Task 3 local status
 
 The Notion webhook event-history migration and ingestion/worker integration are local changes only. The migration passed against isolated local PostgreSQL 17.12 and the Edge Function passed Deno type-check, but neither was applied/deployed to production Supabase or AWS. No production property was submitted for testing, no commit or push was made, and production event-ledger verification remains outstanding until deployment is authorized. When authorized, deploy in dependency order: apply the database migration, deploy `notion-inventory-state`, then deploy the AWS Lambda package. Verify the event lifecycle end to end only after all three are live.
@@ -9,7 +17,7 @@ The Notion webhook event-history migration and ingestion/worker integration are 
 ## Task 3 production deployment — 2026-11-14
 
 - Migration `crm_notion_webhook_event_history` applied to Supabase project `qttcutwzehtskfcwxkwj`.
-- `notion-inventory-state` deployed ACTIVE v10 with JWT verification enabled.
+- `notion-inventory-state` deployed ACTIVE v12 with JWT verification enabled.
 - AWS SAM stack `efps-notion-property-intake` updated successfully in `ap-southeast-2`; Lambda `efps-notion-intake` Active, `LastUpdateStatus=Successful`, last modified `2026-11-14T08:14:28Z`.
 - Deployment reused the existing secret ARNs. No secret values were changed or printed.
 - SAM validation and non-container build passed. The previously built Linux/Python 3.12 dependency package was reused with the updated committed Notion intake module overlaid and verified.
