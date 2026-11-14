@@ -270,3 +270,20 @@ def test_supabase_event_operations_use_only_the_new_notion_rpcs():
     assert "crm_update_notion_webhook_event" in function
     assert "record_webhook_event" in function and "update_webhook_event" in function
     assert "record_webhook_event" in response and "update_webhook_event" in response
+
+
+def test_ignored_webhook_events_remain_ignored_in_database():
+    root = Path(__file__).parents[3]
+    migration = (root / "db" / "migrations" / "20261114160000_fix_notion_ignored_event_status.sql").read_text().lower()
+    assert "'ignored'" in migration
+    assert "else p_processing_status" in migration
+    assert "processing_outcome->>'status'='ignored'" in migration
+    assert "validation_status='ignored'" in migration
+    assert "processing_status='ignored'" in migration
+
+
+def test_notion_intake_template_no_longer_requires_sheets_secret():
+    root = Path(__file__).parents[3]
+    template = (root / "notion-intake-template.yaml").read_text()
+    assert "GoogleSheetsSecretArn" not in template
+    assert "GOOGLE_SHEETS_SECRET_ARN" not in template

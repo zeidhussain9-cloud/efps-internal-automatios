@@ -17,7 +17,6 @@ from shared.cloudinary.client import CloudinaryClient, CloudinaryCredentials
 from shared.cloudinary.media import Upload, upload_property_images, catalog_urls
 from shared.google_maps import GoogleMapsClient
 from shared.google_sheets import schema
-from shared.google_sheets.client import GoogleSheetsClient, GoogleSheetsCredentials
 
 try:
     from . import pipeline
@@ -560,16 +559,6 @@ def build_whatsapp_post(row: dict, raw_text: str, *, maps_verified: bool, verifi
     return "\n".join(lines)
 
 
-def _row_for_listing(client: GoogleSheetsClient, listing_id: str):
-    rows = client.read_range(schema.SHEET_ID, schema.WORKSHEET_NAME, "A2:AT")
-    for row_number, values in enumerate(rows, start=2):
-        padded = list(values) + [""] * (schema.GRID_WIDTH - len(values))
-        row = schema.row_to_mapping(padded)
-        if str(row.get("listing_id") or "") == listing_id:
-            return row_number, row
-    return None
-
-
 def _upload_photos(page: dict, listing_id: str, row: dict, cloudinary: CloudinaryClient):
     files = _photos(page)
     existing = [x.strip() for x in str(row.get("cloudinary_image_urls") or "").split(",") if x.strip()]
@@ -604,17 +593,6 @@ def _aws_secret_value(environment_name: str) -> str:
     return str(value)
 
 
-def _runtime_sheets_client() -> GoogleSheetsClient:
-    raw = _aws_secret_value("GOOGLE_SHEETS_SECRET_ARN")
-    try:
-        service_account = json.loads(raw)
-    except json.JSONDecodeError as exc:
-        raise IntakeError("Google Sheets service-account secret is not valid JSON") from exc
-    if not isinstance(service_account, dict) or not service_account.get("private_key"):
-        raise IntakeError("Google Sheets service-account secret is missing private_key")
-    return GoogleSheetsClient(credentials=GoogleSheetsCredentials(service_account))
-
-
 def _runtime_cloudinary_client() -> CloudinaryClient:
     try:
         values = json.loads(_aws_secret_value("CLOUDINARY_SECRET_ARN"))
@@ -645,7 +623,6 @@ def process_page(
     updated_property_ids: list[str] | None = None,
     notion: NotionClient | None = None,
     store: SupabaseIntakeStore | None = None,
-    sheets: GoogleSheetsClient | None = None,
     cloudinary: CloudinaryClient | None = None,
     maps_client=None,
 ):
@@ -680,7 +657,6 @@ def process_page(
             _log_event("intake_property_update_ignored", page_id=page_id, updated_property_count=len(changed_ids))
             return {"status": "ignored", "listing_id": ""}
 
-    sheets = sheets or _runtime_sheets_client()
     cloudinary = cloudinary or _runtime_cloudinary_client()
     raw_text = _plain_text(props.get("Raw Property Data") or {})
     if not raw_text:
@@ -705,20 +681,18 @@ def process_page(
 
     listing_id = str((item or {}).get("listing_id") or _plain_text(props.get("Listing ID") or {})).strip()
     try:
-        # Validate the full write contract before Sheets writes, media uploads or page creation.
+        # Validate the canonical Notion contract before media uploads or page creation.
         notion.validate_listing_schema()
         if not listing_id:
-            listing_id = pipeline.next_listing_id(sheets)
+            listing_id = store.allocate_listing_id(page_id)
             store.set_listing_id(page_id, listing_id)
         notion.update_page(page_id, {"Intake Status": {"status": {"name": "Processing"}}, "Listing ID": _rich(listing_id)})
-        found = _row_for_listing(sheets, listing_id)
-        if found:
-            row_number, row = found
+        existing_listing = notion.find_listing(listing_id)
+        row = pipeline.initial_row(listing_id, raw_text, str(page.get("created_time") or datetime.now(timezone.utc).isoformat()))
+        if existing_listing:
+            row.update(listing_snapshot(existing_listing))
+            row["listing_id"] = listing_id
             row["raw_message_text"] = raw_text
-        else:
-            row_number = 2
-            row = pipeline.initial_row(listing_id, raw_text, str(page.get("created_time") or datetime.now(timezone.utc).isoformat()))
-            pipeline.write_new_property(sheets, row)
 
         urls, photo_issues = _upload_photos(page, listing_id, row, cloudinary)
         if urls:
@@ -740,8 +714,6 @@ def process_page(
             issues.append("WhatsApp caption not generated because a verified locality or Maps verification is missing.")
             processed["status"] = "Needs Review"
         processed["whatsapp_post"] = caption
-        sheet_projection = {name: processed[name] for name in schema.NAMES}
-        pipeline.write_phase1_update(sheets, row_number, sheet_projection)
         listing_page_id = notion.save_listing(processed)
         final_state = "Needs Review" if processed.get("status") == "Needs Review" else "Processed"
         note = "; ".join(issues) if issues else "Processed through the canonical EFPS inventory pipeline."

@@ -6,9 +6,6 @@ Parameters:
   NotionSecretArn:
     Type: String
     AllowedPattern: '^arn:[^:]+:secretsmanager:[^:]+:[0-9]{12}:secret:.+$'
-  GoogleSheetsSecretArn:
-    Type: String
-    AllowedPattern: '^arn:[^:]+:secretsmanager:[^:]+:[0-9]{12}:secret:.+$'
   CloudinarySecretArn:
     Type: String
     AllowedPattern: '^arn:[^:]+:secretsmanager:[^:]+:[0-9]{12}:secret:.+$'
@@ -43,7 +40,6 @@ Resources:
       Environment:
         Variables:
           NOTION_SECRET_ARN: !Ref NotionSecretArn
-          GOOGLE_SHEETS_SECRET_ARN: !Ref GoogleSheetsSecretArn
           CLOUDINARY_SECRET_ARN: !Ref CloudinarySecretArn
           MAPS_SECRET_ARN: !Ref MapsSecretArn
           SUPABASE_URL: 'https://qttcutwzehtskfcwxkwj.supabase.co'
@@ -76,7 +72,6 @@ Resources:
             - Effect: Allow
               Action: [secretsmanager:GetSecretValue]
               Resource:
-                - !Ref GoogleSheetsSecretArn
                 - !Ref CloudinarySecretArn
                 - !Ref MapsSecretArn
 

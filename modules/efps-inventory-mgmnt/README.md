@@ -1,13 +1,13 @@
 ## Current verified Notion listing-state control (2026-11-14)
 
-The canonical Notion Housing Listings data source now defines listing_state as a SELECT with exactly three options: Available (green), Rented Out (red), and On Hold (yellow). Existing values were preserved: 89 Available and 17 Rented Out at verification; no existing property rows were bulk-edited. This is a Notion schema-only change; no Google Sheets sync, new data flow, Supabase schema change, webhook change, or dashboard code change was introduced. Existing Notion page-property webhook → Lambda → notion-inventory-state → crm_inventory_snapshot → CRM dashboard path remains unchanged.
+The canonical Notion Housing Listings data source defines listing_state as a SELECT with exactly three options: Available (green), Rented Out (red), and On Hold (yellow). Existing values were preserved at the time of verification. The current raw-intake path is Notion → Supabase intake event/ID allocation → Cloudinary/Maps enrichment → Notion Housing Listings → Supabase inventory snapshot → CRM dashboard. Google Sheets is not read or written by this Notion intake path.
 # EFPS Inventory Management
 
 ## Current verified production state — 2026-11-14
 
 ## Raw-intake schema guard — deployed 2026-11-14
 
-The intake adapter checks live Housing Listings property types and required Select options before any Sheet write, photo upload, or canonical page create. `listing_state` is written as a Select, and the final payload is checked before save. Bounded Notion API error code/message are retained. AWS Lambda deployment is Active (CodeSha256 `AFh+Q+KR4onPTtRLPjyAW6AaMPKM0u0N55322ht3lM0=`). Inventory module tests: 114/114 pass locally. `EF-2611-YA84` now has a canonical Housing Listings page and matching active Supabase snapshot; its status is Needs Review because Maps verification was unavailable and 18 photos exceeded the 10-image catalogue limit. No Cloudinary image URLs were published.
+The intake adapter checks live Housing Listings property types and required Select options before photo upload or canonical page create. `listing_state` is written as a Select, and the final payload is checked before save. Raw Notion Property Intake no longer reads from or writes to Google Sheets; Notion is the property source of truth and Supabase remains the CRM projection. Bounded Notion API error code/message are retained. AWS Lambda deployment is Active (CodeSha256 `AFh+Q+KR4onPTtRLPjyAW6AaMPKM0u0N55322ht3lM0=`). Inventory module tests: 114/114 pass locally. `EF-2611-YA84` now has a canonical Housing Listings page and matching active Supabase snapshot; its status is Needs Review because Maps verification was unavailable and 18 photos exceeded the 10-image catalogue limit. No Cloudinary image URLs were published.
 
 
 - 107 active Notion-owned rows and 1 soft-deleted tombstone in Supabase; 106 report business_status Pending and EF-2611-YA84 reports Needs Review.
@@ -15,7 +15,7 @@ The intake adapter checks live Housing Listings property types and required Sele
 - Supabase notion-inventory-state ACTIVE v12; AWS efps-notion-intake updated successfully.
 - Maps API-unavailable fallback deployed: preserve only a supported original short URL, labelled unverified.
 - Processing Notes append each attempt as a new line in the same Notion cell; no separate activity table was introduced.
-- Current connected Housing_Listings column E has dropdown values Available and Rented Out only, with no conditional-format rules. No Google Sheets edit-to-Supabase synchronization is implemented; current update source is Notion Housing Listings.
+- The legacy Housing_Listings workbook contract is retained only for older inventory paths. The Notion raw-intake Lambda no longer receives its Sheets secret, IAM permission, or performs workbook reads/writes; Notion remains the source of truth.
 - Python Inventory + Maps tests: 141/141 passed in the current module suite. Two real submissions (EF-2611-PAGH, EF-2611-Y5KC) are Processed and reconciled. EF-2611-YA84 is reconciled with Needs Review; its 18 photos exceed the 10-image limit and Maps verification was unavailable.
 
 ## Historical initial webhook event-history deployment — 2026-11-14 (v10)
@@ -38,7 +38,7 @@ The production dashboard remains at 104 listings (87 Available / 17 Rented Out).
 - Existing Slack intake: /efps add-property collects details in a thread and writes through the canonical pipeline; /efps photos start associates operator-uploaded thread photos with the same Sheet row.
 - Existing WhAPI intake: messages from the two configured inventory sender numbers are accumulated until the next exact NEW boundary; the canonical pipeline closes and processes the prior property session. The runtime allowlist comes from INVENTORY_SENDERS, with the two verified sender numbers as fallback.
 - Canonical editor: Notion Housing Listings. Signed Page events mirror pages directly into the existing dashboard Supabase inventory. Supabase schema and Edge Function v9 and the isolated Lambda are deployed; the user confirms the existing webhook and all eight Page events remain selected. The backfill populated 104 active Notion-owned rows; see docs/NOTION_PROPERTY_INTAKE.md.
-- Raw Notion Property Intake remains a compatibility pipeline that uses the existing Sheet/Cloudinary/Maps credentials and creates/updates Housing Listings pages. No AWS secret values are rotated or duplicated.
+- Raw Notion Property Intake uses Notion, Supabase, Cloudinary, and Maps credentials; it no longer requires Google Sheets credentials and creates/updates canonical Housing Listings pages. No AWS secret values are rotated or duplicated.
 
 ## Review-status boundary
 
@@ -61,7 +61,7 @@ raw_message_text
 
 `src/pipeline.py:deterministic()` is the authoritative deterministic processing boundary. `src/field_resolution.py` is the canonical resolver for BHK, maintenance, and internal property type. `normalize.py` consumes the resolved property type and does not independently classify it.
 
-Existing Sheet Stage-2 values are never used as deterministic source evidence.
+Existing legacy Sheet Stage-2 values are never used as deterministic source evidence by the Notion intake path.
 
 ## Deterministic field contracts
 
@@ -99,13 +99,19 @@ Stage 2 first segments `raw_message_text` into source-message units using `src/s
 - `pet_friendly` defaults to `Yes` only when no explicit no-pet restriction is present.
 - `property_subtype`, title, highlights, location fallback, and property age follow the canonical source/data contracts.
 
-## Stage-1/2 Sheets boundary
+## Legacy Stage-1/2 Sheets boundary (other legacy intake paths only)
 
 The inventory contract is 48 columns A:AV. Recurring Stage 1/2 updates are restricted to A:D and F:AO. The initial Stage-1 row insertion currently bootstraps E (`listing_state`) as `Available`; subsequent Stage-1/2 projections protect E. AP:AT are downstream-owned. AU and AV are reserved and must remain blank.
 
+## Notion intake adapter — current production boundary
+
+Raw Property Intake uses Notion for source and canonical listing data, Supabase for idempotency and collision-safe Listing ID allocation, Cloudinary for photos, and Google Maps for optional verification. It does not instantiate a Google Sheets client, read or write a workbook, require `GOOGLE_SHEETS_SECRET_ARN`, or receive Google Sheets Secrets Manager IAM access. The SAM template no longer declares a Google Sheets secret parameter. The existing optional Maps billing fallback remains: the original supported short Maps URL is retained in Notion and in the WhatsApp post with an explicit “not verified” label; it is not treated as a verified location.
+
+The 26 historical Notion notifications whose recorded outcome and validation both say `ignored` are now stored as `ignored`, not `failed`. The database status constraint and update function now preserve that terminal status for future ignored notifications. Other genuine failed/rejected events remain separate.
+
 ## Notion intake adapter
 
-`src/notion_intake.py` has two paths. Raw Property Intake still claims in Supabase `crm_inventory_intake_events`, processes text/photos through the existing deterministic pipeline, writes the compatibility Housing_Listings Sheet row, and creates/updates the Housing Listings page. When a Housing Listings page is created or edited, the new path claims the same source page idempotently, allocates a stable Listing ID when needed, and upserts or soft-deletes the existing `public.crm_inventory_snapshot` row directly. The dashboard now includes `housing_notion` rows, and the compatibility Sheet sync cannot overwrite those rows. Long Maps URLs are omitted from captions and flagged; pet policy is not inferred. No WhatsApp message is sent.
+`src/notion_intake.py` has two paths. Raw Property Intake claims in Supabase `crm_inventory_intake_events`, allocates a stable Listing ID through the existing locked Supabase allocator, reads any prior canonical property values from Notion, processes text/photos through the existing deterministic pipeline, and creates/updates the Housing Listings page. It does not access Google Sheets. When a Housing Listings page is created or edited, the new path claims the same source page idempotently, allocates a stable Listing ID when needed, and upserts or soft-deletes the existing `public.crm_inventory_snapshot` row directly. The dashboard includes `housing_notion` rows directly from the canonical Notion projection. Long Maps URLs are omitted from captions and flagged; pet policy is not inferred. No WhatsApp message is sent.
 
 The adapter does not operate on AU/AV or send WhatsApp messages. Its SAM endpoint and secret contract are documented in `docs/NOTION_PROPERTY_INTAKE.md`. The existing AWS stack/Lambda/API route and Supabase `notion-inventory-state` v9 are deployed. Full 104-page source/projection reconciliation and event-to-Listing-ID mapping passed. The user-confirmed eight Page event selections were not changed. Existing AWS secret ARNs were reused; no secret values were displayed or changed. The Notion path has no DynamoDB dependency. A 15-minute scheduled reconciler repairs missed changes/restores and soft-deletes missing pages; fallback restoration was live-tested. Actual Notion `page.undeleted` delivery remains unobserved. The signed-in dashboard showed the 104-row projection.
 

@@ -266,31 +266,18 @@ def test_process_page_persists_one_listing_and_reconciles_intake(monkeypatch):
         def finish(self, page_id, state, **kwargs):
             self.finished.append((state, kwargs))
 
-    class FakeSheets:
-        def __init__(self):
-            self.inserts = []
-            self.writes = []
-        def read_range(self, spreadsheet_id, worksheet_name, range_name):
-            return []
-        def insert_rows(self, spreadsheet_id, worksheet_name, rows):
-            self.inserts.extend(rows)
-        def write_ranges(self, spreadsheet_id, worksheet_name, updates):
-            self.writes.extend(updates)
-
-    fake_notion, fake_store, fake_sheets = FakeNotion(), FakeStore(), FakeSheets()
+    fake_notion, fake_store = FakeNotion(), FakeStore()
     def fake_pipeline(raw_text, *, row, maps_client):
         result = dict(row)
         result.update(status="Pending", intake_status="Processed", property_subtype="Apartment", raw_message_text=raw_text)
         return result, []
     monkeypatch.setattr(intake.pipeline, "process_closed_session", fake_pipeline)
     result = intake.process_page(
-        "intake-page-id", notion=fake_notion, store=fake_store, sheets=fake_sheets,
+        "intake-page-id", notion=fake_notion, store=fake_store,
         cloudinary=object(), maps_client=object(),
     )
     assert result["status"] == "Processed"
     assert result["listing_id"] == "EF-TEST-INTAKE"
-    assert len(fake_sheets.inserts) == 1
-    assert fake_sheets.writes
     assert fake_notion.saved[0]["listing_id"] == "EF-TEST-INTAKE"
     final = fake_notion.updates[-1]
     assert final["Intake Status"]["status"]["name"] == "Processed"
@@ -323,7 +310,6 @@ def test_process_page_ignores_worker_owned_property_webhook(monkeypatch):
         updated_property_ids=["intake-status-id"],
         notion=FakeNotion(),
         store=NoCalls(),
-        sheets=NoCalls(),
         cloudinary=NoCalls(),
     )
     assert result == {"status": "ignored", "listing_id": ""}
@@ -345,7 +331,7 @@ def test_process_page_duplicate_delivery_does_not_write(monkeypatch):
             raise AssertionError(f"unexpected call: {name}")
     store = FakeStore()
     result = intake.process_page(
-        "intake-page-id", notion=FakeNotion(), store=store, sheets=NoCalls(),
+        "intake-page-id", notion=FakeNotion(), store=store,
         cloudinary=NoCalls(),
     )
     assert result == {"status": "already_processed", "listing_id": "EF-EXISTING"}
@@ -504,6 +490,9 @@ def test_process_page_persists_one_listing_and_reconciles_intake(monkeypatch):
     class FakeNotion:
         def __init__(self): self.updates, self.saved = [], []
         def validate_listing_schema(self): return None
+        def find_listing(self, listing_id):
+            assert listing_id == "EF-TEST-INTAKE"
+            return None
         def get_page(self, page_id):
             return {"id": page_id, "parent": {"database_id": intake.INTAKE_DATABASE_ID}, "created_time": "2026-11-13T00:00:00Z", "properties": {
                 "Raw Property Data": {"rich_text": [{"plain_text": "2 BHK Apartment\nRent: 50000\nLocation: Harlur"}]},
@@ -514,6 +503,7 @@ def test_process_page_persists_one_listing_and_reconciles_intake(monkeypatch):
         def __init__(self): self.finished = []
         def claim(self, page_id, payload_hash): return "claimed", {"listing_id": "EF-TEST-INTAKE"}
         def set_listing_id(self, page_id, listing_id): raise AssertionError("existing ID should be reused")
+        def allocate_listing_id(self, page_id): raise AssertionError("claimed Listing ID should be reused")
         def finish(self, page_id, state, **kwargs): self.finished.append((state, kwargs))
     class FakeSheets:
         def __init__(self): self.inserts, self.writes = [], []
@@ -529,9 +519,8 @@ def test_process_page_persists_one_listing_and_reconciles_intake(monkeypatch):
         return result, []
     monkeypatch.setattr(intake.pipeline, "process_closed_session", fake_pipeline)
     result = intake.process_page("intake-page-id", notion=fake_notion, store=fake_store,
-                                 sheets=fake_sheets, cloudinary=object(), maps_client=object())
+                                 cloudinary=object(), maps_client=object())
     assert result["status"] == "Processed" and result["listing_id"] == "EF-TEST-INTAKE"
-    assert len(fake_sheets.inserts) == 1 and fake_sheets.writes
     assert fake_notion.saved[0]["whatsapp_post"].startswith("*👉Semi Furnished 2 BHK*")
     assert fake_notion.saved[0]["whatsapp_post"].endswith("Location: *Harlur*")
     assert fake_notion.updates[-1]["Intake Status"]["status"]["name"] == "Processed"
@@ -548,7 +537,7 @@ def test_process_page_duplicate_delivery_does_not_write():
     class NoCalls:
         def __getattr__(self, name): raise AssertionError(f"unexpected call: {name}")
     result = intake.process_page("intake-page-id", notion=FakeNotion(), store=FakeStore(),
-                                 sheets=NoCalls(), cloudinary=NoCalls())
+                                 cloudinary=NoCalls())
     assert result == {"status": "already_processed", "listing_id": "EF-EXISTING"}
 
 def test_webhook_accepts_notion_event_entity_id(monkeypatch):
@@ -633,7 +622,7 @@ def test_blank_raw_property_data_is_marked_needs_review_without_claiming():
         def __getattr__(self, name): raise AssertionError(f"unexpected call: {name}")
     notion = FakeNotion()
     result = intake.process_page("12345678-1234-1234-1234-123456789abc", notion=notion,
-                                 store=NoCalls(), sheets=NoCalls(), cloudinary=NoCalls())
+                                 store=NoCalls(), cloudinary=NoCalls())
     assert result["status"] == "Needs Review"
     assert notion.updates[0]["Intake Status"]["status"]["name"] == "Needs Review"
 
