@@ -48,3 +48,58 @@ def test_partial_maps_requires_review_and_does_not_apply_candidate_location():
     assert processed["locality"] == "Harlur"
     assert processed["pincode"] == ""
     assert issues == ["Google Maps verification failed or is incomplete: PARTIAL_MATCH"]
+
+
+def test_maps_api_unavailable_preserves_source_url_without_needs_review():
+    raw = "2 BHK Apartment\nRent: 40000\nCommunity: Gated Community\nLocation: Harlur\nGoogle Maps: https://maps.app.goo.gl/example"
+
+    class UnavailableMaps:
+        def resolve(self, *, maps_url="", address=""):
+            return MapsResolution(canonical_url=maps_url, confidence="API_UNAVAILABLE")
+
+    processed, issues = pipeline.process_closed_session(
+        raw,
+        row=pipeline.initial_row("EF-TEST-MAPS-API-UNAVAILABLE"),
+        maps_client=UnavailableMaps(),
+        ai_llm=None,
+    )
+    assert processed["status"] == "Pending"
+    assert processed["intake_status"] == "Processed"
+    assert processed["google_maps_url"] == "https://maps.app.goo.gl/example"
+    assert any(issue.startswith("Google Maps API unavailable") for issue in issues)
+
+
+def test_maps_missing_runtime_verification_is_treated_as_optional_enrichment():
+    raw = "2 BHK Apartment\nRent: 40000\nCommunity: Gated Community\nLocation: Harlur\nGoogle Maps: https://maps.app.goo.gl/example"
+
+    class MissingKeyMaps:
+        def resolve(self, *, maps_url="", address=""):
+            return MapsResolution(canonical_url=maps_url, confidence="NEEDS_RUNTIME_VERIFICATION")
+
+    processed, issues = pipeline.process_closed_session(
+        raw,
+        row=pipeline.initial_row("EF-TEST-MAPS-MISSING-KEY"),
+        maps_client=MissingKeyMaps(),
+        ai_llm=None,
+    )
+    assert processed["status"] == "Pending"
+    assert processed["google_maps_url"] == "https://maps.app.goo.gl/example"
+    assert any(issue.startswith("Google Maps API unavailable") for issue in issues)
+
+
+def test_maps_transport_exception_does_not_block_intake_or_drop_source_url():
+    raw = "2 BHK Apartment\nRent: 40000\nCommunity: Gated Community\nLocation: Harlur\nGoogle Maps: https://maps.app.goo.gl/example"
+
+    class OfflineMaps:
+        def resolve(self, *, maps_url="", address=""):
+            raise TimeoutError("Google Maps request timed out")
+
+    processed, issues = pipeline.process_closed_session(
+        raw,
+        row=pipeline.initial_row("EF-TEST-MAPS-OFFLINE"),
+        maps_client=OfflineMaps(),
+        ai_llm=None,
+    )
+    assert processed["status"] == "Pending"
+    assert processed["google_maps_url"] == "https://maps.app.goo.gl/example"
+    assert any(issue.startswith("Google Maps API unavailable") for issue in issues)

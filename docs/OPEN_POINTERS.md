@@ -1,3 +1,7 @@
+## Current Maps fallback correction
+
+Maps API verification is optional for raw property intake. Missing/unreadable credentials, billing/quota/authorization denials, and request/transport failures preserve the submitted supported short Maps URL as not verified and do not independently create a `Needs Review` state. Source-derived locality remains authoritative; unverified Maps results never enrich location fields. Partial/mismatched results, unsupported links, and genuine property validation issues remain review conditions. See `docs/DEPLOYMENT.md` and `docs/NOTION_PROPERTY_INTAKE.md` for the deployed release evidence.
+
 ## Historical Task 3 deployment checkpoint — 2026-11-14 08:14 UTC (superseded by v12)
 
 ## Current verified open pointers — 2026-11-14 (live check)

@@ -1,3 +1,7 @@
+## Current Maps fallback correction
+
+Maps API verification is optional for raw property intake. Missing/unreadable credentials, billing/quota/authorization denials, and request/transport failures preserve the submitted supported short Maps URL as not verified and do not independently create a `Needs Review` state. Source-derived locality remains authoritative; unverified Maps results never enrich location fields. Partial/mismatched results, unsupported links, and genuine property validation issues remain review conditions. See `docs/DEPLOYMENT.md` and `docs/NOTION_PROPERTY_INTAKE.md` for the deployed release evidence.
+
 ## Current verified Notion listing-state control (2026-11-14)
 
 The canonical Notion Housing Listings data source now defines listing_state as a SELECT with exactly three options: Available (green), Rented Out (red), and On Hold (yellow). Existing values were preserved: 89 Available and 17 Rented Out at verification; no existing property rows were bulk-edited. This is a Notion schema-only change; no Google Sheets sync, new data flow, Supabase schema change, webhook change, or dashboard code change was introduced. Existing Notion page-property webhook → Lambda → notion-inventory-state → crm_inventory_snapshot → CRM dashboard path remains unchanged.

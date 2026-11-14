@@ -640,15 +640,20 @@ def _runtime_cloudinary_client() -> CloudinaryClient:
 
 
 def _runtime_maps_client() -> GoogleMapsClient:
-    raw = _aws_secret_value("MAPS_SECRET_ARN")
     try:
-        parsed = json.loads(raw)
-        key = parsed.get("api_key", "") if isinstance(parsed, dict) else raw
-    except json.JSONDecodeError:
-        key = raw
-    if not str(key).strip() or str(key).strip() == "MIGRATION_PLACEHOLDER":
-        raise IntakeError("Google Maps API secret is not configured with a live key")
-    return GoogleMapsClient(api_key=str(key).strip())
+        raw = _aws_secret_value("MAPS_SECRET_ARN")
+        try:
+            parsed = json.loads(raw)
+            key = parsed.get("api_key", "") if isinstance(parsed, dict) else raw
+        except json.JSONDecodeError:
+            key = raw
+        if str(key).strip() == "MIGRATION_PLACEHOLDER":
+            key = ""
+        return GoogleMapsClient(api_key=str(key).strip())
+    except Exception:
+        # A missing/unreadable Maps secret must not block raw intake. The
+        # pipeline will preserve the submitted URL and mark it not verified.
+        return GoogleMapsClient(api_key="")
 
 
 def process_page(

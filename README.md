@@ -1,7 +1,13 @@
 ## Current verified Notion listing-state control (2026-11-14)
 
 The canonical Notion Housing Listings data source now defines listing_state as a SELECT with exactly three options: Available (green), Rented Out (red), and On Hold (yellow). Existing values were preserved: 89 Available and 17 Rented Out at verification; no existing property rows were bulk-edited. This is a Notion schema-only change; no Google Sheets sync, new data flow, Supabase schema change, webhook change, or dashboard code change was introduced. Existing Notion page-property webhook → Lambda → notion-inventory-state → crm_inventory_snapshot → CRM dashboard path remains unchanged.
-## Current verified production state — 2026-11-14 (live check)
+## Current verified production state — Maps fallback release (2026-11-15)
+
+- Maps API verification is optional enrichment. Missing/unreadable Maps credentials, billing/quota/authorization denial, and request/transport errors preserve the supported original Maps URL as not verified and do not independently mark intake Needs Review. The original link does not supply verified locality, pincode, coordinates, or place-name data.
+- Genuine review conditions remain independent: missing/invalid required property fields, missing source locality, partial/mismatched Maps results, unsupported link formats, AI conflicts, and photo-limit violations. `EF-2611-YA84` remains deliberately Needs Review for its 18 photos exceeding the 10-image catalogue limit; Maps API unavailability alone is not a reason to keep it in review.
+- Regression coverage includes API-unavailable results, transport exceptions, missing Maps secret, and partial-match review behavior. Current release evidence is recorded in `docs/DEPLOYMENT.md` and `docs/NOTION_PROPERTY_INTAKE.md`.
+
+## Historical verified production state — 2026-11-14 (superseded by the Maps fallback release below)
 
 - Raw-intake schema compatibility is corrected and deployed: the Lambda now serializes every string-valued field from the live Notion property type (`rich_text`, Select, or Status), validates options, and preserves the `listing_id` rich-text identity contract. Lambda CodeSha256: `tuZzYD9Ks55hYm547+HmvaBn4EvwvfuzW0yTqVH2nP4=`. Inventory tests 126/126, Node tests 146/146, browser 1/1, SAM validate/build and production build pass. A fresh operator-submitted raw intake remains the final end-to-end acceptance; no synthetic intake was created.
 

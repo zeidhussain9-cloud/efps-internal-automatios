@@ -68,8 +68,14 @@ def process_closed_session(raw_text: str, *, row: dict | None = None, maps_clien
     maps_url = out.get("google_maps_url", "")
     maps_unverified = False
     if maps_url:
-        resolved = maps.resolve(maps_url=maps_url)
-        if resolved.confidence == "VERIFIED":
+        try:
+            resolved = maps.resolve(maps_url=maps_url)
+        except Exception:
+            # Maps is optional enrichment. Network, HTTP, billing, quota, and
+            # credential failures must not discard a valid source-submitted URL.
+            resolved = None
+            issues.append("Google Maps API unavailable (credentials, billing, quota, authorization, or network); original source URL retained and labelled not verified.")
+        if resolved is not None and resolved.confidence == "VERIFIED":
             out["google_maps_url"] = maps_url
             verified_locality = str(resolved.locality or "").strip()
             source_locality = str(out.get("locality", "") or "").strip()
@@ -89,12 +95,12 @@ def process_closed_session(raw_text: str, *, row: dict | None = None, maps_clien
                     issues.append(f"Google Maps verified place name overrides source society: {source_society} -> {place_name}")
                 out["society_name"] = place_name
                 issues.append(f"Google Maps verified place name: {place_name}")
-        else:
-            if resolved.confidence == "API_UNAVAILABLE":
-                issues.append("Google Maps API unavailable (billing, quota, or key authorization); original source URL retained for operator review.")
+        elif resolved is not None:
+            if resolved.confidence in {"API_UNAVAILABLE", "NEEDS_RUNTIME_VERIFICATION"}:
+                    issues.append("Google Maps API unavailable (credentials, billing, quota, or authorization); original source URL retained and labelled not verified.")
             else:
                 issues.append(f"Google Maps verification failed or is incomplete: {resolved.confidence}")
-            maps_unverified = True
+                maps_unverified = True
     try:
         from .phase1 import apply_location_contract
     except ImportError:

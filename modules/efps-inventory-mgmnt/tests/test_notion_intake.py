@@ -847,3 +847,11 @@ def test_notion_listing_reconciliation_excludes_archived_and_trashed_pages():
         def request(self, *args, **kwargs): return FakeResponse()
     notion = intake.NotionClient("test-token", session=FakeSession())
     assert [page["id"] for page in notion.list_listings()] == ["active"]
+
+
+def test_runtime_maps_client_does_not_block_when_secret_is_missing(monkeypatch):
+    monkeypatch.delenv("GOOGLE_MAPS_API_KEY", raising=False)
+    monkeypatch.setattr(intake, "_aws_secret_value", lambda _name: (_ for _ in ()).throw(intake.IntakeError("secret unavailable")))
+    monkeypatch.setattr("shared.credentials.get_secret", lambda _name: (_ for _ in ()).throw(RuntimeError("not available")))
+    client = intake._runtime_maps_client()
+    assert client.api_key == ""

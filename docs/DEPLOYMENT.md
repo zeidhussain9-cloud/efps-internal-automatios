@@ -1,16 +1,29 @@
 # EFPS SAM Deployment Contract
 
-## Current verified release state — 2026-11-14 (live check)
+## Current Maps fallback release — 2026-11-15
 
-- AWS Lambda `efps-notion-intake` is Active, `LastUpdateStatus=Successful`, last modified `2026-11-14T18:40:19Z`, CodeSha256 `tuZzYD9Ks55hYm547+HmvaBn4EvwvfuzW0yTqVH2nP4=`. The deployed package reads the live Notion schema and serializes string-valued fields by actual `rich_text`, Select, or Status type. Stack `efps-notion-property-intake` is `UPDATE_COMPLETE`; the 15-minute EventBridge reconciliation rule remains enabled. Inventory tests 126/126, Node 146/146, browser 1/1, production build, SAM validate/build and generated-template validation passed. Fresh operator-submitted raw-intake acceptance remains pending; no synthetic record was created.
+The raw-intake worker now treats Maps verification as optional enrichment. Missing/unreadable credentials, empty/placeholder keys, billing/quota/authorization denial, and request/transport exceptions preserve the original supported short Maps URL and label it not verified. These API availability conditions do not independently produce `Needs Review`; unverified Maps results never supply locality, pincode, coordinates, or place name. Partial/mismatched results, unsupported URLs, missing required source fields/locality, AI conflicts, and photo-limit violations remain separate review conditions.
 
-- Render CRM service srv-darsv560tbcc73cu4ip0 is LIVE; the exact deployment ID and commit are authoritative in Render and are not duplicated here.
-- Local and remote main / crm-ui-dashboard branches share the same tracked tree; GitHub currently advertises exactly these two branch refs.
-- Supabase notion-inventory-state ACTIVE v12; migration 20261114095316_crm_inventory_business_status registered and applied.
-- AWS efps-notion-intake Active; LastUpdateStatus Successful, last modified 2026-11-14T12:59:58Z; append-only Processing Notes worker deployed; Maps fallback deployed.
-- Two operator submissions are Processed and reconciled; EF-2611-YA84 is reconciled with Needs Review due to Maps/photo-limit issues.
-- Notion webhook ledger currently contains 96 observed rows: 64 synced, 2 already processed, 26 ignored outcomes, 3 Needs Review, and 1 with no outcome. The 26 ignored outcomes are still stored with processing_status=failed; this status/outcome mismatch is an open ledger issue. Complete webhook delivery capture is not certified.
-- No database tables deleted.
+- Code changes: `modules/efps-inventory-mgmnt/src/pipeline.py`, `src/notion_intake.py`.
+- Regression suite covers API unavailable, missing runtime key, request timeout, missing Maps secret, and partial-match review behavior.
+- Isolated AWS stack: `efps-notion-property-intake`, region `ap-southeast-2`; Lambda: `efps-notion-intake`. Deployment timestamp, CodeSha256, commit and branch/tree equality are recorded in the release verification below.
+- Existing Notion webhook, Supabase projection/schema, EventBridge reconciliation, and WhAPI/CRM stack are unchanged.
+
+
+## Current verified release state — 2026-11-15 (Maps fallback correction)
+
+The raw-intake worker treats Google Maps as optional enrichment. Missing/unreadable credentials, empty/placeholder keys, billing/quota/authorization denial, and request/transport exceptions preserve the original supported short Maps URL and label it not verified. These API availability conditions do not independently produce `Needs Review`. The original link is not treated as verified location evidence and cannot supply locality, pincode, coordinates, or place name. Partial/mismatched results, unsupported URL formats, missing required source fields/locality, AI conflicts, and photo-limit violations remain independent review conditions.
+
+- Source changes: `modules/efps-inventory-mgmnt/src/pipeline.py` and `src/notion_intake.py`; regression tests cover API-unavailable responses, transport exceptions, missing secret initialization, and partial-match review.
+- Isolated AWS stack: `efps-notion-property-intake`, region `ap-southeast-2`; deployed Lambda: `efps-notion-intake`. The exact deployment timestamp, CodeSha256, stack status, and source commit are updated after the AWS release is verified.
+- Existing Notion webhook, Supabase projection, EventBridge reconciliation, and WhAPI/CRM stack are unchanged by this code correction.
+- Local Python inventory/Maps suite: 175 passed. Node suite: 146 passed. Browser regression: 1 passed. Production build, Python compileall, SAM template validation and non-container SAM build passed.
+- No production Notion test record was created or existing property mutated during the code verification. A fresh synthetic intake acceptance remains separate from this code/deployment release and will not be performed without approval.
+
+- Render CRM service `srv-darsv560tbcc73cu4ip0` remains a separate production deployment; this inventory-only change does not alter CRM UI runtime.
+- Branches `main` and `crm-ui-dashboard` are reconciled by the release commit; the exact commit/tree SHAs are recorded after GitHub push.
+- Supabase schema/functions and database rows were not changed.
+- No database tables were deleted.
 
 ## Historical Task 3 local-status note — superseded by the production deployment entries below
 

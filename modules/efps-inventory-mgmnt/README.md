@@ -7,13 +7,13 @@ The canonical Notion Housing Listings data source defines listing_state as a SEL
 
 ## Raw-intake schema guard — deployed 2026-11-14
 
-The intake adapter checks live Housing Listings property types and required Select options before photo upload or canonical page create. `listing_state` is written as a Select, and the final payload is checked before save. Raw Notion Property Intake no longer reads from or writes to Google Sheets; Notion is the property source of truth and Supabase remains the CRM projection. Bounded Notion API error code/message are retained. AWS Lambda deployment is Active (CodeSha256 `AFh+Q+KR4onPTtRLPjyAW6AaMPKM0u0N55322ht3lM0=`). Inventory module tests: 114/114 pass locally. `EF-2611-YA84` now has a canonical Housing Listings page and matching active Supabase snapshot; its status is Needs Review because Maps verification was unavailable and 18 photos exceeded the 10-image catalogue limit. No Cloudinary image URLs were published.
+The intake adapter checks live Housing Listings property types and required Select options before photo upload or canonical page create. `listing_state` is written as a Select, and the final payload is checked before save. Raw Notion Property Intake no longer reads from or writes to Google Sheets; Notion is the property source of truth and Supabase remains the CRM projection. Bounded Notion API error code/message are retained. AWS Lambda deployment is Active (CodeSha256 `AFh+Q+KR4onPTtRLPjyAW6AaMPKM0u0N55322ht3lM0=`). Inventory module tests: 114/114 pass locally. `EF-2611-YA84` has a canonical Housing Listings page and matching active Supabase snapshot; it remains Needs Review because 18 photos exceed the 10-image catalogue limit. Maps API unavailability alone is not a review reason under the current fallback contract. No Cloudinary image URLs were published.
 
 
 - 107 active Notion-owned rows and 1 soft-deleted tombstone in Supabase; 106 report business_status Pending and EF-2611-YA84 reports Needs Review.
 - Notion event history remains in crm_inventory_intake_events; WhatsApp event history remains in crm_webhook_events. No tables deleted.
 - Supabase notion-inventory-state ACTIVE v12; AWS efps-notion-intake updated successfully.
-- Maps API-unavailable fallback deployed: preserve only a supported original short URL, labelled unverified.
+- Maps API verification is optional enrichment. Missing/unreadable credentials, billing/quota/authorization denial, and request/transport failures preserve a supported original short Maps URL with an explicit not-verified label; they do not independently set Needs Review. Genuine extraction/validation errors, unresolved required locality, unsupported URL format, AI conflicts, and the photo limit remain separate review reasons.
 - Processing Notes append each attempt as a new line in the same Notion cell; no separate activity table was introduced.
 - The legacy Housing_Listings workbook contract is retained only for older inventory paths. The Notion raw-intake Lambda no longer receives its Sheets secret, IAM permission, or performs workbook reads/writes; Notion remains the source of truth.
 - Python Inventory + Maps tests: 141/141 passed in the current module suite. Two real submissions (EF-2611-PAGH, EF-2611-Y5KC) are Processed and reconciled. EF-2611-YA84 is reconciled with Needs Review; its 18 photos exceed the 10-image limit and Maps verification was unavailable.
@@ -44,7 +44,7 @@ The production dashboard remains at 104 listings (87 Available / 17 Rented Out).
 
 `Needs Review` is not a normal result of deterministic extraction. A valid deterministic extraction remains `Pending` after `intake_status = Processed`.
 
-`Needs Review` is used for deterministic validation errors, explicit AI conflicts, or a supplied Maps URL that cannot be VERIFIED. Unverified Maps candidates never supply locality/pincode and do not overwrite source values. A VERIFIED Maps locality/place name overrides conflicting source locality/society.
+`Needs Review` is used for deterministic validation errors, explicit AI conflicts, genuine Maps verification mismatches/partial results, unsupported submitted Maps URLs where the caption contract cannot safely retain them, or other explicit review conditions. Maps API unavailability (missing key, billing, quota, authorization, or network/transport failure) is not itself a review condition when a supported original source URL and the required source-derived locality are present. The exact original URL is retained and labelled not verified; unverified Maps results never supply locality/pincode or overwrite source values. A VERIFIED Maps locality/place name may override conflicting source locality/society.
 
 ## Canonical Stage-2 pipeline
 
