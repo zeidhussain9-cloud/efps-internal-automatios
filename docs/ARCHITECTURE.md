@@ -1,5 +1,19 @@
 # EFPS Internal Automations — Architecture
 
+## Current verified production state — 2026-11-14
+
+Notion Housing Listings is canonical. Supabase crm_inventory_snapshot is the CRM projection; 106 active Notion-owned rows currently have business_status Pending. business_status is separate from intake_status and listing_state.
+
+- Main and crm-ui-dashboard are synchronized at commit 86c4389 / tree ccec16e4.
+- Render deployment dep-dbs2qnqjnfac73bq84sg is LIVE on commit 2727b38; /health HTTP 200.
+- Supabase notion-inventory-state ACTIVE v11; additive business_status migration registered and applied.
+- AWS efps-notion-intake Active, update successful; Maps API-unavailable fallback deployed.
+- Notion event history remains in crm_inventory_intake_events; WhatsApp history remains in crm_webhook_events. No tables deleted.
+- 12 Notion events observed: 5 processed, 4 ignored non-intake changes, 1 rejected unauthenticated probe, 2 needs-review outcomes. Capture completeness not certified.
+- The live intake form exposes Raw Property Data and Photos. Two existing submissions have photos but no raw text and remain Needs Review; full acceptance awaits a valid operator submission.
+
+# EFPS Internal Automations — Architecture
+
 ## Notion webhook event ledger implementation status
 
 The repository now contains a local-only Task 3 extension to the existing `crm_inventory_intake_events` ledger, with lifecycle hooks in the existing Notion Edge Function/Lambda path. It does not create a new event table or change `crm_webhook_events` / WhatsApp processing. The migration and function/Lambda code have not been applied or deployed to production; the production architecture therefore remains as recorded in the verified state below until deployment is separately authorized.

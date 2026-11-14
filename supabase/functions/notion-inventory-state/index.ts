@@ -183,7 +183,7 @@ Deno.serve(async (req) => {
       monthly_rent: numeric(record.monthly_rent),
       furnishing: String(record.furnish_type ?? ''),
       listing_state: String(record.listing_state ?? 'Unknown'),
-      business_status: String(record.status ?? ''),
+      business_status: String(record.status ?? '').trim() || 'Not recorded',
       intake_status: String(record.intake_status ?? ''),
       pet_friendly: String(record.pet_friendly ?? ''),
       cloudinary_image_urls: urls,

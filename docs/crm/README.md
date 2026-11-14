@@ -1,5 +1,16 @@
 # EasyFind CRM Documentation
 
+## Current verified production state — 2026-11-14
+
+- main and crm-ui-dashboard are synchronized at commit 86c4389 / tree ccec16e4.
+- Render deployment dep-dbs2qnqjnfac73bq84sg LIVE on commit 2727b38; /health HTTP 200.
+- Supabase notion-inventory-state ACTIVE v11; AWS efps-notion-intake update successful.
+- Inventory: 106 active Notion-owned rows; business_status Pending on all 106.
+- Notion events: 12 observed, 5 processed, 4 ignored non-intake changes, 1 rejected unauthenticated probe, 2 needs review. Complete delivery coverage is not certified.
+- No tables deleted. Raw intake end-to-end acceptance awaits a complete operator submission with Raw Property Data and Photos.
+
+# EasyFind CRM Documentation
+
 ## Authoritative current verified state — 2026-11-13
 
 > The latest UI release is live on the remote branch. Notion inventory recovery hardening is deployed (Supabase Edge Function v9, AWS Lambda with 15-minute reconciliation and SQS failure capture). See `CRM_CURRENT_VERIFIED_STATE.md` and `HANDOFF.md` for current evidence. Older dated checkpoints below remain historical.

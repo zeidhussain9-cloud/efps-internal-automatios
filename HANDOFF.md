@@ -1,5 +1,22 @@
 # EFPS CRM — Handoff
 
+## Current verified production state — 2026-11-14
+
+- No database tables deleted. WhatsApp history remains in crm_webhook_events; Notion event history remains in crm_inventory_intake_events.
+- Remote main and crm-ui-dashboard are synchronized at commit 86c4389 / tree ccec16e4. The only local untracked path is supabase/.temp/; preserved.
+- Render deployment dep-dbs2qnqjnfac73bq84sg is LIVE on commit 2727b38; /health HTTP 200; live JS/CSS contain the review-status UI.
+- Supabase notion-inventory-state ACTIVE v11, JWT verification enabled. Migration 20261114095316_crm_inventory_business_status is registered and applied.
+- AWS efps-notion-intake is Active, LastUpdateStatus Successful, deployed package CodeSha256 bx0ZE/aWHFPPIm4AMXcWFablYSPTVPvzj8543mC+s64=.
+- 106 active Notion-owned inventory rows; business_status Pending on all 106. The dashboard has an independent review-status filter and card display.
+- Notion event ledger: 12 observed events — 5 processed, 5 failed-status (4 ignored non-intake changes and 1 rejected unauthenticated probe), 2 needs review. Complete delivery capture is not certified.
+- Live form schema exposes Raw Property Data and Photos. Two existing submissions contain photos but blank Raw Property Data and remain Needs Review. No synthetic property was created.
+- Maps fallback is deployed: preserve only an original supported short Maps URL and label it unverified when the Maps API is unavailable; no place facts are inferred.
+- Local validation before release: Python Inventory + Maps 122/122; Node 146/146; browser 1/1; Vite build PASS; git diff --check PASS.
+- Notion home, workflow and canonical column pages received current runtime notes. No Notion page or database was deleted.
+- Remaining acceptance blocker: a complete real operator submission with Raw Property Data and Photos, then verify Sheets, Cloudinary, Housing Listings and Supabase end to end.
+
+# EFPS CRM — Handoff
+
 ## Notion webhook event history — production deployment 2026-11-14
 
 - Commit `ca05141bec073b87c8617c59bf79a40cd16534f9` is pushed to `crm-ui-dashboard`; Render deployment `dep-dbs1f0m417fc73f0cmig` is LIVE.

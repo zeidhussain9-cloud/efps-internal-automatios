@@ -1,5 +1,17 @@
 # EFPS CRM — Current Verified State
 
+## Current release and inventory status — 2026-11-14
+
+- Git branches main and crm-ui-dashboard are synchronized at commit 86c4389 / tree ccec16e4.
+- Render deployment dep-dbs2qnqjnfac73bq84sg LIVE, commit 2727b38; /health HTTP 200.
+- Supabase notion-inventory-state ACTIVE v11; business_status migration registered and applied.
+- AWS efps-notion-intake Active; code update successful; Maps fallback deployed.
+- Inventory: 106 active Notion-owned rows; business_status Pending on all 106. This remains distinct from intake_status and listing_state.
+- Notion events: 12 observed; 5 processed, 4 ignored non-intake changes, 1 rejected unauthenticated probe, 2 needs review. Complete event capture not certified.
+- Full Raw Property Intake acceptance remains pending because two existing submissions have Photos but blank Raw Property Data. No tables deleted.
+
+# EFPS CRM — Current Verified State
+
 > CRM metrics below were last revalidated 2026-11-12. Inventory release, counts, and Render state were rechecked 2026-11-13.
 
 ## Runtime and release

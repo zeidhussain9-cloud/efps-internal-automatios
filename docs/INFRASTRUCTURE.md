@@ -1,3 +1,14 @@
+# Infrastructure Registry
+
+## Current verified infrastructure — 2026-11-14
+
+- Supabase project qttcutwzehtskfcwxkwj; notion-inventory-state ACTIVE v11 with JWT verification enabled.
+- Migration 20261114095316_crm_inventory_business_status is registered and applied; it adds business_status and a partial index to crm_inventory_snapshot. No tables deleted.
+- Render service srv-darsv560tbcc73cu4ip0: deployment dep-dbs2qnqjnfac73bq84sg LIVE on commit 2727b38; /health HTTP 200.
+- AWS account 294417174793, region ap-southeast-2; efps-notion-intake Active, LastUpdateStatus Successful, package CodeSha256 bx0ZE/aWHFPPIm4AMXcWFablYSPTVPvzj8543mC+s64=.
+- Maps API-unavailable fallback deployed to the existing Lambda. Only supported original short URLs are passed through and explicitly marked unverified.
+- No secret values were printed or rotated.
+
 ## Notion webhook event history — production deployment 2026-11-14
 
 - Supabase migration `crm_notion_webhook_event_history` is applied to `qttcutwzehtskfcwxkwj`. It extends `crm_inventory_intake_events`; it does not create a new event table or modify `crm_webhook_events`.

@@ -1,5 +1,16 @@
 # EFPS CRM — Housing Inventory Sync Runbook
 
+## Current verified production checkpoint — 2026-11-14
+
+- Notion Housing Listings is canonical; crm_inventory_snapshot is the CRM projection.
+- Active Notion-owned projection: 106 rows; business_status Pending on all 106.
+- Supabase notion-inventory-state ACTIVE v11. Render deploy dep-dbs2qnqjnfac73bq84sg LIVE on 2727b38. AWS efps-notion-intake update successful.
+- 12 Notion events observed: 5 processed, 4 ignored non-intake changes, 1 rejected unauthenticated probe, 2 needs-review outcomes. Delivery capture completeness not certified.
+- The form schema includes Raw Property Data and Photos; two existing submissions have photos but no raw text and remain Needs Review.
+- Maps API-unavailable fallback deployed. No database tables deleted.
+
+# EFPS CRM — Housing Inventory Sync Runbook
+
 > Historical Sheet scheduler repair revalidated 2026-11-12. Notion ownership and projection updated 2026-11-13.
 
 ## Canonical editor transition — 2026-11-13

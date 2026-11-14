@@ -1,5 +1,13 @@
 # Data Contracts
 
+## Current verified inventory and event contract — 2026-11-14
+
+crm_inventory_snapshot.business_status is the top-level CRM projection of source_record.status. It is distinct from intake_status (intake lifecycle), listing_state (availability), and crm_inventory_intake_events.processing_status (webhook processing outcome). Existing Notion rows were backfilled from source_record.status; all 106 active Notion-owned rows currently report Pending. New Notion inventory upserts populate business_status and default missing/blank values to Not recorded.
+
+Notion event history is retained in the existing crm_inventory_intake_events table. WhatsApp event history remains in crm_webhook_events. No tables were deleted. The current Notion event audit has 12 observed rows; 5 processed, 4 ignored non-intake changes, 1 rejected unauthenticated probe, and 2 needs-review outcomes. This does not prove complete webhook delivery capture.
+
+# Data Contracts
+
 ## Notion webhook event ledger (local implementation)
 
 The existing `crm_inventory_intake_events` table is extended in place for signed Notion webhook delivery history. Namespaced event rows retain stable event identity, event type/page reference, sanitized payload and raw-body fingerprint, each delivery attempt, lifecycle/status history, processing attempts/errors/outcome, AWS request ID, and optional Listing ID/page correlation. The base page-level intake rows remain keyed by the Notion page ID and continue to drive the existing idempotency contract. Notion event rows use `source_page_id` values prefixed with `notion-webhook:` and do not create a parallel table. Terminal processing states remain within the existing allowed status constraint; validation outcomes are stored separately. Production schema and runtime remain unchanged until deployment.
