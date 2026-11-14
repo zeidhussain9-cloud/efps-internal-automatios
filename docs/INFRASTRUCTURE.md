@@ -2,7 +2,7 @@
 
 ## Current verified infrastructure — 2026-11-14 (live check)
 
-- AWS Lambda `efps-notion-intake` was updated 2026-11-14T15:03:52Z; CodeSha256 `AFh+Q+KR4onPTtRLPjyAW6AaMPKM0u0N55322ht3lM0=`. The update changes the existing intake code only; no Supabase schema, secret values, or schedules were changed.
+- AWS Lambda `efps-notion-intake` is Active, LastUpdateStatus Successful, last modified `2026-11-14T18:40:19Z`, CodeSha256 `tuZzYD9Ks55hYm547+HmvaBn4EvwvfuzW0yTqVH2nP4=`. The deployed adapter now reads the live Notion schema and serializes string-valued fields by actual `rich_text`, Select, or Status type. CloudFormation stack `efps-notion-property-intake` is `UPDATE_COMPLETE`; the existing 15-minute EventBridge reconciliation rule remains enabled. No Supabase schema or secret values were changed.
 
 - Supabase project qttcutwzehtskfcwxkwj; notion-inventory-state ACTIVE v12 with JWT verification enabled.
 - Migration 20261114095316_crm_inventory_business_status is registered and applied. No tables deleted.

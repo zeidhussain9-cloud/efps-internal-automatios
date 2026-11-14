@@ -2,7 +2,7 @@
 
 ## Current verified documentation checkpoint — 2026-11-14
 
-Current operational status is recorded at the top of README.md, HANDOFF.md, docs/ARCHITECTURE.md, docs/DATA_CONTRACTS.md, docs/INFRASTRUCTURE.md, docs/NOTION_PROPERTY_INTAKE.md, docs/crm/CRM_CURRENT_VERIFIED_STATE.md, docs/crm/CRM_DATA_MODEL.md and docs/crm/CRM_INVENTORY_SYNC_RUNBOOK.md. Older dated counts and runtime versions are historical checkpoints, not live state. The business_status contract spans the Supabase migration, Notion Edge Function, CRM repository/API, inventory logic/UI and regression tests. Maps fallback is deployed in the existing Notion intake Lambda. **Raw-intake locality Select compatibility is not deployed:** the current live schema is Select while Lambda still expects rich_text; the local fix has 126 Inventory tests and SAM validation/build passing. No tables deleted.
+Current operational status is recorded at the top of README.md, HANDOFF.md, docs/ARCHITECTURE.md, docs/DATA_CONTRACTS.md, docs/INFRASTRUCTURE.md, docs/NOTION_PROPERTY_INTAKE.md, docs/crm/CRM_CURRENT_VERIFIED_STATE.md, docs/crm/CRM_DATA_MODEL.md and docs/crm/CRM_INVENTORY_SYNC_RUNBOOK.md. Older dated counts and runtime versions are historical checkpoints, not live state. The business_status contract spans the Supabase migration, Notion Edge Function, CRM repository/API, inventory logic/UI and regression tests. Maps fallback is deployed in the existing Notion intake Lambda. **Raw-intake schema compatibility is deployed:** the Lambda uses live Notion property types for string-field serialization; 126 Inventory tests and SAM validation/build pass. Fresh operator-submitted end-to-end acceptance remains pending. No tables deleted.
 
 # Documentation Update Matrix
 

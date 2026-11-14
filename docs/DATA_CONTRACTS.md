@@ -2,7 +2,7 @@
 
 ## Current verified inventory and event contract — 2026-11-14 (live check)
 
-- Raw-intake write contract: the deployed Lambda currently has a known incompatibility because live `locality` is Select but the worker expects/serializes rich_text. The local correction fetches and validates the live schema before constructing the write payload, selects the matching locality serializer, and validates the selected option; it is tested but not deployed. Do not describe locality compatibility as live until the Lambda hash and controlled intake acceptance prove it.
+- Raw-intake write contract: the deployed Lambda fetches and validates the live Housing Listings schema before constructing the outgoing payload. String-valued fields serialize according to their actual Notion `rich_text`, Select, or Status type; Select/Status options are validated. `listing_id` remains rich_text for the existing identity query. Deployed Lambda CodeSha256: `tuZzYD9Ks55hYm547+HmvaBn4EvwvfuzW0yTqVH2nP4=`. Fresh operator-submitted raw-intake end-to-end acceptance remains pending; no synthetic production record was created.
 
 crm_inventory_snapshot is the CRM projection of canonical Notion Housing Listings. business_status is distinct from intake_status, listing_state, and crm_inventory_intake_events.processing_status.
 

@@ -2,7 +2,7 @@
 
 ## Current verified production state — 2026-11-14 (live check)
 
-- Raw-intake currently has a confirmed locality schema mismatch: live Notion locality is Select, but deployed Lambda expects/serializes rich_text. A schema-first Notion-type-aware string-field fix is local and tested (126 Inventory tests), not deployed. The direct Housing Listings page-event projection separately supports Select values. No new service, table, or scheduler is introduced by the local fix.
+- Raw-intake schema compatibility is corrected and deployed: the isolated Lambda reads the live Notion schema before constructing the write payload and serializes string-valued fields according to their actual `rich_text`, Select, or Status type; Select/Status options are validated and `listing_id` retains its rich-text identity contract. Lambda CodeSha256 `tuZzYD9Ks55hYm547+HmvaBn4EvwvfuzW0yTqVH2nP4=`. A fresh operator-submitted intake remains the final end-to-end acceptance; no synthetic production intake was created.
 
 Notion Housing Listings is the canonical operator editor. Supabase public.crm_inventory_snapshot is the CRM projection. The live projection has 107 active Notion-owned rows, 1 soft-deleted Notion-owned row, and 0 active rows with blank locality and society name.
 

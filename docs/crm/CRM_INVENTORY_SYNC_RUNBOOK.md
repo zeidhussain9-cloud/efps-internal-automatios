@@ -10,7 +10,7 @@ The canonical Notion Housing Listings data source now defines listing_state as a
 - Notion Housing Listings is canonical; crm_inventory_snapshot is the CRM projection.
 - 107 active Notion-owned rows, 1 soft-deleted tombstone, 0 active blank locality/society rows.
 - Supabase locality projection has recovered to 107/107 active rows populated; the earlier 104/107 blank report was transient during the enabled 15-minute EventBridge reconciliation. No manual repair was applied.
-- Raw-intake locality remains blocked: live Notion locality is Select while the deployed Lambda still expects/serializes rich_text. The corrective code is local only; do not treat raw-intake Select compatibility as live until deployment and controlled acceptance pass.
+- Raw-intake schema compatibility is corrected and deployed: the Lambda now serializes string-valued fields according to the live Notion type. CodeSha256 `tuZzYD9Ks55hYm547+HmvaBn4EvwvfuzW0yTqVH2nP4=`. Fresh operator-submitted raw-intake end-to-end acceptance remains pending; no synthetic production property was created.
 - Render CRM service srv-darsv560tbcc73cu4ip0 is LIVE; the exact deployment ID and commit are authoritative in Render and are not duplicated here.
 - Two recent property submissions have Processed status, raw data, photos, Housing Listings relations and matching active Supabase snapshots: EF-2611-PAGH and EF-2611-Y5KC.
 - Existing property update path: edit the Housing Listings page; its Notion page event is processed by Lambda and notion-inventory-state, which upserts the same Listing ID into crm_inventory_snapshot. Do not resubmit the intake form to edit an existing listing.

@@ -2,7 +2,7 @@
 
 ## Current verified release state — 2026-11-14 (live check)
 
-- AWS Lambda `efps-notion-intake` is Active, `LastUpdateStatus=Successful`, last modified `2026-11-14T15:52:48Z`, CodeSha256 `C6kJ99XzdnZ8Sua9W7iP99gZ1219KMtdWGsT0ROocRw=`. This deployed package is **not** compatible with the current Select locality schema: it still validates and serializes locality as rich_text. A local correction has passed 124 Inventory tests and SAM validate/build, but has not been deployed. Production raw-intake acceptance remains blocked pending deployment and a controlled real-intake verification.
+- AWS Lambda `efps-notion-intake` is Active, `LastUpdateStatus=Successful`, last modified `2026-11-14T18:40:19Z`, CodeSha256 `tuZzYD9Ks55hYm547+HmvaBn4EvwvfuzW0yTqVH2nP4=`. The deployed package reads the live Notion schema and serializes string-valued fields by actual `rich_text`, Select, or Status type. Stack `efps-notion-property-intake` is `UPDATE_COMPLETE`; the 15-minute EventBridge reconciliation rule remains enabled. Inventory tests 126/126, Node 146/146, browser 1/1, production build, SAM validate/build and generated-template validation passed. Fresh operator-submitted raw-intake acceptance remains pending; no synthetic record was created.
 
 - Render CRM service srv-darsv560tbcc73cu4ip0 is LIVE; the exact deployment ID and commit are authoritative in Render and are not duplicated here.
 - Local and remote main / crm-ui-dashboard branches share the same tracked tree; GitHub currently advertises exactly these two branch refs.

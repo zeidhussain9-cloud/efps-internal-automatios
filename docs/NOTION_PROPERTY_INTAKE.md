@@ -5,15 +5,22 @@ The canonical Notion Housing Listings data source now defines listing_state as a
 
 ## Current verified acceptance state — 2026-11-14 (live check)
 
-### Locality schema compatibility correction — implementation in progress, NOT deployed
+### Notion schema-aware raw-intake correction — deployed 2026-11-14
 
-**Confirmed production defect:** the live Housing Listings Notion schema defines `locality` as a Select property with the current approved locality options. The deployed Lambda source still includes `locality` in `TEXT_FIELDS`, maps it to `rich_text` in `listing_property_types()`, and serializes it with `_rich()` in `listing_notion_properties()`. `validate_listing_schema()` therefore rejects the live Select schema before the raw-intake worker can create/update a Housing Listings page. This is the same class of schema mismatch previously seen with `listing_state`; the prior statement that the raw-intake path already checked and adapted to live property types was incorrect.
+**Confirmed root cause:** the live Housing Listings Notion schema defines `locality` as Select. The prior deployed Lambda incorrectly included locality in `TEXT_FIELDS` mapped to `rich_text`, and serialized it with `_rich()`. Its schema validator therefore rejected the current Select schema before raw-intake page creation/update. The previous claim that the raw-intake path adapted to live property types was incorrect.
 
-The direct existing-page projection path is separate: `_notion_value()` reads Select values and the Supabase projection currently has 107 active rows with populated locality values (0 blank). The 104/107 blank report was an intermediate state while the enabled 15-minute EventBridge reconciliation was catching up; subsequent scheduled runs re-synced the changed records. No manual database repair or deployment was made for that recovery.
+The correction is now committed and deployed. The adapter fetches and validates the live Housing Listings schema before constructing the outgoing listing payload. Every string-valued inventory field is serialized from its actual Notion property type (`rich_text`, `select`, or `status`); Select/Status values are validated against the live options. `listing_id` remains rich_text because it is the immutable identity queried by the existing Listing ID lookup. Unsupported types fail closed.
 
-A corrective code change is currently local only. It validates the live schema before constructing the write payload, serializes all string-valued inventory fields according to their live Notion types (rich_text, Select, or Status), validates options, and adds regression tests for both type representations and schema-first create behavior. Inventory module tests: 126 passed. AWS Lambda still has the pre-fix CodeSha256 `C6kJ99XzdnZ8Sua9W7iP99gZ1219KMtdWGsT0ROocRw=`; deployment and production acceptance are pending. Do not describe this fix as live until the deployed package hash and a real controlled intake acceptance test prove it.
+- Commit: `864c7d2e9decdfd699ec5ac4108ca6f7a614f90d` on `crm-ui-dashboard` and `main`.
+- AWS Lambda `efps-notion-intake`: Active; LastUpdateStatus Successful; last modified `2026-11-14T18:40:19Z`; deployed CodeSha256 `tuZzYD9Ks55hYm547+HmvaBn4EvwvfuzW0yTqVH2nP4=`.
+- CloudFormation stack `efps-notion-property-intake`: `UPDATE_COMPLETE`. The enabled 15-minute EventBridge reconciliation rule remains enabled.
+- Inventory module tests: 126 passed. Repository Node tests: 146 passed. Browser regression: 1 passed. Production build, Python compilation, SAM validation, non-container Python 3.12 SAM build, generated-template validation, and `git diff --check` passed.
+- The deployed Lambda archive was downloaded and inspected; it contains the schema-first `save_listing()` path and generic `_serialize_text_field()` implementation.
+- No database schema, source inventory rows, Notion properties, webhook event selections, schedules, or alternate intake paths were changed by this fix.
 
-No tables, services, schedulers, alternate intake paths, or source records were changed by this local implementation.
+**Acceptance boundary:** no synthetic production intake was created and no existing raw intake record was modified solely to test this deployment. The code, deployed artifact, live schema contract, and regression suite are verified; a fresh operator-submitted raw intake remains the final end-to-end production acceptance test.
+
+The direct existing-page projection path is separate and already supports Select values. Supabase currently has 107 active Notion-owned rows with 107 populated locality values (0 blank); the earlier 104/107 blank alert recovered through scheduled reconciliation without manual repair. The five approved locality corrections were verified in both Notion and Supabase: `EF-2609-YPRP` Kasavanahalli, `EF-2611-YA84` Haralur, `EF-2609-YWY8` HSR Layout, `EF-2609-4MC2` Whitefield, and `EF-2609-MECJ` Karthik Nagar.
 
 The existing failed submission `EF-2611-YA84` was retried successfully through the deployed worker. Its Housing Listings page is `418fedf9-b4e8-8181-8bd5-c94055f39c68`, and its active `housing_notion` Supabase snapshot matches. The record is correctly marked Needs Review—not fully ready—because the Maps API was unavailable and the intake included 18 photos, above the 10-image catalogue limit; no Cloudinary image URLs were published. The raw intake page retains the prior failure notes and the successful retry outcome.
 

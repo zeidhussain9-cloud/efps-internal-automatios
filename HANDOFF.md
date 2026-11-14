@@ -5,22 +5,22 @@ The canonical Notion Housing Listings data source now defines listing_state as a
 
 ## Current verified production state — 2026-11-14 (live check)
 
-- **Confirmed raw-intake blocker:** live Notion Housing Listings `locality` is Select, but deployed `efps-notion-intake` still includes locality in `TEXT_FIELDS`, expects `rich_text`, and emits `_rich()` payloads. The previous assurance that this path adapted to the live type was incorrect. Deployed Lambda CodeSha256 remains `C6kJ99XzdnZ8Sua9W7iP99gZ1219KMtdWGsT0ROocRw=`; the fix is not deployed.
-- Local corrective implementation validates the live schema before building the outgoing listing payload, serializes every string-valued inventory field from the fetched Notion property type (rich_text, Select, or Status), validates selected options, and has regression tests for both type variants and schema-first create behavior. Inventory module tests: 126 passed. Deployment and controlled real-intake acceptance remain pending.
+- **Raw-intake schema compatibility correction deployed:** live Notion locality is Select; the former Lambda incorrectly expected/serialized rich_text. The deployed adapter now reads the live schema before constructing payloads and serializes all string-valued fields according to `rich_text`, Select, or Status; options are checked, and `listing_id` remains rich_text. Lambda CodeSha256 `tuZzYD9Ks55hYm547+HmvaBn4EvwvfuzW0yTqVH2nP4=`, LastModified `2026-11-14T18:40:19Z`, Active / LastUpdateStatus Successful; stack `UPDATE_COMPLETE`.
+- Verification: Inventory 126/126, Node 146/146, browser 1/1, production build, Python compilation, SAM validate/build and generated-template validation passed. Deployed Lambda archive was downloaded and inspected. No synthetic production intake was created; fresh operator-submitted raw intake remains the final end-to-end acceptance.
 - Direct Housing Listings page projection supports Select values. Supabase currently has 107 active Notion-owned rows, 107 populated locality values, 0 blank locality values, and 1 soft-deleted tombstone. The earlier 104/107 blank alert was transient during reconciliation; the enabled 15-minute EventBridge reconciler re-synced the changed pages. No manual repair was made.
-- Notion Housing Listings remains canonical; `crm_inventory_snapshot` remains the dashboard projection. Supabase `notion-inventory-state` ACTIVE v12; AWS Lambda Active, last update successful, but still running the pre-fix code.
-- GitHub `main` and `crm-ui-dashboard` both point to `a9aef7692f1417842a8f7dbaa0ffe5f63334dc49`. The local CRM worktree was clean at that commit before this uncommitted fix. The local main worktree is at a different commit/tree and must be reconciled after the implementation is committed and pushed; preserve local-only material.
+- Notion Housing Listings remains canonical; `crm_inventory_snapshot` remains the dashboard projection. Supabase `notion-inventory-state` ACTIVE v12; the corrected AWS Lambda is Active and LastUpdateStatus Successful.
+- GitHub `main` and `crm-ui-dashboard` both point to `864c7d2e9decdfd699ec5ac4108ca6f7a614f90d`; both local worktrees have identical tracked tree `045ffb9e62ab3af4fcbe036b44a93bd418811241`. The local-only `supabase/.temp/` directory was preserved and remains untracked.
 - Render CRM service `srv-darsv560tbcc73cu4ip0` is LIVE. No CRM UI deployment is required for this Lambda-only correction.
 - The Notion Query Data Source allowance warning came from the Notion MCP `query_data_sources` rows-mode audit used to enumerate/group locality values in the Housing Listings data source. It was not an AWS, Supabase, or Notion API quota and did not affect production synchronization.
-- Daily inventory brief has not been created or scheduled. Its contents are awaiting operator review before any recurring delivery is configured.
+- One-off `EFPS Inventory Summary` email was sent to `zeidhussain9@gmail.com` on 2026-11-14 at 18:02 UTC; the operator replied at 18:38 UTC with section-by-section changes. No recurring 08:00 IST email schedule has been created. The original sent body and feedback are in the Gmail thread; the next revision must follow the operator's feedback.
 
-## Immediate implementation gate
+## Completed implementation and release gates
 
-1. Complete full Inventory module tests, SAM validation/build, Python compilation, and diff checks.
-2. Review maintained root and `docs/` documentation against current verified state.
-3. Commit/push the tested fix to `crm-ui-dashboard`, reconcile the same tracked tree into `main`, and verify remote tree equality.
-4. Deploy only the isolated `efps-notion-intake` Lambda using the existing stack/parameters; verify deployed CodeSha256.
-5. Run a controlled real raw-intake acceptance only after code deployment, then verify Notion page property type/value, Lambda logs, event ledger, and Supabase projection. Do not create a synthetic production property without user approval.
+1. Inventory module tests 126/126, Node tests 146/146, browser regression 1/1, production build, Python compilation, SAM validation/build, generated-template validation and diff checks passed.
+2. Maintained root and `docs/` current-state documents were reviewed and updated.
+3. Commit `864c7d2e9decdfd699ec5ac4108ca6f7a614f90d` was pushed to `crm-ui-dashboard` and fast-forwarded to `main`; GitHub refs and local tracked trees are identical.
+4. The isolated `efps-notion-intake` Lambda was deployed through the existing CloudFormation stack. Stack `UPDATE_COMPLETE`; Lambda CodeSha256 verified as `tuZzYD9Ks55hYm547+HmvaBn4EvwvfuzW0yTqVH2nP4=`.
+5. Final acceptance still requires a fresh operator-submitted raw intake. No synthetic production record was created and no existing raw intake record was altered solely for testing.
 
 ## Historical initial Task 3 deployment — 2026-11-14 08:14 UTC (superseded by current v12 state)
 
