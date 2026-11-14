@@ -1,5 +1,15 @@
 # EasyFind CRM — Canonical Data Model
 
+## Current verified inventory contract — 2026-11-14
+
+- Notion Housing Listings → AWS Lambda efps-notion-intake → Supabase Edge Function notion-inventory-state ACTIVE v11 → crm_inventory_snapshot → CRM dashboard.
+- crm_inventory_snapshot.business_status is projected from source_record.status and is distinct from intake_status and listing_state. All 106 active Notion-owned rows currently report Pending.
+- Notion webhook history remains in crm_inventory_intake_events; WhatsApp webhook history remains in crm_webhook_events. No tables deleted.
+- Maps API-unavailable fallback is deployed to the isolated Lambda and labels the original short URL as unverified.
+- Full raw intake acceptance remains pending a real submission with non-empty Raw Property Data and Photos.
+
+# EasyFind CRM — Canonical Data Model
+
 ## Authoritative current verified state — 2026-11-13
 
 > The CRM UI remains deployed on `crm-ui-dashboard`. Current inventory synchronization and runtime evidence is in `CRM_CURRENT_VERIFIED_STATE.md` and `docs/NOTION_PROPERTY_INTAKE.md`.

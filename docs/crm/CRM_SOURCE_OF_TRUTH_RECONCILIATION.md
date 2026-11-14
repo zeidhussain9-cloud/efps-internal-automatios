@@ -1,3 +1,12 @@
+## Current verified source-of-truth state — 2026-11-14
+
+- Notion Housing Listings remains canonical; Supabase crm_inventory_snapshot is the CRM projection.
+- Active Notion-owned projection: 106 rows; business_status Pending on all 106.
+- main and crm-ui-dashboard synchronized at commit 86c4389 / tree ccec16e4. Render dep-dbs2qnqjnfac73bq84sg LIVE on commit 2727b38.
+- Supabase notion-inventory-state ACTIVE v11; AWS efps-notion-intake code update successful.
+- Notion event ledger: 12 observed records; 5 processed, 4 ignored non-intake changes, 1 rejected unauthenticated probe, 2 needs review. Complete capture not certified.
+- No tables deleted. Raw intake acceptance awaits a complete real operator submission.
+
 ## Authoritative current verified state — 2026-11-13
 
 > The latest UI release is live on the remote branch. Notion inventory recovery hardening is deployed (Supabase Edge Function v9, AWS Lambda with 15-minute reconciliation and SQS failure capture). See `CRM_CURRENT_VERIFIED_STATE.md` and `HANDOFF.md` for current evidence. Older dated checkpoints below remain historical.

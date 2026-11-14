@@ -1,3 +1,7 @@
+## Current verified inventory status — 2026-11-14
+
+Inventory remains a separate source-of-truth domain from lead/contact classification. Notion Housing Listings is canonical; Supabase crm_inventory_snapshot contains 106 active Notion-owned rows, all with business_status Pending. This field is distinct from intake_status and listing_state. No database tables were deleted. See CRM_CURRENT_VERIFIED_STATE.md for the latest live release and event evidence.
+
 ## Authoritative current verified state — 2026-11-13
 
 > The latest UI release is live on the remote branch. Notion inventory recovery hardening is deployed (Supabase Edge Function v9, AWS Lambda with 15-minute reconciliation and SQS failure capture). See `CRM_CURRENT_VERIFIED_STATE.md` and `HANDOFF.md` for current evidence. Older dated checkpoints below remain historical.

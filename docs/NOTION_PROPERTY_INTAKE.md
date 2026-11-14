@@ -1,5 +1,17 @@
 # Notion Property Intake — Runtime Contract
 
+## Current verified acceptance state — 2026-11-14
+
+- The live Submit New Property form schema contains both Raw Property Data and Photos questions.
+- Two existing submissions have Photos but blank Raw Property Data; both remain Needs Review. The recorded worker outcome explicitly says Raw Property Data is required. No source content was fabricated or altered.
+- 12 Notion webhook event rows observed: 5 processed, 4 ignored non-intake changes, 1 rejected unauthenticated probe, 2 needs-review outcomes. Complete delivery coverage is not certified.
+- AWS efps-notion-intake is Active with successful code update; Maps API-unavailable fallback deployed. Supabase notion-inventory-state ACTIVE v11.
+- Supabase inventory projection has 106 active Notion-owned rows; business_status Pending on all 106.
+- No tables deleted. Notion event history remains in crm_inventory_intake_events; WhatsApp event history remains in crm_webhook_events.
+- Full end-to-end acceptance across raw text extraction, Maps, Cloudinary, Sheets, Housing Listings and Supabase remains pending a complete real operator submission.
+
+# Notion Property Intake — Runtime Contract
+
 ## Webhook event history — deployed 2026-11-14
 
 Task 3 is deployed. The additive migration extends the existing `public.crm_inventory_intake_events` ledger with namespaced Notion webhook event rows and restricted RPCs. It does not create a second event table and does not change the WhatsApp `public.crm_webhook_events` table or processing path.
