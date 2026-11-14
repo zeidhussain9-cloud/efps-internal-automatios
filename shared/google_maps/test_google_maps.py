@@ -96,3 +96,17 @@ def test_resolve_does_not_call_geocoding_for_empty_query():
     get.assert_not_called()
     assert result.canonical_url == "https://maps.app.goo.gl/opaque"
     assert result.confidence == "NOT_FOUND"
+
+
+def test_maps_billing_or_quota_api_denial_is_reported_as_unavailable():
+    from unittest.mock import Mock
+    client = GoogleMapsClient(api_key="test-key")
+    response = Mock()
+    response.json.return_value = {"status": "REQUEST_DENIED", "error_message": "Billing account disabled"}
+    response.raise_for_status.return_value = None
+    with patch.object(GoogleMapsClient, "expand", return_value="https://www.google.com/maps/place/Harlur"), patch.object(
+        GoogleMapsClient, "_query_from_url", return_value="Harlur, Bengaluru"
+    ), patch("requests.get", return_value=response):
+        result = client.resolve(maps_url="https://maps.app.goo.gl/AbC123")
+    assert result.confidence == "API_UNAVAILABLE"
+    assert result.canonical_url == "https://maps.app.goo.gl/AbC123"

@@ -107,3 +107,15 @@ The test page was permanently deleted from Notion Trash after approval. Its exac
 ## Legacy boundary
 
 The old WhAPI `NEW`-delimited inventory listener and its DynamoDB session state are legacy code retained temporarily at the user's direction. It is not the new Notion processing path and is not to be removed until the final cleanup phase is explicitly started.
+
+
+## Latest verified checkpoint — 2026-11-14
+
+- No table has been deleted. Notion event history remains in crm_inventory_intake_events; WhatsApp event history remains in crm_webhook_events.
+- Live Notion event rows: 8 (5 processed, 2 ignored/failed outcomes, 1 needs review). This proves logging for those records only; complete delivery capture is not certified.
+- Two operator-requested Housing Listings updates were verified back in Notion and Supabase.
+- Live Notion-owned projection: 106 active rows. Older 104-row figures above are historical checkpoints only.
+- crm_inventory_snapshot.business_status is a first-class reporting field backfilled from source_record.status. All 106 active Notion rows currently report Pending.
+- Raw Property Intake with photos has not passed a fresh real-property end-to-end acceptance run. Awaiting operator submission and verification of Sheets, Cloudinary and Maps runtime credentials.
+- Maps API-unavailable fallback is implemented locally but not deployed: preserve only the original supported short URL, label it unverified, and do not infer place/locality/pincode.
+- The latest UI/Edge Function/Maps code changes are local and not yet deployed.

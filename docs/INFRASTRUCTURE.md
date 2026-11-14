@@ -293,3 +293,12 @@ Production Render service srv-darsv560tbcc73cu4ip0 is live on crm-ui-dashboard c
 ## 2026-10-01 — Dependency security checkpoint
 
 The AWS Bedrock runtime SDK was upgraded to `3.1144.0` after Render exposed a critical transitive `fast-xml-parser` advisory in the previous dependency tree. Local production-dependency audit now reports zero vulnerabilities; the historical automated suite was 71/71; current automated suite is 134/134 and browser regression is 1/1.
+
+
+## Latest verified checkpoint — 2026-11-14
+
+- Supabase project qttcutwzehtskfcwxkwj: additive crm_inventory_snapshot.business_status column and partial index applied. No tables deleted.
+- Supabase notion-inventory-state was last independently verified ACTIVE v10 before the current local Edge Function changes; updated projection code is local and not deployed.
+- Render service srv-darsv560tbcc73cu4ip0 remains the CRM production service. Current local UI/API changes are not deployed.
+- AWS Notion intake Lambda remains the existing isolated runtime. Maps fallback code has not yet been deployed to Lambda.
+- Existing secret values were not printed, rotated, created or overwritten.

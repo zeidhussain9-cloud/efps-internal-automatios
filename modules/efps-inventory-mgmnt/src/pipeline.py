@@ -87,7 +87,10 @@ def process_closed_session(raw_text: str, *, row: dict | None = None, maps_clien
                 out["society_name"] = place_name
                 issues.append(f"Google Maps verified place name: {place_name}")
         else:
-            issues.append(f"Google Maps verification failed or is incomplete: {resolved.confidence}")
+            if resolved.confidence == "API_UNAVAILABLE":
+                issues.append("Google Maps API unavailable (billing, quota, or key authorization); original source URL retained for operator review.")
+            else:
+                issues.append(f"Google Maps verification failed or is incomplete: {resolved.confidence}")
             maps_unverified = True
     try:
         from .phase1 import apply_location_contract

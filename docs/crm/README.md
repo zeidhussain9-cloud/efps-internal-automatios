@@ -83,3 +83,7 @@ The CRM AI workspace is now production-enabled on Render service `srv-darsv560tb
 Points **40 Requirement field correctness**, **41 Property-matching inputs**, and **42 Property-matching results** are governed by the single canonical contract in `crm-source-audit-scheduler/AUDIT_CONTRACT.md` and the shared implementation in `src/crm-requirement-match-audit.mjs`. The scheduled runner fails closed unless the combined requirement/matching audit is complete. Do not duplicate or redefine these rules in this document.
 
 Historical live population snapshot verified 2026-10-05: **253 promoted qualified leads**, **253 normalized requirement profiles**, **0 missing profiles**, and **71 active canonical inventory listings**. Requirement evidence remains a separate provenance layer and is not fabricated by this audit.
+
+## Latest verified inventory state — 2026-11-14
+
+106 active Notion-owned rows are present in crm_inventory_snapshot. Business review status is separately projected as business_status; all 106 currently report Pending. Local UI changes expose this field but are not deployed. No tables were deleted. Full raw-intake acceptance remains pending a real operator submission.

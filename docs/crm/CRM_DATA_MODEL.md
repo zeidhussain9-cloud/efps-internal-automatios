@@ -195,3 +195,7 @@ The production AI workspace also consumes `crm_ai_runs`, `crm_requirement_eviden
 Points **40 Requirement field correctness**, **41 Property-matching inputs**, and **42 Property-matching results** are governed by the single canonical contract in `crm-source-audit-scheduler/AUDIT_CONTRACT.md` and the shared implementation in `src/crm-requirement-match-audit.mjs`. The scheduled runner fails closed unless the combined requirement/matching audit is complete. Do not duplicate or redefine these rules in this document.
 
 Current live population verified 2026-11-12: **371 CRM leads**, **138 deterministic auto-qualified leads**, **104 active canonical inventory listings**, and **0 webhook message events missing a crm_messages link** since 2026-10-05. Requirement evidence remains a separate provenance layer and is not fabricated by this audit.
+
+## Latest verified inventory projection — 2026-11-14
+
+crm_inventory_snapshot has a first-class business_status column backfilled from source_record.status. It is distinct from intake_status and listing_state. The current active Notion-owned projection is 106 rows, all Pending. The CRM API/UI changes are local and not deployed yet. Notion webhook events remain in crm_inventory_intake_events; WhatsApp webhook events remain in crm_webhook_events. No table deletions occurred.

@@ -82,3 +82,8 @@ The 16 IDs are confirmed in Supabase. The source Sheet was not reread during thi
 | AI scheduler | Not scheduled | Intentionally paused |
 
 Reactivating the AI scheduler requires a separate explicit operational decision.
+
+
+## Inventory status reporting update — 2026-11-14
+
+The live crm_inventory_snapshot table has an additive business_status column, backfilled from source_record.status. At the latest query, all 106 active Notion-owned rows reported Pending. This is distinct from intake_status and listing_state. The CRM UI/API implementation to filter and display this field is local and has passed the 146-test Node suite and browser regression 1/1, but it is not yet deployed. No tables were deleted.

@@ -94,3 +94,12 @@ The adapter does not operate on AU/AV or send WhatsApp messages. Its SAM endpoin
 ## Verification
 
 Regression coverage includes canonical source segmentation, multi-candidate resolution, later corrections, decimal BHK, maintenance unit normalization/qualifiers/inclusion, positive/negative property-type evidence, singular/decimal balcony source forms, explicit pet negatives, Sheet-independence, dependent defaults, normalized maintenance validation, and Notion intake projection/idempotency boundaries. Production projection gating validates the committed deterministic path against rows 2–26 without Sheet-value feedback or writes; live external-system writes remain a separate acceptance boundary.
+
+
+## Latest verified checkpoint — 2026-11-14
+
+- No tables deleted. WhatsApp events remain in crm_webhook_events; Notion webhook history remains in crm_inventory_intake_events.
+- Live Notion projection: 106 active rows. business_status is now a first-class Supabase projection column, distinct from intake_status and listing_state.
+- Maps API-unavailable fallback is implemented locally: only a supported original short Maps URL may be emitted, with an explicit unverified label. It does not supply verified location facts. Not yet deployed.
+- Python Inventory and shared Maps regression tests: 122/122 passed.
+- Raw Property Intake end-to-end acceptance remains pending a real operator submission and credential verification.

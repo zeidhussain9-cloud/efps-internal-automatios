@@ -180,3 +180,7 @@ Inventory sender/source routing is outside this CRM classification path and rema
 Points **40 Requirement field correctness**, **41 Property-matching inputs**, and **42 Property-matching results** are governed by the single canonical contract in `crm-source-audit-scheduler/AUDIT_CONTRACT.md` and the shared implementation in `src/crm-requirement-match-audit.mjs`. The scheduled runner fails closed unless the combined requirement/matching audit is complete. Do not duplicate or redefine these rules in this document.
 
 Historical live population snapshot verified 2026-10-05: **253 promoted qualified leads**, **253 normalized requirement profiles**, **0 missing profiles**, and **71 active canonical inventory listings**. Requirement evidence remains a separate provenance layer and is not fabricated by this audit.
+
+## Latest verified inventory count — 2026-11-14
+
+The current active Notion-owned inventory projection is 106 rows (not the historical 104-row count above). All 106 currently have business_status Pending. The CRM UI/API change exposing this review status is local and undeployed. No tables were deleted.

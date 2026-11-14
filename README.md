@@ -41,3 +41,8 @@ Historical documents retain dated evidence. Current-state claims in CRM document
 - The pg_cron trigger has been removed, so no recurring AI scheduler execution is currently scheduled.
 - The deterministic classification scheduler remains active independently at `0 * * * *`.
 - Reactivation requires an explicit operational decision and a new scheduler activation.
+
+
+## Latest verified Notion inventory checkpoint — 2026-11-14
+
+The CRM inventory projection currently contains 106 active Notion-owned rows. Review status is represented separately from intake processing and listing availability. No database tables were deleted. The latest local review-state UI and Maps API-unavailable fallback changes have passed local tests but are not yet deployed. Full raw Property Intake acceptance remains pending a real operator submission.

@@ -396,6 +396,17 @@ def test_v71_caption_requires_maps_verification_and_omits_long_map_url():
     row = {"furnish_type": "Fully Furnished", "BHK": "1 BHK", "locality": "Harlur",
            "google_maps_url": "https://maps.app.goo.gl/AbC123"}
     assert intake.build_whatsapp_post(row, "Pets allowed", maps_verified=False) == ""
+
+
+def test_v71_caption_allows_exact_short_source_map_only_for_api_unavailable_fallback():
+    row = {"furnish_type": "Fully Furnished", "BHK": "1 BHK", "locality": "Harlur",
+           "society_name": "Source Society", "google_maps_url": "https://maps.app.goo.gl/AbC123"}
+    assert intake.build_whatsapp_post(row, "Pets allowed", maps_verified=False) == ""
+    caption = intake.build_whatsapp_post(row, "Pets allowed", maps_verified=False, allow_unverified_source_map=True)
+    assert "Location: *Harlur*" in caption
+    assert "*📍 Original Maps link (not verified):\nhttps://maps.app.goo.gl/AbC123" in caption
+    row["google_maps_url"] = "https://www.google.com/maps/search/?api=1&query=Harlur"
+    assert intake.build_whatsapp_post(row, "Pets allowed", maps_verified=False, allow_unverified_source_map=True) == ""
     row["google_maps_url"] = "https://www.google.com/maps/search/?api=1&query=Harlur"
     caption = intake.build_whatsapp_post(row, "Pets allowed", maps_verified=True)
     assert "google.com/maps" not in caption and "Location: *Harlur*" in caption

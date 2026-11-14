@@ -39,11 +39,12 @@ function PropertyMedia({property}){
 export default function InventoryPanel({data,state,refresh,query,setQuery,sort,setSort,filters,setFilters,offset,setOffset,pageSize,setPageSize}){
  const [selected,setSelected]=useState(null);
  const rows=data?.rows||[];
- const {status='All',bhk='All',locality='All',withPhotos=null}=filters||{};
+ const {status='All',businessStatus='All',bhk='All',locality='All',withPhotos=null}=filters||{};
  const live=state==='live';
  const facets=data?.facets||{statuses:[],bhks:[],localities:[]};
  const summary=data?.summary;
  const statuses=facets.statuses||[];
+ const businessStatuses=facets.businessStatuses||[];
  const localities=facets.localities||[];
  const bhks=facets.bhks||[];
  const total=Number(data?.total)||0;
@@ -52,10 +53,10 @@ export default function InventoryPanel({data,state,refresh,query,setQuery,sort,s
  const rented=Number(summary?.rented)||0;
  const withImages=Number(summary?.withPhotos)||0;
  const chosen=rows.find(r=>r.listing_id===selected);
- const resetFilters=()=>{setFilters({status:'All',bhk:'All',locality:'All',withPhotos:null});setQuery('',true);setOffset(0)};
- const applyKpi=kind=>{setFilters({status:kind==='available'?'Available':kind==='rented'?'Rented Out':'All',bhk:'All',locality:'All',withPhotos:kind==='photos'?true:null});setQuery('',true);setOffset(0)};
+ const resetFilters=()=>{setFilters({status:'All',businessStatus:'All',bhk:'All',locality:'All',withPhotos:null});setQuery('',true);setOffset(0)};
+ const applyKpi=kind=>{setFilters({status:kind==='available'?'Available':kind==='rented'?'Rented Out':'All',businessStatus:'All',bhk:'All',locality:'All',withPhotos:kind==='photos'?true:null});setQuery('',true);setOffset(0)};
  const setFilter=(key,value)=>{setFilters(current=>({...current,[key]:value}));setOffset(0)};
- const activeFilters=status!=='All'||bhk!=='All'||locality!=='All'||withPhotos!==null||Boolean(query);
+ const activeFilters=status!=='All'||businessStatus!=='All'||bhk!=='All'||locality!=='All'||withPhotos!==null||Boolean(query);
  const start=total?offset+1:0;
  const end=Math.min(offset+rows.length,total);
  return <section className="inventory-screen">
@@ -78,7 +79,8 @@ export default function InventoryPanel({data,state,refresh,query,setQuery,sort,s
    </div>
    <div className="inventory-controls">
     <label className="inventory-search"><Search size={18}/><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Search ID, locality, society or title…" aria-label="Search inventory"/></label>
-     <label><SlidersHorizontal size={15}/> Status<select value={status} onChange={e=>setFilter('status',e.target.value)}><option>All</option>{statuses.map(s=><option key={s}>{s}</option>)}</select></label>
+     <label><SlidersHorizontal size={15}/> Listing state<select value={status} onChange={e=>setFilter('status',e.target.value)}><option>All</option>{statuses.map(s=><option key={s}>{s}</option>)}</select></label>
+     <label>Review status<select value={businessStatus} onChange={e=>setFilter('businessStatus',e.target.value)}><option>All</option>{businessStatuses.map(s=><option key={s}>{s}</option>)}</select></label>
      <label>BHK<select value={bhk} onChange={e=>setFilter('bhk',e.target.value)}><option>All</option>{bhks.map(v=><option key={v}>{v}</option>)}</select></label>
      <label>Locality<select value={locality} onChange={e=>setFilter('locality',e.target.value)}><option>All</option>{localities.map(v=><option key={v}>{v}</option>)}</select></label>
     <label>Sort inventory<select value={normalizeInventorySort(sort)} onChange={e=>setSort(normalizeInventorySort(e.target.value))}>{INVENTORY_SORT_OPTIONS.map(([value,label])=><option key={value} value={value}>{label}</option>)}</select></label>
@@ -87,7 +89,7 @@ export default function InventoryPanel({data,state,refresh,query,setQuery,sort,s
     {activeFilters&&<div className="inventory-filter-summary"><span>Filtered view · {total} properties</span><button type="button" onClick={resetFilters}>Clear filters</button></div>}
     <div className="inventory-results"><strong>{total} properties</strong><span>Sorted by {inventorySortLabel(sort)}</span></div>
     <div className="inventory-card-grid">{rows.map(p=><article className="inventory-card" key={p.listing_id}><PropertyMedia property={p}/><div className="inventory-card-body">
-    <div className="inventory-card-top"><span className={'inventory-status '+(p.listing_state==='Available'?'is-available':'is-rented')}>{text(p.listing_state)}</span><small>{p.listing_id}</small></div>
+    <div className="inventory-card-top"><span className={'inventory-status '+(p.listing_state==='Available'?'is-available':'is-rented')}>{text(p.listing_state)}</span><span className="inventory-review-status">{text(p.business_status,'Review status not recorded')}</span><small>{p.listing_id}</small></div>
     <h2>{text(p.bhk,'Property')} · {text(p.locality,'Location unspecified')}</h2>
     <p className="inventory-society"><MapPin size={15}/>{text(p.society_name,p.locality||'Location not provided')}</p>
     <div className="inventory-card-price">{money(p.monthly_rent)}<small> / month</small></div>
@@ -98,7 +100,7 @@ export default function InventoryPanel({data,state,refresh,query,setQuery,sort,s
     <nav className="pagination inventory-pagination" aria-label="Inventory pagination"><button type="button" aria-label="Previous inventory page" disabled={offset===0} onClick={()=>setOffset(Math.max(0,offset-pageLimit))}>Previous</button><span aria-live="polite">Page {Math.floor(offset/pageLimit)+1} · {start}–{end} of {total}</span><button type="button" aria-label="Next inventory page" disabled={!data?.hasMore} onClick={()=>setOffset(offset+pageLimit)}>Next</button></nav>
    {chosen&&<div className="inventory-modal-backdrop" onClick={()=>setSelected(null)}><div className="inventory-modal" role="dialog" aria-modal="true" aria-label="Property details" onClick={e=>e.stopPropagation()}>
     <button type="button" className="inventory-close" onClick={()=>setSelected(null)}>Close ×</button><PropertyMedia property={chosen}/>
-    <div className="inventory-modal-body"><span className="inventory-eyebrow">{chosen.listing_id} · {chosen.listing_state}</span><h2>{text(chosen.bhk)} · {text(chosen.locality)}</h2><h3>{money(chosen.monthly_rent)} / month</h3>
+    <div className="inventory-modal-body"><span className="inventory-eyebrow">{chosen.listing_id} · {chosen.listing_state} · {text(chosen.business_status,'Review status not recorded')}</span><h2>{text(chosen.bhk)} · {text(chosen.locality)}</h2><h3>{money(chosen.monthly_rent)} / month</h3>
      <div className="inventory-detail-grid">{[['Society',chosen.society_name],['Furnishing',chosen.furnishing],['City / state',chosen.source_record?.city||chosen.source_record?.state],['Maintenance',chosen.source_record?.maintenance],['Deposit',chosen.source_record?.security_deposit],['Bathrooms',chosen.source_record?.bathrooms],['Pet friendly',chosen.pet_friendly],['Parking',chosen.source_record?.covered_parking],['Onboarded',chosen.onboarded_on||chosen.source_record?.onboarded_on],['Source updated',chosen.last_synced_at?new Date(chosen.last_synced_at).toLocaleString('en-IN'):null]].map(([k,v])=><div key={k}><small>{k}</small><strong>{text(v)}</strong></div>)}</div>
      {chosen.source_record?.property_highlights&&<p>{chosen.source_record.property_highlights}</p>}{chosen.source_record?.google_maps_url?.startsWith('https://')&&<a href={chosen.source_record.google_maps_url} target="_blank" rel="noreferrer">View source map ↗</a>}
     </div>

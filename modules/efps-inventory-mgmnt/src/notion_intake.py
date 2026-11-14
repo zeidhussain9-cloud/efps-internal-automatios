@@ -412,10 +412,12 @@ def _available_from(raw_text: str) -> str:
     return "Ready to Occupy" if re.search(r"\b(?:now|immediate|immediately|ready\s+to\s+occupy)\b", value, re.I) else value
 
 
-def build_whatsapp_post(row: dict, raw_text: str, *, maps_verified: bool, verified_society_name: str = "") -> str:
-    """Build the v7.1 copy/paste caption using only explicit or Maps-verified facts."""
+def build_whatsapp_post(row: dict, raw_text: str, *, maps_verified: bool, verified_society_name: str = "", allow_unverified_source_map: bool = False) -> str:
+    """Build a caption from explicit facts; an unverified source URL is opt-in and remains labelled unverified."""
     maps_url = str(row.get("google_maps_url") or "").strip()
-    if maps_url and not maps_verified:
+    if maps_url and not maps_verified and not allow_unverified_source_map:
+        return ""
+    if allow_unverified_source_map and maps_url and not _short_mobile_maps_url(maps_url):
         return ""
     locality = str(row.get("locality") or "").strip()
     if not locality:
@@ -463,10 +465,13 @@ def build_whatsapp_post(row: dict, raw_text: str, *, maps_verified: bool, verifi
     if str(row.get("internal_property_type") or "").strip() == "Gated Community": lines.append("Gated Community")
     lines.append(f"Location: *{locality}*")
     if maps_url and _short_mobile_maps_url(maps_url):
-        society = str(verified_society_name or ("" if maps_url else row.get("society_name") or "")).strip()
-        landmark = str(row.get("landmark") or "").strip()
-        label = society if society and society.casefold() != locality.casefold() else ("Landmark" if landmark and landmark.casefold() != locality.casefold() else "")
-        if label: lines.extend(["", f"*📍 {label}:", maps_url])
+        if allow_unverified_source_map and not maps_verified:
+            lines.extend(["", "*📍 Original Maps link (not verified):", maps_url])
+        else:
+            society = str(verified_society_name or row.get("society_name") or "").strip()
+            landmark = str(row.get("landmark") or "").strip()
+            label = society if society and society.casefold() != locality.casefold() else ("Landmark" if landmark and landmark.casefold() != locality.casefold() else "")
+            if label: lines.extend(["", f"*📍 {label}:", maps_url])
     return "\n".join(lines)
 
 
@@ -636,12 +641,13 @@ def process_page(
             processed["status"] = "Needs Review"
         processed["cloudinary_image_urls"] = row.get("cloudinary_image_urls", processed.get("cloudinary_image_urls", ""))
         maps_url = str(processed.get("google_maps_url") or "").strip()
-        maps_failed = bool(maps_url) and any(issue.startswith("Google Maps verification failed") for issue in issues)
+        maps_failed = bool(maps_url) and any(issue.startswith(("Google Maps verification failed", "Google Maps API unavailable")) for issue in issues)
+        maps_api_unavailable = bool(maps_url) and any(issue.startswith("Google Maps API unavailable") for issue in issues)
         if maps_url and not _short_mobile_maps_url(maps_url):
             issues.append("Original Maps URL is not a supported short mobile link; omitted from the caption and requires review.")
             processed["status"] = "Needs Review"
         verified_society = next((issue.split(":", 1)[1].strip() for issue in issues if issue.startswith("Google Maps verified place name:")), "")
-        caption = build_whatsapp_post(processed, raw_text, maps_verified=not maps_failed, verified_society_name=verified_society)
+        caption = build_whatsapp_post(processed, raw_text, maps_verified=not maps_failed, verified_society_name=verified_society, allow_unverified_source_map=maps_api_unavailable)
         if not caption:
             issues.append("WhatsApp caption not generated because a verified locality or Maps verification is missing.")
             processed["status"] = "Needs Review"

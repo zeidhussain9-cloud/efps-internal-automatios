@@ -101,7 +101,12 @@ class GoogleMapsClient:
         response = requests.get(self.API, params=params, timeout=20)
         response.raise_for_status()
         data = response.json()
+        api_status = str(data.get("status") or "").upper()
+        if api_status in {"REQUEST_DENIED", "OVER_QUERY_LIMIT", "UNKNOWN_ERROR"}:
+            return MapsResolution(canonical_url=source, confidence="API_UNAVAILABLE")
         results = data.get("results", [])
+        if api_status not in {"OK", "ZERO_RESULTS"}:
+            return MapsResolution(canonical_url=source, confidence="NOT_FOUND")
         if not results:
             return MapsResolution(canonical_url=source, confidence="NOT_FOUND")
         result = results[0]

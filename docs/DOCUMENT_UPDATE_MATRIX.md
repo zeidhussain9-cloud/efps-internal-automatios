@@ -115,3 +115,8 @@ This matrix is the canonical routing baseline. It must be refined when actual im
 ## CRM production checkpoint 2026-09-30
 
 The current CRM production truth is maintained in `docs/crm/LEAD_CRM_MASTER_PLAN.md`, `docs/crm/CRM_UI_BRANCH_RECONCILIATION.md`, `docs/crm/CRM_LIVE_WHAPI_WEBHOOK.md`, `docs/crm/CRM_DATA_MODEL.md`, and `HANDOFF.md`. These documents supersede older synthetic-only or pre-WhAPI gate statements while retaining those dated documents as historical evidence.
+
+
+## Latest verified checkpoint — 2026-11-14
+
+Inventory review-state changes affect crm_inventory_snapshot.business_status, the Notion Edge Function upsert, CRM repository/API filtering, inventory UI, tests, docs/DATA_CONTRACTS.md, docs/NOTION_PROPERTY_INTAKE.md, docs/INFRASTRUCTURE.md, Inventory module README, HANDOFF.md and current CRM state docs. Maps fallback changes affect shared/google_maps/README.md, Inventory module README, docs/NOTION_PROPERTY_INTAKE.md, relevant tests and HANDOFF.md. These updates are not production-complete until deployment and live verification.

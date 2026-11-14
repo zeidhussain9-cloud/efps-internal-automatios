@@ -136,7 +136,7 @@ function App(){
  const[inventoryOffset,setInventoryOffset]=useState(0);
  const[inventoryPageSize,setInventoryPageSize]=useState(DEFAULT_LIST_PAGE_SIZE);
  const inventoryRequestRef=useRef(0);
- const[inventoryFilters,setInventoryFilters]=useState({status:'All',bhk:'All',locality:'All',withPhotos:null});
+ const[inventoryFilters,setInventoryFilters]=useState({status:'All',businessStatus:'All',bhk:'All',locality:'All',withPhotos:null});
  const[matches,setMatches]=useState([]);
  const[matchState,setMatchState]=useState('idle');
  const[refreshToken,setRefreshToken]=useState(0);
@@ -282,7 +282,7 @@ function App(){
   async function load(){
    const requestId=++inventoryRequestRef.current;
    try{
-    const qs=new URLSearchParams({limit:String(inventoryPageSize),offset:String(inventoryOffset),inventory_sort:normalizeInventorySort(inventorySort),status:inventoryFilters.status==='All'?'':inventoryFilters.status,bhk:inventoryFilters.bhk==='All'?'':inventoryFilters.bhk,locality:inventoryFilters.locality==='All'?'':inventoryFilters.locality,with_photos:inventoryFilters.withPhotos===null?'':String(inventoryFilters.withPhotos),search:debouncedInventoryQuery.trim()});
+    const qs=new URLSearchParams({limit:String(inventoryPageSize),offset:String(inventoryOffset),inventory_sort:normalizeInventorySort(inventorySort),status:inventoryFilters.status==='All'?'':inventoryFilters.status,business_status:inventoryFilters.businessStatus==='All'?'':inventoryFilters.businessStatus,bhk:inventoryFilters.bhk==='All'?'':inventoryFilters.bhk,locality:inventoryFilters.locality==='All'?'':inventoryFilters.locality,with_photos:inventoryFilters.withPhotos===null?'':String(inventoryFilters.withPhotos),search:debouncedInventoryQuery.trim()});
     const r=await apiFetch('/api/inventory/overview?'+qs.toString(),{cache:'no-store',credentials:'include'});
     if(!r.ok)throw Error('Inventory unavailable');
     const data=await r.json();
