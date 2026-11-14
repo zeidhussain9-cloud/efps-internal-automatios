@@ -552,6 +552,7 @@ def process_page(
     page_id: str,
     *,
     event_type: str = "",
+    updated_property_ids: list[str] | None = None,
     notion: NotionClient | None = None,
     store: SupabaseIntakeStore | None = None,
     sheets: GoogleSheetsClient | None = None,
@@ -577,9 +578,20 @@ def process_page(
             return process_listing_page(page, notion=notion, store=store, force_deleted=True)
         return {"status": "ignored", "listing_id": ""}
 
+    props = page.get("properties") or {}
+    if event_type == "page.properties_updated":
+        changed_ids = {str(value).strip() for value in (updated_property_ids or []) if str(value).strip()}
+        intake_input_ids = {
+            str((props.get(name) or {}).get("id") or "").strip()
+            for name in ("Raw Property Data", "Photos")
+        }
+        intake_input_ids.discard("")
+        if not changed_ids.intersection(intake_input_ids):
+            _log_event("intake_property_update_ignored", page_id=page_id, updated_property_count=len(changed_ids))
+            return {"status": "ignored", "listing_id": ""}
+
     sheets = sheets or _runtime_sheets_client()
     cloudinary = cloudinary or _runtime_cloudinary_client()
-    props = page.get("properties") or {}
     raw_text = _plain_text(props.get("Raw Property Data") or {})
     if not raw_text:
         note = "Raw Property Data is required before processing."
@@ -908,6 +920,7 @@ def lambda_handler(event, context):
         event_type = str(event.get("event_type") or "")
         event_id = str(event.get("event_id") or "")
         event_row_id = str(event.get("event_row_id") or "").strip()
+        updated_property_ids = event.get("updated_property_ids") or []
         if not re.fullmatch(r"[0-9a-fA-F-]{32,36}", page_id):
             raise IntakeError("Invalid asynchronous intake page ID")
         started = time.monotonic()
@@ -923,7 +936,7 @@ def lambda_handler(event, context):
                 return {"status": "already_processed", "event_id": event_id, "event_row_id": event_row_id}
         _log_event("worker_started", page_id=page_id, event_type=event_type, event_id=event_id, aws_request_id=getattr(context, "aws_request_id", ""))
         try:
-            result = process_page(page_id, event_type=event_type)
+            result = process_page(page_id, event_type=event_type, updated_property_ids=updated_property_ids)
         except Exception as exc:
             if event_store:
                 try:

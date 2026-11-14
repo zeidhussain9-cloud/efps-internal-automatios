@@ -125,11 +125,11 @@ def test_notion_webhook_validates_native_signature_and_queues_page(monkeypatch):
     monkeypatch.setenv("NOTION_SECRET_ARN", "arn:aws:secretsmanager:ap-southeast-2:123456789012:secret:test")
     monkeypatch.setattr("boto3.client", FakeBoto3.client, raising=False)
     monkeypatch.setattr(intake, "SupabaseIntakeStore", FakeStore)
-    monkeypatch.setattr(intake, "_enqueue_worker", lambda page_id, arn, event_type="", event_id="", event_row_id="", attempt_number=None: (calls.append(("enqueue", event_row_id)), queued.append((page_id, arn, event_type, event_id, event_row_id))))
+    monkeypatch.setattr(intake, "_enqueue_worker", lambda page_id, arn, event_type="", event_id="", event_row_id="", attempt_number=None, updated_property_ids=None: (calls.append(("enqueue", event_row_id)), queued.append((page_id, arn, event_type, event_id, event_row_id, updated_property_ids))))
     context = type("Context", (), {"invoked_function_arn": "arn:aws:lambda:ap-southeast-2:123456789012:function:test"})()
     result = intake.lambda_handler({"headers": {"X-Notion-Signature": signature}, "body": body}, context)
     assert result["statusCode"] == 202
-    assert queued == [("12345678-1234-4234-8234-123456789abc", context.invoked_function_arn, "page.created", "22345678-1234-4234-8234-123456789abc", "notion-webhook:event:22345678-1234-4234-8234-123456789abc")]
+    assert queued == [("12345678-1234-4234-8234-123456789abc", context.invoked_function_arn, "page.created", "22345678-1234-4234-8234-123456789abc", "notion-webhook:event:22345678-1234-4234-8234-123456789abc", None)]
     assert [call[0] for call in calls] == ["record", "enqueue", "queued"]
     assert calls[0][1]["page_id"] == "12345678-1234-4234-8234-123456789abc"
 
@@ -235,6 +235,37 @@ def test_process_page_persists_one_listing_and_reconciles_intake(monkeypatch):
     assert final["Intake Status"]["status"]["name"] == "Processed"
     assert final["Processed Property"]["relation"][0]["id"] == "housing-page-id"
     assert fake_store.finished[0][0] == "processed"
+
+
+def test_process_page_ignores_worker_owned_property_webhook(monkeypatch):
+    page_id = "12345678-1234-1234-1234-123456789abc"
+
+    class FakeNotion:
+        def get_page(self, supplied):
+            assert supplied == page_id
+            return {
+                "parent": {"database_id": intake.INTAKE_DATABASE_ID},
+                "properties": {
+                    "Raw Property Data": {"id": "raw-property-id", "rich_text": [{"plain_text": "raw"}]},
+                    "Photos": {"id": "photos-property-id", "files": []},
+                    "Intake Status": {"id": "intake-status-id"},
+                },
+            }
+
+    class NoCalls:
+        def __getattr__(self, name):
+            raise AssertionError(f"unexpected call: {name}")
+
+    result = intake.process_page(
+        page_id,
+        event_type="page.properties_updated",
+        updated_property_ids=["intake-status-id"],
+        notion=FakeNotion(),
+        store=NoCalls(),
+        sheets=NoCalls(),
+        cloudinary=NoCalls(),
+    )
+    assert result == {"status": "ignored", "listing_id": ""}
 
 
 def test_process_page_duplicate_delivery_does_not_write(monkeypatch):
@@ -469,7 +500,7 @@ def test_webhook_accepts_notion_event_entity_id(monkeypatch):
             status = kwargs.get("status") or args[1]
             return {"status": status, "started": status in {"accepted", "processing"}}
     monkeypatch.setattr(intake, "SupabaseIntakeStore", FakeStore)
-    monkeypatch.setattr(intake, "_enqueue_worker", lambda supplied, arn, event_type="", event_id="", event_row_id="", attempt_number=None: enqueued.append((supplied, arn, event_type, event_id, event_row_id)))
+    monkeypatch.setattr(intake, "_enqueue_worker", lambda supplied, arn, event_type="", event_id="", event_row_id="", attempt_number=None, updated_property_ids=None: enqueued.append((supplied, arn, event_type, event_id, event_row_id, updated_property_ids)))
     context = type("Context", (), {"invoked_function_arn": "arn:aws:lambda:ap-southeast-2:123456789012:function:test"})()
     result = intake.lambda_handler({"headers": {"X-Notion-Signature": signature}, "body": body}, context)
     assert result["statusCode"] == 202
