@@ -100,7 +100,10 @@ def scan(text: str) -> dict[str, str]:
         m = re.search(pat, text, re.I)
         if m: out[key] = m.group(1)
     if "built_up_area" not in out:
-        m = re.search(r"sqft\s*[:\-]\s*(\d{3,5})", text, re.I) or re.search(r"\b(\d{3,5})\s*(?:sq\.?\s*ft|sqft|sft)\b", text, re.I)
+        # A carpet-only measurement is not independent built-up evidence.
+        generic_lines = [line for line in text.splitlines() if not re.search(r"\bcarpet\b", line, re.I)]
+        generic_text = "\n".join(generic_lines)
+        m = re.search(r"sqft[ \t]*[:\-][ \t]*(\d{3,5})", generic_text, re.I) or re.search(r"\b(\d{3,5})[ \t]*(?:sq\.?[ \t]*ft|sqft|sft)\b", generic_text, re.I)
         if m: out["built_up_area"] = m.group(1)
 
     m = re.search(r"floor\s*[:\-]\s*(g|ground|\d{1,2})\s*(?:/|of)\s*(\d{1,2})", text, re.I)
@@ -123,7 +126,7 @@ def scan(text: str) -> dict[str, str]:
 
     patterns = {
         "bathrooms": r"\b(\d)\s*(?:bath|bathroom|toilet|washroom)s?\b",
-        "balconies": r"\b(\d+(?:\.\d+)?)\s*balcon(?:y|ies)\b",
+        "balconies": r"\b(\d+(?:\.\d+)?)[ \t]*balcon(?:y|ies)\b",
         "covered_parking": r"(\d)\s*covered\s*parking",
         "open_parking": r"(\d)\s*open\s*parking",
     }
@@ -136,13 +139,19 @@ def scan(text: str) -> dict[str, str]:
     if "balconies" not in out:
         has_negative_balcony = re.search(r"\b(?:no|without)\s+(?:a\s+)?balcony\b", text, re.I)
         has_singular_balcony = re.search(r"\b(?:with\s+)?balcony\b", text, re.I)
-        if has_singular_balcony and not has_negative_balcony:
+        if has_negative_balcony:
+            out["balconies"] = "0"
+        elif has_singular_balcony:
             out["balconies"] = "1"
 
     marker_society, marker_landmark, marker_maps = _marker_candidates(text)
     society=_first_line_value(text, (r"society\s*name", r"society", r"apartment\s*name", r"community\s*name", r"building\s*name")) or marker_society
     landmark=_first_line_value(text, (r"landmark",)) or marker_landmark
-    locality=_first_line_value(text, (r"property\s*location", r"location", r"locality", r"area"))
+    locality=_first_line_value(text, (r"property\s*location", r"location", r"locality"))
+    if not locality:
+        area_candidate = _first_line_value(text, (r"area",))
+        if area_candidate and not re.fullmatch(r"[\d.,]+[ \t]*(?:sq\.?[ \t]*ft\.?|sqft|sft)?", area_candidate, re.I):
+            locality = area_candidate
     prose = prose_location(text)
     locality = locality or prose.get("locality", "")
     society = society or prose.get("society_name", "")
@@ -172,7 +181,10 @@ def scan(text: str) -> dict[str, str]:
     m = re.search(r"(?:deposit|dep|advance)\D{0,12}?(\d[\d,]*\.?\d*)\s*(k|lakh|l|months?|mnths?)?", text, re.I)
     if m:
         unit = (m.group(2) or "").lower()
-        out["security_deposit"] = (str(int(float(m.group(1).replace(",", ""))*int(out["monthly_rent"]))) if unit.startswith(("month","mnth")) and out.get("monthly_rent","").isdigit() else _scale(m.group(1),m.group(2)))
+        if unit.startswith(("month", "mnth")):
+            out["security_deposit"] = (str(int(float(m.group(1).replace(",", "")) * int(out["monthly_rent"]))) if out.get("monthly_rent", "").isdigit() else m.group(1).replace(",", "") + " months")
+        else:
+            out["security_deposit"] = _scale(m.group(1), m.group(2))
 
     for pat, label in ((r"\bfully\s*furnish", "Fully Furnished"),(r"\bsemi[-\s]*furnish", "Semi Furnished")):
         if re.search(pat, text, re.I): out["furnish_type"] = label; break

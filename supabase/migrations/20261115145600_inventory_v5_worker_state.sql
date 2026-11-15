@@ -1,0 +1,69 @@
+-- STAGED. Fenced worker state transitions. Notion itself has no CAS operation.
+BEGIN;
+ALTER TABLE public.inventory_processing_revisions ADD COLUMN IF NOT EXISTS prepared_inputs jsonb;
+ALTER TABLE public.inventory_processing_revisions ADD COLUMN IF NOT EXISTS page_id uuid UNIQUE;
+ALTER TABLE public.inventory_processing_revisions ADD COLUMN IF NOT EXISTS field_provenance jsonb NOT NULL DEFAULT '{}'::jsonb;
+ALTER TABLE public.inventory_processing_revisions ADD COLUMN IF NOT EXISTS source_evidence jsonb NOT NULL DEFAULT '{}'::jsonb;
+ALTER TABLE public.inventory_processing_revisions ADD COLUMN IF NOT EXISTS review_history jsonb NOT NULL DEFAULT '[]'::jsonb;
+ALTER TABLE public.inventory_processing_revisions ADD COLUMN IF NOT EXISTS processing_status text NOT NULL DEFAULT 'pending';
+
+CREATE OR REPLACE FUNCTION public.inventory_v5_worker_state(
+ p_operation text,p_page_id uuid,p_listing_id text DEFAULT NULL,p_lease uuid DEFAULT NULL,
+ p_revision bigint DEFAULT NULL,p_values jsonb DEFAULT NULL,p_patch jsonb DEFAULT NULL,
+ p_provenance jsonb DEFAULT NULL,p_input_hash text DEFAULT NULL,p_status text DEFAULT NULL,
+ p_review jsonb DEFAULT NULL
+) RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,public AS $$
+DECLARE r public.inventory_processing_revisions%ROWTYPE; token uuid;
+BEGIN
+ IF p_operation='claim' THEN
+  IF p_listing_id IS NULL OR p_listing_id='' THEN RAISE EXCEPTION 'Listing identity required'; END IF;
+  INSERT INTO public.inventory_processing_revisions(listing_id,page_id)
+  VALUES(p_listing_id,p_page_id) ON CONFLICT(listing_id) DO NOTHING;
+  SELECT * INTO r FROM public.inventory_processing_revisions WHERE page_id=p_page_id FOR UPDATE;
+  IF r.listing_id IS DISTINCT FROM p_listing_id THEN RAISE EXCEPTION 'Page/listing identity conflict'; END IF;
+  IF r.lease_until > clock_timestamp() THEN RETURN jsonb_build_object('busy',true); END IF;
+  token=gen_random_uuid();
+  UPDATE public.inventory_processing_revisions SET lease_token=token,
+    lease_until=clock_timestamp()+interval '90 seconds',updated_at=clock_timestamp()
+    WHERE page_id=p_page_id;
+  RETURN jsonb_build_object('lease',token,'revision',r.revision);
+ END IF;
+ SELECT * INTO r FROM public.inventory_processing_revisions WHERE page_id=p_page_id FOR UPDATE;
+ IF NOT FOUND OR r.lease_token IS DISTINCT FROM p_lease OR r.lease_until <= clock_timestamp() THEN
+  RAISE EXCEPTION 'Stale or expired inventory lease';
+ END IF;
+ IF p_operation='load' THEN RETURN to_jsonb(r); END IF;
+ IF p_operation='renew' THEN
+  UPDATE public.inventory_processing_revisions SET lease_until=clock_timestamp()+interval '90 seconds' WHERE page_id=p_page_id;
+ ELSIF p_operation='prepare' THEN
+  IF p_revision IS DISTINCT FROM r.revision THEN RAISE EXCEPTION 'Inventory revision conflict'; END IF;
+  IF jsonb_typeof(p_patch) IS DISTINCT FROM 'object' OR jsonb_typeof(p_provenance) IS DISTINCT FROM 'object' OR jsonb_typeof(p_values) IS DISTINCT FROM 'object' THEN RAISE EXCEPTION 'Patch/provenance/inputs object required'; END IF;
+  UPDATE public.inventory_processing_revisions SET pending_patch=p_patch,expected_self_write=p_patch,
+   field_provenance=p_provenance,current_input_hash=p_input_hash,prepared_inputs=p_values,processing_status='prepared',updated_at=clock_timestamp()
+   WHERE page_id=p_page_id;
+  INSERT INTO public.inventory_field_provenance(listing_id,field_name,origin,evidence,inputs_hash,derivation_version,last_generated_value,revision)
+   SELECT r.listing_id,key,value->>'origin',value,p_input_hash,
+    (value->>'derivation_version')::integer,value->'last_generated_value',r.revision+1
+   FROM jsonb_each(p_provenance)
+   ON CONFLICT(listing_id,field_name) DO UPDATE SET origin=excluded.origin,evidence=excluded.evidence,
+    inputs_hash=excluded.inputs_hash,derivation_version=excluded.derivation_version,
+    last_generated_value=excluded.last_generated_value,revision=excluded.revision,updated_at=clock_timestamp();
+ ELSIF p_operation='finish' THEN
+  IF jsonb_typeof(p_values) IS DISTINCT FROM 'object' THEN RAISE EXCEPTION 'Acknowledged object required'; END IF;
+  UPDATE public.inventory_processing_revisions SET last_acknowledged_values=p_values,pending_patch=NULL,prepared_inputs=NULL,
+    revision=revision+1,processing_status=p_status,updated_at=clock_timestamp() WHERE page_id=p_page_id;
+ ELSIF p_operation='review' THEN
+  IF jsonb_typeof(p_review) IS DISTINCT FROM 'object' THEN RAISE EXCEPTION 'Review object required'; END IF;
+  UPDATE public.inventory_processing_revisions SET review_history=review_history||jsonb_build_array(p_review),
+    processing_status='needs_review',updated_at=clock_timestamp() WHERE page_id=p_page_id;
+ ELSIF p_operation='requeue' THEN
+  UPDATE public.inventory_processing_revisions SET processing_status='retry',updated_at=clock_timestamp() WHERE page_id=p_page_id;
+ ELSIF p_operation='release' THEN
+  UPDATE public.inventory_processing_revisions SET lease_token=NULL,lease_until=NULL,updated_at=clock_timestamp() WHERE page_id=p_page_id;
+ ELSE RAISE EXCEPTION 'Unsupported inventory state operation';
+ END IF;
+ RETURN jsonb_build_object('ok',true);
+END $$;
+REVOKE ALL ON FUNCTION public.inventory_v5_worker_state FROM PUBLIC,anon,authenticated;
+GRANT EXECUTE ON FUNCTION public.inventory_v5_worker_state TO service_role;
+COMMIT;

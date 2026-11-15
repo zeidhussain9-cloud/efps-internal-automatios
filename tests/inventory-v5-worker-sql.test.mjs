@@ -1,0 +1,35 @@
+import fs from 'node:fs';
+import assert from 'node:assert/strict';
+import { PGlite } from '@electric-sql/pglite';
+const db=new PGlite();
+await db.exec('CREATE ROLE anon;CREATE ROLE authenticated;CREATE ROLE service_role;CREATE TABLE public.crm_inventory_snapshot(listing_id text PRIMARY KEY);');
+for(const name of ['20261115145500_inventory_v5_staged.sql','20261115145600_inventory_v5_worker_state.sql'])await db.exec(fs.readFileSync(new URL('../supabase/migrations/'+name,import.meta.url),'utf8'));
+const page='12345678-1234-4234-8234-123456789012';
+async function call(op,opts={}){
+ const args={p_operation:op,p_page_id:page,...opts};
+ const names=Object.keys(args);const result=await db.query(`SELECT public.inventory_v5_worker_state(${names.map((x,i)=>x+'=> $'+(i+1)).join(',')}) AS result`,Object.values(args));
+ return result.rows[0].result;
+}
+const claim=await call('claim',{p_listing_id:'EF-2611-ABCD'});assert.ok(claim.lease);
+assert.equal((await call('claim',{p_listing_id:'EF-2611-ABCD'})).busy,true);
+await assert.rejects(()=>call('load',{p_lease:'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'}),/Stale or expired/);
+const valid={p_lease:claim.lease};
+await assert.rejects(()=>call('prepare',{...valid,p_revision:1,p_patch:{x:'new'},p_values:{x:'old'},p_provenance:{}}),/revision conflict/);
+await call('prepare',{...valid,p_revision:0,p_patch:{x:'new'},p_values:{x:'old'},p_provenance:{x:{origin:'derived',last_generated_value:'new'}},p_input_hash:'a'.repeat(64)});
+let row=await call('load',valid);assert.deepEqual(row.pending_patch,{x:'new'});assert.deepEqual(row.prepared_inputs,{x:'old'});
+await call('review',{...valid,p_review:{fields:['x'],reason:'test'}});
+await call('review',{...valid,p_review:{fields:['y'],reason:'second test'}});
+assert.equal((await call('load',valid)).review_history.length,2);
+await call('finish',{...valid,p_values:{x:'new'},p_status:'recalculated'});
+row=await call('load',valid);assert.equal(row.revision,1);assert.equal(row.pending_patch,null);assert.equal(row.prepared_inputs,null);assert.deepEqual(row.expected_self_write,{x:'new'});
+await call('release',valid);
+await assert.rejects(()=>call('finish',{...valid,p_values:{x:'bad'}}),/Stale or expired/);
+const next=await call('claim',{p_listing_id:'EF-2611-ABCD'});assert.notEqual(next.lease,claim.lease);
+await assert.rejects(()=>call('prepare',{...valid,p_revision:1,p_patch:{},p_values:{},p_provenance:{}}),/Stale or expired/);
+await db.exec(`UPDATE inventory_processing_revisions SET lease_until=now()-interval '1 second'`);
+await assert.rejects(()=>call('load',{p_lease:next.lease}),/Stale or expired/);
+await assert.rejects(()=>call('claim',{p_listing_id:'EF-2611-ZZZZ'}),/Page\/listing identity conflict|duplicate key/);
+await db.exec('SET ROLE anon');await assert.rejects(()=>call('load',{p_lease:next.lease}),/permission denied/);
+await db.exec('RESET ROLE');
+console.log('Isolated PostgreSQL fenced lease/revision/recovery/RLS checks passed. No live writes.');
+await db.close();

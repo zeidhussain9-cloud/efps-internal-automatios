@@ -8,6 +8,9 @@ on:
       - "shared/google_maps/**"
       - "modules/efps-inventory-mgmnt/**"
       - "supabase/functions/notion-inventory-state/**"
+      - "supabase/migrations/*inventory_v5*"
+      - "tests/inventory-v5*"
+      - "src/inventory-date.mjs"
       - "tools/**"
       - ".github/workflows/inventory-contract.yml"
   pull_request:
@@ -17,6 +20,9 @@ on:
       - "shared/google_maps/**"
       - "modules/efps-inventory-mgmnt/**"
       - "supabase/functions/notion-inventory-state/**"
+      - "supabase/migrations/*inventory_v5*"
+      - "tests/inventory-v5*"
+      - "src/inventory-date.mjs"
       - "tools/**"
       - ".github/workflows/inventory-contract.yml"
 
@@ -40,3 +46,10 @@ jobs:
         run: |
           python -m pytest -q shared/google_sheets/test_schema.py modules/efps-inventory-mgmnt/tests modules/efps-inventory-mgmnt/src/test_inventory_pipeline.py tools/test_deterministic_edge_cases.py
           python tools/projection_regression_check.py
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24.21.0"
+          cache: npm
+      - run: npm ci
+      - name: Run version-five type, date, SQL lease and reference-order tests
+        run: node --test tests/inventory-v5*.test.mjs tests/inventory-date.test.mjs tests/inventory-logic.test.mjs

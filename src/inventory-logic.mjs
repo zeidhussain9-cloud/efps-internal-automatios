@@ -1,3 +1,5 @@
+import { inventoryInstant } from './inventory-date.mjs';
+
 export const INVENTORY_SORT_OPTIONS = [
   ['latest','Latest'],
   ['oldest','Oldest'],
@@ -21,7 +23,7 @@ export function inventorySortLabel(value='latest'){
 
 export function sortInventoryRows(rows,sort='latest'){
   const requested=normalizeInventorySort(sort);
-  const parseDate=value=>{if(!value)return null;const t=Date.parse(String(value));return Number.isFinite(t)?t:null};
+  const parseDate=inventoryInstant;
   const bhkNumber=value=>{const match=String(value||'').match(/\d+(?:\.\d+)?/);return match?Number(match[0]):Number.POSITIVE_INFINITY};
   return [...(Array.isArray(rows)?rows:[])].sort((a,b)=>{
    if(requested==='rent_asc'||requested==='rent_desc'){
@@ -37,8 +39,8 @@ export function sortInventoryRows(rows,sort='latest'){
     const cmp=String(a.locality||'').localeCompare(String(b.locality||''));
     if(cmp!==0)return cmp;
    }
-   const ad=parseDate(a.onboarded_on||a.source_record?.onboarded_on||a.last_synced_at);
-   const bd=parseDate(b.onboarded_on||b.source_record?.onboarded_on||b.last_synced_at);
+   const ad=parseDate(a.onboarded_at||a.source_record?.onboarded_at||a.onboarded_on||a.source_record?.onboarded_on||a.last_synced_at);
+   const bd=parseDate(b.onboarded_at||b.source_record?.onboarded_at||b.onboarded_on||b.source_record?.onboarded_on||b.last_synced_at);
    if(requested==='latest'||requested==='oldest'){
     if(ad===null&&bd!==null)return 1;
     if(ad!==null&&bd===null)return -1;

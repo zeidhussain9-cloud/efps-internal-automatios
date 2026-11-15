@@ -1,6 +1,7 @@
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts'
 import { createClient } from 'npm:@supabase/supabase-js@2.117.2'
 import { missingActivePageRows, responseForOperation } from './response-contract.mjs'
+import { v5Projection } from './inventory-v5-contract.mjs'
 
 const EXPECTED_INTERNAL_KEY_SHA256 = 'a64a3cb25769eff7c88456645d5196cf5e4fa33fc1c9b80ac309f4a2d605c4c9'
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!
@@ -33,7 +34,25 @@ Deno.serve(async (req) => {
   const pageScopedOperations = new Set(['claim', 'set_listing_id', 'finish', 'allocate_listing_id', 'delete_inventory', 'find_inventory', 'sync_inventory'])
   if (pageScopedOperations.has(operation) && !uuid(pageId)) return Response.json({ error: 'Invalid Notion page ID' }, { status: 400 })
   let result
-  if (operation === 'record_webhook_event') {
+  if (operation === 'inventory_v5_worker') {
+    if (Deno.env.get('EFPS_INVENTORY_V5_ENABLED') !== 'true') return Response.json({ error:'Inventory v5 is disabled' },{status:409})
+    if (!uuid(pageId)) return Response.json({error:'Invalid Notion page ID'},{status:400})
+    const workerOperation=String(body.worker_operation??'')
+    const allowed=['claim','load','renew','prepare','finish','review','requeue','release']
+    if (!allowed.includes(workerOperation) || (workerOperation!=='claim'&&!uuid(body.lease))) return Response.json({error:'Invalid worker operation or lease'},{status:400})
+    if (workerOperation==='claim'&&!/^EF-\d{4}-[0123456789ABCDEFGHJKMNPQRSTVWXYZ]{4}$/.test(String(body.listing_id??''))) return Response.json({error:'Invalid listing identity'},{status:400})
+    const objectOrNull=(v:unknown)=>v===undefined||v===null||(typeof v==='object'&&!Array.isArray(v))
+    if (![body.values,body.patch,body.provenance,body.review].every(objectOrNull)) return Response.json({error:'Worker objects required'},{status:400})
+    if (body.revision!==undefined&&(!Number.isSafeInteger(body.revision)||Number(body.revision)<0)) return Response.json({error:'Invalid revision'},{status:400})
+    if (body.input_hash!==undefined&&!/^[a-f0-9]{64}$/i.test(String(body.input_hash))) return Response.json({error:'Invalid input hash'},{status:400})
+    const state=await supabase.rpc('inventory_v5_worker_state',{
+      p_operation:workerOperation,p_page_id:pageId,p_listing_id:body.listing_id??null,p_lease:body.lease??null,
+      p_revision:body.revision??null,p_values:body.values??null,p_patch:body.patch??null,
+      p_provenance:body.provenance??null,p_input_hash:body.input_hash??null,p_status:body.status??null,p_review:body.review??null,
+    })
+    if(state.error){console.error('Inventory v5 state failed',{code:state.error.code});return Response.json({error:'Inventory state rejected'},{status:409})}
+    return Response.json(state.data)
+  } else if (operation === 'record_webhook_event') {
     const eventKey = String(body.event_key ?? '')
     const payloadSha256 = String(body.payload_sha256 ?? '')
     const eventPayload = body.payload
@@ -163,7 +182,22 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Invalid inventory row' }, { status: 400 })
     }
     const record = row as Record<string, unknown>
+    let v5Fields: Record<string, unknown> = {}
+    if (Number(record.inventory_contract_version ?? 4) === 5) {
+      if (Deno.env.get('EFPS_INVENTORY_V5_ENABLED') !== 'true') {
+        return Response.json({ error: 'Inventory v5 cutover has not been enabled' }, { status: 409 })
+      }
+      try { v5Fields = v5Projection(record) } catch {
+        return Response.json({ error: 'Invalid inventory v5 contract' }, { status: 400 })
+      }
+    }
     const sourceHash = String(body.source_hash ?? '')
+    // A delayed v4 worker must never erase a migrated record's typed state.
+    if (Number(record.inventory_contract_version ?? 4) !== 5) {
+      const current = await supabase.from('crm_inventory_snapshot').select('source_record').eq('listing_id',listingId).maybeSingle()
+      if (current.error) return Response.json({error:'Inventory version check failed'},{status:500})
+      if (Number(current.data?.source_record?.inventory_contract_version??4)===5) return Response.json({error:'Legacy inventory payload requires v5 requeue'},{status:409})
+    }
     if (!/^[a-f0-9]{64}$/i.test(sourceHash) || String(record.listing_id ?? '') !== listingId) {
       return Response.json({ error: 'Invalid inventory identity or hash' }, { status: 400 })
     }
@@ -182,8 +216,8 @@ Deno.serve(async (req) => {
       bhk: String(record.BHK ?? ''),
       monthly_rent: numeric(record.monthly_rent),
       furnishing: String(record.furnish_type ?? ''),
-      listing_state: String(record.listing_state ?? 'Unknown'),
-      business_status: String(record.status ?? '').trim() || 'Not recorded',
+      listing_state: String(v5Fields.availability ?? record.listing_state ?? 'Unknown'),
+      business_status: String(v5Fields.pipeline_status ?? record.status ?? '').trim() || 'Not recorded',
       intake_status: String(record.intake_status ?? ''),
       pet_friendly: String(record.pet_friendly ?? ''),
       cloudinary_image_urls: urls,
@@ -191,6 +225,7 @@ Deno.serve(async (req) => {
       last_synced_at: new Date().toISOString(),
       source_record: record,
       source_hash: sourceHash,
+      ...v5Fields,
       deleted_at: body.deleted === true ? new Date().toISOString() : null,
     }, { onConflict: 'listing_id' })
     if (result.error) {

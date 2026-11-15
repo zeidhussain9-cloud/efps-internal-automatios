@@ -256,7 +256,7 @@ def _notion_value(prop: dict) -> str:
     if kind in {"select", "status"}:
         return str((value or {}).get("name") or "")
     if kind == "multi_select":
-        return ", ".join(str(part.get("name") or "") for part in (value or []) if part.get("name"))
+        return [str(part.get("name") or "") for part in (value or []) if part.get("name")]
     if kind in {"url", "email", "phone_number"}:
         return str(value or "")
     if kind == "date":
@@ -329,7 +329,7 @@ def _number(value):
 
 
 def _rich(value: object) -> dict:
-    text = str(value or "")
+    text = "" if value is None else str(value)
     parts = [text[i:i + 1900] for i in range(0, len(text), 1900)] or [""]
     return {"rich_text": [{"type": "text", "text": {"content": part}} for part in parts[:100]]}
 
@@ -450,7 +450,7 @@ def validate_listing_schema(schema: dict) -> None:
 
 def _serialize_text_field(value: object, property_type: str, field: str) -> dict:
     """Serialize a string-valued field according to its fetched Notion property type."""
-    text = str(value or "").strip()
+    text = "" if value is None else str(value).strip()
     if property_type == "rich_text":
         return _rich(text)
     if property_type == "select":
@@ -518,7 +518,11 @@ def _short_mobile_maps_url(url: str) -> bool:
 
 def _explicit_pet_policy(raw_text: str) -> str:
     text = str(raw_text or "")
-    if re.search(r"\b(?:no\s+pets?|pets?\s+not\s+allowed|pets?\s+prohibited|not\s+pet\s+friendly)\b", text, re.I):
+    try:
+        from .inventory_v5 import pet_evidence
+    except ImportError:
+        from inventory_v5 import pet_evidence
+    if pet_evidence(text) == "No":
         return "Not Allowed"
     if re.search(r"\b(?:pets?\s+allowed|pet\s+friendly|pets?\s+welcome)\b", text, re.I):
         return "Allowed"
