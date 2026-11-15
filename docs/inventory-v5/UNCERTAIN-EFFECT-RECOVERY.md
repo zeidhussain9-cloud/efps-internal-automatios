@@ -54,3 +54,29 @@ A requests timeout is not a total execution deadline or proof of remote quiescen
 
 Release remains blocked for any path that requires guaranteed automatic recovery
 from an unknown Notion flight. Do not describe this as unconditional self-healing.
+
+## Operational acceptance still required before release
+
+The incident table records the exact blocked effect on a refused takeover and
+records reconciliation readback, remaining values, state hash, decision and
+attestation reference separately from ordinary worker state. Worker return is
+needs_recovery/blocked, not ordinary busy. The title queue also returns
+needs_recovery. These are backend signals only: no deployed operator view,
+alert routing, named incident owner, database attestor or response commitment
+has been selected. Those must be explicit before release.
+
+One uncertain listing write can block that listing indefinitely. One uncertain
+title write can block all later numbering jobs indefinitely. Do not call this
+bounded recovery. If the owner does not accept this tradeoff, defer automatic
+writes/renumbering until there is a supported remote quiescence guarantee.
+A production incident view should show affected listing/job, first blocked time,
+exact effect reference, owner, evidence still missing and next action, without
+exposing credentials. Alert on a new incident and material state changes; do
+not send repeated unchanged alerts. Routing/account changes remain gated.
+
+The service role is privileged trusted application code. The recovery table's
+restricted insert grant prevents accidental use through the ordinary port; it
+is not a tamperproof boundary against malicious code with other privileged
+capabilities. Python readback validation is part of the trusted implementation.
+The SQL recovery RPC persists that readback/decision, checks exact effect and
+attestation CAS, and does not independently interpret Notion values.

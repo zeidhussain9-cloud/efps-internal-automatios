@@ -27,6 +27,8 @@ def process_dependencies(page_id, *, notion, repository, render_caption, route_b
     """
     lease = repository.claim(page_id)
     if not lease:
+        if getattr(repository,'blocked_state',{}).get(page_id,{}).get('needs_recovery'):
+            return {'status':'needs_recovery','blocked':True,'reason':'Uncertain external write; manual incident review required'}
         return {'status': 'busy'}
     try:
         state = repository.load(page_id, lease)

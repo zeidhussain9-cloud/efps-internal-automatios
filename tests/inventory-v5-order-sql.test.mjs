@@ -1,6 +1,6 @@
 import fs from 'node:fs';import assert from 'node:assert/strict';import{PGlite}from'@electric-sql/pglite';
 const db=new PGlite();await db.exec('CREATE ROLE anon;CREATE ROLE authenticated;CREATE ROLE service_role;CREATE TABLE public.crm_inventory_snapshot(listing_id text PRIMARY KEY);');
-for(const f of ['20261115145500_inventory_v5_staged.sql','20261115145700_inventory_v5_reference_order.sql'])await db.exec(fs.readFileSync(new URL('../supabase/migrations/'+f,import.meta.url),'utf8'));
+for(const f of ['20261115145500_inventory_v5_staged.sql','20261115145600_inventory_v5_worker_state.sql','20261115145700_inventory_v5_reference_order.sql'])await db.exec(fs.readFileSync(new URL('../supabase/migrations/'+f,import.meta.url),'utf8'));
 const ids=Array.from({length:4},(_,i)=>`12345678-1234-4234-8234-${String(i+1).padStart(12,'0')}`);
 async function ref(op,args={}){return(await db.query(`SELECT public.inventory_v5_reference_order(p_operation=>$1,p_page_id=>$2,p_listing_id=>$3,p_seed=>$4) AS v`,[op,args.page??null,args.listing??null,args.seed??null])).rows[0].v}
 async function job(op,args={}){return(await db.query(`SELECT public.inventory_v5_renumber_state(p_operation=>$1,p_job_id=>$2,p_lease=>$3,p_next_offset=>$4,p_error=>$5) AS v`,[op,args.id??null,args.lease??null,args.offset??null,args.intent??null])).rows[0].v}

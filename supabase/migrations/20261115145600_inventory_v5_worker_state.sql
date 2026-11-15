@@ -1,5 +1,16 @@
 -- STAGED. Fenced worker state transitions. Notion itself has no CAS operation.
 BEGIN;
+CREATE TABLE public.inventory_effect_recovery_incidents(
+ id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+ scope text NOT NULL CHECK(scope IN ('worker','renumber')),page_id uuid,job_id bigint,
+ effect jsonb NOT NULL,status text NOT NULL DEFAULT 'blocked',
+ readback jsonb,remaining jsonb,state_hash text,decision jsonb,attestation_id uuid,
+ reported_at timestamptz NOT NULL DEFAULT clock_timestamp(),resolved_at timestamptz,
+ UNIQUE(scope,effect)
+);
+ALTER TABLE public.inventory_effect_recovery_incidents ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON public.inventory_effect_recovery_incidents FROM PUBLIC,anon,authenticated;
+GRANT SELECT ON public.inventory_effect_recovery_incidents TO service_role;
 ALTER TABLE public.inventory_processing_revisions ADD COLUMN IF NOT EXISTS active_effect jsonb;
 ALTER TABLE public.inventory_processing_revisions ADD COLUMN IF NOT EXISTS prepared_inputs jsonb;
 ALTER TABLE public.inventory_processing_revisions ADD COLUMN IF NOT EXISTS page_id uuid UNIQUE;
@@ -22,7 +33,9 @@ BEGIN
   VALUES(p_listing_id,p_page_id) ON CONFLICT(listing_id) DO NOTHING;
   SELECT * INTO r FROM public.inventory_processing_revisions WHERE page_id=p_page_id FOR UPDATE;
   IF r.listing_id IS DISTINCT FROM p_listing_id THEN RAISE EXCEPTION 'Page/listing identity conflict'; END IF;
-  IF r.active_effect IS NOT NULL THEN RETURN jsonb_build_object('needs_recovery',true,'busy',true); END IF;
+  IF r.active_effect IS NOT NULL THEN
+   INSERT INTO public.inventory_effect_recovery_incidents(scope,page_id,effect) VALUES('worker',p_page_id,r.active_effect) ON CONFLICT(scope,effect) DO NOTHING;
+   RETURN jsonb_build_object('needs_recovery',true,'busy',true); END IF;
   IF r.lease_until > clock_timestamp() THEN RETURN jsonb_build_object('busy',true); END IF;
   token=gen_random_uuid();
   UPDATE public.inventory_processing_revisions SET lease_token=token,

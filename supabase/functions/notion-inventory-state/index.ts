@@ -59,7 +59,7 @@ Deno.serve(async (req) => {
     if(operation==='inventory_v5_recover_effect'&&!uuid(body.attestation_id)) return Response.json({error:'Operator attestation required'},{status:400})
     const recovered=operation==='inventory_v5_recovery_snapshot'
       ? await supabase.rpc('inventory_v5_recovery_snapshot',{p_scope:body.scope,p_page_id:pageId,p_job_id:body.job_id??null})
-      : await supabase.rpc('inventory_v5_recover_effect',{p_attestation:body.attestation_id,p_expected_effect:body.expected_effect??null,p_current:body.current??null,p_remaining:body.remaining??null})
+      : await supabase.rpc('inventory_v5_recover_effect',{p_attestation:body.attestation_id,p_expected_effect:body.expected_effect??null,p_current:body.current??null,p_remaining:body.remaining??null,p_state_hash:body.state_hash??null,p_decision:body.decision??null})
     if(recovered.error)return Response.json({error:'Recovery rejected'},{status:409})
     return Response.json(recovered.data)
   } else if (operation === 'inventory_v5_renumber' || operation === 'inventory_v5_reference') {

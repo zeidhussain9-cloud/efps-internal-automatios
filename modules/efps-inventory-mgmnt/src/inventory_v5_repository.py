@@ -7,7 +7,7 @@ from __future__ import annotations
 
 class V5Repository:
     def __init__(self, *, request, identity, mirror):
-        self.request=request;self.identity=identity;self.mirror_port=mirror;self.leases={};self.revisions={}
+        self.request=request;self.identity=identity;self.mirror_port=mirror;self.leases={};self.revisions={};self.blocked_state={}
 
     def _call(self, operation, page, lease=None, **values):
         return self.request('inventory_v5_worker',page_id=page,
@@ -15,6 +15,7 @@ class V5Repository:
 
     def claim(self,page):
         result=self._call('claim',page)
+        self.blocked_state[page]=result if result.get('needs_recovery') else {}
         lease=result.get('lease')
         if lease:self.leases[page]=lease
         return lease
@@ -102,4 +103,5 @@ class V5RecoveryRepository:
 
     def resolve_effect(self,page,*,scope,job_id,expected_effect,current,remaining,proof,state_hash):
         return self.request('inventory_v5_recover_effect',page_id=page,scope=scope,job_id=job_id,
-            attestation_id=proof['attestation_id'],expected_effect=expected_effect,current=current,remaining=remaining)
+            attestation_id=proof['attestation_id'],expected_effect=expected_effect,current=current,remaining=remaining,
+            state_hash=state_hash,decision={'proof':proof,'result':'recognized_partial'if remaining else'fully_applied','notion_write':False})

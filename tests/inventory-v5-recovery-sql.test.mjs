@@ -6,7 +6,7 @@ let claim=(await db.query("SELECT inventory_v5_worker_state('claim',$1,'EF-2611-
 await db.query("SELECT inventory_v5_worker_state(p_operation=>'begin_effect',p_page_id=>$1,p_lease=>$2,p_values=>$3)",[page,claim.lease,{patch:{x:2}}]);
 const effect=(await db.query('SELECT active_effect FROM inventory_processing_revisions')).rows[0].active_effect;
 await db.exec("UPDATE inventory_processing_revisions SET lease_until=now()-interval '1 second'");
-async function recover(id,expected=effect){return db.query('SELECT inventory_v5_recover_effect($1,$2,$3,$4)',[id,expected,{x:2},{}])}
+async function recover(id,expected=effect){return db.query('SELECT inventory_v5_recover_effect($1,$2,$3,$4,$5,$6)',[id,expected,{x:2},{},'a'.repeat(64),{result:'fully_applied',notion_write:false}])}
 await assert.rejects(()=>recover(page),/attestation/);
 // Database owner records exact independent proof. This is synthetic evidence,
 // never a claim that local death or a timeout proves a real Notion request ended.
@@ -17,5 +17,6 @@ await assert.rejects(()=>recover(id,{...effect,lease:'different'}),/attestation/
 await recover(id);await assert.rejects(()=>recover(id),/attestation/);
 await db.exec('RESET ROLE');
 let final=(await db.query('SELECT active_effect FROM inventory_processing_revisions')).rows[0];assert.equal(final.active_effect,null);
+let incident=(await db.query('SELECT * FROM inventory_effect_recovery_incidents')).rows[0];assert.equal(incident.status,'reconciled');assert.deepEqual(incident.readback,{x:2});assert.deepEqual(incident.remaining,{});assert.equal(incident.state_hash,'a'.repeat(64));assert.equal(incident.decision.notion_write,false);
 const next=(await db.query("SELECT inventory_v5_worker_state('claim',$1,'EF-2611-ABCD')v",[page])).rows[0].v;assert.ok(next.lease);
 console.log('Operator-attested exact-effect recovery, no worker self-attestation, single-use CAS checks pass.');await db.close();

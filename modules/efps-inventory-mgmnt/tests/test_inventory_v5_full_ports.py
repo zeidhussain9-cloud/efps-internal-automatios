@@ -8,6 +8,7 @@ from src.inventory_v5_repository import V5Repository,V5RenumberRepository,V5Reco
 from src.inventory_v5_notion import V5NotionPort
 from src.inventory_v5_adapter import serialize_notion
 from src.inventory_v5_worker import process_dependencies
+from src.inventory_v5_renumber import run_renumber
 from src.inventory_v5 import content_hash
 from src.inventory_v5_reconcile import Quiescence,reconcile_effect,RecoveryBlocked
 
@@ -167,3 +168,32 @@ def test_operator_attested_reconciliation_resumes_real_ports_without_blind_write
     assert notion.snapshot(PAGE)['Pipeline Status']=='Ready to Post'
     assert db.request('__inspect')['state']['pending_patch']==patch
     assert repo.claim(PAGE) is not None
+
+
+def test_title_job_operator_recovery_resumes_real_checkpoint_and_completion(db):
+    db.request('inventory_v5_reference',worker_operation='seed',seed=[{'page_id':PAGE,'listing_id':'EF-2611-ABCD'}])
+    row={'listing_id':'EF-2611-ABCD','SL number':'old title','Pipeline Status':'Ready to Post'}
+    client=Client(row);notion=V5NotionPort(client,client.schema)
+    repo=V5RenumberRepository(request=db.request,prepare_title=lambda *a:None,ack_title=lambda *a:None)
+    job=repo.claim();intent={'page_id':PAGE,'before':{'SL number':'old title'},'patch':{'SL number':'1'}}
+    def uncertain():raise TimeoutError('synthetic unknown title request')
+    with pytest.raises(TimeoutError):repo.effect(job['job_id'],job['lease_token'],intent,uncertain)
+    db.request('__expire')
+    blocked=run_renumber(repository=repo,notion=notion)
+    assert blocked['busy'] and blocked['needs_recovery']
+    recovery=V5RecoveryRepository(request=db.request)
+    ticket=recovery.recovery_snapshot(PAGE,scope='renumber',job_id=job['job_id'])['effect']
+    attestation=db.request('__attest',scope='renumber',page_id=PAGE,job_id=job['job_id'],effect=ticket)['id']
+    result=reconcile_effect(repository=recovery,notion=notion,page_id=PAGE,scope='renumber',job_id=job['job_id'],
+        verify_quiescence=lambda **k:Quiescence('synthetic terminal writer','synthetic terminal remote','synthetic exact title request',attestation))
+    assert result['status']=='reconciled_without_notion_write'
+    assert notion.snapshot(PAGE)['SL number']=='old title'
+    resumed=run_renumber(repository=repo,notion=notion)
+    assert resumed['status']=='completed' and resumed['changed']==[PAGE]
+    assert notion.snapshot(PAGE)['SL number']=='1'
+    final=db.request('__inspect')
+    assert final['jobs'][0]['status']=='completed' and final['jobs'][0]['next_offset']==1
+    assert final['incidents'][0]['scope']=='renumber'
+    assert final['incidents'][0]['status']=='reconciled'
+    assert final['incidents'][0]['remaining']=={'SL number':'1'}
+    assert final['incidents'][0]['decision']['notion_write']is False

@@ -16,9 +16,9 @@ for await(const line of readline.createInterface({input:process.stdin})){
   }else if(input.operation==='__expire'){
    await db.exec("UPDATE inventory_processing_revisions SET lease_until=now()-interval '1 second';UPDATE inventory_renumber_jobs SET lease_until=now()-interval '1 second'");result={ok:true};
   }else if(input.operation==='__attest'){
-   result=(await db.query("INSERT INTO inventory_effect_recovery_attestations(scope,page_id,effect,writer_reference,remote_reference,request_reference) VALUES('worker',$1,$2,'synthetic writer terminal','synthetic remote terminal','synthetic exact request') RETURNING id",[input.page_id,input.effect])).rows[0];
+   result=(await db.query("INSERT INTO inventory_effect_recovery_attestations(scope,page_id,effect,job_id,writer_reference,remote_reference,request_reference) VALUES($1,$2,$3,$4,'synthetic writer terminal','synthetic remote terminal','synthetic exact request') RETURNING id",[input.scope??'worker',input.page_id,input.effect,input.job_id??null])).rows[0];
   }else if(input.operation==='__inspect'){
-   result={state:(await db.query('SELECT * FROM inventory_processing_revisions')).rows[0],mirror:(await db.query('SELECT * FROM crm_inventory_snapshot')).rows[0]};
+   result={jobs:(await db.query('SELECT * FROM inventory_renumber_jobs ORDER BY job_id')).rows,incidents:(await db.query('SELECT * FROM inventory_effect_recovery_incidents')).rows,state:(await db.query('SELECT * FROM inventory_processing_revisions')).rows[0],mirror:(await db.query('SELECT * FROM crm_inventory_snapshot')).rows[0]};
   }else{
    const response=await handler(new Request('https://test.invalid',{method:'POST',headers:{'x-efps-intake-auth':'test-key','Content-Type':'application/json'},body:JSON.stringify(input)}));
    const value=await response.json();if(!response.ok)throw Error('HTTP '+response.status+': '+JSON.stringify(value));result=value;

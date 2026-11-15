@@ -8,7 +8,7 @@ No production deployment, schema mutation, inventory rewrite, posting or old-col
 
 ## Verified locally
 
-- 360 Python tests, 152 Node tests and Vite build pass.
+- 361 Python tests, 152 Node tests and Vite build pass.
 - Repository audit includes the new files and passes.
 - Disposable PostgreSQL checks cover additive schema compatibility, typed empty channels, vocabularies, RLS, worker fencing, revision checks, persisted write intents, and renumber-job serialization/checkpoints.
 - The actual staged Edge handler runs in a local harness with an injected SQL client. It rejects disabled v5 and bad auth/leases and preserves typed mirror values. This is not an Edge deployment test.
@@ -81,3 +81,13 @@ Deletion then restoration to a previously completed membership now has a SQL
 regression: restoration creates a new job at offset0withthecorrectsavedorder.
 Hash-bound reviewed corrections are migration-only and idempotent, not a
 consumed-once ledger. See UNCERTAIN-EFFECT-RECOVERY.md for fail-closed recovery.
+
+A later local checkpoint persists separate recovery incidents/readback/remaining
+patch/decision/state hash. Actual title-job recovery now resumes through the
+repository/Edge/SQL ports and checkpoints to completion. Operational incident
+routing, named operator/admin and a production blocked-state view remain open.
+The service role is trusted privileged code, not a hostile-worker boundary.
+Real mirror-before backup is now captured privately (104active,9tombstoned),
+reconciles with Notion on all business fields after numeric/blank normalization,
+and is included in104exactcombinedforward/reversemodelchecks. This still is not
+an executable production manifest or full104nativecutover/reversalrehearsal.

@@ -45,7 +45,9 @@ BEGIN
  PERFORM pg_advisory_xact_lock(55151126);
  IF p_operation='claim' THEN
   SELECT * INTO r FROM public.inventory_renumber_jobs WHERE status='running' FOR UPDATE;
-  IF FOUND AND r.active_effect IS NOT NULL THEN RETURN jsonb_build_object('busy',true,'needs_recovery',true); END IF;
+  IF FOUND AND r.active_effect IS NOT NULL THEN
+   INSERT INTO public.inventory_effect_recovery_incidents(scope,page_id,job_id,effect) VALUES('renumber',(r.active_effect->'intent'->>'page_id')::uuid,r.job_id,r.active_effect) ON CONFLICT(scope,effect) DO NOTHING;
+   RETURN jsonb_build_object('busy',true,'needs_recovery',true); END IF;
   IF FOUND AND r.lease_until>clock_timestamp() THEN RETURN jsonb_build_object('busy',true); END IF;
   IF NOT FOUND THEN
    SELECT * INTO r FROM public.inventory_renumber_jobs WHERE status='pending' ORDER BY job_id DESC LIMIT 1 FOR UPDATE;
