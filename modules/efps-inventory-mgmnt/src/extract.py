@@ -2,7 +2,7 @@
 from __future__ import annotations
 import re
 
-from shared.google_maps import GoogleMapsClient
+from shared.ola_maps.links import MapsLinks
 from source_segments import split_source_messages
 from field_resolution import resolve_bhk, resolve_internal_property_type, resolve_maintenance, resolve_property_subtype
 
@@ -41,7 +41,7 @@ def _first_line_value(text: str, labels: tuple[str, ...]) -> str:
 
 def _marker_candidates(text: str) -> tuple[str, str, str]:
     """Read the common EFPS '📍 Name:' source marker without swallowing URLs."""
-    society=""; landmark=""; maps_url=GoogleMapsClient.extract_url(text)
+    society=""; landmark=""; maps_url=MapsLinks.extract_url(text)
     pattern=re.compile(r"(?:📍|:round_pushpin:|:pushpin:)\s*([^:\n|]+?)\s*:\s*(?:\n\s*)?",re.I)
     for match in pattern.finditer(text or ""):
         name=_clean_source_value(match.group(1))
@@ -49,7 +49,7 @@ def _marker_candidates(text: str) -> tuple[str, str, str]:
         if re.fullmatch(r"(?:landmark|location)\s*",name,re.I):
             if not maps_url:
                 lm=re.split(r"\s+",tail,1)[0].strip()
-                landmark=lm if lm and not GoogleMapsClient.extract_url(lm) else landmark
+                landmark=lm if lm and not MapsLinks.extract_url(lm) else landmark
             continue
         if name and not society: society=name
     return society, landmark, maps_url
@@ -149,7 +149,7 @@ def scan(text: str) -> dict[str, str]:
         "property_subtype": subtype,
         "property_highlights": _first_line_value(text, (r"property\s*highlights", r"highlights")),
         "age_of_property_years": _first_line_value(text, (r"age\s*of\s*property", r"property\s*age")),
-        "google_maps_url": marker_maps or GoogleMapsClient.extract_url(text),
+        "google_maps_url": marker_maps or MapsLinks.extract_url(text),
     }
     for key, value in direct.items():
         if value: out[key] = value

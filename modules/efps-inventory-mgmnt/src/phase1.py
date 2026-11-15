@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 import re
-from shared.google_maps import GoogleMapsClient
+from shared.ola_maps.links import MapsLinks
 from shared.google_sheets import schema
 try:
     from . import extract, normalize, validate
@@ -26,7 +26,7 @@ class Phase1Result:
 
 def apply_location_contract(row:dict[str,str])->dict[str,bool]:
     locality=str(row.get("locality","") or "").strip(); landmark=str(row.get("landmark","") or "").strip(); society=str(row.get("society_name","") or "").strip()
-    if GoogleMapsClient.is_maps_url(landmark): row["landmark"]="";landmark=""
+    if MapsLinks.is_maps_url(landmark): row["landmark"]="";landmark=""
     if not landmark and locality:row["landmark"]=locality
     society_fallback=False
     if society.lower() in PLACEHOLDERS:society=""
@@ -56,7 +56,7 @@ def project(raw_text:str,row:dict[str,Any]|None=None)->dict[str,str]:
     resolved_subtype=resolve_property_subtype(raw_text)
     if resolved_subtype:base["property_subtype"]=resolved_subtype
     elif has_property_subtype_evidence(raw_text):base["property_subtype"]=""
-    base.update(resolve_parking_society_amenities(base));maps_url=GoogleMapsClient.extract_url(raw_text)
+    base.update(resolve_parking_society_amenities(base));maps_url=MapsLinks.extract_url(raw_text)
     if maps_url:base["google_maps_url"]=maps_url
     apply_location_contract(base)
     if set(base)!=set(schema.NAMES):raise ValueError("Phase-1 projection must contain exactly 48 fields")

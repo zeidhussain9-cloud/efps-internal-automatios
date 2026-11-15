@@ -123,7 +123,7 @@ def test_verified_maps_resolution_preserves_original_short_url():
         def extract_url(self, raw_text):
             return short_url
 
-        def resolve(self, *, maps_url):
+        def resolve(self, *, maps_url, address="", expected_locality=""):
             assert maps_url == short_url
             return SimpleNamespace(confidence="VERIFIED", canonical_url=canonical_url, locality="Verified Locality", pincode="560102", place_name="Verified Society")
 

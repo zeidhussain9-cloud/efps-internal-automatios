@@ -1,3 +1,5 @@
+> Maps-only cutover verified 2026-11-15 14:12 IST: both Sydney stacks UPDATE_COMPLETE; all three live Lambda archives and bindings checked, no paid Google Maps/Places transport remains in the checked pipeline; source/client Google links remain. Scope, verification limits and provider caveats: [migration record](../modules/efps-inventory-mgmnt/OLA_MAPS_MIGRATION.md). Older deployment snapshots below remain dated history. AI extraction is not part of this release.
+
 ## Current verified Notion listing-state control (2026-11-14)
 
 The canonical Notion Housing Listings data source now defines listing_state as a SELECT with exactly three options: Available (green), Rented Out (red), and On Hold (yellow). Existing values were preserved: 89 Available and 17 Rented Out at verification; no existing property rows were bulk-edited. This is a Notion schema-only change; no Google Sheets sync, new data flow, Supabase schema change, webhook change, or dashboard code change was introduced. Existing Notion page-property webhook → Lambda → notion-inventory-state → crm_inventory_snapshot → CRM dashboard path remains unchanged.

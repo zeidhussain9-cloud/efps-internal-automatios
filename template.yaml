@@ -35,10 +35,6 @@ Parameters:
     Type: String
     AllowedPattern: '^arn:[^:]+:secretsmanager:[^:]+:[0-9]{12}:secret:.+$'
     Description: Existing Secrets Manager secret ARN whose JSON cloud_name, api_key, and api_secret fields contain Cloudinary credentials
-  MapsSecretArn:
-    Type: String
-    AllowedPattern: '^arn:[^:]+:secretsmanager:[^:]+:[0-9]{12}:secret:.+$'
-    Description: Existing Secrets Manager secret ARN whose SecretString contains the Google Maps API key
   NotionSecretArn:
     Type: String
     Default: ''
@@ -71,7 +67,7 @@ Globals:
         CLOUDINARY_CLOUD_NAME: !Sub '{{resolve:secretsmanager:${CloudinarySecretArn}:SecretString:cloud_name}}'
         CLOUDINARY_API_KEY: !Sub '{{resolve:secretsmanager:${CloudinarySecretArn}:SecretString:api_key}}'
         CLOUDINARY_API_SECRET: !Sub '{{resolve:secretsmanager:${CloudinarySecretArn}:SecretString:api_secret}}'
-        GOOGLE_MAPS_API_KEY: !Sub '{{resolve:secretsmanager:${MapsSecretArn}:SecretString}}'
+        OLA_MAPS_API_KEY: !If [HasOlaMapsSecret, !Sub '{{resolve:secretsmanager:${OlaMapsSecretArn}:SecretString}}', !Ref 'AWS::NoValue']
         INVENTORY_SENDERS: '917975102130,919902024973'
         SLACK_LEADS_CHANNEL: 'C0BTM6PH55L'
         SLACK_INVENTORY_CHANNEL: 'C0BTQGG8VT3'
@@ -96,7 +92,6 @@ Resources:
         Variables:
           NOTION_API_TOKEN: !Sub '{{resolve:secretsmanager:${NotionSecretArn}:SecretString:api_token}}'
           NOTION_WEBHOOK_SECRET: !Sub '{{resolve:secretsmanager:${NotionSecretArn}:SecretString:webhook_secret}}'
-          OLA_MAPS_API_KEY: !If [HasOlaMapsSecret, !Sub '{{resolve:secretsmanager:${OlaMapsSecretArn}:SecretString}}', !Ref 'AWS::NoValue']
       Events:
         Intake:
           Type: Api

@@ -144,3 +144,7 @@ The production database previously coerced authenticated webhook terminal outcom
 A separate failed row was traced to a deliberately labelled test-only Codex form submission. The raw intake page and its linked Housing Listings page were both deleted; the Supabase inventory snapshot is soft-deleted. Duplicate property-update deliveries racing with source deletion could enter the exception handler, whose best-effort status PATCH could replace the original exception with a secondary Notion 400. Intake now ignores archived/missing source pages, logs failed status updates separately, and preserves the original processing exception. The historical test row is classified as ignored, not a production listing failure.
 
 Regression coverage: 121 inventory tests pass. The SQL migration `20261114155000_preserve_notion_webhook_terminal_statuses.sql` records the database constraint, terminal-state function, and the two historical corrections.
+
+## Ola-only Maps migration (2026-11-15)
+
+The release removes paid Google Maps/Places API calls while retaining source/client Google links. See `OLA_MAPS_MIGRATION.md` for scope, runtime verification and remaining limits. AI extraction is separate and is not deployed by this release.

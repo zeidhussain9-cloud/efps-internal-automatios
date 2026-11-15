@@ -70,14 +70,18 @@ class OlaMapsClient:
                 payload = json.loads(response.read().decode("utf-8"))
         except Exception:
             return OlaGeocodeResult(confidence="API_UNAVAILABLE")
-        results = payload.get("geocodingResults") or []
+        return self._parse(payload)
+
+    @classmethod
+    def _parse(cls, payload) -> OlaGeocodeResult:
+        results = payload.get("geocodingResults") or payload.get("results") or []
         if not results:
             return OlaGeocodeResult(confidence="ZERO_RESULTS")
         best = results[0] if isinstance(results[0], dict) else {}
         components = best.get("address_components") or []
         candidates: list[str] = []
         pincode = ""
-        for wanted in self.LOCALITY_TYPES:
+        for wanted in cls.LOCALITY_TYPES:
             for component in components:
                 if not isinstance(component, dict):
                     continue
@@ -114,3 +118,21 @@ class OlaMapsClient:
             longitude=location.get("lng"),
             confidence="OK",
         )
+
+    def reverse_geocode(self, latitude: float, longitude: float) -> OlaGeocodeResult:
+        """Background coordinate lookup, not proof of a building's identity."""
+        import math
+        if (isinstance(latitude, bool) or isinstance(longitude, bool)
+            or not isinstance(latitude, (int, float)) or not isinstance(longitude, (int, float))
+            or not math.isfinite(latitude) or not math.isfinite(longitude)
+            or not -90 <= latitude <= 90 or not -180 <= longitude <= 180):
+            return OlaGeocodeResult(confidence="INVALID_COORDINATES")
+        if not self.api_key:
+            return OlaGeocodeResult(confidence="NO_KEY")
+        url = "https://api.olamaps.io/places/v1/reverse-geocode?" + urllib.parse.urlencode({"latlng": f"{latitude},{longitude}"})
+        request = urllib.request.Request(url, headers={"X-API-Key": self.api_key, "X-Request-Id": str(uuid.uuid4())})
+        try:
+            with urllib.request.urlopen(request, timeout=15) as response:
+                return self._parse(json.loads(response.read().decode("utf-8")))
+        except Exception:
+            return OlaGeocodeResult(confidence="API_UNAVAILABLE")

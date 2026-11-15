@@ -4,49 +4,13 @@ from unittest.mock import patch
 from shared.google_maps.client import GoogleMapsClient, MapsResolution
 
 
-def test_maps_explicit_key_has_priority():
-    with patch.dict(os.environ, {"GOOGLE_MAPS_API_KEY": "env-key"}):
-        with patch("shared.credentials.get_secret", return_value="keychain-key"):
-            client = GoogleMapsClient(api_key="explicit-key")
-            assert client.api_key == "explicit-key"
-
-
-def test_maps_env_key_has_priority_over_keychain():
-    with patch.dict(os.environ, {"GOOGLE_MAPS_API_KEY": "env-key"}):
-        with patch("shared.credentials.get_secret", return_value="keychain-key"):
-            client = GoogleMapsClient()
-            assert client.api_key == "env-key"
-
-
-def test_maps_keychain_fallback():
-    with patch.dict(os.environ, {}, clear=False):
-        os.environ.pop("GOOGLE_MAPS_API_KEY", None)
-        with patch("shared.credentials.get_secret", return_value="keychain-key"):
-            client = GoogleMapsClient()
-            assert client.api_key == "keychain-key"
-
-
-def test_maps_missing_key_is_unverified():
-    with patch.dict(os.environ, {}, clear=False):
-        os.environ.pop("GOOGLE_MAPS_API_KEY", None)
-        with patch("shared.credentials.get_secret", side_effect=Exception("missing")):
-            client = GoogleMapsClient()
-            assert client.api_key == ""
-
-
-def test_maps_resolution_defaults_to_not_verified_without_input():
-    client = GoogleMapsClient(api_key="test-key")
-    result = client.resolve()
-    assert isinstance(result, MapsResolution)
-    assert result.confidence == "NOT_VERIFIED"
-
-
-def test_maps_resolve_contract_is_keyword_only():
-    import inspect
-
-    signature = inspect.signature(GoogleMapsClient.resolve)
-    assert signature.parameters["maps_url"].kind is inspect.Parameter.KEYWORD_ONLY
-    assert signature.parameters["address"].kind is inspect.Parameter.KEYWORD_ONLY
+def test_compatibility_client_does_not_consume_google_credentials():
+    from shared.ola_maps.client import OlaMapsClient
+    with patch.dict(os.environ, {"GOOGLE_MAPS_API_KEY": "obsolete"}):
+        with patch("shared.credentials.get_secret", side_effect=AssertionError("No Google secret lookup")):
+            client = GoogleMapsClient(api_key="obsolete", ola_client=OlaMapsClient(api_key="test-ola"))
+    assert not hasattr(client, "api_key")
+    assert client.resolve().confidence == "NOT_VERIFIED"
 
 
 def test_extracts_google_share_short_link():
@@ -89,24 +53,12 @@ def test_normalizes_slack_wrapped_maps_link():
     assert GoogleMapsClient.is_maps_url(wrapped)
 
 
-def test_resolve_does_not_call_geocoding_for_empty_query():
-    client = GoogleMapsClient(api_key="test-key")
+def test_no_legacy_google_transport_in_compatibility_client():
+    from shared.ola_maps.client import OlaMapsClient
+    from shared.ola_maps.source_link import LinkEvidence
+    client = GoogleMapsClient(ola_client=OlaMapsClient(api_key="test"), link_inspector=lambda url: LinkEvidence(url, reachable=True))
     with patch("requests.get") as get:
-        result = client.resolve(maps_url="<https://maps.app.goo.gl/opaque|maps.app.goo.gl>")
+        result = client.resolve(maps_url="https://maps.app.goo.gl/opaque")
     get.assert_not_called()
-    assert result.canonical_url == "https://maps.app.goo.gl/opaque"
-    assert result.confidence == "NOT_FOUND"
-
-
-def test_maps_billing_or_quota_api_denial_is_reported_as_unavailable():
-    from unittest.mock import Mock
-    client = GoogleMapsClient(api_key="test-key")
-    response = Mock()
-    response.json.return_value = {"status": "REQUEST_DENIED", "error_message": "Billing account disabled"}
-    response.raise_for_status.return_value = None
-    with patch.object(GoogleMapsClient, "expand", return_value="https://www.google.com/maps/place/Harlur"), patch.object(
-        GoogleMapsClient, "_query_from_url", return_value="Harlur, Bengaluru"
-    ), patch("requests.get", return_value=response):
-        result = client.resolve(maps_url="https://maps.app.goo.gl/AbC123")
-    assert result.confidence == "API_UNAVAILABLE"
-    assert result.canonical_url == "https://maps.app.goo.gl/AbC123"
+    assert result.confidence == "OLA_EVIDENCE"
+    assert result.evidence["pin_status"] == "not_verified"

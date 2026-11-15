@@ -51,7 +51,7 @@ Google Maps: https://www.google.com/maps/search/?api=1&query=12.9081,77.6476
 """
     class FakeMaps:
         def extract_url(self,text):return "https://www.google.com/maps/search/?api=1&query=12.9081,77.6476"
-        def resolve(self,*,maps_url="",address=""):
+        def resolve(self,*,maps_url="",address="",expected_locality=""):
             assert maps_url
             return MapsResolution(canonical_url="https://www.google.com/maps/search/?api=1&query=12.9080334,77.6475765&query_place_id=test-place",formatted_address="1100, 23rd A Cross Rd, Garden Layout, Sector 2, HSR Layout, Bengaluru, Karnataka 560102, India",locality="HSR Layout",pincode="560102",latitude=12.9080334,longitude=77.6475765,confidence="VERIFIED")
     row=pipeline.initial_row("EF-TEST-STAGE2-MAPS",raw_text=raw);processed,issues=pipeline.process_closed_session(raw,row=row,maps_client=FakeMaps(),ai_llm=None);assert processed["status"]=="Pending";assert processed["intake_status"]=="Processed";assert processed["internal_property_type"]=="Gated Community";assert processed["BHK"]=="2.5 BHK";assert processed["built_up_area"]=="1868";assert processed["carpet_area"]=="1681";assert processed["monthly_rent"]=="60000";assert processed["security_deposit"]=="360000";assert processed["locality"]=="HSR Layout";assert processed["pincode"]=="560102";assert processed["google_maps_url"].startswith("https://www.google.com/maps/");assert issues==[];assert processed["source_group"]=="";assert processed["inventory_locked"]==""

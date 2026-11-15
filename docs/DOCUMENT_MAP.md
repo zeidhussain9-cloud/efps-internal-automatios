@@ -215,3 +215,7 @@ If a new maintained document is required, add it to this map and define its role
 ## Latest verified inventory intake state — 2026-11-14 (live check)
 
 The live Notion-owned Supabase projection has 107 active rows and 1 soft-deleted tombstone. EF-2611-PAGH and EF-2611-Y5KC are Processed; EF-2611-YA84 is reconciled with Needs Review due to Maps unavailability and 18 photos exceeding the 10-image limit. Processing Notes append each outcome in the same Notion cell. Compatibility Sheet writes for the three submissions have not been independently verified.
+
+## Maps migration release record
+
+`modules/efps-inventory-mgmnt/OLA_MAPS_MIGRATION.md` owns the 2026-11-15 paid-Google call-site sweep, Ola provider caveats and runtime cutover evidence.
