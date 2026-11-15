@@ -145,3 +145,7 @@ Current live population verified 2026-10-05: **253 promoted qualified leads**, *
 - Raw Property Intake full-chain acceptance remains pending a real operator submission and runtime credential verification. No synthetic production property was created.
 - Notion workspace cleanup has not been performed; no page was archived/deleted without verified evidence.
 - Full docs reconciliation, GitHub CI, Render deployment, production smoke tests and main branch reconciliation remain release steps.
+
+## Labelled single-floor correction (2026-11-15)
+
+The deterministic parser now accepts a complete single-floor line such as `Floor: 3rd` as floor_number `3`, without inventing total_floors. Conflicting labels, ranges and uncertain/qualified values are not truncated to one floor. Existing Floor: 7/9 and 3rd floor forms remain covered. This is a bounded formatted-template correction, not an AI reader. Runtime verification pending.

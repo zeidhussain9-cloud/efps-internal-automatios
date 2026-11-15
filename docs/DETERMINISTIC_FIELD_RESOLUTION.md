@@ -187,3 +187,6 @@ Every production extraction/resolution defect must have a fixture for the exact 
 ## Non-goals
 
 This deterministic layer does not write Google Sheets, call network Maps resolution during projection, call AI, or own downstream publication state.
+## Labelled single-floor correction (2026-11-15)
+
+The deterministic parser now accepts a complete single-floor line such as `Floor: 3rd` as floor_number `3`, without inventing total_floors. Conflicting labels, ranges and uncertain/qualified values are not truncated to one floor. Existing Floor: 7/9 and 3rd floor forms remain covered. This is a bounded formatted-template correction, not an AI reader. Runtime verification pending.

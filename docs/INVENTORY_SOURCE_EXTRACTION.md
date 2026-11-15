@@ -64,3 +64,6 @@ Every production extraction/resolution defect must have a regression fixture for
 ## Model-test interpretation
 
 The read-only model audit compares deterministic Stage-2 projection with persisted Sheet values. Blank Stage-2 cells becoming populated are expected projections. A populated Sheet mismatch is a source conflict requiring adjudication; it is not permission to alter deterministic source rules to match historical values. The audit never writes the production Sheet.
+## Labelled single-floor correction (2026-11-15)
+
+The deterministic parser now accepts a complete single-floor line such as `Floor: 3rd` as floor_number `3`, without inventing total_floors. Conflicting labels, ranges and uncertain/qualified values are not truncated to one floor. Existing Floor: 7/9 and 3rd floor forms remain covered. This is a bounded formatted-template correction, not an AI reader. Runtime verification pending.

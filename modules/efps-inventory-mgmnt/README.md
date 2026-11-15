@@ -148,3 +148,7 @@ Regression coverage: 121 inventory tests pass. The SQL migration `20261114155000
 ## Ola-only Maps migration (2026-11-15)
 
 The release removes paid Google Maps/Places API calls while retaining source/client Google links. See `OLA_MAPS_MIGRATION.md` for scope, runtime verification and remaining limits. AI extraction is separate and is not deployed by this release.
+
+## Labelled single-floor correction (2026-11-15)
+
+The deterministic parser now accepts a complete single-floor line such as `Floor: 3rd` as floor_number `3`, without inventing total_floors. Conflicting labels, ranges and uncertain/qualified values are not truncated to one floor. Existing Floor: 7/9 and 3rd floor forms remain covered. This is a bounded formatted-template correction, not an AI reader. Runtime verification pending.
