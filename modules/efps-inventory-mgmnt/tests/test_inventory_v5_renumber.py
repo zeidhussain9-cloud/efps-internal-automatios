@@ -10,7 +10,7 @@ class R:
     def effect(self,job,lease,intent,action):self.calls.append('effect');return action()
     def renew(self,*a):self.calls.append('renew')
     def checkpoint(self,j,l,x):self.offset=x
-    def prepare_title(self,*a):self.calls.append('prepare')
+    def prepare_title(self,*a,**kw):self.calls.append('prepare')
     def ack_title(self,*a):self.calls.append('ack')
     def finish(self,*a):self.done=True
     def yield_lease(self,*a):self.calls.append('yield')

@@ -25,7 +25,7 @@ def run_renumber(*, repository, notion, max_rows=20):
             if check.get('SL number')!=page.get('SL number'):
                 repository.fail(job_id,token,'Concurrent title edit')
                 return {'status':'needs_review','changed':changed}
-            repository.prepare_title(ids[index],desired)
+            repository.prepare_title(ids[index],desired,before=page)
             repository.effect(job_id,token,{'page_id':ids[index],'before':{'SL number':page.get('SL number')},'patch':{'SL number':desired}},
                               lambda:notion.patch(ids[index],{'SL number':desired}))
             final=notion.snapshot(ids[index])
@@ -34,8 +34,11 @@ def run_renumber(*, repository, notion, max_rows=20):
                 return {'status':'needs_review','changed':changed}
             repository.ack_title(ids[index],desired)
             changed.append(ids[index])
+        elif hasattr(repository,'ack_existing_title'):
+            repository.ack_existing_title(ids[index],desired)
         repository.checkpoint(job_id,token,index+1)
     completed=min(len(ids),offset+max_rows)==len(ids)
-    if completed:repository.finish(job_id,token)
-    else:repository.yield_lease(job_id,token)
-    return {'status':'completed' if completed else 'paused','changed':changed}
+    finish = repository.finish(job_id,token) if completed else repository.yield_lease(job_id,token)
+    current = not isinstance(finish,dict) or finish.get('membership_current',True)
+    return {'status':('completed' if current else 'completed_snapshot') if completed else 'paused',
+            'membership_current':current if completed else False,'changed':changed}

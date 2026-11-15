@@ -137,14 +137,14 @@ def test_interrupted_typed_numeric_patch_replay_real_ports(db):
 
 def test_renumber_inflight_effect_fences_real_successor(db):
     db.request('inventory_v5_reference',worker_operation='seed',seed=[{'page_id':PAGE,'listing_id':'EF-2611-ABCD'}])
-    repo=V5RenumberRepository(request=db.request,prepare_title=lambda *a:None,ack_title=lambda *a:None)
+    repo=V5RenumberRepository(request=db.request,prepare_title=lambda *a,**kw:None,ack_title=lambda *a:None)
     job=repo.claim();seen=[]
     def late_title_write():
         db.request('__expire')
         other=repo.claim()
         assert other['busy'] and other['needs_recovery']
         seen.append('late title write completed without successor overlap')
-    with pytest.raises(RuntimeError):repo.effect(job['job_id'],job['lease_token'],{'page_id':PAGE,'patch':{'SL number':'1'}},late_title_write)
+    with pytest.raises(RuntimeError):repo.effect(job['job_id'],job['lease_token'],{'page_id':PAGE,'before':{'SL number':'old'},'patch':{'SL number':'1'}},late_title_write)
     assert seen
     assert repo.claim()['needs_recovery']
 
@@ -175,7 +175,7 @@ def test_title_job_operator_recovery_resumes_real_checkpoint_and_completion(db):
     db.request('inventory_v5_reference',worker_operation='seed',seed=[{'page_id':PAGE,'listing_id':'EF-2611-ABCD'}])
     row={'listing_id':'EF-2611-ABCD','SL number':'old title','Pipeline Status':'Ready to Post'}
     client=Client(row);notion=V5NotionPort(client,client.schema)
-    repo=V5RenumberRepository(request=db.request,prepare_title=lambda *a:None,ack_title=lambda *a:None)
+    repo=V5RenumberRepository(request=db.request,prepare_title=lambda *a,**kw:None,ack_title=lambda *a:None)
     job=repo.claim();intent={'page_id':PAGE,'before':{'SL number':'old title'},'patch':{'SL number':'1'}}
     def uncertain():raise TimeoutError('synthetic unknown title request')
     with pytest.raises(TimeoutError):repo.effect(job['job_id'],job['lease_token'],intent,uncertain)

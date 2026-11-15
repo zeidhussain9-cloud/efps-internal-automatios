@@ -38,9 +38,9 @@ Deno.serve(async (req) => {
     if (Deno.env.get('EFPS_INVENTORY_V5_ENABLED') !== 'true') return Response.json({ error:'Inventory v5 is disabled' },{status:409})
     if (!uuid(pageId)) return Response.json({error:'Invalid Notion page ID'},{status:400})
     const workerOperation=String(body.worker_operation??'')
-    const allowed=['claim','load','renew','prepare','finish','review','requeue','release','begin_effect','end_effect','record_effect_receipt','bind_effect_dispatch']
-    if (!allowed.includes(workerOperation) || (workerOperation!=='claim'&&!uuid(body.lease))) return Response.json({error:'Invalid worker operation or lease'},{status:400})
-    if (workerOperation==='claim'&&!/^EF-\d{4}-[0123456789ABCDEFGHJKMNPQRSTVWXYZ]{4}$/.test(String(body.listing_id??''))) return Response.json({error:'Invalid listing identity'},{status:400})
+    const allowed=['claim','claim_title','prepare_title','finish_title','load','renew','prepare','finish','review','requeue','release','begin_effect','end_effect','record_effect_receipt','bind_effect_dispatch']
+    if (!allowed.includes(workerOperation) || (!['claim','claim_title'].includes(workerOperation)&&!uuid(body.lease))) return Response.json({error:'Invalid worker operation or lease'},{status:400})
+    if (['claim','claim_title'].includes(workerOperation)&&!/^EF-\d{4}-[0123456789ABCDEFGHJKMNPQRSTVWXYZ]{4}$/.test(String(body.listing_id??''))) return Response.json({error:'Invalid listing identity'},{status:400})
     const objectOrNull=(v:unknown)=>v===undefined||v===null||(typeof v==='object'&&!Array.isArray(v))
     if (![body.values,body.patch,body.provenance,body.review].every(objectOrNull)) return Response.json({error:'Worker objects required'},{status:400})
     if (body.revision!==undefined&&(!Number.isSafeInteger(body.revision)||Number(body.revision)<0)) return Response.json({error:'Invalid revision'},{status:400})
@@ -67,7 +67,7 @@ Deno.serve(async (req) => {
     const op=String(body.worker_operation??'')
     let state
     if(operation==='inventory_v5_renumber'){
-      if(!['claim','renew','checkpoint','finish','yield','fail','begin_effect','end_effect'].includes(op)||
+      if(!['claim','renew','checkpoint','finish','yield','fail','begin_effect','end_effect','bind_effect_dispatch','record_effect_receipt'].includes(op)||
         (op!=='claim'&&(!uuid(body.lease)||!Number.isSafeInteger(body.job_id)))||
         (body.next_offset!==undefined&&(!Number.isSafeInteger(body.next_offset)||Number(body.next_offset)<0))) return Response.json({error:'Invalid renumber operation'},{status:400})
       state=await supabase.rpc('inventory_v5_renumber_state',{p_operation:op,p_job_id:body.job_id??null,p_lease:body.lease??null,p_next_offset:body.next_offset??null,p_error:body.error??null})

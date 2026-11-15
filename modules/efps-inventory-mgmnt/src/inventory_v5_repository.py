@@ -13,8 +13,12 @@ class V5Repository:
         return self.request('inventory_v5_worker',page_id=page,
             worker_operation=operation,listing_id=self.identity(page),lease=lease,**values)
 
-    def claim(self,page):
-        result=self._call('claim',page)
+    def claim(self,page):return self._claim(page,'claim')
+
+    def claim_title(self,page):return self._claim(page,'claim_title')
+
+    def _claim(self,page,operation):
+        result=self._call(operation,page)
         self.blocked_state[page]=result if result.get('needs_recovery') else {}
         lease=result.get('lease')
         if lease:self.leases[page]=lease
@@ -26,12 +30,19 @@ class V5Repository:
         return {'acknowledged':row['last_acknowledged_values'],
             'provenance':row['field_provenance'],'source_evidence':row['source_evidence'],
             'expected_self_write':row.get('expected_self_write'),
-            'pending_patch':row.get('pending_patch'),'prepared_inputs':row.get('prepared_inputs'),
+            'pending_patch':row.get('pending_patch'),'prepared_inputs':row.get('prepared_inputs'),'pending_kind':row.get('pending_kind'),
             'revision':row['revision']}
 
     def prepare(self,page,lease,*,expected_revision,input_hash,input_values,patch,provenance):
         return self._call('prepare',page,lease,revision=expected_revision,input_hash=input_hash,
                          values=input_values,patch=patch,provenance=provenance)
+
+    def prepare_title(self,page,lease,*,expected_revision,input_values,desired):
+        return self._call('prepare_title',page,lease,revision=expected_revision,
+                          values=input_values,patch={'SL number':desired})
+
+    def finish_title(self,page,lease,values):
+        return self._call('finish_title',page,lease,values=values)
 
     def review(self,page,fields,reason):
         return self._call('review',page,self.leases[page],review={'fields':fields,'reason':reason})
@@ -98,13 +109,24 @@ class V5RenumberRepository:
     def yield_lease(self,job,lease):return self._call('yield',job,lease)
     def fail(self,job,lease,error):return self._call('fail',job,lease,error=error)
 
+    def bind_dispatch(self,page,binding):
+        import json
+        return self._call('bind_effect_dispatch',self.effect_job,self.effect_lease,
+            error=json.dumps({'effect_id':self.effect_id,'dispatch':binding},separators=(',',':')))
+
+    def record_receipt(self,page,receipt):
+        import json
+        return self._call('record_effect_receipt',self.effect_job,self.effect_lease,
+            error=json.dumps({'effect_id':self.effect_id,'receipt':receipt},separators=(',',':')))
+
     def effect(self,job,lease,intent,action):
         import json
         self.renew(job,lease)
-        self._call('begin_effect',job,lease,error=json.dumps(intent,separators=(',',':')))
+        ticket=self._call('begin_effect',job,lease,error=json.dumps(intent,separators=(',',':')))
+        self.effect_job=job;self.effect_lease=lease;self.effect_id=ticket['effect_id']
         self.renew(job,lease)
         result=action()
-        self._call('end_effect',job,lease)
+        self._call('end_effect',job,lease,error=json.dumps({'effect_id':self.effect_id}))
         return result
 
 
