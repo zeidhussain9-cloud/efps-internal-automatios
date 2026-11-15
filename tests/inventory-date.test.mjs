@@ -11,3 +11,6 @@ test('internal onboarding instant beats display and mirror update time',()=>{
  const rows=[{listing_id:'new',onboarded_at:'2026-11-15T09:11:00Z',onboarded_on:'15 Nov 2026, 2:41 PM'},{listing_id:'old',onboarded_at:'2026-11-14T09:11:00Z',last_synced_at:'2026-12-15T09:11:00Z'}];
  assert.deepEqual(sortInventoryRows(rows,'latest').map(x=>x.listing_id),['new','old']);
 });
+test('real Notion narrow no-break am/pm separator parses without rewriting display',()=>{
+ assert.equal(inventoryInstant('Wednesday, September 9, 2026 at 11:50:00\u202fam'),Date.parse('2026-09-09T06:20:00Z'));
+});

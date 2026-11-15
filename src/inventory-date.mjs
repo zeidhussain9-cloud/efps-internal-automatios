@@ -1,7 +1,7 @@
 // Inventory's legacy readable timestamps are India-local, never host-local.
 // New v5 records carry qualified ISO instants independently of display text.
 export function inventoryInstant(value) {
- let raw=String(value??'').trim();
+ let raw=String(value??'').trim().replace(/[\u00a0\u202f]/g,' ');
  if(!raw)return null;
  // Earlier CRM snapshots used a second explicit English display format.
  const short=raw.match(/^(\d{1,2}) (Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) (\d{4}), (\d{1,2}):(\d{2}) (AM|PM)$/);
