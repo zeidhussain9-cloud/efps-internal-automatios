@@ -223,9 +223,35 @@ def test_documented_saved_503_receipt_persisted_real_ports_no_patch_retry(db):
             self.patch_count+=1;client.update_page(PAGE,kwargs['json']['properties'])
             return Response(503,{'code':'service_unavailable','request_id':'saved-request123','additional_data':{'retry_guidance':['Read the object again to confirm the saved change.','Do not repeat the write.']}})
     session=Session();http=V5HttpNotionClient(token='synthetic',version='2026-03-11',session=session)
-    notion=V5NotionPort(http,client.schema,record_receipt=repo.record_receipt)
+    notion=V5NotionPort(http,client.schema,record_receipt=repo.record_receipt,bind_dispatch=repo.bind_dispatch)
     client.update_page(PAGE,{'built_up_area':serialize_notion(1300,'number')})
     result=process_dependencies(PAGE,notion=notion,repository=repo,render_caption=lambda row:'new caption',route_bhk=lambda bhk:('',''))
     assert result['status']=='recalculated'
     assert session.patch_count==1 and session.receipt_seen
     assert db.request('__inspect')['mirror']['source_record']['carpet_area']==1210
+
+
+def test_old_receipt_after_effect_a_end_b_same_lease_rejected_real_ports(db):
+    repo,notion,client=setup(db);lease=repo.claim(PAGE);repo.load(PAGE,lease)
+    saved={}
+    def effect_a():
+        ticket=repo.effects[PAGE]
+        binding={'effect_id':ticket,'page_id':PAGE,'method':'PATCH','body_hash':'a'*64}
+        repo.bind_dispatch(PAGE,binding)
+        saved.update(ticket=ticket,receipt={'request_id':'same-request','dispatch':binding,'classification':'unknown_response'})
+        repo.record_receipt(PAGE,saved['receipt'])
+    repo.effect(PAGE,lease,{'patch':{'x':1}},effect_a)
+    def effect_b():
+        binding={'effect_id':repo.effects[PAGE],'page_id':PAGE,'method':'PATCH','body_hash':'b'*64}
+        repo.bind_dispatch(PAGE,binding)
+        with pytest.raises(RuntimeError):
+            db.request('inventory_v5_worker',page_id=PAGE,worker_operation='record_effect_receipt',lease=lease,
+                review={'effect_id':saved['ticket']},values=saved['receipt'])
+        with pytest.raises(RuntimeError):repo.record_receipt(PAGE,saved['receipt'])
+        with pytest.raises(RuntimeError):repo.record_receipt(PAGE,{**saved['receipt'],'dispatch':binding})
+        repo.record_receipt(PAGE,{'request_id':'new-request','dispatch':binding,'classification':'unknown_response'})
+    repo.effect(PAGE,lease,{'patch':{'x':2}},effect_b)
+    final=db.request('__inspect')
+    assert final['state']['active_effect']is None
+    assert len(final['incidents'])==2
+    assert all(x['status']=='completed'for x in final['incidents'])

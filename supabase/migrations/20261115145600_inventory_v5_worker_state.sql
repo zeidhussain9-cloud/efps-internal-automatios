@@ -25,7 +25,7 @@ CREATE OR REPLACE FUNCTION public.inventory_v5_worker_state(
  p_provenance jsonb DEFAULT NULL,p_input_hash text DEFAULT NULL,p_status text DEFAULT NULL,
  p_review jsonb DEFAULT NULL
 ) RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,public AS $$
-DECLARE r public.inventory_processing_revisions%ROWTYPE; token uuid;
+DECLARE r public.inventory_processing_revisions%ROWTYPE; token uuid;effect_id uuid;
 BEGIN
  IF p_operation='claim' THEN
   IF p_listing_id IS NULL OR p_listing_id='' THEN RAISE EXCEPTION 'Listing identity required'; END IF;
@@ -45,10 +45,22 @@ BEGIN
   RETURN jsonb_build_object('lease',token,'revision',r.revision);
  END IF;
  SELECT * INTO r FROM public.inventory_processing_revisions WHERE page_id=p_page_id FOR UPDATE;
+ IF p_operation IN ('record_effect_receipt','bind_effect_dispatch') THEN
+  IF r.active_effect->>'effect_id' IS DISTINCT FROM p_review->>'effect_id' OR p_review->>'effect_id' IS NULL THEN RAISE EXCEPTION 'Effect nonce mismatch'; END IF;
+ END IF;
+ IF p_operation='bind_effect_dispatch' THEN
+  IF r.active_effect IS NULL OR r.active_effect ? 'dispatch' OR r.lease_until<=clock_timestamp() OR r.lease_token IS DISTINCT FROM p_lease OR
+    p_values->>'effect_id' IS DISTINCT FROM r.active_effect->>'effect_id' OR p_values->>'page_id' IS DISTINCT FROM p_page_id::text OR
+    p_values->>'method' IS DISTINCT FROM 'PATCH' OR coalesce(p_values->>'body_hash','') !~ '^[a-f0-9]{64}$' THEN RAISE EXCEPTION 'Dispatch binding mismatch'; END IF;
+  UPDATE public.inventory_processing_revisions SET active_effect=active_effect||jsonb_build_object('dispatch',p_values) WHERE page_id=p_page_id;
+  RETURN jsonb_build_object('ok',true);
+ END IF;
  IF p_operation='record_effect_receipt' THEN
   IF NOT FOUND OR r.active_effect->>'lease' IS DISTINCT FROM p_lease::text OR r.active_effect ? 'receipt' OR jsonb_typeof(p_values) IS DISTINCT FROM 'object' THEN RAISE EXCEPTION 'Receipt effect mismatch'; END IF;
+  IF r.active_effect->'dispatch' IS NULL OR (p_values->'dispatch')-'started_monotonic'-'finished_monotonic' IS DISTINCT FROM r.active_effect->'dispatch' OR
+   coalesce(p_values->>'request_id','')='' OR EXISTS(SELECT 1 FROM public.inventory_effect_recovery_incidents WHERE decision->>'request_id'=p_values->>'request_id') THEN RAISE EXCEPTION 'Receipt dispatch/request mismatch'; END IF;
   UPDATE public.inventory_processing_revisions SET active_effect=active_effect||jsonb_build_object('receipt',p_values||jsonb_build_object('effect_token',p_lease,'page_id',p_page_id)) WHERE page_id=p_page_id;
-  INSERT INTO public.inventory_effect_recovery_incidents(scope,page_id,effect,status,decision) VALUES('worker',p_page_id,r.active_effect,'terminal_receipt_recorded',p_values) ON CONFLICT(scope,effect) DO UPDATE SET decision=excluded.decision;
+  INSERT INTO public.inventory_effect_recovery_incidents(scope,page_id,effect,status,decision) VALUES('worker',p_page_id,r.active_effect,'response_receipt_recorded',p_values) ON CONFLICT(scope,effect) DO UPDATE SET decision=excluded.decision;
   RETURN jsonb_build_object('ok',true);
  END IF;
  IF NOT FOUND OR r.lease_token IS DISTINCT FROM p_lease OR r.lease_until <= clock_timestamp() THEN
@@ -61,10 +73,13 @@ BEGIN
  ELSIF p_operation='begin_effect' THEN
   IF r.active_effect IS NOT NULL THEN RAISE EXCEPTION 'Uncertain external effect requires reconciliation'; END IF;
   IF jsonb_typeof(p_values) IS DISTINCT FROM 'object' THEN RAISE EXCEPTION 'Effect intent required'; END IF;
-  UPDATE public.inventory_processing_revisions SET active_effect=jsonb_build_object('intent',p_values,'lease',p_lease,'started_at',clock_timestamp()),updated_at=clock_timestamp() WHERE page_id=p_page_id;
+  effect_id=gen_random_uuid();
+  UPDATE public.inventory_processing_revisions SET active_effect=jsonb_build_object('effect_id',effect_id,'intent',p_values,'lease',p_lease,'started_at',clock_timestamp()),updated_at=clock_timestamp() WHERE page_id=p_page_id;
+  RETURN jsonb_build_object('effect_id',effect_id);
  ELSIF p_operation='end_effect' THEN
+  IF r.active_effect->>'effect_id' IS DISTINCT FROM p_review->>'effect_id' OR p_review->>'effect_id' IS NULL THEN RAISE EXCEPTION 'Effect nonce mismatch'; END IF;
   IF r.active_effect IS NULL OR r.active_effect->>'lease' IS DISTINCT FROM p_lease::text THEN RAISE EXCEPTION 'Effect ticket mismatch'; END IF;
-  UPDATE public.inventory_effect_recovery_incidents SET status='completed',resolved_at=clock_timestamp() WHERE scope='worker' AND (effect=r.active_effect OR effect=r.active_effect-'receipt') AND status IN ('blocked','terminal_receipt_recorded');
+  UPDATE public.inventory_effect_recovery_incidents SET status='completed',resolved_at=clock_timestamp() WHERE scope='worker' AND (effect=r.active_effect OR effect=r.active_effect-'receipt') AND status IN ('blocked','response_receipt_recorded');
   UPDATE public.inventory_processing_revisions SET active_effect=NULL,updated_at=clock_timestamp() WHERE page_id=p_page_id;
  ELSIF p_operation='prepare' THEN
   IF p_revision IS DISTINCT FROM r.revision THEN RAISE EXCEPTION 'Inventory revision conflict'; END IF;

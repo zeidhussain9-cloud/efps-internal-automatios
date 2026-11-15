@@ -7,7 +7,7 @@ from __future__ import annotations
 
 class V5Repository:
     def __init__(self, *, request, identity, mirror):
-        self.request=request;self.identity=identity;self.mirror_port=mirror;self.leases={};self.revisions={};self.blocked_state={}
+        self.request=request;self.identity=identity;self.mirror_port=mirror;self.leases={};self.revisions={};self.blocked_state={};self.effects={}
 
     def _call(self, operation, page, lease=None, **values):
         return self.request('inventory_v5_worker',page_id=page,
@@ -51,19 +51,30 @@ class V5Repository:
     def requeue(self,page,lease,*,reason):
         return self._call('requeue',page,lease,status=reason)
 
+    def bind_dispatch(self,page,binding):
+        return self._call('bind_effect_dispatch',page,self.leases[page],values=binding,review={'effect_id':self.effects[page]})
+
     def record_receipt(self,page,receipt):
-        return self._call('record_effect_receipt',page,self.leases[page],values=receipt)
+        return self._call('record_effect_receipt',page,self.leases[page],values=receipt,review={'effect_id':self.effects[page]})
 
     def effect(self,page,lease,intent,action):
         # An expired owner cannot start an effect. Once started, durable active_effect
         # blocks takeover even after lease expiry. Any timeout/error leaves it there
         # for explicit readback/reconciliation, never automatic overlapping replay.
         self.renew(page,lease)
-        self._call('begin_effect',page,lease,values=intent)
-        self.renew(page,lease)
-        result=action()
-        self._call('end_effect',page,lease)
-        return result
+        ticket=self._call('begin_effect',page,lease,values=intent)
+        self.effects[page]=ticket['effect_id']
+        try:
+            from .inventory_v5_http import effect_context
+        except ImportError:
+            from inventory_v5_http import effect_context
+        context=effect_context.set(ticket['effect_id'])
+        try:
+            self.renew(page,lease)
+            result=action()
+            self._call('end_effect',page,lease,review={'effect_id':ticket['effect_id']})
+            return result
+        finally:effect_context.reset(context)
 
     def renew(self,page,lease):return self._call('renew',page,lease)
 

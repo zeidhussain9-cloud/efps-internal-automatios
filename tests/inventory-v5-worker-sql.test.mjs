@@ -6,6 +6,7 @@ await db.exec('CREATE ROLE anon;CREATE ROLE authenticated;CREATE ROLE service_ro
 for(const name of ['20261115145500_inventory_v5_staged.sql','20261115145600_inventory_v5_worker_state.sql'])await db.exec(fs.readFileSync(new URL('../supabase/migrations/'+name,import.meta.url),'utf8'));
 const page='12345678-1234-4234-8234-123456789012';
 async function call(op,opts={}){
+ if(op==='end_effect'&&!opts.p_review){const effect=(await db.query('SELECT active_effect FROM inventory_processing_revisions')).rows[0].active_effect;opts={...opts,p_review:{effect_id:effect?.effect_id}}}
  const args={p_operation:op,p_page_id:page,...opts};
  const names=Object.keys(args);const result=await db.query(`SELECT public.inventory_v5_worker_state(${names.map((x,i)=>x+'=> $'+(i+1)).join(',')}) AS result`,Object.values(args));
  return result.rows[0].result;
@@ -34,12 +35,22 @@ const third=await call('claim',{p_listing_id:'EF-2611-ABCD'});
 await call('begin_effect',{p_lease:third.lease,p_values:{kind:'notion_patch',patch:{x:2}}});
 const healthy=await call('claim',{p_listing_id:'EF-2611-ABCD'});assert.equal(healthy.busy,true);assert.equal(healthy.needs_recovery,undefined);
 assert.equal((await db.query('SELECT count(*)::int n FROM inventory_effect_recovery_incidents')).rows[0].n,0);
-await call('record_effect_receipt',{p_lease:third.lease,p_values:{request_id:'exact-response'}});
-await assert.rejects(()=>call('record_effect_receipt',{p_lease:third.lease,p_values:{request_id:'duplicate'}}),/Receipt effect mismatch/);
-await assert.rejects(()=>call('record_effect_receipt',{p_lease:claim.lease,p_values:{request_id:'stale'}}),/Receipt effect mismatch/);
+const effectA=(await db.query('SELECT active_effect FROM inventory_processing_revisions')).rows[0].active_effect;
+const bindingA={effect_id:effectA.effect_id,page_id:page,method:'PATCH',body_hash:'a'.repeat(64)};
+await call('bind_effect_dispatch',{p_lease:third.lease,p_review:{effect_id:effectA.effect_id},p_values:bindingA});
+const receiptA={request_id:'exact-response',dispatch:bindingA,classification:'unknown_response'};
+await call('record_effect_receipt',{p_lease:third.lease,p_review:{effect_id:effectA.effect_id},p_values:receiptA});
+await assert.rejects(()=>call('record_effect_receipt',{p_lease:third.lease,p_review:{effect_id:effectA.effect_id},p_values:receiptA}),/Receipt effect mismatch/);
 await call('end_effect',{p_lease:third.lease});
 assert.equal((await db.query("SELECT status FROM inventory_effect_recovery_incidents WHERE status='completed'")).rows.length,1);
 await call('begin_effect',{p_lease:third.lease,p_values:{kind:'notion_patch',patch:{x:3}}});
+await assert.rejects(()=>call('record_effect_receipt',{p_lease:third.lease,p_review:{effect_id:effectA.effect_id},p_values:receiptA}),/Effect nonce mismatch/);
+await assert.rejects(()=>call('end_effect',{p_lease:third.lease,p_review:{effect_id:effectA.effect_id}}),/Effect nonce mismatch/);
+const effectB=(await db.query('SELECT active_effect FROM inventory_processing_revisions')).rows[0].active_effect;
+const bindingB={...bindingA,effect_id:effectB.effect_id};
+await call('bind_effect_dispatch',{p_lease:third.lease,p_review:{effect_id:effectB.effect_id},p_values:bindingB});
+await assert.rejects(()=>call('record_effect_receipt',{p_lease:third.lease,p_review:{effect_id:effectB.effect_id},p_values:{...receiptA,dispatch:bindingB}}),/Receipt dispatch\/request mismatch/);
+
 await db.exec(`UPDATE inventory_processing_revisions SET lease_until=now()-interval '1 second'`);
 const blocked=await call('claim',{p_listing_id:'EF-2611-ABCD'});assert.equal(blocked.needs_recovery,true);assert.equal(blocked.busy,true);
 await assert.rejects(()=>call('end_effect',{p_lease:third.lease}),/Stale or expired/);

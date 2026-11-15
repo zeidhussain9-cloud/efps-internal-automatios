@@ -38,7 +38,7 @@ Deno.serve(async (req) => {
     if (Deno.env.get('EFPS_INVENTORY_V5_ENABLED') !== 'true') return Response.json({ error:'Inventory v5 is disabled' },{status:409})
     if (!uuid(pageId)) return Response.json({error:'Invalid Notion page ID'},{status:400})
     const workerOperation=String(body.worker_operation??'')
-    const allowed=['claim','load','renew','prepare','finish','review','requeue','release','begin_effect','end_effect','record_effect_receipt']
+    const allowed=['claim','load','renew','prepare','finish','review','requeue','release','begin_effect','end_effect','record_effect_receipt','bind_effect_dispatch']
     if (!allowed.includes(workerOperation) || (workerOperation!=='claim'&&!uuid(body.lease))) return Response.json({error:'Invalid worker operation or lease'},{status:400})
     if (workerOperation==='claim'&&!/^EF-\d{4}-[0123456789ABCDEFGHJKMNPQRSTVWXYZ]{4}$/.test(String(body.listing_id??''))) return Response.json({error:'Invalid listing identity'},{status:400})
     const objectOrNull=(v:unknown)=>v===undefined||v===null||(typeof v==='object'&&!Array.isArray(v))

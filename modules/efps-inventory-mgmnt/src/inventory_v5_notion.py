@@ -2,15 +2,15 @@
 from __future__ import annotations
 try:
     from .inventory_v5_adapter import read_notion_value,serialize_notion
-    from .inventory_v5_http import V5NotionWriteError
+    from .inventory_v5_http import V5NotionWriteError,effect_context
     from .inventory_v5 import field_equal,content_hash
 except ImportError:
     from inventory_v5_adapter import read_notion_value,serialize_notion
-    from inventory_v5_http import V5NotionWriteError
+    from inventory_v5_http import V5NotionWriteError,effect_context
     from inventory_v5 import field_equal,content_hash
 
 class V5NotionPort:
-    def __init__(self,client,schema,*,record_receipt=None):self.client=client;self.schema=schema;self.record_receipt=record_receipt
+    def __init__(self,client,schema,*,record_receipt=None,bind_dispatch=None):self.client=client;self.schema=schema;self.record_receipt=record_receipt;self.bind_dispatch=bind_dispatch
 
     def snapshot(self,page_id):
         page=self.client.get_page(page_id)
@@ -31,12 +31,14 @@ class V5NotionPort:
                 selected=value if isinstance(value,list) else [value] if value else []
                 if any(x not in options for x in selected):raise ValueError('Unapproved Notion option: '+name)
             properties[name]=serialize_notion(value,kind)
+        if self.bind_dispatch is not None:
+            self.bind_dispatch(page_id,{'effect_id':effect_context.get(),'method':'PATCH','page_id':page_id,'body_hash':content_hash({'properties':properties})})
         try:return self.client.update_page(page_id,properties)
         except V5NotionWriteError as error:
             binding=error.dispatch or {}
-            if binding.get('page_id')!=page_id or binding.get('method')!='PATCH' or binding.get('body_hash')!=content_hash({'properties':properties}):raise
+            if binding.get('effect_id')!=effect_context.get() or not binding.get('effect_id') or binding.get('page_id')!=page_id or binding.get('method')!='PATCH' or binding.get('body_hash')!=content_hash({'properties':properties}):raise
             if self.record_receipt is not None:self.record_receipt(page_id,error.receipt())
-            if not error.explicitly_saved() or self.record_receipt is None:raise
+            if not error.explicitly_saved() or self.record_receipt is None or self.bind_dispatch is None:raise
             readback=self.snapshot(page_id)
             if any(not field_equal(k,readback.get(k),v)for k,v in values.items()):raise
             return {'saved_terminal_readback':True,'receipt':error.receipt()}

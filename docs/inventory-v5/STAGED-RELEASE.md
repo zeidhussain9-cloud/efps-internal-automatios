@@ -8,7 +8,7 @@ No production deployment, schema mutation, inventory rewrite, posting or old-col
 
 ## Verified locally
 
-- 383 Python tests, 152 Node tests and Vite build pass.
+- 384 Python tests, 152 Node tests and Vite build pass.
 - Repository audit includes the new files and passes.
 - Disposable PostgreSQL checks cover additive schema compatibility, typed empty channels, vocabularies, RLS, worker fencing, revision checks, persisted write intents, and renumber-job serialization/checkpoints.
 - The actual staged Edge handler runs in a local harness with an injected SQL client. It rejects disabled v5 and bad auth/leases and preserves typed mirror values. This is not an Edge deployment test.

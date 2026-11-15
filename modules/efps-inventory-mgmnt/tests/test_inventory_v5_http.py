@@ -1,6 +1,6 @@
 from copy import deepcopy
 import pytest
-from src.inventory_v5_http import V5HttpNotionClient,V5NotionWriteError
+from src.inventory_v5_http import V5HttpNotionClient,V5NotionWriteError,effect_context
 from src.inventory_v5_notion import V5NotionPort
 
 SAVED={'code':'service_unavailable','request_id':'req123','additional_data':{'retry_guidance':['Read the object again to confirm the saved change.','Do not repeat the write.']}}
@@ -16,9 +16,10 @@ class Session:
 
 def run(response,current='1',record=True):
     session=Session([response,Response(200,{'properties':{'SL number':{'type':'title','title':[{'text':{'content':current}}]}}})])
+    effect_context.set('synthetic-effect')
     receipts=[]
     client=V5HttpNotionClient(token='synthetic',version='2026-03-11',session=session)
-    port=V5NotionPort(client,{'SL number':{'type':'title'}},record_receipt=(lambda p,r:receipts.append(r))if record else None)
+    port=V5NotionPort(client,{'SL number':{'type':'title'}},record_receipt=(lambda p,r:receipts.append(r))if record else None,bind_dispatch=lambda *a:None)
     return port,session,receipts
 
 def test_documented_terminal_saved_response_reads_back_without_retry():

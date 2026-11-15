@@ -4,6 +4,8 @@ No retries for PATCH. A timeout is unknown, not proof of commit or cancellation.
 The exact documented saved-response path may read back, never resend the write.
 """
 import time
+from contextvars import ContextVar
+effect_context=ContextVar("inventory_effect_id",default=None)
 try:
     from .inventory_v5 import content_hash
 except ImportError:
@@ -17,7 +19,7 @@ class V5NotionWriteError(RuntimeError):
 
     def receipt(self):
         return {'status':self.status,'code':self.body.get('code'),'request_id':self.request_id,
-                'additional_data':self.body.get('additional_data',{}),'message':self.body.get('message',''),'dispatch':self.dispatch,'body':self.body}
+                'additional_data':self.body.get('additional_data',{}),'message':self.body.get('message',''),'dispatch':self.dispatch,'body':self.body,'classification':'documented_saved_no_repeat'if self.explicitly_saved()else'unknown_response'}
 
     def explicitly_saved(self):
         # Only the documented terminal saved-write response, not generic503,
@@ -34,7 +36,7 @@ class V5HttpNotionClient:
 
     def _request(self,method,page,properties=None):
         started=time.monotonic()
-        dispatch={'method':method,'page_id':page,'body_hash':content_hash({'properties':properties})if properties is not None else None,'started_monotonic':started}
+        dispatch={'effect_id':effect_context.get(),'method':method,'page_id':page,'body_hash':content_hash({'properties':properties})if properties is not None else None,'started_monotonic':started}
         response=self.session.request(method,'https://api.notion.com/v1/pages/'+page,
           headers={'Authorization':'Bearer '+self.token,'Notion-Version':self.version,'Content-Type':'application/json'},
           json={'properties':properties}if properties is not None else None,timeout=25)

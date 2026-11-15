@@ -109,3 +109,13 @@ Sources fetched15November2026:
 https://developers.notion.com/reference/request-limits
 https://developers.notion.com/reference/status-codes
 https://developers.notion.com/reference/patch-page
+
+
+Receipt binding follow-up: each begin_effect now mints its own UUID, distinct
+from the worker lease. The repository carries that UUID through dispatch,
+receipt and end. SQL registers exact serialized PATCH page/method/bodyhash
+BEFORE the HTTP dispatch, rejects a receipt from an earlier effect on the SAME
+lease, rejects wrong dispatch or reused request ID, and labels generic responses
+response_receipt_recorded with an explicit classification. The HTTP context
+binds the synchronous call to that effect UUID. This is trusted application
+provenance, not cryptographic protection against privileged malicious code.
