@@ -108,7 +108,13 @@ def scan(text: str) -> dict[str, str]:
         out["floor_number"] = "0" if m.group(1).lower() in {"g","ground"} else m.group(1)
         out["total_floors"] = m.group(2)
     else:
-        m = re.search(r"\b(\d{1,2})\s*(?:st|nd|rd|th)?\s*floor\b", text, re.I)
+        # A labelled single floor is complete without a total-floor count.
+        # Anchor the entire line so ranges, alternatives and qualifiers cannot
+        # silently become one exact floor. Existing x/y and prose paths stay.
+        labelled = re.findall(r"^[ \t]*floor[ \t]*[:=-][ \t]*(\d{1,2})(?:st|nd|rd|th)?[ \t]*$", text, re.I | re.M)
+        if len(set(labelled)) == 1:
+            out["floor_number"] = str(int(labelled[0]))
+        m = re.search(r"\b(\d{1,2})[ \t]*(?:st|nd|rd|th)?[ \t]*floor\b", text, re.I)
         if m:
             out["floor_number"] = m.group(1)
             tail = text[m.end():m.end()+25]
