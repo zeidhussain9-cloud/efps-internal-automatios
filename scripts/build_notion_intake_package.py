@@ -21,7 +21,7 @@ for name in ("__init__.py", "credentials.py"):
     source = ROOT / "shared" / name
     if source.exists():
         shutil.copy2(source, shared_dest / name)
-for package in ("cloudinary", "google_maps", "ola_maps"):
+for package in ("cloudinary", "ola_maps"):
     shutil.copytree(ROOT / "shared" / package, shared_dest / package,
                     ignore=shutil.ignore_patterns("__pycache__", "*.pyc", "tests", "test_*"))
 # The inventory pipeline still uses the historical field schema as a pure data contract.

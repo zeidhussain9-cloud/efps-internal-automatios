@@ -854,4 +854,4 @@ def test_runtime_maps_client_does_not_block_when_secret_is_missing(monkeypatch):
     monkeypatch.setattr(intake, "_aws_secret_value", lambda _name: (_ for _ in ()).throw(intake.IntakeError("secret unavailable")))
     monkeypatch.setattr("shared.credentials.get_secret", lambda _name: (_ for _ in ()).throw(RuntimeError("not available")))
     client = intake._runtime_maps_client()
-    assert client.api_key == ""
+    assert client.ola.api_key == ""

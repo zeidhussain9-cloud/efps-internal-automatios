@@ -1,3 +1,5 @@
+> Superseded 2026-11-15: this package is now an Ola-only compatibility shim; no Google API key is loaded or used. Earlier transport/key instructions below are historical, not current implementation. Source Google links remain.
+
 # Shared Google Maps Client
 
 ## Current production fallback — 2026-11-14

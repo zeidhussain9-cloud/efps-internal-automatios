@@ -1,3 +1,5 @@
+> Maps-only release in progress, 2026-11-15: source implementation uses Ola, not paid Google Maps/Places; source/client Google links remain. Runtime cutover evidence and provider limits: [migration record](modules/efps-inventory-mgmnt/OLA_MAPS_MIGRATION.md). Older deployment snapshots below remain dated history. AI extraction is not part of this release.
+
 ## Current Maps fallback correction
 
 Maps API verification is optional for raw property intake. Missing/unreadable credentials, billing/quota/authorization denials, and request/transport failures preserve the submitted supported short Maps URL as not verified and do not independently create a `Needs Review` state. Source-derived locality remains authoritative; unverified Maps results never enrich location fields. Partial/mismatched results, unsupported links, and genuine property validation issues remain review conditions. See `docs/DEPLOYMENT.md` and `docs/NOTION_PROPERTY_INTAKE.md` for the deployed release evidence.

@@ -13,15 +13,11 @@
 /**
  * Get environment variables
  * Required for Phase 3 (API integration):
- * - GOOGLE_PLACES_API_KEY
- * - GOOGLE_MAPS_API_KEY
  * - OPENAI_API_KEY
  */
 export function getEnvironment() {
   // TODO: Implement environment loading
   return {
-    // googlePlacesApiKey: process.env.GOOGLE_PLACES_API_KEY,
-    // googleMapsApiKey: process.env.GOOGLE_MAPS_API_KEY,
     // openaiApiKey: process.env.OPENAI_API_KEY,
     // environment: process.env.NODE_ENV || 'development',
   };

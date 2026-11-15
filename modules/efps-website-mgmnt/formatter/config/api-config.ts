@@ -10,8 +10,6 @@
  * - Configure rate limiting
  *
  * REQUIRED FOR PHASE 3:
- * - GOOGLE_PLACES_API_KEY
- * - GOOGLE_MAPS_API_KEY
  * - OPENAI_API_KEY
  */
 
@@ -20,8 +18,6 @@
  */
 export const googlePlacesConfig = {
   // TODO: Load from environment
-  // apiKey: process.env.GOOGLE_PLACES_API_KEY,
-  // endpoint: 'https://maps.googleapis.com/maps/api/place',
   // timeout: 10000,
   // retries: 3,
 };

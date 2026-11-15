@@ -1,3 +1,5 @@
+> Maps-only release in progress, 2026-11-15: source implementation uses Ola, not paid Google Maps/Places; source/client Google links remain. Runtime cutover evidence and provider limits: [migration record](../modules/efps-inventory-mgmnt/OLA_MAPS_MIGRATION.md). Older deployment snapshots below remain dated history. AI extraction is not part of this release.
+
 # EFPS SAM Deployment Contract
 ## Pending deployment — 2026-11-15 sheet-sync removal + Ola locality normalization (branch feat/remove-legacy-sheet-sync + merged PR #102)
 

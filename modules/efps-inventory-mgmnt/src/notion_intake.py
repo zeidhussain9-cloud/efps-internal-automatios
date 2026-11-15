@@ -15,7 +15,7 @@ import requests
 
 from shared.cloudinary.client import CloudinaryClient, CloudinaryCredentials
 from shared.cloudinary.media import Upload, upload_property_images, catalog_urls
-from shared.google_maps import GoogleMapsClient
+from shared.ola_maps.inventory import OlaInventoryMaps
 from shared.google_sheets import schema
 from shared.ola_maps import OlaMapsClient
 
@@ -642,21 +642,9 @@ def _runtime_cloudinary_client() -> CloudinaryClient:
     return CloudinaryClient(credentials=CloudinaryCredentials(**{key: str(values[key]) for key in required}))
 
 
-def _runtime_maps_client() -> GoogleMapsClient:
-    try:
-        raw = _aws_secret_value("MAPS_SECRET_ARN")
-        try:
-            parsed = json.loads(raw)
-            key = parsed.get("api_key", "") if isinstance(parsed, dict) else raw
-        except json.JSONDecodeError:
-            key = raw
-        if str(key).strip() == "MIGRATION_PLACEHOLDER":
-            key = ""
-        return GoogleMapsClient(api_key=str(key).strip())
-    except Exception:
-        # A missing/unreadable Maps secret must not block raw intake. The
-        # pipeline will preserve the submitted URL and mark it not verified.
-        return GoogleMapsClient(api_key="")
+def _runtime_maps_client() -> OlaInventoryMaps:
+    # No Google credentials or API fallback. Source links are links only.
+    return OlaInventoryMaps(ola_client=_runtime_ola_client())
 
 
 def _runtime_ola_client() -> OlaMapsClient:
@@ -792,8 +780,9 @@ def process_page(
                 )
         processed["cloudinary_image_urls"] = row.get("cloudinary_image_urls", processed.get("cloudinary_image_urls", ""))
         maps_url = str(processed.get("google_maps_url") or "").strip()
-        maps_failed = bool(maps_url) and any(issue.startswith(("Google Maps verification failed", "Google Maps API unavailable")) for issue in issues)
-        maps_api_unavailable = bool(maps_url) and any(issue.startswith("Google Maps API unavailable") for issue in issues)
+        ola_checked = any(issue.startswith("Ola background checks:") for issue in issues)
+        maps_failed = bool(maps_url) and (ola_checked or any(issue.startswith(("Google Maps verification failed", "Google Maps API unavailable", "Background Maps check unavailable")) for issue in issues))
+        maps_api_unavailable = bool(maps_url) and (ola_checked or any(issue.startswith(("Google Maps API unavailable", "Background Maps check unavailable")) for issue in issues))
         if maps_url and not _short_mobile_maps_url(maps_url):
             issues.append("Original Maps URL is not a supported short mobile link; omitted from the caption and requires review.")
             processed["status"] = "Needs Review"

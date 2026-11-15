@@ -49,17 +49,15 @@ export async function formatProperty(input: FormatterInput): Promise<FormatterRe
     // 3. Parse property fields deterministically from the raw text
     const parsed: ParsedProperty = parseProperty(sanitizedDetails);
 
-    // 4. Resolve Google Maps (if provided) — authoritative source for
-    //    society name, locality, and community type
+    // 4. Retain source Maps links. Legacy enrichment is disabled; unknown
+    //    geography must not erase already parsed source details.
     let resolvedPlace = null;
     let community: "Gated" | "Semi-gated" = "Semi-gated";
     if (input.googleMapsUrl) {
       resolvedPlace = await resolveGoogleMapsLocation(input.googleMapsUrl);
-      community = detectCommunityType(resolvedPlace.placeName, resolvedPlace.placeType);
-      parsed.locality = resolvedPlace.locality !== "Unknown" ? resolvedPlace.locality : undefined;
-      parsed.societyName = isSocietyName(resolvedPlace.placeName)
-        ? resolvedPlace.placeName
-        : undefined;
+      if (resolvedPlace.placeName) community = detectCommunityType(resolvedPlace.placeName, resolvedPlace.placeType);
+      if (resolvedPlace.locality && resolvedPlace.locality !== "Unknown") parsed.locality = resolvedPlace.locality;
+      if (resolvedPlace.placeName && isSocietyName(resolvedPlace.placeName)) parsed.societyName = resolvedPlace.placeName;
     }
     parsed.communityType = community;
     parsed.googleMapsUrl = input.googleMapsUrl;

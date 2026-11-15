@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from shared.google_maps import GoogleMapsClient
+from shared.ola_maps.inventory import OlaInventoryMaps
 from shared.google_sheets import schema
 try:
     from . import ai, listing_id, validate
@@ -54,17 +54,17 @@ def process_closed_session(raw_text: str, *, row: dict | None = None, maps_clien
     result = run_phase1(raw_text, row=row)
     out = result.row
     issues = list(result.issues)
-    maps = maps_client or GoogleMapsClient()
+    maps = maps_client or OlaInventoryMaps()
     maps_url = out.get("google_maps_url", "")
     maps_unverified = False
     if maps_url:
         try:
-            resolved = maps.resolve(maps_url=maps_url)
+            resolved = maps.resolve(maps_url=maps_url, address=", ".join(str(out.get(k) or "").strip() for k in ("society_name", "locality", "city") if out.get(k)), expected_locality=str(out.get("locality") or ""))
         except Exception:
             # Maps is optional enrichment. Network, HTTP, billing, quota, and
             # credential failures must not discard a valid source-submitted URL.
             resolved = None
-            issues.append("Google Maps API unavailable (credentials, billing, quota, authorization, or network); original source URL retained and labelled not verified.")
+            issues.append("Background Maps check unavailable; original source URL retained and labelled not verified.")
         if resolved is not None and resolved.confidence == "VERIFIED":
             out["google_maps_url"] = maps_url
             verified_locality = str(resolved.locality or "").strip()
@@ -85,9 +85,20 @@ def process_closed_session(raw_text: str, *, row: dict | None = None, maps_clien
                     issues.append(f"Google Maps verified place name overrides source society: {source_society} -> {place_name}")
                 out["society_name"] = place_name
                 issues.append(f"Google Maps verified place name: {place_name}")
+        elif resolved is not None and resolved.confidence == "OLA_EVIDENCE":
+            # Candidate evidence is not pin/building verification. Preserve source.
+            evidence = resolved.evidence
+            issues.append("Ola background checks: " + str(evidence))
+            if evidence.get("link_status") == "unreachable_or_unsupported":
+                maps_unverified = True
+            forward = {str(v).casefold() for v in evidence.get("forward_candidates", [])}
+            reverse = {str(v).casefold() for v in evidence.get("reverse_candidates", [])}
+            if forward and reverse and not forward & reverse:
+                maps_unverified = True
+                issues.append("Ola source pin/address candidates disagree; source facts not overwritten")
         elif resolved is not None:
             if resolved.confidence in {"API_UNAVAILABLE", "NEEDS_RUNTIME_VERIFICATION"}:
-                    issues.append("Google Maps API unavailable (credentials, billing, quota, or authorization); original source URL retained and labelled not verified.")
+                    issues.append("Background Maps check unavailable; original source URL retained and labelled not verified.")
             else:
                 issues.append(f"Google Maps verification failed or is incomplete: {resolved.confidence}")
                 maps_unverified = True
