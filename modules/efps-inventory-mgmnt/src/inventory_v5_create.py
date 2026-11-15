@@ -4,6 +4,7 @@ A separate disabled Edge gate is mandatory: current legacy readers would expose
 Available drafts despite Processing. No policy here authorizes that exposure.
 """
 from copy import deepcopy
+import json
 from datetime import datetime
 try:
     from . import notion_intake,pipeline
@@ -130,7 +131,9 @@ def create_fixture(*,source_page_id,payload_hash,repository,client,http,schema_l
             values.update({'listing_id':listing_id,'SL number':'','Availability':'Available','Pipeline Status':'Processing','Live On':[]})
             if 'onboarded_on' in values:values['onboarded_on']=display_onboarded(instant,display_timezone='Asia/Calcutta')
             body={'parent':{'database_id':PARENT},'properties':{name:serialize_notion(value,schema[name]['type'])for name,value in values.items()}}
-            plan={'body':body,'body_hash':content_hash(body),'values':values};call('plan',plan)
+            plan={'body':body,'body_hash':content_hash(body),'values':values,
+                'values_hash_input':json.dumps(values,sort_keys=True,separators=(',',':'),ensure_ascii=False),
+                'values_hash':content_hash(values)};call('plan',plan)
         effect=saved.get('effect')
         if effect is None:
             fresh()

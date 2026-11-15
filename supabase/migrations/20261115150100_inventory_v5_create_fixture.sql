@@ -106,6 +106,8 @@ BEGIN
   UPDATE public.inventory_v5_creations SET output=p_value,phase='output_saved' WHERE source_page_id=p_source;
  ELSIF p_operation='plan' THEN
   IF r.phase<>'output_saved' OR r.plan IS NOT NULL OR p_value->'body'->'parent'->>'database_id' IS DISTINCT FROM 'bccfd4f55e294b269daa093a928f873a' OR
+   p_value->>'values_hash_input' IS NULL OR (p_value->>'values_hash_input')::jsonb IS DISTINCT FROM p_value->'values' OR
+   p_value->>'values_hash' IS DISTINCT FROM encode(sha256(convert_to(p_value->>'values_hash_input','UTF8')),'hex') OR
    coalesce(p_value->>'body_hash','') !~ '^[a-f0-9]{64}$' OR p_value->'values'->>'listing_id' IS DISTINCT FROM r.listing_id OR
    p_value->'body'->'template' IS NOT NULL OR p_value->'values'->>'SL number' IS DISTINCT FROM '' OR
    p_value->'values'->>'Availability' IS DISTINCT FROM r.policy->>'availability' OR p_value->'values'->>'Pipeline Status' IS DISTINCT FROM 'Processing' OR
@@ -130,11 +132,7 @@ BEGIN
   INSERT INTO public.inventory_v5_create_receipts VALUES(p_value->>'request_id',p_source,(r.effect->>'nonce')::uuid,p_value);
   UPDATE public.inventory_v5_creations SET page_id=(p_value->>'page_id')::uuid,effect=effect||jsonb_build_object('receipt',p_value),phase='receipted' WHERE source_page_id=p_source;
  ELSIF p_operation='bootstrap' THEN
-  IF r.phase='bootstrapped' THEN
-   IF r.baseline IS DISTINCT FROM p_value->'values' OR r.provenance IS DISTINCT FROM p_value->'provenance' OR r.full_readback IS DISTINCT FROM p_value->'readback' OR r.source_before IS DISTINCT FROM p_value->'source' OR r.schema_contract IS DISTINCT FROM p_value->'schema' THEN RAISE EXCEPTION 'Bootstrap immutable'; END IF;
-   RETURN jsonb_build_object('ok',true,'source_completion_allowed',false,'phase','bootstrapped');
-  END IF;
-  IF r.phase<>'receipted' OR r.effect->'receipt' IS NULL OR p_value->'values' IS DISTINCT FROM r.plan->'values' OR
+  IF r.phase NOT IN ('receipted','bootstrapped') OR r.effect->'receipt' IS NULL OR p_value->'values' IS DISTINCT FROM r.plan->'values' OR
    p_value->'source' IS DISTINCT FROM r.source_before OR p_value->'schema' IS DISTINCT FROM r.schema_contract OR
    replace(p_value->'readback'->>'id','-','') IS DISTINCT FROM replace(r.page_id::text,'-','') OR p_value->'readback'->>'archived' IS DISTINCT FROM 'false' OR
    p_value->'readback'->'parent'->>'database_id' IS DISTINCT FROM r.plan->'body'->'parent'->>'database_id' OR
@@ -145,7 +143,14 @@ BEGIN
    EXISTS(SELECT 1 FROM jsonb_each(p_value->'provenance') x WHERE x.value->>'origin' IS DISTINCT FROM 'legacy_unknown' OR
       x.value->'created_value' IS DISTINCT FROM r.plan->'values'->x.key OR x.value->>'create_nonce' IS DISTINCT FROM r.effect->>'nonce') THEN RAISE EXCEPTION 'Exact receipt-proven unknown-ownership bootstrap required'; END IF;
   s=jsonb_populate_record(NULL::public.crm_inventory_snapshot,p_value->'mirror');
-  IF s.listing_id IS DISTINCT FROM r.listing_id OR s.source_record->>'notion_page_id' IS DISTINCT FROM r.page_id::text OR
+  IF jsonb_typeof(p_value->'mirror') IS DISTINCT FROM 'object' OR
+   EXISTS(SELECT 1 FROM jsonb_object_keys(p_value->'mirror') k WHERE k NOT IN
+    ('listing_id','source_kind','source_tab','source_record','locality','society_name','bhk','furnishing','monthly_rent','pet_friendly','cloudinary_image_urls',
+     'source_hash','inventory_contract_version','inventory_revision','availability','listing_state','pipeline_status','business_status','intake_status','live_on','onboarded_at','deleted_at')) OR
+   s.source_kind IS DISTINCT FROM 'housing_notion' OR s.source_tab IS DISTINCT FROM 'Housing Listings' OR
+   s.deleted_at IS NOT NULL OR s.intake_status IS DISTINCT FROM 'Processing' OR
+   s.source_hash IS DISTINCT FROM r.plan->>'values_hash' OR
+   s.listing_id IS DISTINCT FROM r.listing_id OR s.source_record->>'notion_page_id' IS DISTINCT FROM r.page_id::text OR
    s.source_record IS DISTINCT FROM (r.plan->'values')||jsonb_build_object('notion_page_id',r.page_id,'inventory_contract_version',5) OR
    s.inventory_revision IS DISTINCT FROM 1 OR s.inventory_contract_version IS DISTINCT FROM 5 OR s.availability IS DISTINCT FROM r.policy->>'availability' OR
    s.locality IS DISTINCT FROM coalesce(r.plan->'values'->>'locality','') OR s.society_name IS DISTINCT FROM coalesce(r.plan->'values'->>'society_name','') OR
@@ -155,6 +160,12 @@ BEGIN
    s.cloudinary_image_urls IS DISTINCT FROM coalesce((SELECT jsonb_agg(btrim(x)) FROM unnest(string_to_array(coalesce(r.plan->'values'->>'cloudinary_image_urls',''),','))x WHERE btrim(x)<>''),'[]'::jsonb) OR
    s.listing_state IS DISTINCT FROM r.policy->>'availability' OR s.business_status IS DISTINCT FROM 'Processing' OR
    s.pipeline_status IS DISTINCT FROM 'Processing' OR s.live_on IS DISTINCT FROM ARRAY[]::text[] OR s.onboarded_at IS DISTINCT FROM r.onboarded_at THEN RAISE EXCEPTION 'Exact mirror bootstrap required'; END IF;
+  IF r.phase='bootstrapped' THEN
+   IF r.baseline IS DISTINCT FROM p_value->'values' OR r.provenance IS DISTINCT FROM p_value->'provenance' OR r.full_readback IS DISTINCT FROM p_value->'readback' OR r.source_before IS DISTINCT FROM p_value->'source' OR r.schema_contract IS DISTINCT FROM p_value->'schema' THEN RAISE EXCEPTION 'Bootstrap immutable'; END IF;
+   RETURN jsonb_build_object('ok',true,'source_completion_allowed',false,'phase','bootstrapped');
+  END IF;
+  -- Mirror receipt times are database-owned bootstrap observations, not onboarding.
+  s.source_snapshot_at=clock_timestamp();s.last_synced_at=s.source_snapshot_at;
   INSERT INTO public.inventory_processing_revisions(listing_id,page_id,last_acknowledged_values,field_provenance,revision,processing_status)
    VALUES(r.listing_id,r.page_id,(r.plan->'values')||jsonb_build_object('_archived',false),p_value->'provenance',1,'create_fixture_draft');
   INSERT INTO public.inventory_field_provenance(listing_id,field_name,origin,evidence,revision)

@@ -300,3 +300,22 @@ matching values. The title baseline is exactly blank, not a guessed rank; future
 current-membership title/lease/mirror acknowledgment is still required before a
 new source may complete. Read-before-write is not Notion CAS. Unknown create and
 pre-capture holds still need explicit operator resolution, not timer clearing.
+
+### Mirror control-contract correction after independent review
+
+The first fixture checkpoint's SQL omitted several mirror control checks. A
+privileged caller could bootstrap active membership with a wrong-domain or
+soft-deleted mirror even though the normal Python caller sent correct values.
+The corrected boundary requires housing_notion/Housing Listings, no deletion,
+Processing intake status, and the frozen value hash, as well as the previously
+checked business/value fields. Caller timestamps and unknown mirror metadata
+are refused rather than silently accepted. Source snapshot and last-sync times
+are database-owned bootstrap observation times; they do not replace onboarding.
+
+The hash policy freezes a UTF-8 JSON value preimage with the creation plan. SQL
+requires that preimage to parse to exactly the frozen values and independently
+checks its SHA256 bytes. The mirror hash must equal that saved hash. This proves
+integrity of that frozen value document, not pipeline authorship. The same
+mirror contract is checked for idempotent bootstrap replay before returning.
+Fault tests require no baseline, mirror, provenance, membership or job after any
+rejected control/hash metadata, then allow a correct retry with no second POST.

@@ -296,3 +296,48 @@ def test_another_legacy_source_cannot_receive_reserved_id(db,monkeypatch):
     db.request('__legacy_binding',source_page_id=PAGE,listing_id=reserved,page_id='',payload_hash='b'*64)
     with pytest.raises(RuntimeError):db.request('allocate_listing_id',page_id=PAGE)
     assert len(db.request('__inspect')['creations'])==1 and s.count==1
+
+
+@pytest.mark.parametrize('bad,value',[
+    ('source_kind','not_housing'),('source_tab','Other'),('deleted_at','2026-11-15T00:00:00Z'),
+    ('intake_status','Processed'),('source_hash','a'*64),('source_snapshot_at','1900-01-01T00:00:00Z'),
+    ('last_synced_at','1900-01-01T00:00:00Z'),('unrecognized_metadata','injected')])
+def test_exact_mirror_control_contract_rejects_forged_bootstrap_atomically(db,monkeypatch,bad,value):
+    args,c,s,counts=setup(db,monkeypatch);orig=args['repository'].call
+    def tamper(op,*a,**kw):
+        if op=='bootstrap':kw['value']['mirror'][bad]=value
+        return orig(op,*a,**kw)
+    args['repository'].call=tamper
+    with pytest.raises(RuntimeError):create_fixture(**args)
+    x=db.request('__inspect')
+    assert x.get('state') is None and x.get('mirror') is None and not x['membership'] and not x['provenance'] and not x['jobs']
+    assert x['creations'][0]['phase']=='receipted' and s.count==1
+    args['repository'].call=orig
+    assert create_fixture(**args)['phase']=='bootstrapped' and s.count==1
+    mirror=db.request('__inspect')['mirror']
+    assert mirror['source_kind']=='housing_notion' and mirror['source_tab']=='Housing Listings' and mirror['deleted_at'] is None
+    assert mirror['intake_status']=='Processing' and mirror['source_hash']==content_hash(db.request('__inspect')['creations'][0]['plan']['values'])
+    assert mirror['source_snapshot_at']==mirror['last_synced_at'] and mirror['source_snapshot_at'] is not None
+
+
+def test_idempotent_bootstrap_does_not_accept_changed_mirror_contract(db,monkeypatch):
+    args,c,s,counts=setup(db,monkeypatch);create_fixture(**args);orig=args['repository'].call
+    def tamper(op,*a,**kw):
+        if op=='bootstrap':kw['value']['mirror']['source_kind']='not_housing'
+        return orig(op,*a,**kw)
+    args['repository'].call=tamper
+    with pytest.raises(RuntimeError):create_fixture(**args)
+    x=db.request('__inspect');assert x['mirror']['source_kind']=='housing_notion' and len(x['jobs'])==1 and s.count==1
+
+
+@pytest.mark.parametrize('bad',['hash','input'])
+def test_frozen_value_hash_contract_verified_by_sql(db,monkeypatch,bad):
+    args,c,s,counts=setup(db,monkeypatch);orig=args['repository'].call
+    def tamper(op,*a,**kw):
+        if op=='plan':
+            if bad=='hash':kw['value']['values_hash']='a'*64
+            else:kw['value']['values_hash_input']='{}'
+        return orig(op,*a,**kw)
+    args['repository'].call=tamper
+    with pytest.raises(RuntimeError):create_fixture(**args)
+    assert s.count==0 and db.request('__inspect')['creations'][0]['phase']=='output_saved'
