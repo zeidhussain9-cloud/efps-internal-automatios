@@ -77,6 +77,8 @@ def save_existing_destination(*,source_page_id,payload_hash,page_id,processed,
         pending=state.get('pending_patch')
         prepared=state.get('prepared_inputs')
         if pending is not None:
+            if state['revision'] != plan['revision']:
+                raise IntakeDestinationBlocked('Frozen pending destination revision changed; explicit resolution required')
             if state.get('pending_kind')!='intake' or state.get('pending_submission')!=marker or pending!=patch or prepared!=before:
                 raise IntakeDestinationBlocked('Different pending destination intent')
             if any(not field_equal(k,current.get(k),before.get(k)) and not field_equal(k,current.get(k),expected.get(k))
@@ -88,6 +90,11 @@ def save_existing_destination(*,source_page_id,payload_hash,page_id,processed,
             submissions.call('destination_ack',source_page_id,source_lease)
             return {'status':'awaiting_source_ack','conflicts':plan['conflicts'],'source_completion_allowed':False}
         else:
+            # A durable source plan freezes the destination revision too. Even
+            # an unchanged-value worker/title/other-source acknowledgment may
+            # advance it. Do not mutate against a stale plan and strand its ack.
+            if state['revision'] != plan['revision']:
+                raise IntakeDestinationBlocked('Frozen destination revision changed; explicit blocked-plan resolution required before writes')
             if not _same(current,before) or not _same(state['acknowledged'],before):
                 raise IntakeDestinationBlocked('Destination changed since durable source plan')
             workers._call('prepare_intake',page_id,row_lease,revision=state['revision'],

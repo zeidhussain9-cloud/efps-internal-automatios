@@ -87,3 +87,15 @@ new-create/idempotency/membership, actual binding lookup and production route
 wiring, complete interrupted recovery availability, plus the broader release
 gates. Tests use synthetic typed Notion HTTP and actual staged Edge/SQL ports,
 not real Notion atomicity or a production E2E proof.
+
+### Frozen-plan revision guard
+
+A source plan also freezes the destination revision. If the process stops after
+saving that plan but before installing the row intent, a normal dependency
+acknowledgment, title pass or second source can advance the destination revision
+without changing visible values. The executor now explicitly refuses before any
+new preparation/effect when that frozen revision differs. It does not rebase the
+plan, regenerate its candidate or relax destination acknowledgment to accept
+arbitrary newer revisions. The planned submission stays blocked for explicit
+resolution. Tests exercise all three intervening paths through actual ports and
+verify zero destination PATCHes and unchanged provenance on refusal.

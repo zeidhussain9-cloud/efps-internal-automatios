@@ -178,3 +178,36 @@ def test_ledger_cannot_claim_destination_ack_before_row_and_mirror(db):
     with pytest.raises(RuntimeError):sub.call('destination_ack',SOURCE,lease)
     with pytest.raises(RuntimeError):sub.call('finish',SOURCE,lease)
     assert db.request('__inspect')['submissions'][0]['phase']=='planned'
+
+
+@pytest.mark.parametrize('intervening',['same_value_worker','title_pass','other_source'])
+def test_frozen_plan_revision_refuses_before_mutation_after_intervening_ack(db,intervening):
+    args,c,s=setup(db);workers=args['workers'];orig=workers._call
+    def crash(op,*a,**kw):
+        if op=='prepare_intake':raise TimeoutError('crash after source plan')
+        return orig(op,*a,**kw)
+    workers._call=crash
+    with pytest.raises(TimeoutError):save_existing_destination(**args)
+    workers._call=orig
+    before=args['notion'].snapshot(PAGE)
+    if intervening=='same_value_worker':
+        lease=workers.claim(PAGE);workers.load(PAGE,lease)
+        workers.finish(PAGE,lease,before,status='self_write_acknowledged');workers.release(PAGE,lease)
+    elif intervening=='title_pass':
+        lease=workers.claim_title(PAGE);state=workers.load(PAGE,lease)
+        workers.prepare_title(PAGE,lease,expected_revision=state['revision'],input_values=before,desired='1')
+        workers.finish_title(PAGE,lease,before);workers.release(PAGE,lease)
+    else:
+        # A second source acknowledges identical values through its own actual
+        # durable ledger, row-intent and mirror path while source1 is only planned.
+        other={**args,'source_page_id':'12345678-1234-4234-8234-123456789014',
+               'processed':{**args['processed'],'monthly_rent':25000}}
+        assert save_existing_destination(**other)['status']=='awaiting_source_ack'
+    assert db.request('__inspect')['state']['revision']==2
+    with pytest.raises(IntakeDestinationBlocked,match='Frozen destination revision'):
+        save_existing_destination(**args)
+    assert s.count==0 and args['notion'].snapshot(PAGE)['monthly_rent']==25000
+    x=db.request('__inspect')
+    first=next(z for z in x['submissions']if z['source_page_id']==SOURCE)
+    assert first['phase']=='planned' and x['state']['pending_patch'] is None
+    assert x['state']['field_provenance']['monthly_rent']['last_generated_value']==25000
