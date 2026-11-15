@@ -48,6 +48,8 @@ def runtime_fixture(db):
         client.schema[name]={'id':name,'type':kind,kind:{'options':[{'name':x}for x in options]}if kind in ['select','multi_select']else{}}
         client.row[name]={'type':kind,**serialize_notion(row[name],kind)}
     client.schema['_SL numeric sort']={'id':'sort','type':'formula','formula':{'expression':'toNumber(prop("SL number"))'}}
+    original_get=client.get_page
+    client.get_page=lambda page:{**original_get(page),'parent':{'database_id':intake.LISTINGS_DATABASE_ID}}
     client.token='test-token';client.session=HttpSession(client)
     ack=V5NotionPort(client,client.schema).snapshot(PAGE)
     db.request('__seed',page_id=PAGE,row=ack,provenance={'carpet_area':{'origin':'derived','last_generated_value':'1110'},'whatsapp_post':{'origin':'derived','last_generated_value':'caption'}})
@@ -149,6 +151,7 @@ def test_enabled_raw_intake_archive_still_uses_original_flow(monkeypatch):
         def get_page(self,page):return {'id':page,'archived':True,'parent':{'database_id':intake.INTAKE_DATABASE_ID}}
     class Store:
         def finish(self,*a,**k):pass
+        def find_inventory(self,page):return {'found':False}
     assert intake.process_page(PAGE,notion=Notion(),store=Store())['reason']=='source_page_deleted'
 
 
@@ -173,3 +176,49 @@ def test_v5_review_status_maps_to_existing_event_ledger_without_legacy_change(mo
     class Context:aws_request_id='test-request'
     intake.lambda_handler({'_efps_notion_worker':True,'page_id':PAGE,'event_row_id':'notion-webhook:test'},Context())
     assert writes==['processing','needs_review']
+
+
+@pytest.mark.parametrize('archived',[False,True])
+@pytest.mark.parametrize('parent',[intake.INTAKE_DATABASE_ID,'123456781234423482341234567890ab'])
+def test_known_housing_moved_to_other_parent_never_enters_legacy_or_raw_intake(monkeypatch,archived,parent):
+    monkeypatch.setenv('EFPS_INVENTORY_V5_ENABLED','true')
+    seen=[]
+    class Notion:
+        def get_page(self,page):return {'id':page,'archived':archived,'parent':{'database_id':parent},'properties':{}}
+        def update_page(self,*a,**k):seen.append('notion_write')
+    class Store:
+        def find_inventory(self,page):return {'found':True,'listing_id':'EF-2611-ABCD'}
+        def claim(self,*a,**k):seen.append('legacy_claim');raise AssertionError('legacy claim')
+        def finish(self,*a,**k):seen.append('legacy_finish')
+    class Media:
+        def __getattr__(self,name):raise AssertionError('media port used')
+    with pytest.raises(intake.IntakeError,match='moved outside Housing'):
+        intake.process_page(PAGE,event_type='page.moved',notion=Notion(),store=Store(),cloudinary=Media())
+    assert seen==[]
+
+
+@pytest.mark.parametrize('parent',[intake.INTAKE_DATABASE_ID,'','123456781234423482341234567890ab'])
+def test_direct_runtime_rechecks_current_parent_before_any_patch_or_mirror(db,parent):
+    client,store=runtime_fixture(db)
+    original_get=client.get_page
+    client.get_page=lambda page:{**original_get(page),'parent':{'database_id':parent}}
+    with pytest.raises(ValueError,match='expected Housing parent'):run(client,store)
+    assert not store.calls
+    assert not any(c[0]=='PATCH'for c in client.session.calls)
+
+
+def test_runtime_move_during_prewrite_recheck_refuses_patch_and_mirror(db):
+    client,store=runtime_fixture(db)
+    client.update_page(PAGE,{'built_up_area':serialize_notion(1300,'number')})
+    original_get=client.get_page;reads=[]
+    def moved(page):
+        reads.append(page)
+        result=original_get(page)
+        # Initial runtime boundary read and worker read are Housing. A move
+        # before worker prewrite refetch is visible and must stop the write.
+        if len(reads)>=3:result['parent']={'database_id':intake.INTAKE_DATABASE_ID}
+        return result
+    client.get_page=moved
+    with pytest.raises(ValueError,match='expected Housing parent'):run(client,store)
+    assert not any(c[0]=='PATCH'for c in client.session.calls)
+    assert not any(op=='sync_inventory'for op,_ in store.calls)

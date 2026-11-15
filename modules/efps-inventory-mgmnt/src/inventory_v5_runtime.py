@@ -69,7 +69,8 @@ def process_existing_housing(page_id, *, client, store, schema, sealed_schema_ha
 
     repo = SeededRepository(request=store._request, identity=lambda page: identity, mirror=mirror)
     http = V5HttpNotionClient(token=client.token, version='2022-06-28', session=client.session)
-    notion = V5NotionPort(http, schema, bind_dispatch=repo.bind_dispatch, record_receipt=repo.record_receipt)
+    notion = V5NotionPort(http, schema, bind_dispatch=repo.bind_dispatch, record_receipt=repo.record_receipt,
+                          expected_parent='bccfd4f55e294b269daa093a928f873a')
     # A known archived page must not enter the legacy mirror or mutate membership.
     initial = notion.snapshot(page_id)
     if initial.get('_archived'):

@@ -52,3 +52,14 @@ JSON encoding before dispatch binding or HTTP. Oversize input is rejected, not
 truncated. These local failures do not justify automatic clearing of an already
 begun durable effect. Official size limits:
 https://developers.notion.com/reference/request-limits
+
+## Known-parent boundary repair
+
+The first staged adapter missed two known-move cases. A canonical Housing page
+moved into Raw Intake could enter the old intake route, and a move after outer
+routing was not checked by the runtime snapshot. Neither path was deployed.
+The enabled route now resolves a known inventory binding before any non-Housing
+route or archive shortcut. Every runtime snapshot requires the expected Housing
+parent, including prewrite refetch and postwrite readback. Known moves, missing
+parents and wrong parents refuse patch/mirror effects. This remains a checked
+read-before-write boundary, not atomic CAS against a simultaneous move.

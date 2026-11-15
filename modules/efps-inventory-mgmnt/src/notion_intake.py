@@ -694,6 +694,11 @@ def process_page(
     if _housing_v5_enabled():
         parent = page.get("parent") or {}
         source = str(parent.get("database_id") or parent.get("data_source_id") or "").replace("-", "").lower()
+        # Resolve known canonical binding before ANY non-Housing route, including
+        # archived pages and pages moved into Raw Intake. Never treat a moved
+        # canonical row as a fresh intake submission.
+        if source != LISTINGS_DATABASE_ID and store.find_inventory(page_id).get("found"):
+            raise IntakeError("Known Housing page moved outside Housing; v5 membership handling required")
         if source == LISTINGS_DATABASE_ID:
             return process_listing_page(page, notion=notion, store=store)
     if page.get("archived") or page.get("in_trash"):

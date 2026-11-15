@@ -10,10 +10,17 @@ except ImportError:
     from inventory_v5 import field_equal,content_hash
 
 class V5NotionPort:
-    def __init__(self,client,schema,*,record_receipt=None,bind_dispatch=None):self.client=client;self.schema=schema;self.record_receipt=record_receipt;self.bind_dispatch=bind_dispatch
+    def __init__(self,client,schema,*,record_receipt=None,bind_dispatch=None,expected_parent=None):self.client=client;self.schema=schema;self.record_receipt=record_receipt;self.bind_dispatch=bind_dispatch;self.expected_parent=expected_parent
 
     def snapshot(self,page_id):
         page=self.client.get_page(page_id)
+        if self.expected_parent is not None:
+            parent=page.get('parent') or {}
+            # database_id is authoritative when both database/data-source IDs
+            # are present. Missing/unknown parent is not implicitly Housing.
+            source=str(parent.get('database_id') or parent.get('data_source_id') or '').replace('-','').lower()
+            if source!=self.expected_parent.replace('-','').lower():
+                raise ValueError('Notion page is outside the expected Housing parent')
         row={name:read_notion_value(prop) for name,prop in page.get('properties',{}).items()
              if prop.get('type') in ('multi_select','title','rich_text','select','status','checkbox','number','date','url','email','phone_number')}
         row['_edited_at']=page.get('last_edited_time')
