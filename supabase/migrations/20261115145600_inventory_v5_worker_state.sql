@@ -33,6 +33,7 @@ BEGIN
   VALUES(p_listing_id,p_page_id) ON CONFLICT(listing_id) DO NOTHING;
   SELECT * INTO r FROM public.inventory_processing_revisions WHERE page_id=p_page_id FOR UPDATE;
   IF r.listing_id IS DISTINCT FROM p_listing_id THEN RAISE EXCEPTION 'Page/listing identity conflict'; END IF;
+  IF r.lease_until > clock_timestamp() THEN RETURN jsonb_build_object('busy',true); END IF;
   IF r.active_effect IS NOT NULL THEN
    INSERT INTO public.inventory_effect_recovery_incidents(scope,page_id,effect) VALUES('worker',p_page_id,r.active_effect) ON CONFLICT(scope,effect) DO NOTHING;
    RETURN jsonb_build_object('needs_recovery',true,'busy',true); END IF;
@@ -44,6 +45,12 @@ BEGIN
   RETURN jsonb_build_object('lease',token,'revision',r.revision);
  END IF;
  SELECT * INTO r FROM public.inventory_processing_revisions WHERE page_id=p_page_id FOR UPDATE;
+ IF p_operation='record_effect_receipt' THEN
+  IF NOT FOUND OR r.active_effect->>'lease' IS DISTINCT FROM p_lease::text OR r.active_effect ? 'receipt' OR jsonb_typeof(p_values) IS DISTINCT FROM 'object' THEN RAISE EXCEPTION 'Receipt effect mismatch'; END IF;
+  UPDATE public.inventory_processing_revisions SET active_effect=active_effect||jsonb_build_object('receipt',p_values||jsonb_build_object('effect_token',p_lease,'page_id',p_page_id)) WHERE page_id=p_page_id;
+  INSERT INTO public.inventory_effect_recovery_incidents(scope,page_id,effect,status,decision) VALUES('worker',p_page_id,r.active_effect,'terminal_receipt_recorded',p_values) ON CONFLICT(scope,effect) DO UPDATE SET decision=excluded.decision;
+  RETURN jsonb_build_object('ok',true);
+ END IF;
  IF NOT FOUND OR r.lease_token IS DISTINCT FROM p_lease OR r.lease_until <= clock_timestamp() THEN
   RAISE EXCEPTION 'Stale or expired inventory lease';
  END IF;
@@ -57,6 +64,7 @@ BEGIN
   UPDATE public.inventory_processing_revisions SET active_effect=jsonb_build_object('intent',p_values,'lease',p_lease,'started_at',clock_timestamp()),updated_at=clock_timestamp() WHERE page_id=p_page_id;
  ELSIF p_operation='end_effect' THEN
   IF r.active_effect IS NULL OR r.active_effect->>'lease' IS DISTINCT FROM p_lease::text THEN RAISE EXCEPTION 'Effect ticket mismatch'; END IF;
+  UPDATE public.inventory_effect_recovery_incidents SET status='completed',resolved_at=clock_timestamp() WHERE scope='worker' AND (effect=r.active_effect OR effect=r.active_effect-'receipt') AND status IN ('blocked','terminal_receipt_recorded');
   UPDATE public.inventory_processing_revisions SET active_effect=NULL,updated_at=clock_timestamp() WHERE page_id=p_page_id;
  ELSIF p_operation='prepare' THEN
   IF p_revision IS DISTINCT FROM r.revision THEN RAISE EXCEPTION 'Inventory revision conflict'; END IF;

@@ -8,7 +8,7 @@ No production deployment, schema mutation, inventory rewrite, posting or old-col
 
 ## Verified locally
 
-- 361 Python tests, 152 Node tests and Vite build pass.
+- 383 Python tests, 152 Node tests and Vite build pass.
 - Repository audit includes the new files and passes.
 - Disposable PostgreSQL checks cover additive schema compatibility, typed empty channels, vocabularies, RLS, worker fencing, revision checks, persisted write intents, and renumber-job serialization/checkpoints.
 - The actual staged Edge handler runs in a local harness with an injected SQL client. It rejects disabled v5 and bad auth/leases and preserves typed mirror values. This is not an Edge deployment test.
@@ -91,3 +91,8 @@ Real mirror-before backup is now captured privately (104active,9tombstoned),
 reconciles with Notion on all business fields after numeric/blank normalization,
 and is included in104exactcombinedforward/reversemodelchecks. This still is not
 an executable production manifest or full104nativecutover/reversalrehearsal.
+
+Healthy concurrent claims during an unexpired effect now return ordinary busy,
+not needs_recovery. Worker/title regression tests cover this and normal effect
+completion closes matching incidents. A narrow documented saved503receiptpath
+is staged/tested without PATCH retry; unknown503/504/transportlossremainsblocked.

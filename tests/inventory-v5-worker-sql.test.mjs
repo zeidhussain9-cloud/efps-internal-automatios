@@ -32,6 +32,14 @@ await assert.rejects(()=>call('claim',{p_listing_id:'EF-2611-ZZZZ'}),/Page\/list
 // A begun external effect outlives its lease, but cannot be overtaken.
 const third=await call('claim',{p_listing_id:'EF-2611-ABCD'});
 await call('begin_effect',{p_lease:third.lease,p_values:{kind:'notion_patch',patch:{x:2}}});
+const healthy=await call('claim',{p_listing_id:'EF-2611-ABCD'});assert.equal(healthy.busy,true);assert.equal(healthy.needs_recovery,undefined);
+assert.equal((await db.query('SELECT count(*)::int n FROM inventory_effect_recovery_incidents')).rows[0].n,0);
+await call('record_effect_receipt',{p_lease:third.lease,p_values:{request_id:'exact-response'}});
+await assert.rejects(()=>call('record_effect_receipt',{p_lease:third.lease,p_values:{request_id:'duplicate'}}),/Receipt effect mismatch/);
+await assert.rejects(()=>call('record_effect_receipt',{p_lease:claim.lease,p_values:{request_id:'stale'}}),/Receipt effect mismatch/);
+await call('end_effect',{p_lease:third.lease});
+assert.equal((await db.query("SELECT status FROM inventory_effect_recovery_incidents WHERE status='completed'")).rows.length,1);
+await call('begin_effect',{p_lease:third.lease,p_values:{kind:'notion_patch',patch:{x:3}}});
 await db.exec(`UPDATE inventory_processing_revisions SET lease_until=now()-interval '1 second'`);
 const blocked=await call('claim',{p_listing_id:'EF-2611-ABCD'});assert.equal(blocked.needs_recovery,true);assert.equal(blocked.busy,true);
 await assert.rejects(()=>call('end_effect',{p_lease:third.lease}),/Stale or expired/);

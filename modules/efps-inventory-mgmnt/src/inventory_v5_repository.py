@@ -51,6 +51,9 @@ class V5Repository:
     def requeue(self,page,lease,*,reason):
         return self._call('requeue',page,lease,status=reason)
 
+    def record_receipt(self,page,receipt):
+        return self._call('record_effect_receipt',page,self.leases[page],values=receipt)
+
     def effect(self,page,lease,intent,action):
         # An expired owner cannot start an effect. Once started, durable active_effect
         # blocks takeover even after lease expiry. Any timeout/error leaves it there

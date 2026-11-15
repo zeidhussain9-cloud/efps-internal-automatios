@@ -10,6 +10,7 @@ from src.inventory_v5_adapter import serialize_notion
 from src.inventory_v5_worker import process_dependencies
 from src.inventory_v5_renumber import run_renumber
 from src.inventory_v5 import content_hash
+from src.inventory_v5_http import V5HttpNotionClient,V5NotionWriteError
 from src.inventory_v5_reconcile import Quiescence,reconcile_effect,RecoveryBlocked
 
 PAGE='12345678-1234-4234-8234-123456789012'
@@ -197,3 +198,34 @@ def test_title_job_operator_recovery_resumes_real_checkpoint_and_completion(db):
     assert final['incidents'][0]['status']=='reconciled'
     assert final['incidents'][0]['remaining']=={'SL number':'1'}
     assert final['incidents'][0]['decision']['notion_write']is False
+
+
+def test_documented_saved_503_receipt_persisted_real_ports_no_patch_retry(db):
+    before={'listing_id':'EF-2611-ABCD','Pipeline Status':'Ready to Post','built_up_area':1200,'carpet_area':1110,'whatsapp_post':'old caption'}
+    client=Client(before);base=V5NotionPort(client,client.schema)
+    db.request('__seed',page_id=PAGE,row=base.snapshot(PAGE),provenance={'carpet_area':{'origin':'derived','last_generated_value':1110},'whatsapp_post':{'origin':'derived','last_generated_value':'old caption'}})
+    def mirror(page,values,*,deleted,lease,revision):
+        row={**values,'inventory_contract_version':5,'Availability':'Available','Live On':[],'onboarded_at':'2026-11-15T09:11:00Z'}
+        return db.request('sync_inventory',page_id=page,listing_id=row['listing_id'],row=row,deleted=deleted,lease=lease,revision=revision,source_hash=content_hash(row))
+    repo=V5Repository(request=db.request,identity=lambda page:before['listing_id'],mirror=mirror)
+    class Response:
+        headers={}
+        def __init__(self,status,body):self.status_code=status;self.body=body;self.ok=status==200
+        def json(self):return self.body
+    class Session:
+        def __init__(self):self.patch_count=0;self.receipt_seen=False
+        def request(self,method,url,**kwargs):
+            if method=='GET':
+                if self.patch_count:
+                    effect=db.request('__inspect')['state']['active_effect']
+                    if effect:self.receipt_seen=effect.get('receipt',{}).get('request_id')=='saved-request123'
+                return Response(200,client.get_page(PAGE))
+            self.patch_count+=1;client.update_page(PAGE,kwargs['json']['properties'])
+            return Response(503,{'code':'service_unavailable','request_id':'saved-request123','additional_data':{'retry_guidance':['Read the object again to confirm the saved change.','Do not repeat the write.']}})
+    session=Session();http=V5HttpNotionClient(token='synthetic',version='2026-03-11',session=session)
+    notion=V5NotionPort(http,client.schema,record_receipt=repo.record_receipt)
+    client.update_page(PAGE,{'built_up_area':serialize_notion(1300,'number')})
+    result=process_dependencies(PAGE,notion=notion,repository=repo,render_caption=lambda row:'new caption',route_bhk=lambda bhk:('',''))
+    assert result['status']=='recalculated'
+    assert session.patch_count==1 and session.receipt_seen
+    assert db.request('__inspect')['mirror']['source_record']['carpet_area']==1210

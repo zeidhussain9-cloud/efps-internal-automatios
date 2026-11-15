@@ -80,3 +80,32 @@ is not a tamperproof boundary against malicious code with other privileged
 capabilities. Python readback validation is part of the trusted implementation.
 The SQL recovery RPC persists that readback/decision, checks exact effect and
 attestation CAS, and does not independently interpret Notion values.
+
+## Documented saved503exception, limited staged path
+
+Official Notion request-limits/status documentation describes a specific503
+response where the change was saved but building the response timed out. Its
+complete additional_data.retry_guidance says to read the object and not repeat
+the write. The staged HTTP adapter preserves the full structured response,
+request ID and exact dispatched PATCH page/method/body hash/start/finish timing.
+It accepts only the complete expected two-item guidance with503/service_unavailable,
+not English substrings, partial guidance, another status or a connection error.
+
+The caller records that receipt under the exact active effect BEFORE readback.
+Wrong page/method/body binding is rejected; stale/duplicate SQL receipt tickets
+are rejected. The synchronous origin makes only one PATCH, with no retry; it
+then reads back, checks all intended typed values, and returns through its own
+normal effect completion. It does not launch another writer. A third value
+keeps the barrier unresolved. This path is tested through the worker's actual
+repository/Edge/isolated SQL ports; it is not enabled in production and does not
+supply a production title-HTTP runtime by itself.
+
+The existing25secondHTTPtimeoutcanexpirebeforea503savedresponsearound55seconds
+arrives. No timeout change was slipped in. Longer waits might reduce lost
+receipts but are not proof of remote completion and need a separate bounded
+invocation/lease policy. Truly missing responses remain unknown.
+
+Sources fetched15November2026:
+https://developers.notion.com/reference/request-limits
+https://developers.notion.com/reference/status-codes
+https://developers.notion.com/reference/patch-page

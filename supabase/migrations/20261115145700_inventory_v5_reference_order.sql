@@ -45,6 +45,7 @@ BEGIN
  PERFORM pg_advisory_xact_lock(55151126);
  IF p_operation='claim' THEN
   SELECT * INTO r FROM public.inventory_renumber_jobs WHERE status='running' FOR UPDATE;
+  IF FOUND AND r.lease_until>clock_timestamp() THEN RETURN jsonb_build_object('busy',true); END IF;
   IF FOUND AND r.active_effect IS NOT NULL THEN
    INSERT INTO public.inventory_effect_recovery_incidents(scope,page_id,job_id,effect) VALUES('renumber',(r.active_effect->'intent'->>'page_id')::uuid,r.job_id,r.active_effect) ON CONFLICT(scope,effect) DO NOTHING;
    RETURN jsonb_build_object('busy',true,'needs_recovery',true); END IF;
@@ -66,6 +67,7 @@ BEGIN
   UPDATE public.inventory_renumber_jobs SET active_effect=jsonb_build_object('intent',p_error::jsonb,'lease',p_lease,'started_at',clock_timestamp()) WHERE job_id=p_job_id;
  ELSIF p_operation='end_effect' THEN
   IF r.active_effect IS NULL OR r.active_effect->>'lease' IS DISTINCT FROM p_lease::text THEN RAISE EXCEPTION 'Title effect ticket mismatch'; END IF;
+  UPDATE public.inventory_effect_recovery_incidents SET status='completed',resolved_at=clock_timestamp() WHERE scope='renumber' AND effect=r.active_effect AND status='blocked';
   UPDATE public.inventory_renumber_jobs SET active_effect=NULL WHERE job_id=p_job_id;
  ELSIF p_operation='renew' THEN
   UPDATE public.inventory_renumber_jobs SET lease_until=clock_timestamp()+interval '90 seconds' WHERE job_id=p_job_id;
