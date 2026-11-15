@@ -49,15 +49,6 @@ createServer(async(req,res)=>{
    finally{await repo.close()}
   }
 
-  if(p==='/api/internal/inventory/sync'&&req.method==='POST'){
-   if(process.env.CRM_INVENTORY_SYNC_ENABLED!=='true'||!process.env.CRM_INVENTORY_SYNC_SECRET){res.writeHead(404,security);return res.end('Inventory sync disabled');}
-   const ts=String(req.headers['x-efps-inventory-timestamp']||'');const provided=String(req.headers['x-efps-inventory-signature']||'');
-   if(!/^\d+$/.test(ts)||Math.abs(Date.now()-Number(ts)*1000)>300000||!/^[a-f0-9]{64}$/i.test(provided)){res.writeHead(401,security);return res.end('Invalid inventory sync authentication');}
-   const expected=createHmac('sha256',process.env.CRM_INVENTORY_SYNC_SECRET).update(ts).digest('hex');
-   if(expected.length!==provided.length||!timingSafeEqual(Buffer.from(expected),Buffer.from(provided.toLowerCase()))){res.writeHead(401,security);return res.end('Invalid inventory sync authentication');}
-   try{const {readCanonicalInventory,syncInventorySnapshot}=await import('./src/inventory-sync.mjs');const rows=await readCanonicalInventory(process.env);const result=await syncInventorySnapshot({rows});res.writeHead(200,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify({ok:true,...result}));}
-   catch(e){console.error('[inventory-sync] reconciliation failed',{code:e?.code||null,constraint:e?.constraint||null,table:e?.table||null,error_name:e?.name||null});res.writeHead(502,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify({ok:false,error:'Inventory sync failed'}));}
-  }
   const mode=accessMode(process.env);
   if(mode==='misconfigured'){res.writeHead(503,security);return res.end('CRM access configuration incomplete');}
   if(p==='/api/auth/session'&&req.method==='GET'){
@@ -84,7 +75,7 @@ createServer(async(req,res)=>{
   if(mode==='protected'&&!principal&&p.startsWith('/api/')){
    res.writeHead(401,{...security,'Content-Type':'application/json'});return res.end(JSON.stringify({error:'Authentication required'}));
   }
-  if(!sameOrigin(req)&&!['GET','HEAD'].includes(req.method)&&p!=='/api/internal/inventory/sync'){res.writeHead(403,security);return res.end('Cross-origin request rejected')}
+  if(!sameOrigin(req)&&!['GET','HEAD'].includes(req.method)){res.writeHead(403,security);return res.end('Cross-origin request rejected')}
   if(p==='/api/audit/recent'){
    if(req.method!=='GET'){res.writeHead(405,security);return res.end('Method not allowed')}
    const q=new URL(req.url,'http://localhost').searchParams;const limitRaw=q.get('limit')||'50',offsetRaw=q.get('offset')||'0',from=q.get('from')||null,to=q.get('to')||null;

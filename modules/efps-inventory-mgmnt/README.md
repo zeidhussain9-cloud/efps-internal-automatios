@@ -35,8 +35,7 @@ The production dashboard remains at 104 listings (87 Available / 17 Rented Out).
 
 ## Intake entry points
 
-- Existing Slack intake: /efps add-property collects details in a thread and writes through the canonical pipeline; /efps photos start associates operator-uploaded thread photos with the same Sheet row.
-- Existing WhAPI intake: messages from the two configured inventory sender numbers are accumulated until the next exact NEW boundary; the canonical pipeline closes and processes the prior property session. The runtime allowlist comes from INVENTORY_SENDERS, with the two verified sender numbers as fallback.
+- Retired 2026-11-15: the Slack /efps inventory intake and the WhAPI `NEW`-delimited listener (both Google Sheet-backed) are removed with the Sheet sync. New properties arrive only through the Notion Submit New Property form / Raw Property Data path.
 - Canonical editor: Notion Housing Listings. Signed Page events mirror pages directly into the existing dashboard Supabase inventory. Supabase schema and Edge Function v9 and the isolated Lambda are deployed; the user confirms the existing webhook and all eight Page events remain selected. The backfill populated 104 active Notion-owned rows; see docs/NOTION_PROPERTY_INTAKE.md.
 - Raw Notion Property Intake uses Notion, Supabase, Cloudinary, and Maps credentials; it no longer requires Google Sheets credentials and creates/updates canonical Housing Listings pages. No AWS secret values are rotated or duplicated.
 

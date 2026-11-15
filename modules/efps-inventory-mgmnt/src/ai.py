@@ -8,8 +8,9 @@ def _gemini(prompt):
     import requests
     from google.auth.transport.requests import Request
     from google.oauth2 import service_account
-    from shared.google_sheets.client import GoogleSheetsCredentials
-    info=GoogleSheetsCredentials.from_environment().service_account_info
+    import base64 as _b64
+    _raw=os.environ.get('GOOGLE_SERVICE_ACCOUNT_JSON') or os.environ.get('GOOGLE_SERVICE_ACCOUNT_JSON_BASE64','')
+    info=json.loads(_raw if _raw.strip().startswith('{') else _b64.b64decode(_raw).decode('utf-8'))
     creds=service_account.Credentials.from_service_account_info(info,scopes=['https://www.googleapis.com/auth/cloud-platform']);creds.refresh(Request())
     model=os.getenv('EFPS_GEMINI_MODEL','gemini-3.1-pro-preview'); loc=os.getenv('EFPS_VERTEX_LOCATION','global'); host='aiplatform.googleapis.com' if loc=='global' else f'{loc}-aiplatform.googleapis.com'; api='v1beta1' if model.startswith('gemini-3') else 'v1'
     url=f'https://{host}/{api}/projects/{info["project_id"]}/locations/{loc}/publishers/google/models/{model}:generateContent'

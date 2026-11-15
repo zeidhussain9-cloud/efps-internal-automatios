@@ -30,7 +30,7 @@ Parameters:
   GoogleSheetsSecretArn:
     Type: String
     AllowedPattern: '^arn:[^:]+:secretsmanager:[^:]+:[0-9]{12}:secret:.+$'
-    Description: Existing Secrets Manager secret ARN whose SecretString is the Google service-account JSON document
+    Description: Existing Secrets Manager secret ARN whose SecretString is the Google service-account JSON document (now used only for optional Vertex/Gemini enrichment; the Sheets sync is retired)
   CloudinarySecretArn:
     Type: String
     AllowedPattern: '^arn:[^:]+:secretsmanager:[^:]+:[0-9]{12}:secret:.+$'
@@ -80,21 +80,6 @@ Globals:
         LEAD_WORKER_ARN: !Sub 'arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${AWS::StackName}-EFPSLeadWorker-*'
 
 Resources:
-  EFPSWebhook:
-    Type: AWS::Serverless::Function
-    Properties:
-      Handler: webhook_handler.lambda_handler
-      CodeUri: .
-      Events:
-        Webhook:
-          Type: Api
-          Properties: { Path: /whapi/webhook, Method: post }
-      Policies:
-        - Statement:
-            - Effect: Allow
-              Action: [dynamodb:GetItem, dynamodb:PutItem, dynamodb:UpdateItem, dynamodb:Query, dynamodb:Scan, dynamodb:DeleteItem]
-              Resource: [!Ref LeadsTableArn, !Ref InteractionsTableArn, !Ref LeadAuditTableArn, !Ref SessionsTableArn]
-
   EFPSNotionIntake:
     Type: AWS::Serverless::Function
     Condition: HasNotionSecret
@@ -125,44 +110,6 @@ Resources:
               Action: [lambda:InvokeFunction]
               Resource: !Sub 'arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${AWS::StackName}-EFPSNotionIntake'
 
-  EFPSCommands:
-    Type: AWS::Serverless::Function
-    Properties:
-      Handler: commands_handler.lambda_handler
-      CodeUri: .
-      Events:
-        Command:
-          Type: Api
-          Properties: { Path: /slack/commands, Method: post }
-      Policies:
-        - Statement:
-            - Effect: Allow
-              Action: [dynamodb:GetItem, dynamodb:PutItem, dynamodb:DeleteItem, dynamodb:UpdateItem]
-              Resource: [!Ref SessionsTableArn]
-            - Effect: Allow
-              Action: [lambda:InvokeFunction]
-              Resource:
-                - !Sub 'arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${AWS::StackName}-EFPSLeadWorker-*'
-                - !Sub 'arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${AWS::StackName}-EFPSCommands-*'
-
-  EFPSEvents:
-    Type: AWS::Serverless::Function
-    Properties:
-      Handler: events_handler.lambda_handler
-      CodeUri: .
-      Events:
-        Events:
-          Type: Api
-          Properties: { Path: /slack/events, Method: post }
-      Policies:
-        - Statement:
-            - Effect: Allow
-              Action: [dynamodb:GetItem, dynamodb:PutItem, dynamodb:DeleteItem, dynamodb:UpdateItem]
-              Resource: [!Ref SessionsTableArn]
-            - Effect: Allow
-              Action: [lambda:InvokeFunction]
-              Resource: !Sub "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${AWS::StackName}-EFPSEvents-*"
-
   EFPSInteractive:
     Type: AWS::Serverless::Function
     Properties:
@@ -172,18 +119,6 @@ Resources:
         Interactive:
           Type: Api
           Properties: { Path: /slack/interactive, Method: post }
-
-  EFPSBatch:
-    Type: AWS::Serverless::Function
-    Properties:
-      Handler: handler.lambda_handler
-      CodeUri: .
-      Events:
-        Schedule:
-          Type: Schedule
-          Properties:
-            Schedule: cron(30 2,6,12 ? * * *)
-            Enabled: true
 
   EFPSLeadWorker:
     Type: AWS::Serverless::Function
@@ -209,12 +144,6 @@ Resources:
               Resource: [!Ref LeadsTableArn, !Ref InteractionsTableArn, !Ref LeadAuditTableArn]
 
 Outputs:
-  WebhookUrl:
-    Value: !Sub 'https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/whapi/webhook'
-  SlackCommandUrl:
-    Value: !Sub 'https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/slack/commands'
-  SlackEventsUrl:
-    Value: !Sub 'https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/slack/events'
   SlackInteractiveUrl:
     Value: !Sub 'https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/slack/interactive'
   NotionIntakeUrl:

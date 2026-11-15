@@ -1,5 +1,10 @@
 # Data Contracts
 
+## Current state — 2026-11-15: Google Sheet inventory sync removed
+
+The legacy Google Sheet inventory path is fully retired: the CRM `/api/internal/inventory/sync` endpoint, the Sheet-to-Supabase mirror (`src/inventory-sync.mjs`, `src/housing-sheet-adapter.mjs`, `scripts/sync-housing-inventory.mjs`), the WhAPI `NEW` inventory listener (`webhook_handler.py`), the Slack `/efps` inventory commands and events handlers, the scheduled Sheet batch worker (`handler.py`), the Sheet batch/phase1 runtime modules, and the `shared/google_sheets` Sheets client are removed. `shared/google_sheets/schema.py` is RETAINED as the canonical field/vocabulary rulebook consumed by the Notion intake; Notion Housing Listings is the source of truth and Supabase remains the CRM projection. The Google service-account secret now serves only optional Vertex/Gemini enrichment. Dated sections below remain historical evidence.
+
+
 ## Current verified release — 2026-11-15 (Maps fallback correction)
 
 - Repository: zeidhussain9-cloud/efps-internal-automatios; main and crm-ui-dashboard are fast-forward synchronized, with identical GitHub branch heads and clean local worktrees. The deployed Lambda code is from source commit bb52959; later commits in this release only reconcile documentation.
