@@ -52,3 +52,38 @@ carries an exact before hash and cannot mark the source complete.
 
 These gates deliberately remain open. This layer protects values by refusing
 unsupported effects, not by pretending a database transaction includes Notion.
+
+## Staged layer 2: existing destination execution and source phase ledger
+
+`save_existing_destination` now exercises the real row-state/effect HTTP/mirror
+ports and an additive source-submission SQL ledger through the staged Edge
+handler. It is still an explicit entrypoint, not connected to intake routing.
+The source/listing/page unique-active binding resolver remains a required
+injected verification port, not a production lookup supplied by this layer.
+
+Each source submission freezes payload hash, candidate and destination identity.
+A different payload/binding is refused while this submission is unresolved.
+An exact plan is durable before a dedicated intake row intent. Generic workers
+cannot consume that intent. Generated provenance advances only at exact final
+row acknowledgment, after readback and the lease/revision-qualified mirror.
+Detected owner changes block writes/replay/acknowledgment. Removed rows retain
+their explicit lifecycle hold.
+
+A known completed row acknowledgment can resume a lost source-ledger response
+without another PATCH. A plan or row intent interrupted before dispatch resumes
+its exact remaining work. A mirror failure retains the pending intent and old
+acknowledged provenance. Unknown Notion flight keeps the durable effect barrier.
+There is no automatic timeout-based recovery or second uncertain PATCH.
+
+The source ledger can enter `awaiting_source_ack` only after SQL independently
+checks the exact acknowledged destination row, matching expected revision and
+active mirror record including page identity and values. This phase is NOT
+source success: source completion remains false; there is no finish operation.
+The ledger currently refuses later payload versions even after destination ack
+because final source acknowledgment/version handoff remains unimplemented.
+
+Known remaining gates include final source relation/status acknowledgment,
+new-create/idempotency/membership, actual binding lookup and production route
+wiring, complete interrupted recovery availability, plus the broader release
+gates. Tests use synthetic typed Notion HTTP and actual staged Edge/SQL ports,
+not real Notion atomicity or a production E2E proof.

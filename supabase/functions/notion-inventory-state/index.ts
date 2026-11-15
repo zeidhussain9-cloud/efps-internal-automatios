@@ -38,9 +38,9 @@ Deno.serve(async (req) => {
     if (Deno.env.get('EFPS_INVENTORY_V5_ENABLED') !== 'true') return Response.json({ error:'Inventory v5 is disabled' },{status:409})
     if (!uuid(pageId)) return Response.json({error:'Invalid Notion page ID'},{status:400})
     const workerOperation=String(body.worker_operation??'')
-    const allowed=['claim','claim_title','prepare_title','finish_title','load','renew','prepare','finish','review','requeue','release','begin_effect','end_effect','record_effect_receipt','bind_effect_dispatch']
-    if (!allowed.includes(workerOperation) || (!['claim','claim_title'].includes(workerOperation)&&!uuid(body.lease))) return Response.json({error:'Invalid worker operation or lease'},{status:400})
-    if (['claim','claim_title'].includes(workerOperation)&&!/^EF-\d{4}-[0123456789ABCDEFGHJKMNPQRSTVWXYZ]{4}$/.test(String(body.listing_id??''))) return Response.json({error:'Invalid listing identity'},{status:400})
+    const allowed=['claim','claim_title','prepare_title','finish_title','claim_intake','prepare_intake','finish_intake','load','renew','prepare','finish','review','requeue','release','begin_effect','end_effect','record_effect_receipt','bind_effect_dispatch']
+    if (!allowed.includes(workerOperation) || (!['claim','claim_title','claim_intake'].includes(workerOperation)&&!uuid(body.lease))) return Response.json({error:'Invalid worker operation or lease'},{status:400})
+    if (['claim','claim_title','claim_intake'].includes(workerOperation)&&!/^EF-\d{4}-[0123456789ABCDEFGHJKMNPQRSTVWXYZ]{4}$/.test(String(body.listing_id??''))) return Response.json({error:'Invalid listing identity'},{status:400})
     const objectOrNull=(v:unknown)=>v===undefined||v===null||(typeof v==='object'&&!Array.isArray(v))
     if (![body.values,body.patch,body.provenance,body.review].every(objectOrNull)) return Response.json({error:'Worker objects required'},{status:400})
     if (body.revision!==undefined&&(!Number.isSafeInteger(body.revision)||Number(body.revision)<0)) return Response.json({error:'Invalid revision'},{status:400})
@@ -52,6 +52,18 @@ Deno.serve(async (req) => {
     })
     if(state.error){console.error('Inventory v5 state failed',{code:state.error.code});return Response.json({error:'Inventory state rejected'},{status:409})}
     return Response.json(state.data)
+  } else if (operation === 'inventory_v5_intake_submission') {
+    if(Deno.env.get('EFPS_INVENTORY_V5_ENABLED')!=='true') return Response.json({error:'Inventory v5 is disabled'},{status:409})
+    const op=String(body.worker_operation??'')
+    if(!uuid(body.source_page_id)||!['claim','renew','plan','destination_ack','release'].includes(op)||
+       (op!=='claim'&&!uuid(body.lease))||
+       (op==='claim'&&(!uuid(pageId)||!/^[a-f0-9]{64}$/.test(String(body.payload_hash??''))))) return Response.json({error:'Invalid intake submission'},{status:400})
+    const submission=await supabase.rpc('inventory_v5_intake_submission',{
+      p_operation:op,p_source_page_id:body.source_page_id,p_payload_hash:body.payload_hash??null,
+      p_destination_page_id:pageId||null,p_listing_id:body.listing_id??null,
+      p_candidate:body.candidate??null,p_lease:body.lease??null,p_plan:body.plan??null})
+    if(submission.error)return Response.json({error:'Intake submission rejected'},{status:409})
+    return Response.json(submission.data)
   } else if (operation === 'inventory_v5_recovery_snapshot' || operation === 'inventory_v5_recover_effect') {
     if(Deno.env.get('EFPS_INVENTORY_V5_ENABLED')!=='true') return Response.json({error:'Inventory v5 is disabled'},{status:409})
     if(!uuid(pageId)||!['worker','renumber'].includes(String(body.scope))) return Response.json({error:'Invalid recovery scope/page'},{status:400})

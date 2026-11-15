@@ -30,7 +30,7 @@ class V5Repository:
         return {'acknowledged':row['last_acknowledged_values'],
             'provenance':row['field_provenance'],'source_evidence':row['source_evidence'],
             'expected_self_write':row.get('expected_self_write'),
-            'pending_patch':row.get('pending_patch'),'prepared_inputs':row.get('prepared_inputs'),'pending_kind':row.get('pending_kind'),
+            'pending_patch':row.get('pending_patch'),'prepared_inputs':row.get('prepared_inputs'),'pending_kind':row.get('pending_kind'),'pending_submission':row.get('pending_submission'),
             'revision':row['revision']}
 
     def prepare(self,page,lease,*,expected_revision,input_hash,input_values,patch,provenance):
