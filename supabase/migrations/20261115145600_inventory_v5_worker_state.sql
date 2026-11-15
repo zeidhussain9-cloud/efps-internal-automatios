@@ -30,11 +30,14 @@ CREATE OR REPLACE FUNCTION public.inventory_v5_worker_state(
 ) RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,public AS $$
 DECLARE r public.inventory_processing_revisions%ROWTYPE; token uuid;effect_id uuid;
 BEGIN
- IF p_operation IN ('claim','claim_title','claim_intake') THEN
+ IF p_operation IN ('claim','claim_title','claim_intake','claim_pending_intake') THEN
   IF p_listing_id IS NULL OR p_listing_id='' THEN RAISE EXCEPTION 'Listing identity required'; END IF;
-  INSERT INTO public.inventory_processing_revisions(listing_id,page_id)
-  VALUES(p_listing_id,p_page_id) ON CONFLICT(listing_id) DO NOTHING;
+  IF p_operation<>'claim_pending_intake' THEN
+   INSERT INTO public.inventory_processing_revisions(listing_id,page_id)
+   VALUES(p_listing_id,p_page_id) ON CONFLICT(listing_id) DO NOTHING;
+  END IF;
   SELECT * INTO r FROM public.inventory_processing_revisions WHERE page_id=p_page_id FOR UPDATE;
+  IF p_operation='claim_pending_intake' AND (NOT FOUND OR r.pending_kind IS DISTINCT FROM 'intake') THEN RETURN jsonb_build_object('busy',true,'no_proven_pending',true); END IF;
   IF r.listing_id IS DISTINCT FROM p_listing_id THEN RAISE EXCEPTION 'Page/listing identity conflict'; END IF;
   IF r.lease_until > clock_timestamp() THEN RETURN jsonb_build_object('busy',true); END IF;
   IF r.active_effect IS NOT NULL THEN

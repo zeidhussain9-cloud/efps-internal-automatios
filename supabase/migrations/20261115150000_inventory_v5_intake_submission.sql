@@ -15,6 +15,15 @@ CREATE OR REPLACE FUNCTION public.inventory_v5_intake_submission(p_operation tex
 RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,public AS $$
 DECLARE r public.inventory_intake_submissions%ROWTYPE;token uuid;w public.inventory_processing_revisions%ROWTYPE;m public.crm_inventory_snapshot%ROWTYPE;
 BEGIN
+ IF p_operation='claim_existing' THEN
+  SELECT * INTO r FROM public.inventory_intake_submissions WHERE source_page_id=p_source_page_id FOR UPDATE;
+  IF NOT FOUND THEN RETURN jsonb_build_object('found',false); END IF;
+  IF r.lease_until>clock_timestamp() THEN RETURN jsonb_build_object('found',true,'busy',true); END IF;
+  token=gen_random_uuid();
+  UPDATE public.inventory_intake_submissions SET lease_token=token,lease_until=clock_timestamp()+interval '90 seconds'
+   WHERE source_page_id=p_source_page_id RETURNING * INTO r;
+  RETURN to_jsonb(r)||jsonb_build_object('found',true);
+ END IF;
  IF p_operation='claim' THEN
   IF p_payload_hash IS NULL OR p_payload_hash !~ '^[a-f0-9]{64}$' OR p_destination_page_id IS NULL OR
    coalesce(p_listing_id,'') !~ '^EF-[0-9]{4}-[0123456789ABCDEFGHJKMNPQRSTVWXYZ]{4}$' OR

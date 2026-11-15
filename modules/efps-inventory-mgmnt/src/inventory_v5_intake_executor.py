@@ -43,7 +43,40 @@ def save_existing_destination(*,source_page_id,payload_hash,page_id,processed,
         if binding!={'source_page_id':source_page_id,'listing_id':listing_id,'page_id':page_id,'active':True,'unique':True}:
             raise IntakeDestinationBlocked('Exact unique active source/listing/page binding required')
         return schema
-    schema=validate()
+    def quarantine_existing_submission():
+        # Resolve only the immutable stored source binding, never the newly
+        # supplied candidate/page/listing identity or the now-invalid schema.
+        saved=submissions.call('claim_existing',source_page_id)
+        if not saved.get('found') or saved.get('busy'):return False
+        source_token=saved['lease_token'];known_page=saved['destination_page_id'];lease=None
+        try:
+            known_id=saved['listing_id']
+            result=workers.request('inventory_v5_worker',page_id=known_page,
+                worker_operation='claim_pending_intake',listing_id=known_id)
+            lease=result.get('lease')
+            if not lease:return False
+            state=workers.request('inventory_v5_worker',page_id=known_page,
+                worker_operation='load',listing_id=known_id,lease=lease)
+            marker={'source_page_id':source_page_id,'payload_hash':saved['payload_hash']}
+            plan=saved.get('plan') or {}
+            if (state.get('pending_kind')!='intake' or state.get('pending_submission')!=marker or
+                state.get('listing_id')!=known_id or state.get('revision')!=plan.get('revision') or
+                state.get('pending_patch')!=plan.get('patch') or state.get('prepared_inputs')!=plan.get('before')):
+                return False
+            workers.request('inventory_v5_quarantine_intake',page_id=known_page,
+                listing_id=known_id,lease=lease,revision=state['revision'])
+            return True
+        finally:
+            try:
+                if lease:workers.request('inventory_v5_worker',page_id=known_page,
+                    worker_operation='release',listing_id=saved['listing_id'],lease=lease)
+            finally:submissions.call('release',source_page_id,source_token)
+    try:
+        schema=validate()
+    except (ValueError,IntakeDestinationBlocked) as error:
+        quarantined=quarantine_existing_submission()
+        raise IntakeDestinationBlocked(str(error)+('; original pending destination quarantined' if quarantined else
+            '; no proven pending binding quarantined, incident review required')) from error
     candidate=destination_candidate(processed,schema=schema,sealed_schema_hash=sealed_schema_hash)
     submission=submissions.call('claim',source_page_id,page_id=page_id,
         payload_hash=payload_hash,listing_id=listing_id,candidate=candidate)

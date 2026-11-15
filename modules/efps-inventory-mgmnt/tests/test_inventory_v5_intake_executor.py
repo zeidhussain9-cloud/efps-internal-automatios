@@ -290,3 +290,34 @@ def test_detected_prewrite_owner_edit_after_prepare_quarantines_without_patch(db
     with pytest.raises(IntakeDestinationBlocked,match='Concurrent'):save_existing_destination(**args)
     assert_quarantined(db)
     assert s.count==0
+
+
+@pytest.mark.parametrize('invalid',['binding','schema'])
+def test_cross_invocation_invalid_binding_or_schema_quarantines_original_pending_destination(db,invalid):
+    args,c,s=setup(db);w=args['workers'];orig=w.mirror_port
+    w.mirror_port=lambda *a,**kw:(_ for _ in ()).throw(TimeoutError('mirror failure after PATCH'))
+    with pytest.raises(TimeoutError):save_existing_destination(**args)
+    assert s.count==1 and db.request('__inspect')['state']['pending_kind']=='intake'
+    if invalid=='binding':args['verify_binding']=lambda *a:{'unique':False}
+    else:args['schema_loader']=lambda:{}
+    # Supply a wrong NEW candidate identity/page too: only the original stored
+    # source binding may choose the quarantined destination.
+    args['processed']={**args['processed'],'listing_id':'EF-2611-ZZZZ'}
+    args['page_id']='12345678-1234-4234-8234-123456789099'
+    with pytest.raises(IntakeDestinationBlocked,match='original pending destination quarantined'):
+        save_existing_destination(**args)
+    assert_quarantined(db)
+    assert s.count==1
+
+
+@pytest.mark.parametrize('invalid',['binding','schema'])
+def test_initial_invalid_binding_or_schema_creates_no_ledger_or_quarantine(db,invalid):
+    args,c,s=setup(db)
+    if invalid=='binding':args['verify_binding']=lambda *a:{'unique':False}
+    else:args['schema_loader']=lambda:{}
+    with pytest.raises(IntakeDestinationBlocked,match='no proven pending binding'):
+        save_existing_destination(**args)
+    x=db.request('__inspect')
+    assert x['submissions']==[] and x['state']['pending_patch'] is None
+    assert x['mirror']['pipeline_status']=='Ready to Post' and x['mirror']['business_status']=='Ready to Post'
+    assert s.count==0

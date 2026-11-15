@@ -118,3 +118,14 @@ Tests cover owner edits detected before dispatch, after write, after mirror,
 on replay, plus postmirror identity/parent/archive changes and stale/wrong
 quarantine calls. Unknown undetected concurrent Notion edits remain outside the
 read-before-write guarantee.
+
+### Cross-invocation validation failure
+
+If a later invocation rejects a changed schema or no-longer-unique binding before
+normal row loading, it now checks for an existing immutable source submission.
+It claims only an already-existing pending intake row, verifies the stored plan,
+original page/listing identity, payload marker and revision, and quarantines that
+original mirror. New candidate identity/page values do not choose the target.
+An initial invalid submission creates no ledger or row and cannot quarantine an
+unrelated mirror. A busy, missing or unproven original pending row remains an
+explicit incident-review gap; no unverified quarantine is claimed.
