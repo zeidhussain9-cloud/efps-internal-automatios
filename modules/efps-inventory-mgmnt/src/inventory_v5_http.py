@@ -49,3 +49,24 @@ class V5HttpNotionClient:
 
     def get_page(self,page):return self._request('GET',page)
     def update_page(self,page,properties):return self._request('PATCH',page,properties)
+
+    def write_page_with_receipt(self,page,properties):
+        """One actual HTTP attempt with its exact local dispatch and server receipt.
+
+        Unlike legacy update_page this preserves successful response metadata.
+        A missing response/request reference never permits source completion.
+        """
+        dispatch={'effect_id':effect_context.get(),'method':'PATCH','page_id':page,
+                  'body_hash':content_hash({'properties':properties})}
+        response=self.session.request('PATCH','https://api.notion.com/v1/pages/'+page,
+            headers={'Authorization':'Bearer '+self.token,'Notion-Version':self.version,'Content-Type':'application/json'},
+            json={'properties':properties},timeout=25)
+        try:body=response.json()
+        except ValueError:body={}
+        request_id=response.headers.get('x-request-id') or body.get('request_id')
+        if not response.ok:
+            error=V5NotionWriteError(status=response.status_code,body=body,request_id=request_id,dispatch=dispatch)
+            if not error.explicitly_saved():raise error
+            return error.receipt()
+        if not request_id:raise RuntimeError('Source write response has no request reference; do not repeat')
+        return {'status':response.status_code,'request_id':request_id,'dispatch':dispatch}

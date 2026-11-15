@@ -668,6 +668,59 @@ def _locality_select_options(listing_schema: dict) -> list[str]:
     ]
 
 
+def final_intake_output(*, page, listing_id, row, raw_text, notion, cloudinary, maps_client=None, ola_client=None):
+    """Existing final processing body, shared unchanged by explicit staged tests.
+
+    No destination/source save happens here. Production still uses legacy save.
+    """
+    urls, photo_issues = _upload_photos(page, listing_id, row, cloudinary)
+    if urls:
+        row["cloudinary_image_urls"] = catalog_urls([Upload(url=u, public_id="", index=i) for i, u in enumerate(urls, start=1)])
+    processed, issues = pipeline.process_closed_session(raw_text, row=row, maps_client=maps_client or _runtime_maps_client())
+    issues.extend(photo_issues)
+    if photo_issues:
+        processed["status"] = "Needs Review"
+    # Owner rule (15 Nov 2026): raw Location text is normalized to the
+    # closest locality dropdown option instead of failing the listing.
+    listing_schema = getattr(notion, "_listing_schema", None) or notion.validate_listing_schema()
+    locality_options = _locality_select_options(listing_schema)
+    raw_locality = str(processed.get("locality") or "").strip()
+    if locality_options and raw_locality and raw_locality not in locality_options:
+        normalization = normalize_locality(
+            raw_locality,
+            locality_options,
+            ola_client=ola_client or _runtime_ola_client(),
+            context=(processed.get("landmark", ""), processed.get("society_name", "")),
+        )
+        if normalization.canonical:
+            processed["locality"] = normalization.canonical
+            if normalization.note:
+                issues.append(normalization.note)
+        else:
+            processed["locality"] = ""
+            processed["status"] = "Needs Review"
+            issues.append(
+                f"Location '{raw_locality}' is not in the locality list and no close option matched "
+                "(checked the list and Ola Maps). Pick the right locality from the dropdown; "
+                "the original Location stays in Raw Property Data."
+            )
+    processed["cloudinary_image_urls"] = row.get("cloudinary_image_urls", processed.get("cloudinary_image_urls", ""))
+    maps_url = str(processed.get("google_maps_url") or "").strip()
+    ola_checked = any(issue.startswith("Ola background checks:") for issue in issues)
+    maps_failed = bool(maps_url) and (ola_checked or any(issue.startswith(("Google Maps verification failed", "Google Maps API unavailable", "Background Maps check unavailable")) for issue in issues))
+    maps_api_unavailable = bool(maps_url) and (ola_checked or any(issue.startswith(("Google Maps API unavailable", "Background Maps check unavailable")) for issue in issues))
+    if maps_url and not _short_mobile_maps_url(maps_url):
+        issues.append("Original Maps URL is not a supported short mobile link; omitted from the caption and requires review.")
+        processed["status"] = "Needs Review"
+    verified_society = next((issue.split(":", 1)[1].strip() for issue in issues if issue.startswith("Google Maps verified place name:")), "")
+    caption = build_whatsapp_post(processed, raw_text, maps_verified=not maps_failed, verified_society_name=verified_society, allow_unverified_source_map=maps_api_unavailable)
+    if not caption:
+        issues.append("WhatsApp caption not generated because a verified locality or Maps verification is missing.")
+        processed["status"] = "Needs Review"
+    processed["whatsapp_post"] = caption
+    return processed, issues
+
+
 def process_page(
     page_id: str,
     *,
@@ -763,51 +816,8 @@ def process_page(
             row["listing_id"] = listing_id
             row["raw_message_text"] = raw_text
 
-        urls, photo_issues = _upload_photos(page, listing_id, row, cloudinary)
-        if urls:
-            row["cloudinary_image_urls"] = catalog_urls([Upload(url=u, public_id="", index=i) for i, u in enumerate(urls, start=1)])
-        processed, issues = pipeline.process_closed_session(raw_text, row=row, maps_client=maps_client or _runtime_maps_client())
-        issues.extend(photo_issues)
-        if photo_issues:
-            processed["status"] = "Needs Review"
-        # Owner rule (15 Nov 2026): raw Location text is normalized to the
-        # closest locality dropdown option instead of failing the listing.
-        listing_schema = getattr(notion, "_listing_schema", None) or notion.validate_listing_schema()
-        locality_options = _locality_select_options(listing_schema)
-        raw_locality = str(processed.get("locality") or "").strip()
-        if locality_options and raw_locality and raw_locality not in locality_options:
-            normalization = normalize_locality(
-                raw_locality,
-                locality_options,
-                ola_client=ola_client or _runtime_ola_client(),
-                context=(processed.get("landmark", ""), processed.get("society_name", "")),
-            )
-            if normalization.canonical:
-                processed["locality"] = normalization.canonical
-                if normalization.note:
-                    issues.append(normalization.note)
-            else:
-                processed["locality"] = ""
-                processed["status"] = "Needs Review"
-                issues.append(
-                    f"Location '{raw_locality}' is not in the locality list and no close option matched "
-                    "(checked the list and Ola Maps). Pick the right locality from the dropdown; "
-                    "the original Location stays in Raw Property Data."
-                )
-        processed["cloudinary_image_urls"] = row.get("cloudinary_image_urls", processed.get("cloudinary_image_urls", ""))
-        maps_url = str(processed.get("google_maps_url") or "").strip()
-        ola_checked = any(issue.startswith("Ola background checks:") for issue in issues)
-        maps_failed = bool(maps_url) and (ola_checked or any(issue.startswith(("Google Maps verification failed", "Google Maps API unavailable", "Background Maps check unavailable")) for issue in issues))
-        maps_api_unavailable = bool(maps_url) and (ola_checked or any(issue.startswith(("Google Maps API unavailable", "Background Maps check unavailable")) for issue in issues))
-        if maps_url and not _short_mobile_maps_url(maps_url):
-            issues.append("Original Maps URL is not a supported short mobile link; omitted from the caption and requires review.")
-            processed["status"] = "Needs Review"
-        verified_society = next((issue.split(":", 1)[1].strip() for issue in issues if issue.startswith("Google Maps verified place name:")), "")
-        caption = build_whatsapp_post(processed, raw_text, maps_verified=not maps_failed, verified_society_name=verified_society, allow_unverified_source_map=maps_api_unavailable)
-        if not caption:
-            issues.append("WhatsApp caption not generated because a verified locality or Maps verification is missing.")
-            processed["status"] = "Needs Review"
-        processed["whatsapp_post"] = caption
+        processed, issues = final_intake_output(page=page, listing_id=listing_id, row=row,
+            raw_text=raw_text, notion=notion, cloudinary=cloudinary, maps_client=maps_client, ola_client=ola_client)
         listing_page_id = notion.save_listing(processed)
         final_state = "Needs Review" if processed.get("status") == "Needs Review" else "Processed"
         note = "; ".join(issues) if issues else "Processed through the canonical EFPS inventory pipeline."

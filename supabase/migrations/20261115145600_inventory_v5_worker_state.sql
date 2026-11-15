@@ -30,13 +30,14 @@ CREATE OR REPLACE FUNCTION public.inventory_v5_worker_state(
 ) RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,public AS $$
 DECLARE r public.inventory_processing_revisions%ROWTYPE; token uuid;effect_id uuid;
 BEGIN
- IF p_operation IN ('claim','claim_title','claim_intake','claim_pending_intake') THEN
+ IF p_operation IN ('claim','claim_title','claim_intake','claim_pending_intake','claim_ack') THEN
   IF p_listing_id IS NULL OR p_listing_id='' THEN RAISE EXCEPTION 'Listing identity required'; END IF;
-  IF p_operation<>'claim_pending_intake' THEN
+  IF p_operation NOT IN ('claim_pending_intake','claim_ack') THEN
    INSERT INTO public.inventory_processing_revisions(listing_id,page_id)
    VALUES(p_listing_id,p_page_id) ON CONFLICT(listing_id) DO NOTHING;
   END IF;
   SELECT * INTO r FROM public.inventory_processing_revisions WHERE page_id=p_page_id FOR UPDATE;
+  IF p_operation='claim_ack' AND NOT FOUND THEN RETURN jsonb_build_object('busy',true); END IF;
   IF p_operation='claim_pending_intake' AND (NOT FOUND OR r.pending_kind IS DISTINCT FROM 'intake') THEN RETURN jsonb_build_object('busy',true,'no_proven_pending',true); END IF;
   IF r.listing_id IS DISTINCT FROM p_listing_id THEN RAISE EXCEPTION 'Page/listing identity conflict'; END IF;
   IF r.lease_until > clock_timestamp() THEN RETURN jsonb_build_object('busy',true); END IF;
@@ -44,7 +45,7 @@ BEGIN
    INSERT INTO public.inventory_effect_recovery_incidents(scope,page_id,effect) VALUES('worker',p_page_id,r.active_effect) ON CONFLICT(scope,effect) DO NOTHING;
    RETURN jsonb_build_object('needs_recovery',true,'busy',true); END IF;
   IF r.lease_until > clock_timestamp() THEN RETURN jsonb_build_object('busy',true); END IF;
-  IF r.pending_kind IN ('title','intake') AND p_operation='claim' THEN RETURN jsonb_build_object('busy',true,'needs_title_resume',true); END IF;
+  IF r.pending_kind IN ('title','intake') AND p_operation IN ('claim','claim_ack') THEN RETURN jsonb_build_object('busy',true,'needs_title_resume',true); END IF;
   token=gen_random_uuid();
   UPDATE public.inventory_processing_revisions SET lease_token=token,
     lease_until=clock_timestamp()+interval '90 seconds',updated_at=clock_timestamp()

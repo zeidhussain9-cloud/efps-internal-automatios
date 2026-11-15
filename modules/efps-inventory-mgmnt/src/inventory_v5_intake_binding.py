@@ -53,13 +53,8 @@ class ExistingBindingResolver:
             raise IntakeDestinationBlocked('Exact single existing source relation required')
         return page
 
-    def __call__(self,source_page_id,listing_id,page_id):
-        if not re.fullmatch(r'EF-\d{4}-[0123456789ABCDEFGHJKMNPQRSTVWXYZ]{4}',listing_id or ''):
-            raise IntakeDestinationBlocked('Invalid binding identity')
-        known=self.request('inventory_v5_intake_binding',source_page_id=source_page_id)
-        if known!={'found':True,'source_page_id':source_page_id,'listing_id':listing_id,'page_id':page_id,'payload_hash':self.payload_hash,'active':True}:
-            raise IntakeDestinationBlocked('Durable existing source/destination binding differs')
-        source=self.source(source_page_id,listing_id,page_id)
+    def destination(self,listing_id,page_id):
+        """Fully paginated read-only identity/parent check, no binding inference."""
         rows=[];cursor=None;seen=set()
         while True:
             body={'filter':{'property':'listing_id','rich_text':{'equals':listing_id}},'page_size':100}
@@ -78,6 +73,16 @@ class ExistingBindingResolver:
         active_page(rows[0],PARENT)
         if read_notion_value((rows[0].get('properties')or{}).get('listing_id')or{})!=listing_id:
             raise IntakeDestinationBlocked('Destination query returned mismatching identity')
+        return rows[0]
+
+    def __call__(self,source_page_id,listing_id,page_id):
+        if not re.fullmatch(r'EF-\d{4}-[0123456789ABCDEFGHJKMNPQRSTVWXYZ]{4}',listing_id or ''):
+            raise IntakeDestinationBlocked('Invalid binding identity')
+        known=self.request('inventory_v5_intake_binding',source_page_id=source_page_id)
+        if known!={'found':True,'source_page_id':source_page_id,'listing_id':listing_id,'page_id':page_id,'payload_hash':self.payload_hash,'active':True}:
+            raise IntakeDestinationBlocked('Durable existing source/destination binding differs')
+        source=self.source(source_page_id,listing_id,page_id)
+        self.destination(listing_id,page_id)
         # Re-read source after pagination so changed source content/relation is
         # not hidden by a successful earlier read. This is not atomic CAS.
         if self.source(source_page_id,listing_id,page_id)!=source:

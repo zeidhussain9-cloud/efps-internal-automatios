@@ -1,11 +1,26 @@
--- STAGED ONLY. Existing-destination submission ledger; never source completion.
+-- STAGED ONLY. Bound existing-destination/source ledger, not production routing.
 BEGIN;
 CREATE TABLE public.inventory_intake_submissions(
  source_page_id uuid PRIMARY KEY,payload_hash text NOT NULL CHECK(payload_hash ~ '^[a-f0-9]{64}$'),
  destination_page_id uuid NOT NULL,listing_id text NOT NULL,candidate jsonb NOT NULL,
- phase text NOT NULL DEFAULT 'claimed' CHECK(phase IN ('claimed','planned','awaiting_source_ack')),
+ phase text NOT NULL DEFAULT 'claimed' CHECK(phase IN ('claimed','planned','awaiting_source_ack','completed')),
  plan jsonb,source_ack_plan jsonb,upstream_outcome jsonb,source_write_plan jsonb,source_effect jsonb,lease_token uuid,lease_until timestamptz,updated_at timestamptz NOT NULL DEFAULT clock_timestamp()
 );
+CREATE TABLE public.inventory_intake_submission_history(
+ source_page_id uuid NOT NULL,payload_hash text NOT NULL,record jsonb NOT NULL,
+ PRIMARY KEY(source_page_id,payload_hash));
+ALTER TABLE public.inventory_intake_submission_history ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON public.inventory_intake_submission_history FROM PUBLIC,anon,authenticated;
+CREATE TABLE public.inventory_intake_source_receipts(
+ request_id text PRIMARY KEY,source_page_id uuid NOT NULL,effect_id uuid NOT NULL,receipt jsonb NOT NULL);
+ALTER TABLE public.inventory_intake_source_receipts ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON public.inventory_intake_source_receipts FROM PUBLIC,anon,authenticated;
+CREATE TABLE public.inventory_intake_pipeline_runs(
+ source_page_id uuid NOT NULL,payload_hash text NOT NULL,destination_page_id uuid NOT NULL,listing_id text NOT NULL,
+ token uuid NOT NULL DEFAULT gen_random_uuid(),snapshot jsonb NOT NULL,output jsonb,
+ PRIMARY KEY(source_page_id,payload_hash));
+ALTER TABLE public.inventory_intake_pipeline_runs ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON public.inventory_intake_pipeline_runs FROM PUBLIC,anon,authenticated;
 ALTER TABLE public.inventory_intake_submissions ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON public.inventory_intake_submissions FROM PUBLIC,anon,authenticated;
 GRANT SELECT ON public.inventory_intake_submissions TO service_role;
@@ -13,16 +28,50 @@ CREATE OR REPLACE FUNCTION public.inventory_v5_intake_submission(p_operation tex
  p_source_page_id uuid,p_payload_hash text DEFAULT NULL,p_destination_page_id uuid DEFAULT NULL,
  p_listing_id text DEFAULT NULL,p_candidate jsonb DEFAULT NULL,p_lease uuid DEFAULT NULL,p_plan jsonb DEFAULT NULL)
 RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,public AS $$
-DECLARE r public.inventory_intake_submissions%ROWTYPE;token uuid;w public.inventory_processing_revisions%ROWTYPE;m public.crm_inventory_snapshot%ROWTYPE;
+DECLARE r public.inventory_intake_submissions%ROWTYPE;token uuid;w public.inventory_processing_revisions%ROWTYPE;m public.crm_inventory_snapshot%ROWTYPE;run public.inventory_intake_pipeline_runs%ROWTYPE;b jsonb;
 BEGIN
- IF p_operation='claim_existing' THEN
+ IF p_operation IN ('begin_pipeline','freeze_pipeline') THEN
+  -- Serialize run creation against the source binding, including the first run.
+  PERFORM pg_advisory_xact_lock(hashtextextended(p_source_page_id::text,0));
+  IF p_operation='begin_pipeline' THEN
+   b=public.inventory_v5_intake_binding(p_source_page_id);
+   SELECT * INTO r FROM public.inventory_intake_submissions WHERE source_page_id=p_source_page_id FOR UPDATE;
+   IF b->>'found' IS DISTINCT FROM 'true' OR b->>'page_id' IS DISTINCT FROM p_destination_page_id::text OR
+    b->>'listing_id' IS DISTINCT FROM p_listing_id OR p_payload_hash IS NULL OR p_payload_hash !~ '^[a-f0-9]{64}$' OR
+    (r.source_page_id IS NOT NULL AND r.payload_hash<>p_payload_hash AND r.phase<>'completed') OR
+    (r.source_page_id IS NULL AND b->>'payload_hash' IS DISTINCT FROM p_payload_hash) OR
+    jsonb_typeof(p_plan) IS DISTINCT FROM 'object' THEN RAISE EXCEPTION 'Known bound pipeline version required'; END IF;
+   SELECT * INTO run FROM public.inventory_intake_pipeline_runs WHERE source_page_id=p_source_page_id AND payload_hash=p_payload_hash;
+   IF FOUND THEN
+    IF run.destination_page_id IS DISTINCT FROM p_destination_page_id OR run.listing_id IS DISTINCT FROM p_listing_id OR
+     run.snapshot IS DISTINCT FROM p_plan THEN RAISE EXCEPTION 'Pipeline snapshot/binding changed'; END IF;
+    RETURN to_jsonb(run)||jsonb_build_object('run_allowed',false,'held',run.output IS NULL);
+   END IF;
+   INSERT INTO public.inventory_intake_pipeline_runs(source_page_id,payload_hash,destination_page_id,listing_id,snapshot)
+    VALUES(p_source_page_id,p_payload_hash,p_destination_page_id,p_listing_id,p_plan) RETURNING * INTO run;
+   RETURN to_jsonb(run)||jsonb_build_object('run_allowed',true,'held',false);
+  END IF;
+  SELECT * INTO run FROM public.inventory_intake_pipeline_runs WHERE source_page_id=p_source_page_id AND payload_hash=p_payload_hash FOR UPDATE;
+  IF NOT FOUND OR run.token IS DISTINCT FROM p_lease OR run.output IS NOT NULL OR
+   p_plan->'processed'->>'status' IS NULL OR p_plan->'processed'->>'status' NOT IN ('Pending','Needs Review') OR
+   p_plan->'processed'->>'listing_id' IS DISTINCT FROM run.listing_id OR jsonb_typeof(p_plan->'issues') IS DISTINCT FROM 'array' THEN
+   RAISE EXCEPTION 'Single exact pipeline output required'; END IF;
+  UPDATE public.inventory_intake_pipeline_runs SET output=p_plan WHERE source_page_id=p_source_page_id AND payload_hash=p_payload_hash;
+  RETURN jsonb_build_object('ok',true,'source_completion_allowed',false);
+ END IF;
+ IF p_operation IN ('claim_existing','claim_source') THEN
   SELECT * INTO r FROM public.inventory_intake_submissions WHERE source_page_id=p_source_page_id FOR UPDATE;
   IF NOT FOUND THEN RETURN jsonb_build_object('found',false); END IF;
-  IF r.source_effect IS NOT NULL THEN RETURN jsonb_build_object('found',true,'busy',true,'needs_source_effect_review',true); END IF;
+  IF r.source_effect IS NOT NULL AND NOT(p_operation='claim_source' AND r.source_effect ? 'receipt') THEN
+   RETURN jsonb_build_object('found',true,'busy',true,'needs_source_effect_review',true); END IF;
   IF r.lease_until>clock_timestamp() THEN RETURN jsonb_build_object('found',true,'busy',true); END IF;
   token=gen_random_uuid();
   UPDATE public.inventory_intake_submissions SET lease_token=token,lease_until=clock_timestamp()+interval '90 seconds'
    WHERE source_page_id=p_source_page_id RETURNING * INTO r;
+  IF p_operation='claim_source' AND r.source_effect IS NOT NULL THEN
+   UPDATE public.inventory_intake_submissions SET source_effect=source_effect||jsonb_build_object('lease',token)
+    WHERE source_page_id=p_source_page_id RETURNING * INTO r;
+  END IF;
   RETURN to_jsonb(r)||jsonb_build_object('found',true);
  END IF;
  IF p_operation='claim' THEN
@@ -46,6 +95,43 @@ BEGIN
  IF NOT FOUND OR r.lease_token IS DISTINCT FROM p_lease OR r.lease_until<=clock_timestamp() THEN RAISE EXCEPTION 'Stale source submission lease'; END IF;
  IF p_operation='renew' THEN
   UPDATE public.inventory_intake_submissions SET lease_until=clock_timestamp()+interval '90 seconds' WHERE source_page_id=p_source_page_id;
+ ELSIF p_operation='handoff' THEN
+  IF r.phase<>'completed' OR r.source_effect->>'status' IS DISTINCT FROM 'committed' OR
+   p_payload_hash IS NULL OR p_payload_hash !~ '^[a-f0-9]{64}$' OR p_payload_hash=r.payload_hash OR
+   EXISTS(SELECT 1 FROM public.inventory_intake_submission_history WHERE source_page_id=p_source_page_id AND payload_hash=p_payload_hash) OR
+   p_destination_page_id IS DISTINCT FROM r.destination_page_id OR p_listing_id IS DISTINCT FROM r.listing_id OR
+   jsonb_typeof(p_candidate) IS DISTINCT FROM 'object' THEN RAISE EXCEPTION 'Completed exact previous version required for handoff'; END IF;
+  INSERT INTO public.inventory_intake_submission_history VALUES(p_source_page_id,r.payload_hash,to_jsonb(r));
+  UPDATE public.inventory_intake_submissions SET payload_hash=p_payload_hash,candidate=p_candidate,phase='claimed',
+   plan=NULL,source_ack_plan=NULL,upstream_outcome=NULL,source_write_plan=NULL,source_effect=NULL,
+   updated_at=clock_timestamp() WHERE source_page_id=p_source_page_id;
+ ELSIF p_operation='quarantine_source_destination' THEN
+  SELECT * INTO w FROM public.inventory_processing_revisions WHERE page_id=r.destination_page_id FOR UPDATE;
+  SELECT * INTO m FROM public.crm_inventory_snapshot WHERE listing_id=r.listing_id FOR UPDATE;
+  IF w.lease_token::text IS DISTINCT FROM p_plan->>'row_lease' OR w.lease_until<=clock_timestamp() OR
+   w.listing_id IS DISTINCT FROM r.listing_id OR w.revision IS DISTINCT FROM (p_plan->>'revision')::bigint OR
+   m.inventory_contract_version IS DISTINCT FROM 5 OR m.source_record->>'notion_page_id' IS DISTINCT FROM r.destination_page_id::text THEN
+   RAISE EXCEPTION 'Original acknowledged destination lease/binding required for quarantine'; END IF;
+  UPDATE public.crm_inventory_snapshot SET pipeline_status='Needs Review',business_status='Needs Review',
+   source_record=source_record||jsonb_build_object('Pipeline Status','Needs Review','source_ack_conflict_quarantined',true),
+   inventory_revision=greatest(coalesce(m.inventory_revision,0),w.revision)+1,last_synced_at=clock_timestamp()
+   WHERE listing_id=r.listing_id;
+  UPDATE public.inventory_processing_revisions SET processing_status='needs_review' WHERE page_id=r.destination_page_id;
+ ELSIF p_operation='source_commit' THEN
+  IF r.phase<>'awaiting_source_ack' OR r.source_effect->>'status' IS DISTINCT FROM 'finish_prepared' OR
+   r.source_effect->'receipt' IS NULL OR r.source_effect->'readback' IS DISTINCT FROM r.source_write_plan->'expected_after' OR
+   p_plan->>'effect_id' IS DISTINCT FROM r.source_effect->>'effect_id' OR
+   p_plan->'readback' IS DISTINCT FROM r.source_write_plan->'expected_after' THEN RAISE EXCEPTION 'Exact evidenced source finish required'; END IF;
+  SELECT * INTO w FROM public.inventory_processing_revisions WHERE page_id=r.destination_page_id FOR UPDATE;
+  SELECT * INTO m FROM public.crm_inventory_snapshot WHERE listing_id=r.listing_id FOR UPDATE;
+  IF w.lease_token::text IS DISTINCT FROM p_plan->>'row_lease' OR w.lease_until<=clock_timestamp() OR
+   w.revision IS DISTINCT FROM (r.plan->>'revision')::bigint+1 OR w.pending_patch IS NOT NULL OR w.active_effect IS NOT NULL OR
+   w.listing_id IS DISTINCT FROM r.listing_id OR w.last_acknowledged_values-'_edited_at' IS DISTINCT FROM ((r.plan->'before')||(r.plan->'patch'))-'_edited_at' OR
+   m.inventory_revision IS DISTINCT FROM (r.plan->>'revision')::bigint OR m.deleted_at IS NOT NULL OR
+   m.inventory_contract_version IS DISTINCT FROM 5 OR m.source_record->>'notion_page_id' IS DISTINCT FROM r.destination_page_id::text OR
+   NOT(m.source_record @> (w.last_acknowledged_values-'_edited_at'-'_archived')) THEN RAISE EXCEPTION 'Destination changed before final source commit'; END IF;
+  UPDATE public.inventory_intake_submissions SET phase='completed',source_effect=source_effect||jsonb_build_object('status','committed') WHERE source_page_id=p_source_page_id;
+  RETURN jsonb_build_object('ok',true,'source_completion_allowed',true,'status',r.source_write_plan->>'status');
  ELSIF p_operation='plan' THEN
   IF r.phase<>'claimed' OR jsonb_typeof(p_plan) IS DISTINCT FROM 'object' THEN RAISE EXCEPTION 'Single durable plan required'; END IF;
   UPDATE public.inventory_intake_submissions SET phase='planned',plan=p_plan WHERE source_page_id=p_source_page_id;
@@ -90,7 +176,7 @@ BEGIN
   IF r.source_write_plan IS NOT NULL AND r.source_write_plan IS DISTINCT FROM p_plan THEN RAISE EXCEPTION 'Source write plan immutable'; END IF;
   UPDATE public.inventory_intake_submissions SET source_write_plan=p_plan WHERE source_page_id=p_source_page_id;
  ELSIF p_operation='begin_source_effect' THEN
-  IF r.source_write_plan IS NULL OR r.source_effect IS NOT NULL OR
+  IF r.phase<>'awaiting_source_ack' OR r.source_write_plan IS NULL OR r.source_effect IS NOT NULL OR
    p_plan->'source_before' IS DISTINCT FROM r.source_write_plan->'source_before' OR
    p_plan->'source_schema' IS DISTINCT FROM r.source_write_plan->'source_schema' THEN RAISE EXCEPTION 'Exact source snapshot/schema and no unresolved effect required'; END IF;
   SELECT * INTO w FROM public.inventory_processing_revisions WHERE page_id=r.destination_page_id FOR UPDATE;
@@ -103,7 +189,7 @@ BEGIN
   UPDATE public.inventory_intake_submissions SET source_effect=jsonb_build_object('effect_id',token,'lease',p_lease,'intent',r.source_write_plan,'status','begun') WHERE source_page_id=p_source_page_id;
   RETURN jsonb_build_object('effect_id',token,'source_completion_allowed',false);
  ELSIF p_operation IN ('bind_source_dispatch','source_receipt','source_finish_prepare') THEN
-  IF r.source_effect IS NULL OR p_plan->>'effect_id' IS DISTINCT FROM r.source_effect->>'effect_id' OR
+  IF r.phase<>'awaiting_source_ack' OR r.source_effect IS NULL OR p_plan->>'effect_id' IS DISTINCT FROM r.source_effect->>'effect_id' OR
     p_plan->>'effect_id' IS NULL OR r.source_effect->>'lease' IS DISTINCT FROM p_lease::text THEN RAISE EXCEPTION 'Source effect nonce/lease mismatch'; END IF;
   IF p_operation='bind_source_dispatch' THEN
    IF r.source_effect ? 'dispatch' OR p_plan->>'method' IS DISTINCT FROM 'PATCH' OR p_plan->>'page_id' IS DISTINCT FROM p_source_page_id::text OR
@@ -118,6 +204,7 @@ BEGIN
         (p_plan->'receipt'->>'status'='503' AND p_plan->'receipt'->>'classification'='documented_saved_no_repeat' AND
          p_plan->'receipt'->>'code'='service_unavailable' AND
          p_plan->'receipt'->'additional_data'->'retry_guidance'='["Read the object again to confirm the saved change.","Do not repeat the write."]'::jsonb)),false) THEN RAISE EXCEPTION 'Exact terminal source receipt required'; END IF;
+   INSERT INTO public.inventory_intake_source_receipts VALUES(p_plan->'receipt'->>'request_id',p_source_page_id,(p_plan->>'effect_id')::uuid,p_plan->'receipt');
    UPDATE public.inventory_intake_submissions SET source_effect=source_effect||jsonb_build_object('receipt',p_plan->'receipt') WHERE source_page_id=p_source_page_id;
   ELSE
    IF r.source_effect->'receipt' IS NULL OR p_plan->'readback' IS DISTINCT FROM r.source_write_plan->'expected_after' THEN RAISE EXCEPTION 'Exact source readback and terminal receipt required'; END IF;

@@ -8,13 +8,13 @@ from src.inventory_v5_adapter import serialize_notion
 from src.inventory_v5_intake_binding import INTAKE_DATABASE_ID
 
 
-def setup(db,status='Pending',issues=None):
-    args,c,s,client,resolver=port(db)
+def setup(db,status='Pending',issues=None,save=True):
+    args,c,s,client,resolver=port(db,save=save)
     args['processed']['status']=status
     args['processed']['intake_status']='Processed'
     # Prior fixture output already carries these legacy statuses.
     outcome=capture_upstream_output(source_page_id=SOURCE,payload_hash=args['payload_hash'],processed=args['processed'],issues=issues or [],
-        submissions=args['submissions'],destination_schema=args['notion'].schema,sealed_destination_hash=args['sealed_schema_hash'])
+        submissions=args['submissions'],destination_schema=args['notion'].schema,sealed_destination_hash=args['sealed_schema_hash']) if save else None
     client.source['properties']['Processing Notes']={'type':'rich_text',**serialize_notion('old notes','rich_text')}
     client.source['properties']['Processed At']={'type':'date','date':None}
     schema={k:{'id':k,'type':v['type']}for k,v in client.source['properties'].items()}

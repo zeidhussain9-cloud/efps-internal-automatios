@@ -193,3 +193,56 @@ finish_prepared keeps awaiting_source_ack and completion false. Source outcome
 capture wiring, source execution/recovery/incident handling, final ledger commit
 and next-payload handoff are not supplied by this checkpoint. New creation,
 bootstrap, membership and production routing remain separate gates.
+
+## Staged layer 5: coherent existing-row source completion
+
+`run_existing_intake_staged` is an explicit, unconnected staging entrypoint. It
+uses the actual shared `final_intake_output` body from the legacy intake, with
+its photo/maps/locality/caption behavior unchanged. Only that function's exact
+output is frozen. The initial pipeline row and clients still come from staging;
+this is not a production route or a complete new/legacy inventory bootstrap.
+No WhatsApp receiving, sending, posting, recipients or photo algorithm changes
+are included. The production `process_page` still uses the legacy save path.
+
+A durable pipeline-run ticket precedes extraction/media. A saved output resumes
+without repeating those steps. A process stopped before capture remains held,
+even if a media upload may have completed. It does not silently replay the whole
+pipeline. A capture hash is integrity evidence, not proof of who ran a model.
+
+`complete_existing_source` holds the source and known destination row leases,
+checks exact current destination values/identity/parent/archive against the
+frozen destination acknowledgment, and rechecks SQL row/mirror revisions. The
+live destination check is repeated before dispatch, after response, and before
+final commit. Detected conflicts quarantine the original bound mirror in both
+canonical and legacy status readers without replacing the owner's values.
+An identity query alone is not a live value check.
+
+The source writer uses the actual one-attempt HTTP transport and stores its
+exact effect nonce, page, method, body hash and server request reference. Normal
+success and the narrow documented saved503 can read back; unknown transport,
+missing request reference or unsaved receipt leaves a durable hold. Restart can
+claim an effect ONLY with its already-persisted terminal receipt, then reread
+without another PATCH. A source/effect/readback commit response lost after the
+write resumes through saved state, not through a second source write. Duplicate
+server request references cannot acknowledge different source effects.
+
+Exact source values/schema, final live destination reads and a SQL commit under
+the current row lease are required before `completed`. A new raw/photo version
+can replace only a completed version with the same source/listing/page binding;
+the old full submission including its effect/receipt is archived. Old archived
+payload hashes cannot be used for a handoff. New work starts incomplete, with a
+new actual pipeline run and no inherited success/outcome.
+
+This is read-before-write protection, NOT Notion CAS or a transaction spanning
+Notion and SQL. An owner edit after the last read can still race a source PATCH.
+If detected after that PATCH, SQL completion is refused and the destination
+mirror is quarantined. The source may already display Processed in that case;
+there is no speculative compensating PATCH. The unresolved incident must be
+handled explicitly. Unknown-flight and pre-capture holds have no automatic
+operator recovery or timeout-clear path in this layer.
+
+Tests use actual staged Edge/SQL and actual HTTP serialization/response handling
+with synthetic remote services/model/media. They are not live Notion E2E proof.
+New-create/unknown-create/bootstrap/membership, known lifecycle, reconciler,
+production initial-row/route integration, controlled migration/inverse,
+operator recovery acceptance and final content/release gates remain open.
