@@ -129,3 +129,33 @@ original mirror. New candidate identity/page values do not choose the target.
 An initial invalid submission creates no ledger or row and cannot quarantine an
 unrelated mirror. A busy, missing or unproven original pending row remains an
 explicit incident-review gap; no unverified quarantine is claimed.
+
+## Staged layer 3: actual binding reads and partial source-ack preparation
+
+`ExistingBindingResolver` replaces a no-op/injected uniqueness assertion with a
+read-only Notion/Supabase implementation: recover the existing immutable source
+binding (submission ledger, otherwise legacy intake ledger), require its active
+v5 mirror page binding, inspect the current Raw Intake source identity/parent/
+payload hash/single relation, fully paginate the destination identity query,
+require exactly one active Housing page, then re-read the source. It uses the
+existing raw-text/photo claim hash without uploading or processing media.
+Missing historical relation/mirror/binding is a hold, not guessed membership.
+
+The existing executor can use this callable, but production intake routing still
+does not instantiate it. The required v5 mirror means this is a post-bootstrap
+existing-row reader, not a legacy-to-v5 bootstrap or a new-create path.
+
+`prepare_source_ack` stores an immutable source-before snapshot/hash and proposed
+Listing ID/relation patch under the source lease. SQL rechecks exact acknowledged
+destination and mirror revisions/values. A duplicate exact preparation is
+idempotent; changed source snapshot, payload, destination revision or stale lease
+is refused. No source PATCH occurs. There is deliberately NO Processed/Needs
+Review status patch: upstream processing outcome has not been captured in the
+ledger, so a caller-provided status must not manufacture source success.
+`source_status_unresolved=true` and `source_completion_allowed=false` remain.
+
+Still required: durable upstream outcome, source schema seal/effect dispatch and
+receipt proof, source PATCH/readback, exact ledger finish and payload-version
+handoff. Preparing this relation plan is not completing source acknowledgment.
+These tests use actual staged Edge/SQL and a synthetic Notion read client, not
+live accounts. No production or WhatsApp-flow changes are included.

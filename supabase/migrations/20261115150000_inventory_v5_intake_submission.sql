@@ -4,7 +4,7 @@ CREATE TABLE public.inventory_intake_submissions(
  source_page_id uuid PRIMARY KEY,payload_hash text NOT NULL CHECK(payload_hash ~ '^[a-f0-9]{64}$'),
  destination_page_id uuid NOT NULL,listing_id text NOT NULL,candidate jsonb NOT NULL,
  phase text NOT NULL DEFAULT 'claimed' CHECK(phase IN ('claimed','planned','awaiting_source_ack')),
- plan jsonb,lease_token uuid,lease_until timestamptz,updated_at timestamptz NOT NULL DEFAULT clock_timestamp()
+ plan jsonb,source_ack_plan jsonb,lease_token uuid,lease_until timestamptz,updated_at timestamptz NOT NULL DEFAULT clock_timestamp()
 );
 ALTER TABLE public.inventory_intake_submissions ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON public.inventory_intake_submissions FROM PUBLIC,anon,authenticated;
@@ -59,11 +59,49 @@ BEGIN
    m.source_record->>'notion_page_id' IS DISTINCT FROM r.destination_page_id::text OR
    NOT(m.source_record @> (w.last_acknowledged_values-'_edited_at'-'_archived')) THEN RAISE EXCEPTION 'Destination mirror not exactly acknowledged'; END IF;
   UPDATE public.inventory_intake_submissions SET phase='awaiting_source_ack' WHERE source_page_id=p_source_page_id;
+ ELSIF p_operation='prepare_source_ack' THEN
+  IF r.phase<>'awaiting_source_ack' OR jsonb_typeof(p_plan) IS DISTINCT FROM 'object' OR
+   p_plan->>'payload_hash' IS DISTINCT FROM r.payload_hash OR p_plan->>'listing_id' IS DISTINCT FROM r.listing_id OR
+   p_plan->>'destination_page_id' IS DISTINCT FROM r.destination_page_id::text OR
+   (p_plan->>'destination_revision')::bigint IS DISTINCT FROM (r.plan->>'revision')::bigint+1 OR
+   p_plan->>'source_completion_allowed' IS DISTINCT FROM 'false' OR p_plan->>'source_status_unresolved' IS DISTINCT FROM 'true' OR
+   p_plan->'properties' IS DISTINCT FROM jsonb_build_object('Listing ID',jsonb_build_object('rich_text',jsonb_build_array(jsonb_build_object('type','text','text',jsonb_build_object('content',r.listing_id)))),
+    'Processed Property',jsonb_build_object('relation',jsonb_build_array(jsonb_build_object('id',r.destination_page_id::text)))) OR
+   coalesce(p_plan->>'source_before_hash','') !~ '^[a-f0-9]{64}$' THEN RAISE EXCEPTION 'Exact source ack preparation required'; END IF;
+  SELECT * INTO w FROM public.inventory_processing_revisions WHERE page_id=r.destination_page_id FOR UPDATE;
+  SELECT * INTO m FROM public.crm_inventory_snapshot WHERE listing_id=r.listing_id FOR UPDATE;
+  IF w.listing_id IS DISTINCT FROM r.listing_id OR w.pending_patch IS NOT NULL OR w.active_effect IS NOT NULL OR
+   w.revision IS DISTINCT FROM (r.plan->>'revision')::bigint+1 OR
+   w.last_acknowledged_values-'_edited_at' IS DISTINCT FROM ((r.plan->'before')||(r.plan->'patch'))-'_edited_at' OR
+   m.inventory_revision IS DISTINCT FROM (r.plan->>'revision')::bigint OR m.deleted_at IS NOT NULL OR
+   m.source_record->>'notion_page_id' IS DISTINCT FROM r.destination_page_id::text OR
+   NOT(m.source_record @> (w.last_acknowledged_values-'_edited_at'-'_archived')) THEN RAISE EXCEPTION 'Destination changed before source ack preparation'; END IF;
+  IF r.source_ack_plan IS NOT NULL AND r.source_ack_plan IS DISTINCT FROM p_plan THEN RAISE EXCEPTION 'Source ack plan immutable; source changed'; END IF;
+  UPDATE public.inventory_intake_submissions SET source_ack_plan=p_plan WHERE source_page_id=p_source_page_id;
  ELSIF p_operation='release' THEN
   UPDATE public.inventory_intake_submissions SET lease_token=NULL,lease_until=NULL WHERE source_page_id=p_source_page_id;
  ELSE RAISE EXCEPTION 'Unsupported submission operation; source completion not implemented'; END IF;
  RETURN jsonb_build_object('ok',true,'source_completion_allowed',false);
 END $$;
+CREATE OR REPLACE FUNCTION public.inventory_v5_intake_binding(p_source_page_id uuid)
+RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,public AS $$
+DECLARE e jsonb;s public.inventory_intake_submissions%ROWTYPE;m public.crm_inventory_snapshot%ROWTYPE;
+BEGIN
+ SELECT * INTO s FROM public.inventory_intake_submissions WHERE source_page_id=p_source_page_id;
+ IF FOUND THEN
+  e=jsonb_build_object('listing_id',s.listing_id,'listing_page_id',s.destination_page_id,'payload_hash',s.payload_hash);
+ ELSE
+  SELECT to_jsonb(x) INTO e FROM public.crm_inventory_intake_events x WHERE x.source_page_id=p_source_page_id::text;
+ END IF;
+ IF e IS NULL OR coalesce(e->>'listing_page_id','')='' THEN RETURN jsonb_build_object('found',false); END IF;
+ SELECT * INTO m FROM public.crm_inventory_snapshot WHERE listing_id=e->>'listing_id';
+ IF NOT FOUND OR m.deleted_at IS NOT NULL OR m.inventory_contract_version IS DISTINCT FROM 5 OR
+  m.source_record->>'notion_page_id' IS DISTINCT FROM e->>'listing_page_id' THEN RETURN jsonb_build_object('found',false); END IF;
+ RETURN jsonb_build_object('found',true,'source_page_id',p_source_page_id,'listing_id',e->>'listing_id',
+  'page_id',e->>'listing_page_id','payload_hash',e->>'payload_hash','active',true);
+END $$;
+REVOKE ALL ON FUNCTION public.inventory_v5_intake_binding FROM PUBLIC,anon,authenticated;
+GRANT EXECUTE ON FUNCTION public.inventory_v5_intake_binding TO service_role;
 CREATE OR REPLACE FUNCTION public.inventory_v5_quarantine_intake(p_page_id uuid,p_listing_id text,p_lease uuid,p_revision bigint)
 RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,public AS $$
 DECLARE r public.inventory_processing_revisions%ROWTYPE;m public.crm_inventory_snapshot%ROWTYPE;n bigint;

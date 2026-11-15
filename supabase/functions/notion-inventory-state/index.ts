@@ -60,10 +60,16 @@ Deno.serve(async (req) => {
       p_page_id:pageId,p_listing_id:body.listing_id,p_lease:body.lease,p_revision:body.revision})
     if(quarantined.error)return Response.json({error:'Intake quarantine rejected'},{status:409})
     return Response.json(quarantined.data)
+  } else if (operation === 'inventory_v5_intake_binding') {
+    if(Deno.env.get('EFPS_INVENTORY_V5_ENABLED')!=='true')return Response.json({error:'Inventory v5 is disabled'},{status:409})
+    if(!uuid(body.source_page_id))return Response.json({error:'Invalid source identity'},{status:400})
+    const binding=await supabase.rpc('inventory_v5_intake_binding',{p_source_page_id:body.source_page_id})
+    if(binding.error)return Response.json({error:'Existing binding lookup rejected'},{status:409})
+    return Response.json(binding.data)
   } else if (operation === 'inventory_v5_intake_submission') {
     if(Deno.env.get('EFPS_INVENTORY_V5_ENABLED')!=='true') return Response.json({error:'Inventory v5 is disabled'},{status:409})
     const op=String(body.worker_operation??'')
-    if(!uuid(body.source_page_id)||!['claim','claim_existing','renew','plan','destination_ack','release'].includes(op)||
+    if(!uuid(body.source_page_id)||!['claim','claim_existing','renew','plan','destination_ack','prepare_source_ack','release'].includes(op)||
        (!['claim','claim_existing'].includes(op)&&!uuid(body.lease))||
        (op==='claim'&&(!uuid(pageId)||!/^[a-f0-9]{64}$/.test(String(body.payload_hash??''))))) return Response.json({error:'Invalid intake submission'},{status:400})
     const submission=await supabase.rpc('inventory_v5_intake_submission',{
