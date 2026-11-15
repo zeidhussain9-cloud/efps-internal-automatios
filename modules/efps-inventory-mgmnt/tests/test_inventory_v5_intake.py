@@ -100,3 +100,20 @@ def test_unconverted_package_field_or_multiple_titles_are_not_final_schema():
 def test_low_level_plan_cannot_receive_source_pipeline_status():
     row={'listing_id':'EF-2611-ABCD','Pipeline Status':'Needs Review'}
     with pytest.raises(IntakeDestinationBlocked,match='pipeline'):plan({'Pipeline Status':'Ready to Post'},row,{})
+
+
+@pytest.mark.parametrize('owner',[{}, {'monthly_rent':{'origin':'manual'}},
+    {'monthly_rent':{'origin':'derived','last_generated_value':25000}}])
+def test_removed_listing_refuses_manual_or_generated_source_update(owner):
+    row={'listing_id':'EF-2611-ABCD','Pipeline Status':'Removed',
+         'Availability':'Available','monthly_rent':25000}
+    before=deepcopy(row)
+    with pytest.raises(IntakeDestinationBlocked,match='Removed listing'):
+        plan({'monthly_rent':26000},row,owner)
+    assert row==before and row['Pipeline Status']=='Removed'
+
+
+def test_removed_listing_unchanged_source_plan_keeps_disposition_and_no_patch():
+    row={'listing_id':'EF-2611-ABCD','Pipeline Status':'Removed','monthly_rent':25000}
+    out=plan({'monthly_rent':25000},row,{})
+    assert out['patch']=={} and not out['source_completion_allowed']

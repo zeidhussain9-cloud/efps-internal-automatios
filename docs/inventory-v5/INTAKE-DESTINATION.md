@@ -8,7 +8,9 @@ The original approval and explanation are recorded in the Decision Log.
 
 `inventory_v5_intake.py` is the first pure destination layer, NOT a completed
 adapter and NOT connected to the intake worker. It validates the final schema
-seal, title/formula/status/channel contracts and exact select options. It uses
+seal, title/formula/status/channel contracts and each selected option. Exact
+package vocabulary as a whole relies on the independently reviewed sealed schema,
+not a separate complete-vocabulary check in this layer. It uses
 only the already reviewed strict package/tenant/BHK mapping. Custom or unknown
 values stop for review instead of silently dropping detail.
 
@@ -21,7 +23,9 @@ overwritten by a new processed payload through this existing-row plan.
 An existing row must match its acknowledged baseline. Only a field whose
 provenance already marks the current value as generated can change automatically.
 Matching an owner or legacy value does not manufacture generated ownership.
-Other changed values are preserved and cause a Needs Review plan. The plan
+Other changed values are preserved and cause a Needs Review plan. A Removed
+listing refuses every changed source update, even to a generated field, until
+an explicit lifecycle decision; source reprocessing cannot reactivate it. The plan
 carries an exact before hash and cannot mark the source complete.
 
 ## Still required before this is an adapter

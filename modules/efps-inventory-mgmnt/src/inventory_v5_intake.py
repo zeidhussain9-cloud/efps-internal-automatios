@@ -105,6 +105,12 @@ def existing_destination_plan(*, candidate, current, acknowledged, provenance, l
     if changed:raise IntakeDestinationBlocked('Unacknowledged owner edits: '+','.join(changed))
     if 'Pipeline Status' in candidate:
         raise IntakeDestinationBlocked('Processed source cannot set canonical pipeline status')
+    if current.get('Pipeline Status')=='Removed':
+        # A source reprocess is not approval to reactivate or edit a removed
+        # listing. Keep lifecycle disposition sticky, even for generated fields.
+        changes=[k for k,v in candidate.items() if not field_equal(k,current.get(k),v)]
+        if changes:
+            raise IntakeDestinationBlocked('Removed listing requires explicit lifecycle decision; no destination update')
     patch={};conflicts=[];next_provenance=deepcopy(provenance)
     for field,value in candidate.items():
         if field_equal(field,current.get(field),value):continue
