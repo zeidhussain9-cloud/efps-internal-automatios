@@ -55,6 +55,34 @@ def _marker_candidates(text: str) -> tuple[str, str, str]:
     return society, landmark, maps_url
 
 
+
+def prose_location(text: str) -> dict[str, str]:
+    """Read a bounded comma-separated property header, not arbitrary sentences.
+
+    Supported headers: society, locality, property type; or locality, property
+    type. Explicit labeled fields take precedence in scan(). The locality is a
+    source candidate only: the intake adapter must still match its live options.
+    Ambiguous/negative headers are left unresolved rather than invented.
+    """
+    first_line = next((line.strip() for line in (text or "").splitlines() if line.strip()), "")
+    parts = [_clean_source_value(part) for part in first_line.split(",")]
+    markers = [i for i, part in enumerate(parts) if re.fullmatch(
+        r"(?:gated\s+community|semi[- ]gated(?:\s+community)?|standalone)", part, re.I)]
+    if len(markers) != 1 or markers[0] not in (1, 2):
+        return {}
+    prefix = parts[:markers[0]]
+    # Don't reinterpret prices, requirements, alternatives or labeled data as names.
+    forbidden = r"[:/|;?]|\b(?:not|no|near|or|and|rent|budget|available|bhk|bedrooms?|bathrooms?|looking|wanted|preferred|anywhere|maintenance)\b"
+    if any(not value or len(value) > 120 or not re.search(r"[a-z]", value, re.I)
+           or re.search(forbidden, value, re.I) or re.search(r"\d", value)
+           for value in prefix):
+        return {}
+    result = {"locality": prefix[-1]}
+    if len(prefix) == 2:
+        result["society_name"] = prefix[0]
+    return result
+
+
 def scan(text: str) -> dict[str, str]:
     out: dict[str, str] = {}
     text = text or ""
@@ -109,6 +137,9 @@ def scan(text: str) -> dict[str, str]:
     society=_first_line_value(text, (r"society\s*name", r"society", r"apartment\s*name", r"community\s*name", r"building\s*name")) or marker_society
     landmark=_first_line_value(text, (r"landmark",)) or marker_landmark
     locality=_first_line_value(text, (r"property\s*location", r"location", r"locality", r"area"))
+    prose = prose_location(text)
+    locality = locality or prose.get("locality", "")
+    society = society or prose.get("society_name", "")
     subtype=resolve_property_subtype(text)
     direct = {
         "internal_property_type": resolve_internal_property_type(text),
