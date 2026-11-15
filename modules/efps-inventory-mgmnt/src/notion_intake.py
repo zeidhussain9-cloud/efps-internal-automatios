@@ -684,11 +684,18 @@ def process_page(
     if event_type == "page.deleted":
         existing = store.find_inventory(page_id)
         if existing.get("found"):
+            if _housing_v5_enabled():
+                raise IntakeError("Housing v5 deletion is not yet wired; no legacy fallback")
             store.delete_inventory(page_id)
             store.finish(page_id, "processed", listing_page_id=page_id, note="Deleted from canonical Notion Housing Listings.")
             return {"status": "deleted", "listing_id": existing.get("listing_id", "")}
         return {"status": "ignored", "listing_id": ""}
     page = notion.get_page(page_id)
+    if _housing_v5_enabled():
+        parent = page.get("parent") or {}
+        source = str(parent.get("database_id") or parent.get("data_source_id") or "").replace("-", "").lower()
+        if source == LISTINGS_DATABASE_ID:
+            return process_listing_page(page, notion=notion, store=store)
     if page.get("archived") or page.get("in_trash"):
         store.finish(page_id, "processed", note="Source intake page is deleted; stale delivery ignored.")
         _log_event("intake_deleted_source_ignored", page_id=page_id, event_type=event_type)
@@ -836,11 +843,31 @@ def process_page(
         raise
 
 
+def _housing_v5_enabled():
+    return os.environ.get("EFPS_INVENTORY_V5_ENABLED") == "true"
+
+
+def _process_existing_housing_v5(page_id, *, notion, store):
+    try:
+        from .inventory_v5_runtime import process_existing_housing
+    except ImportError:
+        from inventory_v5_runtime import process_existing_housing
+    live_schema = notion.request("GET", f"databases/{LISTINGS_DATABASE_ID}").get("properties") or {}
+    return process_existing_housing(page_id, client=notion, store=store,
+        schema=live_schema, sealed_schema_hash=os.environ.get("EFPS_INVENTORY_V5_SCHEMA_SHA256", ""),
+        render_caption=lambda row: build_whatsapp_post(row, row.get("raw_message_text", ""),
+            maps_verified=False, allow_unverified_source_map=True), route_bhk=_bhk_group)
+
+
 def process_listing_page(page: dict, *, notion: NotionClient, store: SupabaseIntakeStore, force_deleted: bool = False):
     """Mirror a Housing Listings page directly into the inventory used by the dashboard."""
     page_id = str(page.get("id") or "").strip()
     if not re.fullmatch(r"[0-9a-fA-F-]{32,36}", page_id):
         raise IntakeError("Invalid Housing Listings page ID")
+    if _housing_v5_enabled():
+        if force_deleted:
+            raise IntakeError("Housing v5 membership changes are not yet wired; no legacy fallback")
+        return _process_existing_housing_v5(page_id, notion=notion, store=store)
     row = listing_snapshot(page)
     deleted = force_deleted or bool(page.get("archived") or page.get("in_trash"))
     payload_hash = hashlib.sha256(json.dumps({"row": row, "deleted": deleted}, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
@@ -985,6 +1012,8 @@ def _event_record_input(payload: dict, raw_body: str, *, malformed: bool = False
 
 def _enqueue_listing_backfill(function_arn: str, *, notion=None, store=None, lambda_client=None):
     """Reconcile active Notion rows, enqueue only changed/restored pages, and tombstone missing pages."""
+    if _housing_v5_enabled():
+        raise IntakeError("Housing v5 reconciler/order orchestration is not yet wired; no legacy fallback")
     notion = notion or NotionClient(_notion_secret_value("api_token"))
     store = store or SupabaseIntakeStore()
     pages = notion.list_listings()
@@ -1146,6 +1175,16 @@ def lambda_handler(event, context):
                        duration_ms=round((time.monotonic() - started) * 1000))
             raise
         worker_status = str(result.get("status") or "unknown")
+        if result.get("inventory_contract_version") == 5:
+            if worker_status in {"busy", "retry", "needs_recovery"}:
+                if event_store:
+                    event_store.update_webhook_event(event_row_id, "failed", page_id=page_id,
+                        error="Housing v5 work remains pending or blocked", outcome=result)
+                raise IntakeError("Housing v5 work remains pending or blocked: " + worker_status)
+            if worker_status not in {"self_write_acknowledged", "recalculated", "recovered", "needs_review"}:
+                raise IntakeError("Unrecognized Housing v5 worker outcome; not acknowledged")
+            if worker_status == "needs_review":
+                worker_status = "Needs Review"
         if worker_status.lower() in {"processing", "in_progress"}:
             retry_error = "Inventory page is already being processed; retry this event after the active page claim finishes."
             if event_store:

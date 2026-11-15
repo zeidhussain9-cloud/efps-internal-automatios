@@ -95,3 +95,25 @@ def test_long_rich_text_is_losslessly_chunked_for_notion_limit():
     typed=serialize_notion(value,'rich_text')
     assert all(len(part['text']['content'])<=2000 for part in typed['rich_text'])
     assert read_notion_value({'type':'rich_text',**typed})==value
+
+
+@pytest.mark.parametrize('kind',['rich_text','title'])
+def test_rich_text_array_limit_and_astral_chunks_fail_closed(kind):
+    value='😀'*1001
+    parts=serialize_notion(value,kind)[kind]
+    assert [len(p['text']['content']) for p in parts]==[1000,1]
+    assert ''.join(p['text']['content']for p in parts)==value
+    with pytest.raises(ValueError,match='100 elements'):
+        serialize_notion('x'*200001,kind)
+
+
+def test_total_properties_payload_limit_precedes_binding_and_http():
+    from src.inventory_v5_notion import V5NotionPort
+    seen=[]
+    class Client:
+        def update_page(self,*args):seen.append('http')
+    schema={name:{'type':'rich_text'}for name in ['a','b','c']}
+    port=V5NotionPort(Client(),schema,bind_dispatch=lambda *args:seen.append('bind'))
+    with pytest.raises(ValueError,match='500KB'):
+        port.patch('test',{name:'x'*180000 for name in schema})
+    assert seen==[]

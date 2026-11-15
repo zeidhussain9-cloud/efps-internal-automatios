@@ -31,6 +31,11 @@ class V5NotionPort:
                 selected=value if isinstance(value,list) else [value] if value else []
                 if any(x not in options for x in selected):raise ValueError('Unapproved Notion option: '+name)
             properties[name]=serialize_notion(value,kind)
+        import json
+        # requests' JSON encoding escapes non-ASCII by default. Bound that wire
+        # representation, not only the smaller canonical semantic hash payload.
+        if len(json.dumps({'properties':properties}, ensure_ascii=True, allow_nan=False).encode('utf-8')) > 500000:
+            raise ValueError('Notion properties payload exceeds conservative 500KB limit')
         if self.bind_dispatch is not None:
             self.bind_dispatch(page_id,{'effect_id':effect_context.get(),'method':'PATCH','page_id':page_id,'body_hash':content_hash({'properties':properties})})
         try:return self.client.update_page(page_id,properties)

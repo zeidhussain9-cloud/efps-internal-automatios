@@ -41,7 +41,16 @@ def serialize_notion(value, kind):
         return {kind: {'name': text(value)} if text(value) else None}
     if kind in ('title', 'rich_text'):
         exact='' if value is None else str(value)
-        return {kind: [{'type': 'text', 'text': {'content': exact[start:start+2000]}}for start in range(0,len(exact),2000)]}
+        # UTF-16 units are conservative for astral Unicode too. Never truncate.
+        chunks=[];chunk=[];units=0
+        for char in exact:
+            width=2 if ord(char)>0xffff else 1
+            if units+width>2000:
+                chunks.append(''.join(chunk));chunk=[];units=0
+            chunk.append(char);units+=width
+        if chunk:chunks.append(''.join(chunk))
+        if len(chunks)>100:raise ValueError('Notion rich-text array exceeds 100 elements')
+        return {kind: [{'type': 'text', 'text': {'content': chunk}}for chunk in chunks]}
     if kind == 'number':
         if value in (None, ''):
             return {'number': None}
