@@ -28,8 +28,10 @@ CREATE OR REPLACE FUNCTION public.inventory_v5_worker_state(
  p_provenance jsonb DEFAULT NULL,p_input_hash text DEFAULT NULL,p_status text DEFAULT NULL,
  p_review jsonb DEFAULT NULL
 ) RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,public AS $$
-DECLARE r public.inventory_processing_revisions%ROWTYPE; token uuid;effect_id uuid;
+DECLARE r public.inventory_processing_revisions%ROWTYPE; token uuid;effect_id uuid;mirror_before jsonb;
 BEGIN
+ -- Title operations always acquire reference advisory -> worker row -> mirror.
+ IF p_operation IN ('claim_title','prepare_title','finish_title','verify_title_mirror') THEN PERFORM pg_advisory_xact_lock(55151126); END IF;
  IF p_operation IN ('claim','claim_title','claim_intake','claim_pending_intake','claim_ack') THEN
   IF p_listing_id IS NULL OR p_listing_id='' THEN RAISE EXCEPTION 'Listing identity required'; END IF;
   IF p_operation NOT IN ('claim_pending_intake','claim_ack') THEN
@@ -113,19 +115,36 @@ BEGIN
     (SELECT array_agg(key) FROM jsonb_each(p_patch)) IS DISTINCT FROM ARRAY['SL number'] OR
     coalesce(p_patch->>'SL number','') !~ '^[1-9][0-9]*$' OR p_values->>'listing_id' IS DISTINCT FROM r.listing_id OR
     p_values-'_edited_at'-'_archived' IS DISTINCT FROM r.last_acknowledged_values-'_edited_at'-'_archived' THEN RAISE EXCEPTION 'Reviewed title baseline required'; END IF;
-  UPDATE public.inventory_processing_revisions SET pending_patch=p_patch,expected_self_write=p_patch,
+  mirror_before=public.inventory_v5_checked_title_mirror(p_page_id,r.listing_id,r.revision,p_values);
+  UPDATE public.inventory_processing_revisions SET pending_title_mirror=mirror_before,pending_patch=p_patch,expected_self_write=p_patch,
    prepared_inputs=p_values,pending_kind='title',processing_status='title_prepared',updated_at=clock_timestamp() WHERE page_id=p_page_id;
  ELSIF p_operation='finish_title' THEN
   IF r.pending_kind IS DISTINCT FROM 'title' OR r.prepared_inputs IS NULL OR r.pending_patch IS NULL OR
    p_values-'_edited_at' IS DISTINCT FROM (r.prepared_inputs||r.pending_patch)-'_edited_at' THEN RAISE EXCEPTION 'Exact title readback required'; END IF;
+  mirror_before=public.inventory_v5_checked_title_mirror(p_page_id,r.listing_id,r.revision,r.prepared_inputs);
+  IF r.pending_title_mirror IS NULL OR mirror_before IS DISTINCT FROM r.pending_title_mirror THEN RAISE EXCEPTION 'Title mirror changed since durable preparation'; END IF;
+  -- Narrow update only. Keep both business projection/status semantics and all
+  -- unrelated JSON annotations intact. All changes roll back with row ack.
+  UPDATE public.crm_inventory_snapshot SET
+   source_record=jsonb_set(source_record,'{SL number}',p_values->'SL number',true),
+   source_hash=encode(sha256(convert_to(jsonb_set(source_record,'{SL number}',p_values->'SL number',true)::text,'UTF8')),'hex'),
+   inventory_revision=r.revision+1,last_synced_at=clock_timestamp()
+   WHERE listing_id=r.listing_id;
   p_provenance=jsonb_build_object('origin','derived','last_generated_value',p_values->'SL number','derivation_version',5,'revision',r.revision+1);
   UPDATE public.inventory_processing_revisions SET last_acknowledged_values=p_values,pending_patch=NULL,prepared_inputs=NULL,pending_kind=NULL,
-   field_provenance=field_provenance||jsonb_build_object('SL number',p_provenance),revision=revision+1,
+   field_provenance=field_provenance||jsonb_build_object('SL number',p_provenance),pending_title_mirror=NULL,revision=revision+1,
    processing_status=CASE WHEN processing_status='needs_review' THEN 'needs_review' ELSE 'title_acknowledged' END,updated_at=clock_timestamp() WHERE page_id=p_page_id;
   INSERT INTO public.inventory_field_provenance(listing_id,field_name,origin,evidence,derivation_version,last_generated_value,revision)
    VALUES(r.listing_id,'SL number','derived',p_provenance,5,p_values->'SL number',r.revision+1)
    ON CONFLICT(listing_id,field_name) DO UPDATE SET origin=excluded.origin,evidence=excluded.evidence,
     derivation_version=5,last_generated_value=excluded.last_generated_value,revision=excluded.revision,updated_at=clock_timestamp();
+ ELSIF p_operation='verify_title_mirror' THEN
+  IF r.pending_patch IS NOT NULL OR r.active_effect IS NOT NULL OR
+   p_values-'_edited_at' IS DISTINCT FROM r.last_acknowledged_values-'_edited_at' THEN RAISE EXCEPTION 'Exact title replay acknowledgment required'; END IF;
+  -- Already-numbered pages may be an untouched valid baseline (N/N-1) or a
+  -- committed title (N/N); generated-title provenance requires the latter.
+  PERFORM public.inventory_v5_checked_title_mirror(p_page_id,r.listing_id,r.revision,p_values,
+    coalesce(r.field_provenance->'SL number'->>'origin'='derived',false));
  ELSIF p_operation='prepare' THEN
   IF r.pending_kind IN ('title','intake') THEN RAISE EXCEPTION 'Dedicated acknowledgment required before dependency work'; END IF;
   IF p_revision IS DISTINCT FROM r.revision THEN RAISE EXCEPTION 'Inventory revision conflict'; END IF;

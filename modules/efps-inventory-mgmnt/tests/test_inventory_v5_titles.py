@@ -20,8 +20,10 @@ def db():
 
 def setup(db, response='ok'):
     row={'listing_id':'EF-2611-ABCD','SL number':'old title',
-         'Pipeline Status':'Ready to Post','whatsapp_post':'caption must not change','catalog_title':'original catalog'}
+         'Availability':'Available','Live On':[],'Pipeline Status':'Ready to Post','whatsapp_post':'caption must not change','catalog_title':'original catalog'}
     client=Client(row)
+    client.schema['Live On']={'id':'live','type':'multi_select'}
+    client.row['Live On']={'type':'multi_select',**serialize_notion([],'multi_select')}
     client.schema['SL number']={'id':'title','type':'title'}
     client.row['SL number']={'type':'title',**serialize_notion(row['SL number'],'title')}
     original_get=client.get_page

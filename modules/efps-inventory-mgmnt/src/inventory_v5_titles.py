@@ -129,6 +129,7 @@ class CoordinatedTitleRepository(V5RenumberRepository):
         if before.get('listing_id') != self.workers.identity(page) or final.get('SL number') != desired or any(not field_equal(k, final.get(k), before.get(k)) for k in keys):
             self.workers.review(page, ['SL number'], 'Already-numbered page has unacknowledged owner edits')
             raise TitleBlocked('Do not infer generated provenance from matching title')
+        self.workers._call('verify_title_mirror',page,lease,values=final)
         self.workers.release(page, lease)
         self.rows.pop(page)
 
