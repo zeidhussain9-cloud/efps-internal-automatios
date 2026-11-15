@@ -246,3 +246,57 @@ with synthetic remote services/model/media. They are not live Notion E2E proof.
 New-create/unknown-create/bootstrap/membership, known lifecycle, reconciler,
 production initial-row/route integration, controlled migration/inverse,
 operator recovery acceptance and final content/release gates remain open.
+
+## Isolated new-create checkpoint, not new-property completion
+
+`inventory_v5_create.py` and the additive fixture migration cover only a bounded
+new-source reservation, actual-output capture, one POST, receipt/readback, and
+atomic baseline/mirror/provenance/reference/job bootstrap. There is NO source
+relation PATCH/completion, title-pass orchestration, existing104 bootstrap,
+production routing or live execution. A separate create-fixture flag defaults
+OFF even if v5 is enabled. Its mandatory sealed policy names isolated fixture
+visibility, Available, Processing, empty Live On and blank title. Those values
+are explicit test inputs, not an approved production visibility policy.
+
+Material blocker: the legacy CRM reader filters Available without a readiness
+check. Processing does not hide an Available draft. This checkpoint does not
+change those readers, invent a business availability to hide drafts, pause any
+consumer, or claim a safe production draft. Missing fixture policy refuses
+before allocation/media/create. Contradictory raw availability, production draft
+visibility and full per-field lineage still require grounded resolution.
+
+A new-source reservation atomically inserts its own legacy claim, uses the
+established allocator's UTC-month/Crockford ID format, and freezes that result.
+Preexisting legacy claims are refused because an older pipeline may still have
+untracked external work. Legacy claim/allocator calls cannot take over a v5
+reservation; new reservations participate in ID collision checks. No later
+legacy-ID edit changes the immutable create binding. This is staged SQL, not a
+claim that deployment has fenced the current live writer.
+
+Before media and before POST the controller checks the exact source raw/photos,
+empty complete relation, source IDs/types/schema seal, destination schema and
+fully paginated allocated-ID query. One durable pipeline ticket protects media
+capture from replay. Original onboarding instant, outcome and media results are
+frozen. One POST binds URL/method/parent/bodyhash/effect nonce. Templates and the
+PATCH saved503 rule are not used. A terminal response must contain server request
+reference, page ID and complete body; absent/unsaved evidence holds indefinitely.
+A later query match never authorizes adoption or another POST. Even a begun
+intent interrupted before dispatch conservatively stays held.
+
+Only the receipt-proven page can pass postresponse unique-identity and full typed
+GET/readback, including stable property IDs/types and readonly/owner fields.
+Source edits after POST hold without attaching the old page to a new payload.
+Owner edits or duplicate identity hold before bootstrap. Exact row baseline,
+unknown-ownership provenance, mirror, reference membership and queued title job
+commit in ONE SQL transaction; a failure rolls all five back. Response loss can
+resume the same receipt and exact bootstrap without new POST/media/reseed.
+
+Every seeded value currently has legacy_unknown origin plus its exact created
+value and create nonce. This proves what this controller wrote, not whether each
+value was explicit source fact or derived. It deliberately does not seed all
+fields as generated. Consequence: later automatic updates can refuse for review
+until field lineage is proven. Existing arbitrary rows never gain ownership from
+matching values. The title baseline is exactly blank, not a guessed rank; future
+current-membership title/lease/mirror acknowledgment is still required before a
+new source may complete. Read-before-write is not Notion CAS. Unknown create and
+pre-capture holds still need explicit operator resolution, not timer clearing.

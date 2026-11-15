@@ -70,3 +70,18 @@ class V5HttpNotionClient:
             return error.receipt()
         if not request_id:raise RuntimeError('Source write response has no request reference; do not repeat')
         return {'status':response.status_code,'request_id':request_id,'dispatch':dispatch}
+
+    def create_page_with_receipt(self,body,dispatch):
+        """One POST, no retry and no PATCH-specific saved503 interpretation."""
+        expected={'nonce':effect_context.get(),'method':'POST','url':'https://api.notion.com/v1/pages',
+                  'parent':body.get('parent'),'body_hash':content_hash(body)}
+        if dispatch!=expected or not expected['nonce']:raise ValueError('Exact bound POST dispatch required')
+        response=self.session.request('POST',dispatch['url'],headers={
+            'Authorization':'Bearer '+self.token,'Notion-Version':self.version,'Content-Type':'application/json'},json=body,timeout=25)
+        try:result=response.json()
+        except ValueError:result={}
+        request_id=response.headers.get('x-request-id') or result.get('request_id')
+        if not response.ok or not request_id or not result.get('id'):
+            raise RuntimeError('Unknown/unaccepted create response; never repeat POST')
+        return {'dispatch':dispatch,'status':response.status_code,'request_id':request_id,
+                'page_id':result['id'],'body':result}

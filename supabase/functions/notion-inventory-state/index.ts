@@ -52,6 +52,16 @@ Deno.serve(async (req) => {
     })
     if(state.error){console.error('Inventory v5 state failed',{code:state.error.code});return Response.json({error:'Inventory state rejected'},{status:409})}
     return Response.json(state.data)
+  } else if (operation === 'inventory_v5_create_fixture') {
+    // Separate fixture-only gate: Processing does not hide drafts from legacy CRM.
+    if(Deno.env.get('EFPS_INVENTORY_V5_ENABLED')!=='true'||Deno.env.get('EFPS_INVENTORY_V5_CREATE_FIXTURE')!=='true')return Response.json({error:'Create fixture is disabled; production draft visibility unresolved'},{status:409})
+    const op=String(body.worker_operation??'')
+    if(!uuid(body.source_page_id)||!['claim','renew','pipeline_begin','pipeline_output','plan','begin','dispatch','receipt','bootstrap','release'].includes(op)||
+      (op!=='claim'&&!uuid(body.lease)))return Response.json({error:'Invalid fixture create request'},{status:400})
+    const created=await supabase.rpc('inventory_v5_create_fixture',{p_operation:op,p_source:body.source_page_id,
+      p_payload:body.payload_hash??null,p_lease:body.lease??null,p_value:body.value??null})
+    if(created.error)return Response.json({error:'Fixture creation rejected'},{status:409})
+    return Response.json(created.data)
   } else if (operation === 'inventory_v5_quarantine_intake') {
     if(Deno.env.get('EFPS_INVENTORY_V5_ENABLED')!=='true')return Response.json({error:'Inventory v5 is disabled'},{status:409})
     if(!uuid(pageId)||!uuid(body.lease)||!Number.isSafeInteger(body.revision)||body.revision<0||
