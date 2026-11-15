@@ -41,7 +41,7 @@ def serialize_notion(value, kind):
         return {kind: {'name': text(value)} if text(value) else None}
     if kind in ('title', 'rich_text'):
         exact='' if value is None else str(value)
-        return {kind: [{'type': 'text', 'text': {'content': exact}}] if exact else []}
+        return {kind: [{'type': 'text', 'text': {'content': exact[start:start+2000]}}for start in range(0,len(exact),2000)]}
     if kind == 'number':
         if value in (None, ''):
             return {'number': None}

@@ -88,3 +88,10 @@ def test_rich_text_inverse_preserves_source_whitespace_exactly():
     for kind in ('title','rich_text'):
         exact='  Original source  \n'
         assert read_notion_value({'type':kind,**serialize_notion(exact,kind)})==exact
+
+
+def test_long_rich_text_is_losslessly_chunked_for_notion_limit():
+    value='  '+('x'*2489)+'\n'+('y'*2100)+'  '
+    typed=serialize_notion(value,'rich_text')
+    assert all(len(part['text']['content'])<=2000 for part in typed['rich_text'])
+    assert read_notion_value({'type':'rich_text',**typed})==value
