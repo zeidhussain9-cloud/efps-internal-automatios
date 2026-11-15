@@ -53,3 +53,19 @@ def test_blank_missing_photos_not_ready():
     result=pipeline_v5.project(RAW,existing={**initial(),'cloudinary_image_urls':''},render_caption=render,route_bhk=route)
     assert result['row']['Pipeline Status']=='Needs Review'
     assert 'Photos missing' in result['issues']
+
+def test_stale_derived_provenance_does_not_overwrite_unacknowledged_human_value():
+    result=pipeline_v5.project(RAW,existing={**initial(),'monthly_rent':'41000'},provenance={'monthly_rent':{'origin':'derived','last_generated_value':'40000'}},render_caption=render,route_bhk=route)
+    assert result['row']['monthly_rent']=='41000'
+    assert 'monthly_rent' in result['conflicts']
+    assert result['row']['Pipeline Status']=='Needs Review'
+
+def test_matching_manual_package_keeps_manual_ownership():
+    result=pipeline_v5.project(RAW,existing={**initial(),'flat_furnishings':'Semi Package'},provenance={'flat_furnishings':{'origin':'manual'}},render_caption=render,route_bhk=route)
+    assert result['provenance']['flat_furnishings']['origin']=='manual'
+
+def test_manual_blank_caption_is_never_regenerated():
+    result=pipeline_v5.project(RAW,existing={**initial(),'whatsapp_post':''},provenance={'whatsapp_post':{'origin':'manual'}},render_caption=render,route_bhk=route)
+    assert result['row']['whatsapp_post']==''
+    assert 'whatsapp_post' in result['conflicts']
+    assert result['row']['Pipeline Status']=='Needs Review'

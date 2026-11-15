@@ -102,3 +102,7 @@ def test_executable_sources_have_no_paid_google_endpoints():
         if file.name.startswith('test_') or 'node_modules' in file.parts: continue
         if any(word in file.read_text() for word in forbidden): hits.append(str(file.relative_to(root)))
     assert not hits
+
+def test_directions_origin_is_never_treated_as_destination_pin():
+    url='https://www.google.com/maps?saddr=12.9107140,77.6753570&daddr=Y+%40+Whitefield+Back+gate&geocode=origin;destination'
+    assert pin_coordinates(url) is None

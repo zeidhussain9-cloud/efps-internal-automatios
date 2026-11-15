@@ -8,13 +8,13 @@ import re
 try:
     from . import phase1
     from .inventory_v5 import (AMENITIES, AVAILABILITY, BHK_OPTIONS, FURNISHINGS,
-         PACKAGES, balcony_evidence, content_hash, text)
+         PACKAGES, balcony_evidence, content_hash, text, field_equal)
     from .inventory_v5_evidence import evidence_overlay
     from .inventory_v5_adapter import parse_onboarded, display_onboarded, content_readiness
 except ImportError:
     import phase1
     from inventory_v5 import (AMENITIES, AVAILABILITY, BHK_OPTIONS, FURNISHINGS,
-         PACKAGES, balcony_evidence, content_hash, text)
+         PACKAGES, balcony_evidence, content_hash, text, field_equal)
     from inventory_v5_evidence import evidence_overlay
     from inventory_v5_adapter import parse_onboarded, display_onboarded, content_readiness
 
@@ -59,21 +59,25 @@ def project(raw, *, existing=None, provenance=None, render_caption, route_bhk):
     for field,current in existing.items():
         if field in DOWNSTREAM or field not in out:continue
         origin=provenance.get(field,{}).get('origin','legacy_unknown')
-        protected=origin=='manual' or (origin=='legacy_unknown' and text(current))
+        acknowledged=provenance.get(field,{}).get('last_generated_value')
+        protected=origin in ('manual','source_explicit') or (origin=='legacy_unknown' and text(current)) or (origin=='derived' and not field_equal(field,current,acknowledged))
         if protected and out[field]!=current:
             conflicts.append(field);out[field]=current
-    derived_provenance = {**provenance, **source_provenance}
+    derived_provenance = {**source_provenance, **provenance}
     for field in ('flat_furnishings', 'society_amenities', 'bachelor_preference'):
-        derived_provenance[field] = {'origin': 'derived', 'last_generated_value': out[field], 'derivation_version': 5}
+        prior=provenance.get(field,{})
+        if prior.get('origin') not in ('manual','source_explicit') and field not in conflicts:
+            derived_provenance[field] = {'origin': 'derived', 'last_generated_value': out[field], 'derivation_version': 5}
     for field in conflicts:
         if field in provenance:derived_provenance[field] = dict(provenance[field])
         else:derived_provenance[field] = {'origin': 'legacy_unknown'}
     group,destination=route_bhk(out.get('BHK','')) if out.get('BHK') in BHK_OPTIONS else ('','')
     for field, value in [('WhatsApp Group', group), ('WhatsApp Destination', destination)]:
         old = provenance.get(field, {}).get('origin', 'legacy_unknown')
-        if field in existing and (old == 'manual' or (old == 'legacy_unknown' and text(existing[field]))) and existing[field] != value:
+        protected_route=old in ('manual','source_explicit') or (old=='legacy_unknown' and text(existing.get(field))) or (old=='derived' and existing.get(field)!=provenance.get(field,{}).get('last_generated_value'))
+        if field in existing and protected_route:
             out[field] = existing[field]
-            conflicts.append(field)
+            if existing[field] != value:conflicts.append(field)
         else:
             out[field] = value
             derived_provenance[field] = {'origin': 'derived', 'last_generated_value': value, 'derivation_version': 5}
@@ -89,7 +93,9 @@ def project(raw, *, existing=None, provenance=None, render_caption, route_bhk):
         except ValueError as error:issues.append(str(error))
     caption=render_caption(out,raw)
     caption_origin=provenance.get('whatsapp_post',{}).get('origin','legacy_unknown')
-    if existing.get('whatsapp_post') and caption_origin!='derived':
+    caption_provenance=provenance.get('whatsapp_post',{})
+    caption_protected=caption_origin in ('manual','source_explicit') or (caption_origin=='legacy_unknown' and text(existing.get('whatsapp_post'))) or (caption_origin=='derived' and existing.get('whatsapp_post')!=caption_provenance.get('last_generated_value'))
+    if 'whatsapp_post' in existing and caption_protected:
         out['whatsapp_post']=existing['whatsapp_post']
         if caption!=existing['whatsapp_post']:conflicts.append('whatsapp_post')
     else:out['whatsapp_post']=caption

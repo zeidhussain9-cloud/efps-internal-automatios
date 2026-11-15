@@ -97,3 +97,30 @@ def test_interrupted_write_with_human_third_value_never_replays():
     out=run(n,r)
     assert out['status']=='needs_review'
     assert not n.patches
+
+def test_protected_edit_persists_needs_review_not_just_return_value():
+    before={'listing_id':'EF-2611-ABCD','raw_message_text':'old','Pipeline Status':'Ready to Post'}
+    n=Notion({**before,'raw_message_text':'owner new source'});r=Repo(before)
+    out=run(n,r)
+    assert out['status']=='needs_review'
+    assert n.row['Pipeline Status']=='Needs Review'
+    assert n.row['raw_message_text']=='owner new source'
+    assert n.patches==[{'Pipeline Status':'Needs Review'}]
+
+def test_changed_identity_never_mirrors_under_unverified_identity():
+    before={'listing_id':'EF-2611-ABCD','Pipeline Status':'Ready to Post'}
+    n=Notion({**before,'listing_id':'EF-2611-ZZZZ'});r=Repo(before)
+    out=run(n,r)
+    assert out['status']=='needs_review' and n.row['Pipeline Status']=='Needs Review'
+    assert 'mirror' not in r.calls
+
+def test_notion_numeric_readback_acknowledges_string_intent():
+    class NumericNotion(Notion):
+        def patch(self,page,patch):
+            self.patches.append(deepcopy(patch))
+            self.row.update({k:float(v)if k=='carpet_area' else v for k,v in patch.items()})
+    before={'built_up_area':1200,'carpet_area':1110,'whatsapp_post':'old caption'}
+    n=NumericNotion({**before,'built_up_area':1300});r=Repo(before,{'carpet_area':{'origin':'derived','last_generated_value':1110},'whatsapp_post':{'origin':'derived','last_generated_value':'old caption'}})
+    out=run(n,r)
+    assert out['status']=='recalculated'
+    assert n.row['carpet_area']==1210

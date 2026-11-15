@@ -102,6 +102,17 @@ class ChangeSet:
     inputs_hash: str
 
 
+def field_equal(field, left, right):
+    # Notion number values come back as numbers even when extraction produced
+    # decimal strings. Only numeric schema fields get numeric equivalence.
+    numeric={'monthly_rent','security_deposit','built_up_area','carpet_area','balconies','bathrooms','covered_parking','total_floors','pincode','age_of_property_years'}
+    if field in numeric and left not in (None,'') and right not in (None,''):
+        from decimal import Decimal,InvalidOperation
+        try:return Decimal(str(left))==Decimal(str(right))
+        except InvalidOperation:return False
+    return left==right
+
+
 def dependency_patch(row, changed, provenance, *, deposit_months=None, explicit_gender=None):
     """Recompute only named parents. Never silently overwrite protected children.
 
@@ -161,7 +172,7 @@ def dependency_patch(row, changed, provenance, *, deposit_months=None, explicit_
             continue
         evidence = provenance.get(field, {})
         origin = evidence.get('origin', 'legacy_unknown')
-        generated_current = origin == 'derived' and current == evidence.get('last_generated_value')
+        generated_current = origin == 'derived' and field_equal(field,current,evidence.get('last_generated_value'))
         empty_unowned = not text(current) and origin not in ('manual', 'source_explicit')
         if generated_current or empty_unowned:
             patch[field] = value
