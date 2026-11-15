@@ -52,6 +52,16 @@ Deno.serve(async (req) => {
     })
     if(state.error){console.error('Inventory v5 state failed',{code:state.error.code});return Response.json({error:'Inventory state rejected'},{status:409})}
     return Response.json(state.data)
+  } else if (operation === 'inventory_v5_recovery_snapshot' || operation === 'inventory_v5_recover_effect') {
+    if(Deno.env.get('EFPS_INVENTORY_V5_ENABLED')!=='true') return Response.json({error:'Inventory v5 is disabled'},{status:409})
+    if(!uuid(pageId)||!['worker','renumber'].includes(String(body.scope))) return Response.json({error:'Invalid recovery scope/page'},{status:400})
+    if(body.scope==='renumber'&&!Number.isSafeInteger(body.job_id)) return Response.json({error:'Recovery job required'},{status:400})
+    if(operation==='inventory_v5_recover_effect'&&!uuid(body.attestation_id)) return Response.json({error:'Operator attestation required'},{status:400})
+    const recovered=operation==='inventory_v5_recovery_snapshot'
+      ? await supabase.rpc('inventory_v5_recovery_snapshot',{p_scope:body.scope,p_page_id:pageId,p_job_id:body.job_id??null})
+      : await supabase.rpc('inventory_v5_recover_effect',{p_attestation:body.attestation_id,p_expected_effect:body.expected_effect??null,p_current:body.current??null,p_remaining:body.remaining??null})
+    if(recovered.error)return Response.json({error:'Recovery rejected'},{status:409})
+    return Response.json(recovered.data)
   } else if (operation === 'inventory_v5_renumber' || operation === 'inventory_v5_reference') {
     if(Deno.env.get('EFPS_INVENTORY_V5_ENABLED')!=='true') return Response.json({error:'Inventory v5 is disabled'},{status:409})
     const op=String(body.worker_operation??'')

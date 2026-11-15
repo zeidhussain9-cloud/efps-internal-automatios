@@ -17,8 +17,20 @@ const next=await job('claim');assert.deepEqual(next.ordered_page_ids,[ids[3],...
 await assert.rejects(()=>job('checkpoint',{...valid,offset:3}),/Stale renumber/);
 await ref('deactivate',{page:ids[1],listing:'EF-1'});x=await ref('read');assert.deepEqual(x.page_ids,[ids[3],ids[0],ids[2]]);
 const n=await db.query("SELECT count(*)::int AS n FROM inventory_renumber_jobs WHERE status='pending'");assert.equal(n.rows[0].n,1);
-await job('begin_effect',{id:next.job_id,lease:next.lease_token,intent:JSON.stringify({page_id:ids[0],patch:{'SL number':'2'}})});
+// Delete then restore to an already COMPLETED historical membership. The
+// latest membership, not any old matching hash, decides whether to queue.
+await job('checkpoint',{id:next.job_id,lease:next.lease_token,offset:4});
+await job('finish',{id:next.job_id,lease:next.lease_token});
+const deleted=await job('claim');assert.deepEqual(deleted.ordered_page_ids,[ids[3],ids[0],ids[2]]);
+await job('checkpoint',{id:deleted.job_id,lease:deleted.lease_token,offset:3});
+await job('finish',{id:deleted.job_id,lease:deleted.lease_token});
+const restoredRef=await ref('activate',{page:ids[1],listing:'EF-1'});
+assert.deepEqual(restoredRef.page_ids,next.ordered_page_ids);
+assert.ok(restoredRef.new_job_id>deleted.job_id);
+const restored=await job('claim');assert.deepEqual(restored.ordered_page_ids,next.ordered_page_ids);
+assert.notEqual(restored.job_id,next.job_id);assert.equal(restored.next_offset,0);
+await job('begin_effect',{id:restored.job_id,lease:restored.lease_token,intent:JSON.stringify({page_id:ids[0],patch:{'SL number':'2'}})});
 await db.exec("UPDATE inventory_renumber_jobs SET lease_until=now()-interval '1 second' WHERE status='running'");
 assert.equal((await job('claim')).needs_recovery,true);
-await assert.rejects(()=>job('end_effect',{id:next.job_id,lease:next.lease_token}),/Stale renumber/);
+await assert.rejects(()=>job('end_effect',{id:restored.job_id,lease:restored.lease_token}),/Stale renumber/);
 console.log('Isolated reference ordering, concurrent insertion coalescing, resume/checkpoint fencing checks passed.');await db.close();

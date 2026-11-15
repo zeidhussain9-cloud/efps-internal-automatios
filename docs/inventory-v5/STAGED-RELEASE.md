@@ -8,7 +8,7 @@ No production deployment, schema mutation, inventory rewrite, posting or old-col
 
 ## Verified locally
 
-- 351 Python tests, 151 Node tests and Vite build pass.
+- 360 Python tests, 152 Node tests and Vite build pass.
 - Repository audit includes the new files and passes.
 - Disposable PostgreSQL checks cover additive schema compatibility, typed empty channels, vocabularies, RLS, worker fencing, revision checks, persisted write intents, and renumber-job serialization/checkpoints.
 - The actual staged Edge handler runs in a local harness with an injected SQL client. It rejects disabled v5 and bad auth/leases and preserves typed mirror values. This is not an Edge deployment test.
@@ -66,4 +66,18 @@ Stop on identity/media/channel-state loss, unexpected posting, incorrect row cou
 6. A separate combined schema/value/mirror manifest now preserves property IDs, uses exact typed forward/inverse values, and keeps onboarded_at and contract version only in mirror data. The inverse title restores the original title on the same property ID. Synthetic whole-state reversal passes; live mirror-before snapshots and actual isolated schema-conversion readback are still required. The private104-rowcombinedmanifestisNOTexecutable,usespendingIDsfornewcolumns,andexplicitlyblocksexactmirrorrollbackwithoutabackup.
 7. Permanent tenant/amenity listing-ID exceptions removed from the reusable normalizer. Private one-time correction entries require exact full before and corrected-after hashes; changed owner choices refuse the old correction.
 
-All changes remain staged and require independent retest. The last independently verified SHA was e9fbe94, not this checkpoint.
+All changes remain staged and require independent retest. Independent24c660freviewclosedreportedstageddefects1/2/3/4/7andunsafe-takeoverpartof5. Operator reconciliation is newly staged, not independently closed.
+
+## Later evidence checkpoint
+
+Native isolated one-row schema forward/reverse rehearsal independently passed:
+eight rich-text columns converted to selects with stable IDs; title renamed on
+same ID; four additions written/read and then removed only in the synthetic DB.
+Original nine schema definitions and complete typed property JSON compare equal,
+including title/bachelor whitespace. Screenshots inspected. Preserved raw evidence
+and reconstructed call index sent privately. This is not a full104mirrorrollback.
+
+Deletion then restoration to a previously completed membership now has a SQL
+regression: restoration creates a new job at offset0withthecorrectsavedorder.
+Hash-bound reviewed corrections are migration-only and idempotent, not a
+consumed-once ledger. See UNCERTAIN-EFFECT-RECOVERY.md for fail-closed recovery.

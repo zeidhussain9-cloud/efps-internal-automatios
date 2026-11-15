@@ -4,11 +4,12 @@ import subprocess
 from pathlib import Path
 from copy import deepcopy
 import pytest
-from src.inventory_v5_repository import V5Repository,V5RenumberRepository
+from src.inventory_v5_repository import V5Repository,V5RenumberRepository,V5RecoveryRepository
 from src.inventory_v5_notion import V5NotionPort
 from src.inventory_v5_adapter import serialize_notion
 from src.inventory_v5_worker import process_dependencies
 from src.inventory_v5 import content_hash
+from src.inventory_v5_reconcile import Quiescence,reconcile_effect,RecoveryBlocked
 
 PAGE='12345678-1234-4234-8234-123456789012'
 ROOT=Path(__file__).resolve().parents[3]
@@ -144,3 +145,25 @@ def test_renumber_inflight_effect_fences_real_successor(db):
     with pytest.raises(RuntimeError):repo.effect(job['job_id'],job['lease_token'],{'page_id':PAGE,'patch':{'SL number':'1'}},late_title_write)
     assert seen
     assert repo.claim()['needs_recovery']
+
+
+def test_operator_attested_reconciliation_resumes_real_ports_without_blind_write(db):
+    repo,notion,client=setup(db)
+    lease=repo.claim(PAGE);state=repo.load(PAGE,lease);current=notion.snapshot(PAGE)
+    patch={'Pipeline Status':'Needs Review'}
+    repo.prepare(PAGE,lease,expected_revision=state['revision'],input_hash=content_hash(current),input_values=current,patch=patch,provenance={})
+    # Inject a transport failure before effect completion confirmation. Barrier
+    # is left in place. Synthetic verifier is NOT a production proof source.
+    def uncertain():raise TimeoutError('synthetic unknown flight')
+    with pytest.raises(TimeoutError):repo.effect(PAGE,lease,{'kind':'notion_patch','patch':patch},uncertain)
+    db.request('__expire')
+    recovery=V5RecoveryRepository(request=db.request)
+    with pytest.raises(RecoveryBlocked):reconcile_effect(repository=recovery,notion=notion,page_id=PAGE,scope='worker')
+    ticket=recovery.recovery_snapshot(PAGE,scope='worker')['effect']
+    attestation=db.request('__attest',page_id=PAGE,effect=ticket)['id']
+    result=reconcile_effect(repository=recovery,notion=notion,page_id=PAGE,scope='worker',
+        verify_quiescence=lambda **k:Quiescence('synthetic terminal writer','synthetic terminal remote','synthetic exact request',attestation))
+    assert result['status']=='reconciled_without_notion_write'
+    assert notion.snapshot(PAGE)['Pipeline Status']=='Ready to Post'
+    assert db.request('__inspect')['state']['pending_patch']==patch
+    assert repo.claim(PAGE) is not None

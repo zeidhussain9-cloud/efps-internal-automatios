@@ -91,3 +91,15 @@ class V5RenumberRepository:
         result=action()
         self._call('end_effect',job,lease)
         return result
+
+
+class V5RecoveryRepository:
+    """Operator recovery port. Ordinary workers cannot mint attestations."""
+    def __init__(self,*,request):self.request=request
+
+    def recovery_snapshot(self,page,*,scope,job_id=None):
+        return self.request('inventory_v5_recovery_snapshot',page_id=page,scope=scope,job_id=job_id)
+
+    def resolve_effect(self,page,*,scope,job_id,expected_effect,current,remaining,proof,state_hash):
+        return self.request('inventory_v5_recover_effect',page_id=page,scope=scope,job_id=job_id,
+            attestation_id=proof['attestation_id'],expected_effect=expected_effect,current=current,remaining=remaining)

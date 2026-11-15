@@ -26,7 +26,7 @@ def run_renumber(*, repository, notion, max_rows=20):
                 repository.fail(job_id,token,'Concurrent title edit')
                 return {'status':'needs_review','changed':changed}
             repository.prepare_title(ids[index],desired)
-            repository.effect(job_id,token,{'page_id':ids[index],'patch':{'SL number':desired}},
+            repository.effect(job_id,token,{'page_id':ids[index],'before':{'SL number':page.get('SL number')},'patch':{'SL number':desired}},
                               lambda:notion.patch(ids[index],{'SL number':desired}))
             final=notion.snapshot(ids[index])
             if final.get('SL number')!=desired:
