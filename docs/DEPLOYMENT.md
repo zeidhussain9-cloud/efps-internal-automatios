@@ -50,6 +50,7 @@ This document retains the historical SAM deployment contract. It is not the prod
 | `GoogleSheetsSecretArn` | `GOOGLE_SERVICE_ACCOUNT_JSON` | Complete Google service-account JSON as `SecretString` |
 | `CloudinarySecretArn` | `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET` | JSON object with `cloud_name`, `api_key`, and `api_secret` |
 | `MapsSecretArn` | `GOOGLE_MAPS_API_KEY` | API key as `SecretString` |
+| `OlaMapsSecretArn` | `OLA_MAPS_API_KEY` | Optional Ola Maps (Krutrim) API key as `SecretString`; enables Ola-backed locality normalization in the Notion intake |
 
 
 The existing `WebhookToken` parameter remains a `NoEcho` deployment parameter because the current webhook authorization code consumes `EFPS_WEBHOOK_TOKEN` directly. The isolated Notion Lambda uses the dedicated `NotionSecretArn` JSON secret: `api_token` for Notion API access and `webhook_secret` for the Notion Connection webhook verification token. The API token is retrieved from Secrets Manager at worker runtime rather than stored in Lambda environment variables. Neither value is stored in repository files.

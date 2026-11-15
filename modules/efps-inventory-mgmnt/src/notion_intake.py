@@ -17,11 +17,14 @@ from shared.cloudinary.client import CloudinaryClient, CloudinaryCredentials
 from shared.cloudinary.media import Upload, upload_property_images, catalog_urls
 from shared.google_maps import GoogleMapsClient
 from shared.google_sheets import schema
+from shared.ola_maps import OlaMapsClient
 
 try:
     from . import pipeline
+    from .location_match import normalize_locality
 except ImportError:
     import pipeline
+    from location_match import normalize_locality
 
 NOTION_VERSION = "2022-06-28"
 INTAKE_DATABASE_ID = "89dad7a3990849ca9dc23e5bcb3fa99f"
@@ -656,6 +659,23 @@ def _runtime_maps_client() -> GoogleMapsClient:
         return GoogleMapsClient(api_key="")
 
 
+def _runtime_ola_client() -> OlaMapsClient:
+    # Optional enrichment: a missing key must never block raw intake. With no
+    # key configured, locality normalization still runs on text similarity and
+    # simply skips the Ola lookup.
+    return OlaMapsClient()
+
+
+def _locality_select_options(listing_schema: dict) -> list[str]:
+    definition = (listing_schema or {}).get("locality") or {}
+    select = definition.get("select") or {}
+    return [
+        str(option.get("name") or "").strip()
+        for option in (select.get("options") or [])
+        if str(option.get("name") or "").strip()
+    ]
+
+
 def process_page(
     page_id: str,
     *,
@@ -665,6 +685,7 @@ def process_page(
     store: SupabaseIntakeStore | None = None,
     cloudinary: CloudinaryClient | None = None,
     maps_client=None,
+    ola_client=None,
 ):
     notion = notion or NotionClient(_notion_secret_value("api_token"))
     store = store or SupabaseIntakeStore()
@@ -745,6 +766,30 @@ def process_page(
         issues.extend(photo_issues)
         if photo_issues:
             processed["status"] = "Needs Review"
+        # Owner rule (15 Nov 2026): raw Location text is normalized to the
+        # closest locality dropdown option instead of failing the listing.
+        listing_schema = getattr(notion, "_listing_schema", None) or notion.validate_listing_schema()
+        locality_options = _locality_select_options(listing_schema)
+        raw_locality = str(processed.get("locality") or "").strip()
+        if locality_options and raw_locality and raw_locality not in locality_options:
+            normalization = normalize_locality(
+                raw_locality,
+                locality_options,
+                ola_client=ola_client or _runtime_ola_client(),
+                context=(processed.get("landmark", ""), processed.get("society_name", "")),
+            )
+            if normalization.canonical:
+                processed["locality"] = normalization.canonical
+                if normalization.note:
+                    issues.append(normalization.note)
+            else:
+                processed["locality"] = ""
+                processed["status"] = "Needs Review"
+                issues.append(
+                    f"Location '{raw_locality}' is not in the locality list and no close option matched "
+                    "(checked the list and Ola Maps). Pick the right locality from the dropdown; "
+                    "the original Location stays in Raw Property Data."
+                )
         processed["cloudinary_image_urls"] = row.get("cloudinary_image_urls", processed.get("cloudinary_image_urls", ""))
         maps_url = str(processed.get("google_maps_url") or "").strip()
         maps_failed = bool(maps_url) and any(issue.startswith(("Google Maps verification failed", "Google Maps API unavailable")) for issue in issues)
