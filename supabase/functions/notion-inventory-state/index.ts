@@ -52,6 +52,14 @@ Deno.serve(async (req) => {
     })
     if(state.error){console.error('Inventory v5 state failed',{code:state.error.code});return Response.json({error:'Inventory state rejected'},{status:409})}
     return Response.json(state.data)
+  } else if (operation === 'inventory_v5_quarantine_intake') {
+    if(Deno.env.get('EFPS_INVENTORY_V5_ENABLED')!=='true')return Response.json({error:'Inventory v5 is disabled'},{status:409})
+    if(!uuid(pageId)||!uuid(body.lease)||!Number.isSafeInteger(body.revision)||body.revision<0||
+       !/^EF-\d{4}-[0123456789ABCDEFGHJKMNPQRSTVWXYZ]{4}$/.test(String(body.listing_id??'')))return Response.json({error:'Invalid intake quarantine binding'},{status:400})
+    const quarantined=await supabase.rpc('inventory_v5_quarantine_intake',{
+      p_page_id:pageId,p_listing_id:body.listing_id,p_lease:body.lease,p_revision:body.revision})
+    if(quarantined.error)return Response.json({error:'Intake quarantine rejected'},{status:409})
+    return Response.json(quarantined.data)
   } else if (operation === 'inventory_v5_intake_submission') {
     if(Deno.env.get('EFPS_INVENTORY_V5_ENABLED')!=='true') return Response.json({error:'Inventory v5 is disabled'},{status:409})
     const op=String(body.worker_operation??'')

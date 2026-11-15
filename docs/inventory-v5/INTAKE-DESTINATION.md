@@ -99,3 +99,22 @@ plan, regenerate its candidate or relax destination acknowledgment to accept
 arbitrary newer revisions. The planned submission stays blocked for explicit
 resolution. Tests exercise all three intervening paths through actual ports and
 verify zero destination PATCHes and unchanged provenance on refusal.
+
+### Detected owner conflicts quarantine both mirror read paths
+
+A detected conflict after a destination intent, including prewrite refetch,
+postwrite readback, pending replay, or postmirror owner edit, now calls a
+lease/revision/page/listing-qualified SQL quarantine. It sets canonical pipeline
+and legacy business status to Needs Review on the known bound mirror without
+copying owner values back or changing identity. The pending intent, acknowledged
+row and provenance stay intact, and the source cannot complete.
+
+Quarantine raises the mirror revision only. Normal mirror replay at the old row
+revision consequently fails closed until explicit conflict resolution. This is
+a conservative operational hold, not automatic reconciliation or a claim the
+mirror now contains the owner's newest rent. A stale lease/revision, wrong page,
+wrong identity or missing v5 mirror binding cannot quarantine another record.
+Tests cover owner edits detected before dispatch, after write, after mirror,
+on replay, plus postmirror identity/parent/archive changes and stale/wrong
+quarantine calls. Unknown undetected concurrent Notion edits remain outside the
+read-before-write guarantee.

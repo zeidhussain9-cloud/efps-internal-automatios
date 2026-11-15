@@ -62,8 +62,27 @@ def save_existing_destination(*,source_page_id,payload_hash,page_id,processed,
         state=workers.load(page_id,row_lease)
         if state['acknowledged'].get('listing_id')!=listing_id or workers.identity(page_id)!=listing_id:
             raise IntakeDestinationBlocked('Reviewed destination baseline/identity required')
-        current=notion.snapshot(page_id)
-        if current.get('_archived'):raise IntakeDestinationBlocked('Destination lifecycle handling required')
+        pending_installed=state.get('pending_kind')=='intake'
+        def conflict(reason):
+            # Never leave a detected post-intent conflict apparently Ready in
+            # either canonical or legacy mirror readers.
+            workers.review(page_id,list(state.get('pending_patch') or {}),reason)
+            workers.request('inventory_v5_quarantine_intake',page_id=page_id,
+                listing_id=listing_id,lease=row_lease,revision=state['revision'])
+        def checked_snapshot():
+            try:return notion.snapshot(page_id)
+            except ValueError:
+                if pending_installed:conflict('Destination snapshot parent/schema conflict after intake intent')
+                raise
+        def checked_validate():
+            try:return validate()
+            except (ValueError,IntakeDestinationBlocked):
+                if pending_installed:conflict('Destination binding/schema changed after intake intent')
+                raise
+        current=checked_snapshot()
+        if current.get('_archived'):
+            if pending_installed:conflict('Destination archived after intake intent')
+            raise IntakeDestinationBlocked('Destination lifecycle handling required')
         plan=submission.get('plan')
         if plan is None:
             if state.get('pending_patch') is not None:raise IntakeDestinationBlocked('Other pending row work must finish')
@@ -73,6 +92,7 @@ def save_existing_destination(*,source_page_id,payload_hash,page_id,processed,
             submissions.call('plan',source_page_id,source_lease,plan=plan)
         before=plan['before'];patch=plan['patch'];expected={**before,**patch}
         if current.get('listing_id')!=listing_id:
+            if pending_installed:conflict('Destination listing identity changed after intake intent')
             raise IntakeDestinationBlocked('Destination listing identity changed')
         pending=state.get('pending_patch')
         prepared=state.get('prepared_inputs')
@@ -83,7 +103,7 @@ def save_existing_destination(*,source_page_id,payload_hash,page_id,processed,
                 raise IntakeDestinationBlocked('Different pending destination intent')
             if any(not field_equal(k,current.get(k),before.get(k)) and not field_equal(k,current.get(k),expected.get(k))
                    for k in (set(before)|set(current)) - {'_edited_at'}):
-                workers.review(page_id,list(patch),'Interrupted destination conflicts with owner edits')
+                conflict('Interrupted destination conflicts with owner edits')
                 raise IntakeDestinationBlocked('New owner values prevent intake replay')
         elif submission.get('plan') is not None and state['revision']==plan['revision']+1 and _same(state['acknowledged'],expected) and _same(current,expected):
             # Crash after row ack but before source-ledger ack. Do not reapply.
@@ -99,25 +119,28 @@ def save_existing_destination(*,source_page_id,payload_hash,page_id,processed,
                 raise IntakeDestinationBlocked('Destination changed since durable source plan')
             workers._call('prepare_intake',page_id,row_lease,revision=state['revision'],
                 values=before,patch=patch,provenance=plan['provenance'],review=marker)
-        validate();renew()
-        check=notion.snapshot(page_id)
-        if check!=current:raise IntakeDestinationBlocked('Concurrent edit before destination write')
+            pending_installed=True
+        checked_validate();renew()
+        check=checked_snapshot()
+        if check!=current:
+            conflict('Concurrent edit before destination write')
+            raise IntakeDestinationBlocked('Concurrent edit before destination write')
         remaining={k:v for k,v in patch.items()if not field_equal(k,current.get(k),v)}
         if remaining:
             workers.effect(page_id,row_lease,{'kind':'intake_destination','patch':remaining,'submission':marker},
                 lambda:notion.patch(page_id,remaining))
-        validate();renew()
-        final=notion.snapshot(page_id)
+        checked_validate();renew()
+        final=checked_snapshot()
         if not _same(final,expected):
-            workers.review(page_id,list(patch),'Destination readback conflicts with owner values')
+            conflict('Destination readback conflicts with owner values')
             raise IntakeDestinationBlocked('Destination readback mismatch')
         # This port is lease/revision-qualified actual Edge/SQL mirror, not a
         # blind legacy save. Completion cannot precede a successful mirror.
         workers.mirror(page_id,final,deleted=False)
-        validate();renew()
-        after_mirror=notion.snapshot(page_id)
+        checked_validate();renew()
+        after_mirror=checked_snapshot()
         if after_mirror!=final:
-            workers.review(page_id,list(patch),'Owner edit after destination mirror; retain pending acknowledgment')
+            conflict('Owner edit after destination mirror; retain pending acknowledgment')
             raise IntakeDestinationBlocked('Destination changed after mirror')
         workers._call('finish_intake',page_id,row_lease,values=final,review=marker)
         submissions.call('destination_ack',source_page_id,source_lease)

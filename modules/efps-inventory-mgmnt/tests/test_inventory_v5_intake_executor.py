@@ -211,3 +211,82 @@ def test_frozen_plan_revision_refuses_before_mutation_after_intervening_ack(db,i
     first=next(z for z in x['submissions']if z['source_page_id']==SOURCE)
     assert first['phase']=='planned' and x['state']['pending_patch'] is None
     assert x['state']['field_provenance']['monthly_rent']['last_generated_value']==25000
+
+
+def assert_quarantined(db):
+    x=db.request('__inspect')
+    assert x['mirror']['pipeline_status']=='Needs Review'
+    assert x['mirror']['business_status']=='Needs Review'
+    assert x['mirror']['source_record']['Pipeline Status']=='Needs Review'
+    assert x['state']['pending_kind']=='intake' and x['state']['pending_patch']=={'monthly_rent':26000}
+    assert x['state']['field_provenance']['monthly_rent']['last_generated_value']==25000
+    assert x['submissions'][0]['phase']=='planned'
+    return x
+
+
+def test_detected_owner_edit_after_mirror_quarantines_both_read_paths(db):
+    args,c,s=setup(db);w=args['workers'];orig=w.mirror_port
+    def mirror(*a,**kw):
+        result=orig(*a,**kw)
+        c.update_page(PAGE,{'monthly_rent':serialize_notion(27000,'number')})
+        return result
+    w.mirror_port=mirror
+    with pytest.raises(IntakeDestinationBlocked,match='after mirror'):save_existing_destination(**args)
+    x=assert_quarantined(db)
+    assert str(x['mirror']['monthly_rent'])=='26000' and args['notion'].snapshot(PAGE)['monthly_rent']==27000
+    with pytest.raises(IntakeDestinationBlocked,match='owner values'):save_existing_destination(**args)
+    assert s.count==1
+    assert_quarantined(db)
+
+
+def test_detected_readback_and_pending_replay_conflict_quarantines_without_second_patch(db):
+    args,c,s=setup(db)
+    s.after_patch=lambda:c.update_page(PAGE,{'monthly_rent':serialize_notion(27000,'number')})
+    with pytest.raises(IntakeDestinationBlocked,match='readback'):save_existing_destination(**args)
+    assert_quarantined(db)
+    with pytest.raises(IntakeDestinationBlocked,match='owner values'):save_existing_destination(**args)
+    assert_quarantined(db)
+    assert s.count==1 and args['notion'].snapshot(PAGE)['monthly_rent']==27000
+
+
+def test_quarantine_rpc_rejects_stale_revision_lease_or_wrong_identity_page(db):
+    args,c,s=setup(db);w=args['workers'];orig=w.effect
+    w.effect=lambda *a:(_ for _ in ()).throw(TimeoutError('before effect'))
+    with pytest.raises(TimeoutError):save_existing_destination(**args)
+    lease=w._claim(PAGE,'claim_intake');state=w.load(PAGE,lease)
+    base={'page_id':PAGE,'listing_id':'EF-2611-ABCD','lease':lease,'revision':state['revision']}
+    for change in [{'revision':state['revision']+1},{'lease':SOURCE},{'listing_id':'EF-2611-ZZZZ'},{'page_id':SOURCE}]:
+        with pytest.raises(RuntimeError):db.request('inventory_v5_quarantine_intake',**{**base,**change})
+    db.request('__expire')
+    with pytest.raises(RuntimeError):db.request('inventory_v5_quarantine_intake',**base)
+    x=db.request('__inspect')
+    assert x['mirror']['pipeline_status']=='Ready to Post' and x['mirror']['business_status']=='Ready to Post'
+    assert s.count==0
+
+
+@pytest.mark.parametrize('change',['identity','parent','archived'])
+def test_detected_postmirror_binding_or_lifecycle_conflict_quarantines_known_mirror(db,change):
+    args,c,s=setup(db);w=args['workers'];orig=w.mirror_port
+    def mirror(*a,**kw):
+        result=orig(*a,**kw)
+        if change=='identity':c.update_page(PAGE,{'listing_id':serialize_notion('EF-2611-ZZZZ','rich_text')})
+        else:
+            getter=c.get_page
+            c.get_page=lambda page:{**getter(page),**({'parent':{'database_id':SOURCE}}if change=='parent'else{'archived':True})}
+        return result
+    w.mirror_port=mirror
+    with pytest.raises((ValueError,IntakeDestinationBlocked)):save_existing_destination(**args)
+    assert_quarantined(db)
+    assert s.count==1
+
+
+def test_detected_prewrite_owner_edit_after_prepare_quarantines_without_patch(db):
+    args,c,s=setup(db);w=args['workers'];orig=w._call
+    def call(op,*a,**kw):
+        result=orig(op,*a,**kw)
+        if op=='prepare_intake':c.update_page(PAGE,{'monthly_rent':serialize_notion(27000,'number')})
+        return result
+    w._call=call
+    with pytest.raises(IntakeDestinationBlocked,match='Concurrent'):save_existing_destination(**args)
+    assert_quarantined(db)
+    assert s.count==0

@@ -55,6 +55,29 @@ BEGIN
  ELSE RAISE EXCEPTION 'Unsupported submission operation; source completion not implemented'; END IF;
  RETURN jsonb_build_object('ok',true,'source_completion_allowed',false);
 END $$;
+CREATE OR REPLACE FUNCTION public.inventory_v5_quarantine_intake(p_page_id uuid,p_listing_id text,p_lease uuid,p_revision bigint)
+RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,public AS $$
+DECLARE r public.inventory_processing_revisions%ROWTYPE;m public.crm_inventory_snapshot%ROWTYPE;n bigint;
+BEGIN
+ SELECT * INTO r FROM public.inventory_processing_revisions WHERE page_id=p_page_id FOR UPDATE;
+ IF NOT FOUND OR r.listing_id IS DISTINCT FROM p_listing_id OR r.lease_token IS DISTINCT FROM p_lease OR
+  r.lease_until<=clock_timestamp() OR r.revision IS DISTINCT FROM p_revision OR r.pending_kind IS DISTINCT FROM 'intake' THEN
+  RAISE EXCEPTION 'Exact active intake lease/revision/binding required for quarantine'; END IF;
+ SELECT * INTO m FROM public.crm_inventory_snapshot WHERE listing_id=p_listing_id FOR UPDATE;
+ IF NOT FOUND OR m.inventory_contract_version IS DISTINCT FROM 5 OR m.source_record->>'notion_page_id' IS DISTINCT FROM p_page_id::text THEN
+  RAISE EXCEPTION 'Exact known v5 mirror binding required for intake quarantine'; END IF;
+ -- Increment only the mirror revision. Keep the pending row revision/intent
+ -- unchanged so recognized replay stays possible; same-revision normal mirror
+ -- writes now fail closed until explicit conflict resolution.
+ n=greatest(coalesce(m.inventory_revision,0),r.revision)+1;
+ UPDATE public.crm_inventory_snapshot SET pipeline_status='Needs Review',business_status='Needs Review',
+  source_record=source_record||jsonb_build_object('Pipeline Status','Needs Review','intake_conflict_quarantined',true),
+  inventory_revision=n,last_synced_at=clock_timestamp() WHERE listing_id=p_listing_id;
+ UPDATE public.inventory_processing_revisions SET processing_status='needs_review' WHERE page_id=p_page_id;
+ RETURN jsonb_build_object('ok',true,'quarantined',true,'mirror_revision',n);
+END $$;
+REVOKE ALL ON FUNCTION public.inventory_v5_quarantine_intake FROM PUBLIC,anon,authenticated;
+GRANT EXECUTE ON FUNCTION public.inventory_v5_quarantine_intake TO service_role;
 REVOKE ALL ON FUNCTION public.inventory_v5_intake_submission FROM PUBLIC,anon,authenticated;
 GRANT EXECUTE ON FUNCTION public.inventory_v5_intake_submission TO service_role;
 COMMIT;
