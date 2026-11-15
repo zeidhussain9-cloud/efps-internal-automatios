@@ -168,7 +168,7 @@ def dependency_patch(row, changed, provenance, *, deposit_months=None, explicit_
     patch = {}
     for field, value in desired.items():
         current = row.get(field, '')
-        if current == value or text(current) == text(value):
+        if field_equal(field,current,value):
             continue
         evidence = provenance.get(field, {})
         origin = evidence.get('origin', 'legacy_unknown')

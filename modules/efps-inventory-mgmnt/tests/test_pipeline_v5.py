@@ -69,3 +69,21 @@ def test_manual_blank_caption_is_never_regenerated():
     assert result['row']['whatsapp_post']==''
     assert 'whatsapp_post' in result['conflicts']
     assert result['row']['Pipeline Status']=='Needs Review'
+
+
+def test_equal_legacy_package_is_never_promoted_then_overwritten():
+    first=pipeline_v5.project(RAW,existing={**initial(),'flat_furnishings':'Semi Package','society_amenities':'Premium Amenities','bachelor_preference':''},render_caption=render,route_bhk=route)
+    assert first['provenance']['flat_furnishings']['origin']=='legacy_unknown'
+    assert first['provenance']['society_amenities']['origin']=='legacy_unknown'
+    second=pipeline_v5.project(RAW.replace('Semi Furnished','Fully Furnished'),existing=first['row'],provenance=first['provenance'],render_caption=render,route_bhk=route)
+    assert second['row']['flat_furnishings']=='Semi Package'
+    assert 'flat_furnishings' in second['conflicts']
+
+def test_two_successive_generated_rent_updates_advance_acknowledgement():
+    first=pipeline_v5.project(RAW,existing={**initial(),'monthly_rent':'39000'},provenance={'monthly_rent':{'origin':'derived','last_generated_value':'39000'}},render_caption=render,route_bhk=route)
+    assert first['row']['monthly_rent']=='40000'
+    assert first['provenance']['monthly_rent']['last_generated_value']=='40000'
+    second=pipeline_v5.project(RAW.replace('Rent:40K','Rent:42K'),existing=first['row'],provenance=first['provenance'],render_caption=render,route_bhk=route)
+    assert second['row']['monthly_rent']=='42000'
+    assert second['provenance']['monthly_rent']['last_generated_value']=='42000'
+    assert 'monthly_rent' not in second['conflicts']

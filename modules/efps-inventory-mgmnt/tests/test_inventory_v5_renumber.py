@@ -7,6 +7,7 @@ class N:
 class R:
     def __init__(self):self.offset=0;self.done=False;self.calls=[]
     def claim(self):return {'ordered_page_ids':['a','b'],'next_offset':self.offset,'lease_token':'lease','job_id':1}
+    def effect(self,job,lease,intent,action):self.calls.append('effect');return action()
     def renew(self,*a):self.calls.append('renew')
     def checkpoint(self,j,l,x):self.offset=x
     def prepare_title(self,*a):self.calls.append('prepare')

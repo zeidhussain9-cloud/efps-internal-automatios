@@ -1,5 +1,6 @@
 -- STAGED ONLY. Stable reference numbering is independent of other view sorts.
 BEGIN;
+ALTER TABLE public.inventory_renumber_jobs ADD COLUMN IF NOT EXISTS active_effect jsonb;
 CREATE OR REPLACE FUNCTION public.inventory_v5_reference_order(p_operation text,
  p_page_id uuid DEFAULT NULL,p_listing_id text DEFAULT NULL,p_seed jsonb DEFAULT NULL)
 RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,public AS $$
@@ -44,6 +45,7 @@ BEGIN
  PERFORM pg_advisory_xact_lock(55151126);
  IF p_operation='claim' THEN
   SELECT * INTO r FROM public.inventory_renumber_jobs WHERE status='running' FOR UPDATE;
+  IF FOUND AND r.active_effect IS NOT NULL THEN RETURN jsonb_build_object('busy',true,'needs_recovery',true); END IF;
   IF FOUND AND r.lease_until>clock_timestamp() THEN RETURN jsonb_build_object('busy',true); END IF;
   IF NOT FOUND THEN
    SELECT * INTO r FROM public.inventory_renumber_jobs WHERE status='pending' ORDER BY job_id DESC LIMIT 1 FOR UPDATE;
@@ -56,7 +58,14 @@ BEGIN
  END IF;
  SELECT * INTO r FROM public.inventory_renumber_jobs WHERE job_id=p_job_id FOR UPDATE;
  IF NOT FOUND OR r.status<>'running' OR r.lease_token IS DISTINCT FROM p_lease OR r.lease_until<=clock_timestamp() THEN RAISE EXCEPTION 'Stale renumber lease'; END IF;
- IF p_operation='renew' THEN
+ IF r.active_effect IS NOT NULL AND p_operation NOT IN ('renew','end_effect') THEN RAISE EXCEPTION 'Uncertain title effect requires reconciliation'; END IF;
+ IF p_operation='begin_effect' THEN
+  IF p_error IS NULL THEN RAISE EXCEPTION 'Title effect intent required'; END IF;
+  UPDATE public.inventory_renumber_jobs SET active_effect=jsonb_build_object('intent',p_error::jsonb,'lease',p_lease,'started_at',clock_timestamp()) WHERE job_id=p_job_id;
+ ELSIF p_operation='end_effect' THEN
+  IF r.active_effect IS NULL OR r.active_effect->>'lease' IS DISTINCT FROM p_lease::text THEN RAISE EXCEPTION 'Title effect ticket mismatch'; END IF;
+  UPDATE public.inventory_renumber_jobs SET active_effect=NULL WHERE job_id=p_job_id;
+ ELSIF p_operation='renew' THEN
   UPDATE public.inventory_renumber_jobs SET lease_until=clock_timestamp()+interval '90 seconds' WHERE job_id=p_job_id;
  ELSIF p_operation='checkpoint' THEN
   IF p_next_offset IS NULL OR p_next_offset<r.next_offset OR p_next_offset>cardinality(r.ordered_page_ids) THEN RAISE EXCEPTION 'Invalid renumber checkpoint'; END IF;

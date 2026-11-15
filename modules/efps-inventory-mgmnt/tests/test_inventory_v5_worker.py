@@ -18,7 +18,9 @@ class Repo:
     def finish(self,*a,**k):self.calls.append('finish')
     def review(self,*a):self.calls.append('review')
     def prepare(self,*a,**kw):self.calls.append('prepare');self.prepared=kw
+    def quarantine_identity(self,*a):self.calls.append('quarantine')
     def requeue(self,*a,**k):self.calls.append('requeue')
+    def effect(self,page,lease,intent,action):self.calls.append('effect');return action()
     def renew(self,*a):self.calls.append('renew')
     def release(self,*a):self.calls.append('release')
 
@@ -112,7 +114,7 @@ def test_changed_identity_never_mirrors_under_unverified_identity():
     n=Notion({**before,'listing_id':'EF-2611-ZZZZ'});r=Repo(before)
     out=run(n,r)
     assert out['status']=='needs_review' and n.row['Pipeline Status']=='Needs Review'
-    assert 'mirror' not in r.calls
+    assert 'mirror' not in r.calls and 'quarantine' in r.calls
 
 def test_notion_numeric_readback_acknowledges_string_intent():
     class NumericNotion(Notion):

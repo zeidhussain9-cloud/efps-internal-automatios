@@ -5,10 +5,10 @@ from zoneinfo import ZoneInfo
 import re
 try:
     from .inventory_v5 import (AMENITIES, AVAILABILITY, BHK_OPTIONS, CHANNELS, FURNISHINGS,
-                               PACKAGES, PIPELINE, channel_array, text)
+                               PACKAGES, PIPELINE, channel_array, text, content_hash)
 except ImportError:
     from inventory_v5 import (AMENITIES, AVAILABILITY, BHK_OPTIONS, CHANNELS, FURNISHINGS,
-                              PACKAGES, PIPELINE, channel_array, text)
+                              PACKAGES, PIPELINE, channel_array, text, content_hash)
 
 DISPLAY_ZONE = 'Asia/Calcutta'
 LEGACY_FORMAT = '%A, %B %d, %Y at %I:%M:%S %p'
@@ -40,7 +40,8 @@ def serialize_notion(value, kind):
     if kind in ('select', 'status'):
         return {kind: {'name': text(value)} if text(value) else None}
     if kind in ('title', 'rich_text'):
-        return {kind: [{'type': 'text', 'text': {'content': text(value)}}] if text(value) else []}
+        exact='' if value is None else str(value)
+        return {kind: [{'type': 'text', 'text': {'content': exact}}] if exact else []}
     if kind == 'number':
         if value in (None, ''):
             return {'number': None}
@@ -95,16 +96,26 @@ def display_onboarded(instant, *, display_timezone):
     return local.strftime('%A, %B ') + str(local.day) + local.strftime(', %Y at %I:%M:%S ') + local.strftime('%p').lower()
 
 
-def migrate_business_values(row):
+def migrate_business_values(row, *, reviewed_correction=None):
     """Deterministic candidates only, not permission to write or trust old source."""
+    if reviewed_correction is not None:
+        if content_hash(row)!=reviewed_correction.get('before_hash'):
+            raise ValueError('Reviewed correction source changed; no reusable exception')
+        patch=reviewed_correction.get('patch',{})
+        if set(patch)-{'preferred_tenant_type','bachelor_preference','society_amenities'}:
+            raise ValueError('Correction exceeds reviewed business fields')
+        corrected={**row,**patch}
+        if content_hash(corrected)!=reviewed_correction.get('after_hash'):
+            raise ValueError('Reviewed correction expected after-state mismatch')
+        row=corrected
     out = dict(row)
     tenant = text(row.get('preferred_tenant_type'))
     if tenant in ('Family', 'Family Only'):
         tenant = 'Family Only'
     gender = text(row.get('bachelor_preference'))
-    if row.get('listing_id') in ('EF-2609-GJY7', 'EF-2609-DFFP', 'EF-2609-GNTE'):
-        tenant, gender = 'Open For All', 'Female Only'
-    elif tenant == 'Family Only':
+    if tenant == 'Family Only' and gender in ('Female Only','Male Only'):
+        raise ValueError('Tenant/gender conflict requires exact reviewed correction')
+    if tenant == 'Family Only':
         gender = '-'
     elif tenant == 'Open For All' and gender == 'Open for both':
         gender = ''
@@ -122,10 +133,9 @@ def migrate_business_values(row):
         raise ValueError('Unknown internal property type')
     amenity = text(row.get('society_amenities'))
     expected = AMENITIES[building]
-    approved_amenity_cases = ('EF-2609-DS5K', 'EF-2611-6JYX', 'EF-2611-97J4')
     if building == 'Standalone' and amenity in ('', '-'):
         out['society_amenities'] = ''
-    elif amenity in (expected, PACKAGES.get(expected, '')) or row.get('listing_id') in approved_amenity_cases:
+    elif amenity in (expected, PACKAGES.get(expected, '')):
         out['society_amenities'] = expected
     else:
         raise ValueError('Amenity conflict requires reviewed disposition')

@@ -51,6 +51,7 @@ def project(raw, *, existing=None, provenance=None, render_caption, route_bhk):
     out['Availability']=existing.get('Availability') or existing.get('listing_state') or 'Available'
     out['Live On']=list(existing.get('Live On',[]))
     conflicts=[]
+    protected_fields=set()
     # Preserve identities/media/business lifecycle even if raw changes.
     for field in DOWNSTREAM:
         if field in existing:out[field]=existing[field]
@@ -61,16 +62,22 @@ def project(raw, *, existing=None, provenance=None, render_caption, route_bhk):
         origin=provenance.get(field,{}).get('origin','legacy_unknown')
         acknowledged=provenance.get(field,{}).get('last_generated_value')
         protected=origin in ('manual','source_explicit') or (origin=='legacy_unknown' and text(current)) or (origin=='derived' and not field_equal(field,current,acknowledged))
-        if protected and out[field]!=current:
-            conflicts.append(field);out[field]=current
+        if protected:
+            protected_fields.add(field)
+            if not field_equal(field,out[field],current):conflicts.append(field)
+            out[field]=current
     derived_provenance = {**source_provenance, **provenance}
-    for field in ('flat_furnishings', 'society_amenities', 'bachelor_preference'):
+    generated_fields=set(source_provenance)|{'flat_furnishings','society_amenities','bachelor_preference'}
+    for field in generated_fields:
         prior=provenance.get(field,{})
-        if prior.get('origin') not in ('manual','source_explicit') and field not in conflicts:
-            derived_provenance[field] = {'origin': 'derived', 'last_generated_value': out[field], 'derivation_version': 5}
-    for field in conflicts:
-        if field in provenance:derived_provenance[field] = dict(provenance[field])
-        else:derived_provenance[field] = {'origin': 'legacy_unknown'}
+        if field in protected_fields:
+            derived_provenance[field]=dict(prior) if prior else {'origin':'legacy_unknown'}
+        elif prior.get('origin')=='derived' or field in ('flat_furnishings','society_amenities','bachelor_preference'):
+            derived_provenance[field]={**prior,'origin':'derived','last_generated_value':out[field],'derivation_version':5}
+    # Preserve ownership for every protected field, even if equal to this run's
+    # generated value. Equality is not evidence of ownership.
+    for field in protected_fields:
+        derived_provenance[field]=dict(provenance[field]) if field in provenance else {'origin':'legacy_unknown'}
     group,destination=route_bhk(out.get('BHK','')) if out.get('BHK') in BHK_OPTIONS else ('','')
     for field, value in [('WhatsApp Group', group), ('WhatsApp Destination', destination)]:
         old = provenance.get(field, {}).get('origin', 'legacy_unknown')
@@ -98,7 +105,9 @@ def project(raw, *, existing=None, provenance=None, render_caption, route_bhk):
     if 'whatsapp_post' in existing and caption_protected:
         out['whatsapp_post']=existing['whatsapp_post']
         if caption!=existing['whatsapp_post']:conflicts.append('whatsapp_post')
-    else:out['whatsapp_post']=caption
+    else:
+        out['whatsapp_post']=caption
+        derived_provenance['whatsapp_post']={'origin':'derived','last_generated_value':caption,'derivation_version':5}
     issues.extend('Protected manual/legacy conflict: '+field for field in sorted(set(conflicts)))
     out['Pipeline Status'],issues=content_readiness(out,issues,route_valid=bool(group))
     if existing.get('Pipeline Status')=='Removed':out['Pipeline Status']='Removed'

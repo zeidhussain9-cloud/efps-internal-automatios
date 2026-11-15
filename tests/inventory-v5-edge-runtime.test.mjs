@@ -23,6 +23,6 @@ test('actual staged Edge worker passes fenced arguments only under explicit flag
 });
 test('actual staged Edge v5 mirror keeps typed empty channels and dual-readable status',async()=>{
  const r=await runtime('true');const row={listing_id:'EF-2611-ABCD',inventory_contract_version:5,Availability:'On Hold','Pipeline Status':'Ready to Post','Live On':[],onboarded_at:'2026-11-15T09:11:00Z',monthly_rent:0,cloudinary_image_urls:''};
- const response=await r.send({operation:'sync_inventory',page_id:page,listing_id:row.listing_id,source_hash:'b'.repeat(64),row});assert.equal(response.status,200);
- const saved=r.calls[0].upsert;assert.deepEqual(saved.live_on,[]);assert.equal(saved.monthly_rent,0);assert.equal(saved.listing_state,'On Hold');assert.equal(saved.business_status,'Ready to Post');assert.equal(saved.inventory_contract_version,5);
+ const response=await r.send({operation:'sync_inventory',page_id:page,listing_id:row.listing_id,source_hash:'b'.repeat(64),row,lease:page,revision:2});assert.equal(response.status,200);
+ assert.equal(r.calls[0].name,'inventory_v5_sync_snapshot'); const saved=r.calls[0].args.p_snapshot;assert.deepEqual(saved.live_on,[]);assert.equal(saved.monthly_rent,0);assert.equal(saved.listing_state,'On Hold');assert.equal(saved.business_status,'Ready to Post');assert.equal(saved.inventory_contract_version,5);
 });

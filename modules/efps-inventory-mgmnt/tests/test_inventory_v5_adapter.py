@@ -1,6 +1,7 @@
 """Adapter tests never contact a live workspace."""
 from datetime import timezone
 import pytest
+from src.inventory_v5 import content_hash
 from src.inventory_v5_adapter import (read_notion_value,serialize_notion,parse_onboarded,
  display_onboarded,migrate_business_values,status_candidate,content_readiness,distribution_allowed)
 
@@ -54,7 +55,10 @@ def test_full109_snapshot_candidate_mapping_is_independent_of_network():
       'internal_property_type':'Semi Gated',
       'society_amenities':'Club House, Lift, Gym, CCTV, Power Backup, Swimming Pool, Garden, Sports, Kids Area',
       'preferred_tenant_type':'Open For All','bachelor_preference':'Open for both','BHK':'1 RK'}
-    out=migrate_business_values(row)
+    with pytest.raises(ValueError):migrate_business_values(row)
+    correction={'before_hash':content_hash(row),'patch':{'society_amenities':'Standard Amenities'}}
+    correction['after_hash']=content_hash({**row,**correction['patch']})
+    out=migrate_business_values(row,reviewed_correction=correction)
     assert out['flat_furnishings']=='Semi Package'
     assert out['society_amenities']=='Standard Amenities'
     assert out['bachelor_preference']==''
@@ -64,3 +68,23 @@ def test_full109_snapshot_candidate_mapping_is_independent_of_network():
 @pytest.mark.parametrize('bad',['2026-11-15','2026-11-15T09:11:00','2026-02-31T09:11:00Z'])
 def test_unqualified_or_invalid_iso_is_not_assigned_a_zone(bad):
     with pytest.raises(ValueError):parse_onboarded(bad,legacy_timezone='Asia/Calcutta')
+
+
+def test_reviewed_case_is_hash_bound_not_permanent_id_permission():
+    row={'listing_id':'EF-2609-GJY7','furnish_type':'Semi Furnished','flat_furnishings':'Semi Package',
+      'internal_property_type':'Semi Gated','society_amenities':'Standard Amenities',
+      'preferred_tenant_type':'Family','bachelor_preference':'Female Only','BHK':'2 BHK'}
+    with pytest.raises(ValueError):migrate_business_values(row)
+    fix={'before_hash':content_hash(row),'patch':{'preferred_tenant_type':'Open For All','bachelor_preference':'Female Only'}}
+    fix['after_hash']=content_hash({**row,**fix['patch']})
+    assert migrate_business_values(row,reviewed_correction=fix)['preferred_tenant_type']=='Open For All'
+    with pytest.raises(ValueError):migrate_business_values({**row,'bachelor_preference':'Male Only'},reviewed_correction=fix)
+    # The same ID with a later settled owner choice is not forced to the old answer.
+    later={**row,'preferred_tenant_type':'Open For All','bachelor_preference':'Male Only'}
+    assert migrate_business_values(later)['bachelor_preference']=='Male Only'
+
+
+def test_rich_text_inverse_preserves_source_whitespace_exactly():
+    for kind in ('title','rich_text'):
+        exact='  Original source  \n'
+        assert read_notion_value({'type':kind,**serialize_notion(exact,kind)})==exact

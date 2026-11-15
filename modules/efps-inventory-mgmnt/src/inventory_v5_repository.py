@@ -7,7 +7,7 @@ from __future__ import annotations
 
 class V5Repository:
     def __init__(self, *, request, identity, mirror):
-        self.request=request;self.identity=identity;self.mirror_port=mirror;self.leases={}
+        self.request=request;self.identity=identity;self.mirror_port=mirror;self.leases={};self.revisions={}
 
     def _call(self, operation, page, lease=None, **values):
         return self.request('inventory_v5_worker',page_id=page,
@@ -21,6 +21,7 @@ class V5Repository:
 
     def load(self,page,lease):
         row=self._call('load',page,lease)
+        self.revisions[page]=row['revision']
         return {'acknowledged':row['last_acknowledged_values'],
             'provenance':row['field_provenance'],'source_evidence':row['source_evidence'],
             'expected_self_write':row.get('expected_self_write'),
@@ -38,13 +39,55 @@ class V5Repository:
         return self._call('finish',page,lease,values=values,status=status)
 
     def mirror(self,page,values,*,deleted):
-        return self.mirror_port(page,values,deleted=deleted)
+        # The Edge/SQL mirror port must pass these into inventory_v5_sync_snapshot.
+        return self.mirror_port(page,values,deleted=deleted,lease=self.leases[page],revision=self.revisions[page])
+
+    def quarantine_identity(self,page,lease):
+        result=self.request('inventory_v5_quarantine_identity',page_id=page,lease=lease)
+        self.revisions[page]=result['revision']
+        return result
 
     def requeue(self,page,lease,*,reason):
         return self._call('requeue',page,lease,status=reason)
+
+    def effect(self,page,lease,intent,action):
+        # An expired owner cannot start an effect. Once started, durable active_effect
+        # blocks takeover even after lease expiry. Any timeout/error leaves it there
+        # for explicit readback/reconciliation, never automatic overlapping replay.
+        self.renew(page,lease)
+        self._call('begin_effect',page,lease,values=intent)
+        self.renew(page,lease)
+        result=action()
+        self._call('end_effect',page,lease)
+        return result
 
     def renew(self,page,lease):return self._call('renew',page,lease)
 
     def release(self,page,lease):
         try:return self._call('release',page,lease)
         finally:self.leases.pop(page,None)
+
+
+class V5RenumberRepository:
+    """Staged title-job port. Title provenance hooks stay separately injected."""
+    def __init__(self,*,request,prepare_title,ack_title):
+        self.request=request;self.prepare_title=prepare_title;self.ack_title=ack_title
+
+    def _call(self,operation,job=None,lease=None,**values):
+        return self.request('inventory_v5_renumber',worker_operation=operation,job_id=job,lease=lease,**values)
+
+    def claim(self):return self._call('claim')
+    def renew(self,job,lease):return self._call('renew',job,lease)
+    def checkpoint(self,job,lease,offset):return self._call('checkpoint',job,lease,next_offset=offset)
+    def finish(self,job,lease):return self._call('finish',job,lease)
+    def yield_lease(self,job,lease):return self._call('yield',job,lease)
+    def fail(self,job,lease,error):return self._call('fail',job,lease,error=error)
+
+    def effect(self,job,lease,intent,action):
+        import json
+        self.renew(job,lease)
+        self._call('begin_effect',job,lease,error=json.dumps(intent,separators=(',',':')))
+        self.renew(job,lease)
+        result=action()
+        self._call('end_effect',job,lease)
+        return result

@@ -1,12 +1,14 @@
 # Inventory v5 staged build - 15 November 2026
 
 Status: implementation in progress, not a release or cutover approval.
+
+Original scope: inventory columns FIRST. WhatsApp flow remains entirely untouched until inventory is finished and Zeid separately says to move on. No WhatsApp intake/distribution runtime or webhook changes. Inventory-only Notion/Supabase work uses synthetic tests; crossing this boundary is a blocker, not permission.
 Baseline: 489b242427997b33e8628cb0d5574800f5520034.
 No production deployment, schema mutation, inventory rewrite, posting or old-column deletion has been done by this build.
 
 ## Verified locally
 
-- 331 Python tests, 149 Node tests and Vite build pass.
+- 351 Python tests, 151 Node tests and Vite build pass.
 - Repository audit includes the new files and passes.
 - Disposable PostgreSQL checks cover additive schema compatibility, typed empty channels, vocabularies, RLS, worker fencing, revision checks, persisted write intents, and renumber-job serialization/checkpoints.
 - The actual staged Edge handler runs in a local harness with an injected SQL client. It rejects disabled v5 and bad auth/leases and preserves typed mirror values. This is not an Edge deployment test.
@@ -21,7 +23,7 @@ The104-rowseedis the fully paginated current All Properties order. Do not substi
 
 ## Remaining gates
 
-1. Finish the actual Raw Intake and direct-Housing webhook/runtime integration behind a disabled-by-default feature gate. Wire durable order RPCs and title intent acknowledgements. Do not present the injected ports as a live worker.
+1. Finish inventory-only direct-Housing Notion webhook/runtime integration behind a disabled-by-default feature gate. Defer any Raw Intake integration that changes WhatsApp intake behavior to its later separately authorized phase. Wire durable order RPCs and title intent acknowledgements. Do not present the injected ports as a live worker.
 2. Independently review the code, SQL functions and state transitions. Add missing deletion/restoration-to-a-previous-membership regression and end-to-end port tests.
 3. Finish field-by-field caption/source/pin/manual-correction audit.51structuralcandidatesareheld. A nonempty caption and a stored source link do not prove its facts or building.
 4. The104carpetvalues match the old90%helper, and all104rawbuilt-upanchorsmatchcurrentbuilt-upvalues. Prepare exact90sqftreplacementdiffs, but do not infer field ownership solely from matching a formula.8storedpetNofieldsconflictwithanunstated-Yesoverlayandremainprotected.
@@ -53,3 +55,15 @@ Stop on identity/media/channel-state loss, unexpected posting, incorrect row cou
 - Native Notion readable timestamp text is not made chronologically sortable by the internal SQL timestamp. CRM chronology uses a separate qualified instant. Only five ISO display offenders are proposed for reformatting; preserve the other99readabledisplaysbyte-for-byte.
 - Source preservation and manual ownership can require Needs Review rather than automatic correction. A per-listing lease cannot make Notion atomic against a human edit.
 - No Meta/WhatsApp/Housing.com operations are in this build.
+
+## Review repair checkpoint, not independent closure
+
+1. Equal nonblank legacy values retain legacy_unknown even when matching a package. Authorized generated changes advance last_generated_value. Two-pass regressions added for both reviewer repros.
+2. Protected source/identity edits persist Needs Review and observed ownership. SQL finish cannot erase Needs Review from acknowledged values. Identity edits quarantine the known mirror identity by its saved page binding, not the newly edited ID. Actual repository -> Edge -> PostgreSQL test added.
+3. Database trigger enforces v5 downgrade and monotonic revision rejection under the row lock. v5 mirror uses a lease/revision-qualified transactional RPC. Source page binding is checked. v4 delete/reconcile writes against a v5 row now fail closed; old writers still must be drained before rollout.
+4. All ten number fields in the captured Housing schema use numeric equivalence. Actual typed Notion serializer/readback -> repository -> Edge -> PostgreSQL tests cover writes, a second pass and interrupted replay.
+5. Worker and title-job writes use durable active-effect intents. A begun but unconfirmed effect blocks successor takeover even after lease expiry. A timeout, crash, uncertain flight or expired completion requires explicit reconciliation after proving the original process/request cannot still write. There is intentionally NO automatic timer that clears the barrier. The production Notion client has a 25-second HTTP timeout, no automatic PATCH retry; each write renews before starting. No SQL lease can provide CAS against human Notion edits. Title-intent provenance hooks are still injected, not deployed.
+6. A separate combined schema/value/mirror manifest now preserves property IDs, uses exact typed forward/inverse values, and keeps onboarded_at and contract version only in mirror data. The inverse title restores the original title on the same property ID. Synthetic whole-state reversal passes; live mirror-before snapshots and actual isolated schema-conversion readback are still required. The private104-rowcombinedmanifestisNOTexecutable,usespendingIDsfornewcolumns,andexplicitlyblocksexactmirrorrollbackwithoutabackup.
+7. Permanent tenant/amenity listing-ID exceptions removed from the reusable normalizer. Private one-time correction entries require exact full before and corrected-after hashes; changed owner choices refuse the old correction.
+
+All changes remain staged and require independent retest. The last independently verified SHA was e9fbe94, not this checkpoint.

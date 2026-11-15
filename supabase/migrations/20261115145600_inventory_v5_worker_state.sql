@@ -1,5 +1,6 @@
 -- STAGED. Fenced worker state transitions. Notion itself has no CAS operation.
 BEGIN;
+ALTER TABLE public.inventory_processing_revisions ADD COLUMN IF NOT EXISTS active_effect jsonb;
 ALTER TABLE public.inventory_processing_revisions ADD COLUMN IF NOT EXISTS prepared_inputs jsonb;
 ALTER TABLE public.inventory_processing_revisions ADD COLUMN IF NOT EXISTS page_id uuid UNIQUE;
 ALTER TABLE public.inventory_processing_revisions ADD COLUMN IF NOT EXISTS field_provenance jsonb NOT NULL DEFAULT '{}'::jsonb;
@@ -21,6 +22,7 @@ BEGIN
   VALUES(p_listing_id,p_page_id) ON CONFLICT(listing_id) DO NOTHING;
   SELECT * INTO r FROM public.inventory_processing_revisions WHERE page_id=p_page_id FOR UPDATE;
   IF r.listing_id IS DISTINCT FROM p_listing_id THEN RAISE EXCEPTION 'Page/listing identity conflict'; END IF;
+  IF r.active_effect IS NOT NULL THEN RETURN jsonb_build_object('needs_recovery',true,'busy',true); END IF;
   IF r.lease_until > clock_timestamp() THEN RETURN jsonb_build_object('busy',true); END IF;
   token=gen_random_uuid();
   UPDATE public.inventory_processing_revisions SET lease_token=token,
@@ -33,8 +35,16 @@ BEGIN
   RAISE EXCEPTION 'Stale or expired inventory lease';
  END IF;
  IF p_operation='load' THEN RETURN to_jsonb(r); END IF;
+ IF r.active_effect IS NOT NULL AND p_operation IN ('prepare','finish') THEN RAISE EXCEPTION 'External effect unresolved'; END IF;
  IF p_operation='renew' THEN
   UPDATE public.inventory_processing_revisions SET lease_until=clock_timestamp()+interval '90 seconds' WHERE page_id=p_page_id;
+ ELSIF p_operation='begin_effect' THEN
+  IF r.active_effect IS NOT NULL THEN RAISE EXCEPTION 'Uncertain external effect requires reconciliation'; END IF;
+  IF jsonb_typeof(p_values) IS DISTINCT FROM 'object' THEN RAISE EXCEPTION 'Effect intent required'; END IF;
+  UPDATE public.inventory_processing_revisions SET active_effect=jsonb_build_object('intent',p_values,'lease',p_lease,'started_at',clock_timestamp()),updated_at=clock_timestamp() WHERE page_id=p_page_id;
+ ELSIF p_operation='end_effect' THEN
+  IF r.active_effect IS NULL OR r.active_effect->>'lease' IS DISTINCT FROM p_lease::text THEN RAISE EXCEPTION 'Effect ticket mismatch'; END IF;
+  UPDATE public.inventory_processing_revisions SET active_effect=NULL,updated_at=clock_timestamp() WHERE page_id=p_page_id;
  ELSIF p_operation='prepare' THEN
   IF p_revision IS DISTINCT FROM r.revision THEN RAISE EXCEPTION 'Inventory revision conflict'; END IF;
   IF jsonb_typeof(p_patch) IS DISTINCT FROM 'object' OR jsonb_typeof(p_provenance) IS DISTINCT FROM 'object' OR jsonb_typeof(p_values) IS DISTINCT FROM 'object' THEN RAISE EXCEPTION 'Patch/provenance/inputs object required'; END IF;
@@ -51,7 +61,7 @@ BEGIN
  ELSIF p_operation='finish' THEN
   IF jsonb_typeof(p_values) IS DISTINCT FROM 'object' THEN RAISE EXCEPTION 'Acknowledged object required'; END IF;
   UPDATE public.inventory_processing_revisions SET last_acknowledged_values=p_values,pending_patch=NULL,prepared_inputs=NULL,
-    revision=revision+1,processing_status=p_status,updated_at=clock_timestamp() WHERE page_id=p_page_id;
+    revision=revision+1,processing_status=CASE WHEN p_values->>'Pipeline Status'='Needs Review' THEN 'needs_review' ELSE p_status END,updated_at=clock_timestamp() WHERE page_id=p_page_id;
  ELSIF p_operation='review' THEN
   IF jsonb_typeof(p_review) IS DISTINCT FROM 'object' THEN RAISE EXCEPTION 'Review object required'; END IF;
   UPDATE public.inventory_processing_revisions SET review_history=review_history||jsonb_build_array(p_review),

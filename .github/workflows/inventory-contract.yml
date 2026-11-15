@@ -40,16 +40,16 @@ jobs:
         run: python -m compileall -q shared modules/efps-inventory-mgmnt/src tools
       - name: Run repository line-count and contract audit
         run: python tools/repository_audit.py
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24.21.0"
+          cache: npm
+      - run: npm ci
       - name: Run inventory and deterministic regression suite
         env:
           PYTHONPATH: .:modules/efps-inventory-mgmnt:modules/efps-inventory-mgmnt/src
         run: |
           python -m pytest -q shared/google_sheets/test_schema.py modules/efps-inventory-mgmnt/tests modules/efps-inventory-mgmnt/src/test_inventory_pipeline.py tools/test_deterministic_edge_cases.py
           python tools/projection_regression_check.py
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "24.21.0"
-          cache: npm
-      - run: npm ci
       - name: Run version-five type, date, SQL lease and reference-order tests
         run: node --test tests/inventory-v5*.test.mjs tests/inventory-date.test.mjs tests/inventory-logic.test.mjs

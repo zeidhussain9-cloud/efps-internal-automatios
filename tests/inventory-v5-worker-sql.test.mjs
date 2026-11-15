@@ -20,8 +20,8 @@ let row=await call('load',valid);assert.deepEqual(row.pending_patch,{x:'new'});a
 await call('review',{...valid,p_review:{fields:['x'],reason:'test'}});
 await call('review',{...valid,p_review:{fields:['y'],reason:'second test'}});
 assert.equal((await call('load',valid)).review_history.length,2);
-await call('finish',{...valid,p_values:{x:'new'},p_status:'recalculated'});
-row=await call('load',valid);assert.equal(row.revision,1);assert.equal(row.pending_patch,null);assert.equal(row.prepared_inputs,null);assert.deepEqual(row.expected_self_write,{x:'new'});
+await call('finish',{...valid,p_values:{x:'new','Pipeline Status':'Needs Review'},p_status:'protected_change'});
+row=await call('load',valid);assert.equal(row.revision,1);assert.equal(row.processing_status,'needs_review');assert.equal(row.pending_patch,null);assert.equal(row.prepared_inputs,null);assert.deepEqual(row.expected_self_write,{x:'new'});
 await call('release',valid);
 await assert.rejects(()=>call('finish',{...valid,p_values:{x:'bad'}}),/Stale or expired/);
 const next=await call('claim',{p_listing_id:'EF-2611-ABCD'});assert.notEqual(next.lease,claim.lease);
@@ -29,6 +29,14 @@ await assert.rejects(()=>call('prepare',{...valid,p_revision:1,p_patch:{},p_valu
 await db.exec(`UPDATE inventory_processing_revisions SET lease_until=now()-interval '1 second'`);
 await assert.rejects(()=>call('load',{p_lease:next.lease}),/Stale or expired/);
 await assert.rejects(()=>call('claim',{p_listing_id:'EF-2611-ZZZZ'}),/Page\/listing identity conflict|duplicate key/);
+// A begun external effect outlives its lease, but cannot be overtaken.
+const third=await call('claim',{p_listing_id:'EF-2611-ABCD'});
+await call('begin_effect',{p_lease:third.lease,p_values:{kind:'notion_patch',patch:{x:2}}});
+await db.exec(`UPDATE inventory_processing_revisions SET lease_until=now()-interval '1 second'`);
+const blocked=await call('claim',{p_listing_id:'EF-2611-ABCD'});assert.equal(blocked.needs_recovery,true);assert.equal(blocked.busy,true);
+await assert.rejects(()=>call('end_effect',{p_lease:third.lease}),/Stale or expired/);
+await assert.rejects(()=>call('prepare',{p_lease:third.lease,p_revision:1,p_values:{},p_patch:{},p_provenance:{}}),/Stale or expired/);
+const active=(await db.query('SELECT active_effect FROM inventory_processing_revisions')).rows[0].active_effect;assert.equal(active.intent.kind,'notion_patch');
 await db.exec('SET ROLE anon');await assert.rejects(()=>call('load',{p_lease:next.lease}),/permission denied/);
 await db.exec('RESET ROLE');
 console.log('Isolated PostgreSQL fenced lease/revision/recovery/RLS checks passed. No live writes.');

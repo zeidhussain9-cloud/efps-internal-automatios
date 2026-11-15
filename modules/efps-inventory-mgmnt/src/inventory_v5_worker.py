@@ -54,7 +54,7 @@ def process_dependencies(page_id, *, notion, repository, render_caption, route_b
                 repository.requeue(page_id, lease, reason='recovery_concurrent_edit')
                 return {'status': 'retry', 'reason': 'concurrent_edit'}
             remaining = {k:v for k,v in pending.items() if not field_equal(k,current.get(k),v)}
-            if remaining:notion.patch(page_id, remaining)
+            if remaining:repository.effect(page_id,lease,{'kind':'notion_patch','patch':remaining},lambda:notion.patch(page_id,remaining))
             final = notion.snapshot(page_id)
             if any(not field_equal(k,final.get(k),v) for k,v in pending.items()):
                 repository.review(page_id, list(pending), 'Interrupted-write replay readback mismatch')
@@ -62,6 +62,7 @@ def process_dependencies(page_id, *, notion, repository, render_caption, route_b
                 return {'status': 'retry', 'reason': 'post_write_conflict'}
             if state['acknowledged'].get('listing_id') in (None,final.get('listing_id')):
                 repository.mirror(page_id, final, deleted=False)
+            else:repository.quarantine_identity(page_id,lease)
             repository.finish(page_id, lease, final, status='recovered')
             return {'status': 'recovered', 'changed': sorted(remaining)}
         provenance = {k: dict(v) for k, v in state.get('provenance', {}).items()}
@@ -86,14 +87,15 @@ def process_dependencies(page_id, *, notion, repository, render_caption, route_b
             safety_patch={'Pipeline Status':'Needs Review'}
             repository.prepare(page_id,lease,expected_revision=state['revision'],input_hash=content_hash(current),
                 input_values=current,patch=safety_patch,provenance=provenance)
-            notion.patch(page_id,safety_patch)
+            repository.effect(page_id,lease,{'kind':'notion_patch','patch':safety_patch},lambda:notion.patch(page_id,safety_patch))
             final=notion.snapshot(page_id)
             if final.get('Pipeline Status')!='Needs Review':
                 repository.requeue(page_id,lease,reason='protected_status_readback')
                 return {'status':'retry','reason':'post_write_conflict'}
             # An edited identity cannot be mirrored under a guessed identity.
             if 'listing_id' not in protected:repository.mirror(page_id, final, deleted=False)
-            repository.finish(page_id, lease, final, status='protected_change')
+            else:repository.quarantine_identity(page_id,lease)
+            repository.finish(page_id, lease, final, status='needs_review')
             return {'status': 'needs_review', 'protected': protected}
         evidence = state.get('source_evidence') or {}
         result = dependency_patch(current, external - TITLE_FIELDS, provenance,
@@ -142,7 +144,7 @@ def process_dependencies(page_id, *, notion, repository, render_caption, route_b
              input_hash=content_hash(current), input_values=current, patch=patch, provenance=provenance)
         repository.renew(page_id, lease)
         if patch:
-            notion.patch(page_id, patch)
+            repository.effect(page_id,lease,{'kind':'notion_patch','patch':patch},lambda:notion.patch(page_id,patch))
         final = notion.snapshot(page_id)
         mismatches = [k for k, v in patch.items() if not field_equal(k,final.get(k),v)]
         if mismatches:
