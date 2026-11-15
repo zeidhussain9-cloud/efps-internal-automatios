@@ -159,3 +159,37 @@ receipt proof, source PATCH/readback, exact ledger finish and payload-version
 handoff. Preparing this relation plan is not completing source acknowledgment.
 These tests use actual staged Edge/SQL and a synthetic Notion read client, not
 live accounts. No production or WhatsApp-flow changes are included.
+
+## Staged layer 4: saved upstream output, sealed source contract and effect preparation
+
+`capture_upstream_output` freezes exact processed output and issues under the
+existing source submission. It accepts the existing final pipeline statuses
+Pending/Needs Review only, checks the destination candidate and payload binding,
+and refuses replacement. This is an explicit staged capture boundary, not yet
+called by the live pipeline. Its output hash does not prove who ran extraction.
+Production orchestration must capture the unmodified result once after existing
+media/maps/caption checks and resume from that result, not replay those steps.
+
+`prepare_source_write` derives source Processed/Needs Review from that saved
+output and saved destination conflicts, never a later caller's Processed request.
+It retains the existing notes-append behavior and freezes a qualified processed
+instant. Required source property IDs/types/status options/relation target are
+sealed and reread. The exact source object is read twice, not merely trusted by
+hash. SQL independently checks the frozen destination and mirror revisions.
+
+`SourceEffectPreparation` supplies durable begin/dispatch/terminal-receipt/
+readback/finish-preparation transitions. Begin compares exact saved source
+snapshot and schema objects; bind requires the saved body hash; receipts require
+the exact effect nonce/dispatch/request reference and a terminal success or the
+narrow documented saved503 response. Readback compares all source property
+values and page binding to the saved expected result, then rechecks destination
+state before recording finish_prepared. Unknown source flight blocks subsequent
+claims without an automatic timer clear.
+
+There is still NO source HTTP writer and NO ledger finish/source completion
+operation. Tests inject synthetic terminal receipts and readbacks into the real
+Edge/SQL state machine, without actually sending a source PATCH. Even
+finish_prepared keeps awaiting_source_ack and completion false. Source outcome
+capture wiring, source execution/recovery/incident handling, final ledger commit
+and next-payload handoff are not supplied by this checkpoint. New creation,
+bootstrap, membership and production routing remain separate gates.

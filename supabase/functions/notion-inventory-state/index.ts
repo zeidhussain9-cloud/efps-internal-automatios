@@ -69,7 +69,7 @@ Deno.serve(async (req) => {
   } else if (operation === 'inventory_v5_intake_submission') {
     if(Deno.env.get('EFPS_INVENTORY_V5_ENABLED')!=='true') return Response.json({error:'Inventory v5 is disabled'},{status:409})
     const op=String(body.worker_operation??'')
-    if(!uuid(body.source_page_id)||!['claim','claim_existing','renew','plan','destination_ack','prepare_source_ack','release'].includes(op)||
+    if(!uuid(body.source_page_id)||!['claim','claim_existing','renew','plan','destination_ack','prepare_source_ack','capture_outcome','prepare_source_write','begin_source_effect','bind_source_dispatch','source_receipt','source_finish_prepare','release'].includes(op)||
        (!['claim','claim_existing'].includes(op)&&!uuid(body.lease))||
        (op==='claim'&&(!uuid(pageId)||!/^[a-f0-9]{64}$/.test(String(body.payload_hash??''))))) return Response.json({error:'Invalid intake submission'},{status:400})
     const submission=await supabase.rpc('inventory_v5_intake_submission',{

@@ -4,7 +4,7 @@ CREATE TABLE public.inventory_intake_submissions(
  source_page_id uuid PRIMARY KEY,payload_hash text NOT NULL CHECK(payload_hash ~ '^[a-f0-9]{64}$'),
  destination_page_id uuid NOT NULL,listing_id text NOT NULL,candidate jsonb NOT NULL,
  phase text NOT NULL DEFAULT 'claimed' CHECK(phase IN ('claimed','planned','awaiting_source_ack')),
- plan jsonb,source_ack_plan jsonb,lease_token uuid,lease_until timestamptz,updated_at timestamptz NOT NULL DEFAULT clock_timestamp()
+ plan jsonb,source_ack_plan jsonb,upstream_outcome jsonb,source_write_plan jsonb,source_effect jsonb,lease_token uuid,lease_until timestamptz,updated_at timestamptz NOT NULL DEFAULT clock_timestamp()
 );
 ALTER TABLE public.inventory_intake_submissions ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON public.inventory_intake_submissions FROM PUBLIC,anon,authenticated;
@@ -18,6 +18,7 @@ BEGIN
  IF p_operation='claim_existing' THEN
   SELECT * INTO r FROM public.inventory_intake_submissions WHERE source_page_id=p_source_page_id FOR UPDATE;
   IF NOT FOUND THEN RETURN jsonb_build_object('found',false); END IF;
+  IF r.source_effect IS NOT NULL THEN RETURN jsonb_build_object('found',true,'busy',true,'needs_source_effect_review',true); END IF;
   IF r.lease_until>clock_timestamp() THEN RETURN jsonb_build_object('found',true,'busy',true); END IF;
   token=gen_random_uuid();
   UPDATE public.inventory_intake_submissions SET lease_token=token,lease_until=clock_timestamp()+interval '90 seconds'
@@ -34,6 +35,7 @@ BEGIN
   IF r.payload_hash IS DISTINCT FROM p_payload_hash OR r.destination_page_id IS DISTINCT FROM p_destination_page_id OR
    r.listing_id IS DISTINCT FROM p_listing_id OR r.candidate IS DISTINCT FROM p_candidate THEN
    RAISE EXCEPTION 'Earlier source submission unresolved or immutable binding changed'; END IF;
+  IF r.source_effect IS NOT NULL THEN RETURN jsonb_build_object('busy',true,'needs_source_effect_review',true); END IF;
   IF r.lease_until>clock_timestamp() THEN RETURN jsonb_build_object('busy',true); END IF;
   token=gen_random_uuid();
   UPDATE public.inventory_intake_submissions SET lease_token=token,lease_until=clock_timestamp()+interval '90 seconds',updated_at=clock_timestamp()
@@ -59,6 +61,75 @@ BEGIN
    m.source_record->>'notion_page_id' IS DISTINCT FROM r.destination_page_id::text OR
    NOT(m.source_record @> (w.last_acknowledged_values-'_edited_at'-'_archived')) THEN RAISE EXCEPTION 'Destination mirror not exactly acknowledged'; END IF;
   UPDATE public.inventory_intake_submissions SET phase='awaiting_source_ack' WHERE source_page_id=p_source_page_id;
+ ELSIF p_operation='capture_outcome' THEN
+  IF jsonb_typeof(p_plan) IS DISTINCT FROM 'object' OR p_plan->>'payload_hash' IS DISTINCT FROM r.payload_hash OR
+   p_plan->'candidate' IS DISTINCT FROM r.candidate OR p_plan->>'boundary' IS DISTINCT FROM 'existing_pipeline_final_output' OR
+   p_plan->'processed'->>'status' NOT IN ('Pending','Needs Review') OR p_plan->'processed'->>'status' IS NULL OR
+   jsonb_typeof(p_plan->'issues') IS DISTINCT FROM 'array' OR p_plan->>'source_completion_allowed' IS DISTINCT FROM 'false' OR
+   coalesce(p_plan->>'output_hash','') !~ '^[a-f0-9]{64}$' THEN RAISE EXCEPTION 'Exact upstream output required'; END IF;
+  IF r.upstream_outcome IS NOT NULL AND r.upstream_outcome IS DISTINCT FROM p_plan THEN RAISE EXCEPTION 'Upstream output immutable'; END IF;
+  UPDATE public.inventory_intake_submissions SET upstream_outcome=p_plan WHERE source_page_id=p_source_page_id;
+ ELSIF p_operation='prepare_source_write' THEN
+  IF r.phase<>'awaiting_source_ack' OR r.upstream_outcome IS NULL OR
+   p_plan->>'payload_hash' IS DISTINCT FROM r.payload_hash OR p_plan->>'output_hash' IS DISTINCT FROM r.upstream_outcome->>'output_hash' OR
+   p_plan->>'listing_id' IS DISTINCT FROM r.listing_id OR p_plan->>'destination_page_id' IS DISTINCT FROM r.destination_page_id::text OR
+   (p_plan->>'destination_revision')::bigint IS DISTINCT FROM (r.plan->>'revision')::bigint+1 OR
+   p_plan->>'status' IS DISTINCT FROM (CASE WHEN r.upstream_outcome->'processed'->>'status'='Needs Review' OR jsonb_array_length(r.plan->'conflicts')>0 THEN 'Needs Review' ELSE 'Processed' END) OR
+   p_plan->'properties'->'Intake Status'->'status'->>'name' IS DISTINCT FROM p_plan->>'status' OR
+   p_plan->'properties'->'Processed Property' IS DISTINCT FROM jsonb_build_object('relation',jsonb_build_array(jsonb_build_object('id',r.destination_page_id::text))) OR
+   p_plan->>'source_completion_allowed' IS DISTINCT FROM 'false' OR p_plan->>'effect_required' IS DISTINCT FROM 'true' OR
+   coalesce(p_plan->>'source_schema_hash','') !~ '^[a-f0-9]{64}$' OR coalesce(p_plan->>'body_hash','') !~ '^[a-f0-9]{64}$' OR
+   p_plan->'properties'->'Listing ID' IS DISTINCT FROM jsonb_build_object('rich_text',jsonb_build_array(jsonb_build_object('type','text','text',jsonb_build_object('content',r.listing_id)))) OR
+   (SELECT array_agg(key ORDER BY key) FROM jsonb_each(p_plan->'properties')) IS DISTINCT FROM ARRAY['Intake Status','Listing ID','Processed At','Processed Property','Processing Notes'] THEN RAISE EXCEPTION 'Sealed exact source write preparation required'; END IF;
+  SELECT * INTO w FROM public.inventory_processing_revisions WHERE page_id=r.destination_page_id FOR UPDATE;
+  SELECT * INTO m FROM public.crm_inventory_snapshot WHERE listing_id=r.listing_id FOR UPDATE;
+  IF w.revision IS DISTINCT FROM (r.plan->>'revision')::bigint+1 OR w.pending_patch IS NOT NULL OR w.active_effect IS NOT NULL OR
+   w.listing_id IS DISTINCT FROM r.listing_id OR w.last_acknowledged_values-'_edited_at' IS DISTINCT FROM ((r.plan->'before')||(r.plan->'patch'))-'_edited_at' OR
+   m.inventory_revision IS DISTINCT FROM (r.plan->>'revision')::bigint OR m.deleted_at IS NOT NULL OR m.source_record->>'notion_page_id' IS DISTINCT FROM r.destination_page_id::text OR
+   NOT(m.source_record @> (w.last_acknowledged_values-'_edited_at'-'_archived')) THEN RAISE EXCEPTION 'Destination changed before source write'; END IF;
+  IF r.source_write_plan IS NOT NULL AND r.source_write_plan IS DISTINCT FROM p_plan THEN RAISE EXCEPTION 'Source write plan immutable'; END IF;
+  UPDATE public.inventory_intake_submissions SET source_write_plan=p_plan WHERE source_page_id=p_source_page_id;
+ ELSIF p_operation='begin_source_effect' THEN
+  IF r.source_write_plan IS NULL OR r.source_effect IS NOT NULL OR
+   p_plan->'source_before' IS DISTINCT FROM r.source_write_plan->'source_before' OR
+   p_plan->'source_schema' IS DISTINCT FROM r.source_write_plan->'source_schema' THEN RAISE EXCEPTION 'Exact source snapshot/schema and no unresolved effect required'; END IF;
+  SELECT * INTO w FROM public.inventory_processing_revisions WHERE page_id=r.destination_page_id FOR UPDATE;
+  SELECT * INTO m FROM public.crm_inventory_snapshot WHERE listing_id=r.listing_id FOR UPDATE;
+  IF w.revision IS DISTINCT FROM (r.plan->>'revision')::bigint+1 OR w.pending_patch IS NOT NULL OR w.active_effect IS NOT NULL OR
+   w.listing_id IS DISTINCT FROM r.listing_id OR w.last_acknowledged_values-'_edited_at' IS DISTINCT FROM ((r.plan->'before')||(r.plan->'patch'))-'_edited_at' OR
+   m.inventory_revision IS DISTINCT FROM (r.plan->>'revision')::bigint OR m.deleted_at IS NOT NULL OR m.source_record->>'notion_page_id' IS DISTINCT FROM r.destination_page_id::text OR
+   NOT(m.source_record @> (w.last_acknowledged_values-'_edited_at'-'_archived')) THEN RAISE EXCEPTION 'Destination changed before source effect'; END IF;
+  token=gen_random_uuid();
+  UPDATE public.inventory_intake_submissions SET source_effect=jsonb_build_object('effect_id',token,'lease',p_lease,'intent',r.source_write_plan,'status','begun') WHERE source_page_id=p_source_page_id;
+  RETURN jsonb_build_object('effect_id',token,'source_completion_allowed',false);
+ ELSIF p_operation IN ('bind_source_dispatch','source_receipt','source_finish_prepare') THEN
+  IF r.source_effect IS NULL OR p_plan->>'effect_id' IS DISTINCT FROM r.source_effect->>'effect_id' OR
+    p_plan->>'effect_id' IS NULL OR r.source_effect->>'lease' IS DISTINCT FROM p_lease::text THEN RAISE EXCEPTION 'Source effect nonce/lease mismatch'; END IF;
+  IF p_operation='bind_source_dispatch' THEN
+   IF r.source_effect ? 'dispatch' OR p_plan->>'method' IS DISTINCT FROM 'PATCH' OR p_plan->>'page_id' IS DISTINCT FROM p_source_page_id::text OR
+    p_plan->>'body_hash' IS DISTINCT FROM r.source_write_plan->>'body_hash' THEN RAISE EXCEPTION 'Exact source dispatch required'; END IF;
+   UPDATE public.inventory_intake_submissions SET source_effect=source_effect||jsonb_build_object('dispatch',p_plan) WHERE source_page_id=p_source_page_id;
+  ELSIF p_operation='source_receipt' THEN
+   IF r.source_effect->'dispatch' IS NULL OR r.source_effect ? 'receipt' OR jsonb_typeof(p_plan->'receipt') IS DISTINCT FROM 'object' OR
+    coalesce(p_plan->'receipt'->>'status','') !~ '^[0-9]{3}$' OR
+    p_plan->'receipt'->'dispatch' IS DISTINCT FROM r.source_effect->'dispatch' OR
+    coalesce(p_plan->'receipt'->>'request_id','')='' OR
+    NOT coalesce((((p_plan->'receipt'->>'status')::integer BETWEEN 200 AND 299) OR
+        (p_plan->'receipt'->>'status'='503' AND p_plan->'receipt'->>'classification'='documented_saved_no_repeat' AND
+         p_plan->'receipt'->>'code'='service_unavailable' AND
+         p_plan->'receipt'->'additional_data'->'retry_guidance'='["Read the object again to confirm the saved change.","Do not repeat the write."]'::jsonb)),false) THEN RAISE EXCEPTION 'Exact terminal source receipt required'; END IF;
+   UPDATE public.inventory_intake_submissions SET source_effect=source_effect||jsonb_build_object('receipt',p_plan->'receipt') WHERE source_page_id=p_source_page_id;
+  ELSE
+   IF r.source_effect->'receipt' IS NULL OR p_plan->'readback' IS DISTINCT FROM r.source_write_plan->'expected_after' THEN RAISE EXCEPTION 'Exact source readback and terminal receipt required'; END IF;
+   SELECT * INTO w FROM public.inventory_processing_revisions WHERE page_id=r.destination_page_id FOR UPDATE;
+   SELECT * INTO m FROM public.crm_inventory_snapshot WHERE listing_id=r.listing_id FOR UPDATE;
+   IF w.revision IS DISTINCT FROM (r.plan->>'revision')::bigint+1 OR w.pending_patch IS NOT NULL OR w.active_effect IS NOT NULL OR
+    w.last_acknowledged_values-'_edited_at' IS DISTINCT FROM ((r.plan->'before')||(r.plan->'patch'))-'_edited_at' OR
+    m.inventory_revision IS DISTINCT FROM (r.plan->>'revision')::bigint OR m.deleted_at IS NOT NULL OR
+    m.source_record->>'notion_page_id' IS DISTINCT FROM r.destination_page_id::text OR
+    NOT(m.source_record @> (w.last_acknowledged_values-'_edited_at'-'_archived')) THEN RAISE EXCEPTION 'Destination changed before source finish preparation'; END IF;
+   UPDATE public.inventory_intake_submissions SET source_effect=source_effect||jsonb_build_object('readback',p_plan->'readback','status','finish_prepared') WHERE source_page_id=p_source_page_id;
+  END IF;
  ELSIF p_operation='prepare_source_ack' THEN
   IF r.phase<>'awaiting_source_ack' OR jsonb_typeof(p_plan) IS DISTINCT FROM 'object' OR
    p_plan->>'payload_hash' IS DISTINCT FROM r.payload_hash OR p_plan->>'listing_id' IS DISTINCT FROM r.listing_id OR
