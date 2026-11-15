@@ -1,5 +1,10 @@
 ## Current verified Notion listing-state control (2026-11-14)
 
+## Current state — 2026-11-15: Google Sheet inventory sync removed
+
+The legacy Google Sheet inventory path is fully retired: the CRM `/api/internal/inventory/sync` endpoint, the Sheet-to-Supabase mirror (`src/inventory-sync.mjs`, `src/housing-sheet-adapter.mjs`, `scripts/sync-housing-inventory.mjs`), the WhAPI `NEW` inventory listener (`webhook_handler.py`), the Slack `/efps` inventory commands and events handlers, the scheduled Sheet batch worker (`handler.py`), the Sheet batch/phase1 runtime modules, and the `shared/google_sheets` Sheets client are removed. `shared/google_sheets/schema.py` is RETAINED as the canonical field/vocabulary rulebook consumed by the Notion intake; Notion Housing Listings is the source of truth and Supabase remains the CRM projection. The Google service-account secret now serves only optional Vertex/Gemini enrichment. Dated sections below remain historical evidence.
+
+
 The canonical Notion Housing Listings data source now defines listing_state as a SELECT with exactly three options: Available (green), Rented Out (red), and On Hold (yellow). Existing values were preserved: 89 Available and 17 Rented Out at verification; no existing property rows were bulk-edited. This is a Notion schema-only change; no Google Sheets sync, new data flow, Supabase schema change, webhook change, or dashboard code change was introduced. Existing Notion page-property webhook → Lambda → notion-inventory-state → crm_inventory_snapshot → CRM dashboard path remains unchanged.
 ## Current verified production state — Maps fallback release (2026-11-15)
 

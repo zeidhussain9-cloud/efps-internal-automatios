@@ -1,4 +1,11 @@
 # EFPS SAM Deployment Contract
+## Pending deployment — 2026-11-15 sheet-sync removal + Ola locality normalization (branch feat/remove-legacy-sheet-sync + merged PR #102)
+
+- template.yaml drops the retired Sheet-backed functions: EFPSWebhook (/whapi/webhook, the legacy NEW listener), EFPSCommands (/slack/commands), EFPSEvents (/slack/events), and the EFPSBatch scheduled Sheet worker. Remaining: EFPSNotionIntake (/notion/intake), EFPSInteractive (/slack/interactive, leads), EFPSLeadWorker.
+- GoogleSheetsSecretArn remains as a deploy parameter; the service-account JSON now serves only optional Vertex/Gemini enrichment.
+- OlaMapsSecretArn (new, optional) supplies OLA_MAPS_API_KEY to EFPSNotionIntake for the locality-normalization fallback; deploys unchanged without it.
+- On next authorized deploy: create the Ola API key secret in Secrets Manager, deploy with all existing ARNs + OlaMapsSecretArn, then confirm the legacy routes 404 and the intake processes a raw submission end to end.
+
 
 ## Current verified release — 2026-11-15 (Maps fallback correction)
 

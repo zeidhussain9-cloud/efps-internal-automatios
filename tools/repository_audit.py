@@ -12,7 +12,6 @@ from shared.google_sheets import schema
 STALE_TERMS=("declared " + "Standalone fallback","declared `" + "Standalone` fallback","fallback is " + "Standalone","fallback is `" + "Standalone`","fallback is **" + "Standalone**")
 RESERVED_ALLOWED_FILES={
     "shared/google_sheets/schema.py",
-    "shared/google_sheets/client.py",
     "modules/efps-inventory-mgmnt/src/validate.py",
     "tools/repository_audit.py",
 }
@@ -51,14 +50,11 @@ def audit()->int:
     print("\nFOLDER LINE TOTALS");print(f"FOLDER . | lines={total_text_lines}")
     for folder in sorted(folder_lines):print(f"FOLDER {folder} | lines={folder_lines[folder]}")
     print("\nCONTRACT INVARIANTS")
-    schema_text=(ROOT/"shared/google_sheets/schema.py").read_text(encoding="utf-8");gate_text=(ROOT/"tools/production_projection_gate.py").read_text(encoding="utf-8");inventory_readme=(ROOT/"modules/efps-inventory-mgmnt/README.md").read_text(encoding="utf-8")
+    schema_text=(ROOT/"shared/google_sheets/schema.py").read_text(encoding="utf-8");inventory_readme=(ROOT/"modules/efps-inventory-mgmnt/README.md").read_text(encoding="utf-8")
     reserved_hits=reserved_operation_hits(files)
     checks={
         "exact live bachelor tuple":schema.BY_NAME["bachelor_preference"].allowed_values==("Female Only ","Male Only","Open for both"),
         "trimmed bachelor value excluded":"Female Only" not in schema.BY_NAME["bachelor_preference"].allowed_values,
-        "gate derives bachelor vocabulary from schema":'bachelor_allowed = set(schema.BY_NAME["bachelor_preference"].allowed_values)' in gate_text,
-        "gate compares bachelor exactly":'if bachelor not in bachelor_allowed:' in gate_text,
-        "gate compares tenant exactly":'if tenant not in tenant_allowed:' in gate_text,
         "landmark declares locality fallback dependency":re.search(r'\("landmark",PANEL,STAGE_2,\(\),\("locality",\)',schema_text) is not None,
         "inventory README has no stale Standalone fallback":all(term not in inventory_readme for term in STALE_TERMS),
         "reserved columns are exact":schema.RESERVED_COLUMNS==("source_group","inventory_locked"),

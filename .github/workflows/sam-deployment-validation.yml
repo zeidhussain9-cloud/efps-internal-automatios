@@ -7,11 +7,7 @@ on:
       - "template.yaml"
       - "notion-intake-template.yaml"
       - "requirements.txt"
-      - "webhook_handler.py"
-      - "commands_handler.py"
-      - "events_handler.py"
       - "interactive_handler.py"
-      - "handler.py"
       - "leads_worker.py"
       - "shared/**"
       - "modules/efpd-lead-mgmnt/**"
@@ -23,11 +19,7 @@ on:
       - "template.yaml"
       - "notion-intake-template.yaml"
       - "requirements.txt"
-      - "webhook_handler.py"
-      - "commands_handler.py"
-      - "events_handler.py"
       - "interactive_handler.py"
-      - "handler.py"
       - "leads_worker.py"
       - "shared/**"
       - "modules/efpd-lead-mgmnt/**"
@@ -66,7 +58,7 @@ jobs:
         run: sam validate --template-file .aws-sam/notion-build/template.yaml --lint
 
       - name: Compile Python runtime modules
-        run: python -m compileall -q shared modules/efpd-lead-mgmnt/src modules/efps-inventory-mgmnt/src tools webhook_handler.py commands_handler.py events_handler.py interactive_handler.py handler.py leads_worker.py
+        run: python -m compileall -q shared modules/efpd-lead-mgmnt/src modules/efps-inventory-mgmnt/src tools interactive_handler.py leads_worker.py
 
       - name: Verify Lambda dependency packaging
         run: |
@@ -75,15 +67,11 @@ jobs:
 
           build_root = Path('.aws-sam/build')
           functions = [
-              'EFPSWebhook',
               'EFPSNotionIntake',
-              'EFPSCommands',
-              'EFPSEvents',
               'EFPSInteractive',
-              'EFPSBatch',
               'EFPSLeadWorker',
           ]
-          required = ['boto3', 'cloudinary', 'cryptography', 'gspread', 'requests']
+          required = ['boto3', 'cloudinary', 'cryptography', 'requests']
 
           for function in functions:
               artifact = build_root / function

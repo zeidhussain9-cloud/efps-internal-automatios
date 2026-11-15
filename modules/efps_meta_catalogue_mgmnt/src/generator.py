@@ -4,9 +4,10 @@ import re
 import time
 from datetime import datetime, date
 from typing import Any, Mapping
-from shared.google_sheets.client import GoogleSheetsClient
-from shared.google_sheets import schema
 from shared.whatsapp_whapi.client import WhApiClient
+
+# Google Sheets persistence is retired (Notion is canonical). Callers record
+# publish results themselves; pass recorder(product_id) to publish_product.
 
 # Minimum seconds to wait between product creation and collection assignment.
 # WhAPI returns 429 if the assignment call follows the create call too quickly.
@@ -189,11 +190,10 @@ def assign_to_collection(
 
 
 def publish_and_assign(
-    row_number: int,
     row: Mapping[str, Any],
     *,
     whapi: WhApiClient | None = None,
-    sheets: GoogleSheetsClient | None = None,
+    recorder=None,
 ) -> tuple[dict, bool, str]:
     """Create/reconcile a WhatsApp product and assign it to its BHK collection.
 
@@ -202,7 +202,7 @@ def publish_and_assign(
     Returns: (publish_result, assign_ok, assign_message)
     Raises ValueError or RuntimeError on unrecoverable publish failure.
     """
-    result = publish_product(row_number, row, whapi=whapi, sheets=sheets)
+    result = publish_product(row, whapi=whapi, recorder=recorder)
     product_id = result["product_id"]
     bhk = str(row.get("BHK") or "").strip()
 
@@ -317,35 +317,18 @@ def generate_description(row: Mapping[str, Any]) -> tuple[str, str]:
     return title_with_emoji, body
 
 
-def _record_published(
-    sheet: GoogleSheetsClient, row_number: int, product_id: str
-) -> None:
-    sheet.write_range(
-        schema.SHEET_ID,
-        schema.WORKSHEET_NAME,
-        schema.range_for("meta_catalog_id", "meta_catalog_status", row_number),
-        [[product_id, "Posted"]],
-    )
-    sheet.write_range(
-        schema.SHEET_ID,
-        schema.WORKSHEET_NAME,
-        schema.range_for("intake_status", "intake_status", row_number),
-        [["Published"]],
-    )
-    sheet.write_range(
-        schema.SHEET_ID,
-        schema.WORKSHEET_NAME,
-        schema.range_for("error_notes", "error_notes", row_number),
-        [[""]],
-    )
+def _record_published(recorder, product_id: str) -> None:
+    # Sheet write-back is retired. The catalogue rebuild (fix-plan item 15)
+    # will record meta_catalog_id/status in Notion via this callback.
+    if recorder:
+        recorder(product_id)
 
 
 def publish_product(
-    row_number: int,
     row: Mapping[str, Any],
     *,
     whapi: WhApiClient | None = None,
-    sheets: GoogleSheetsClient | None = None,
+    recorder=None,
 ) -> dict:
     """Create or reconcile a WhatsApp Business product for the given property row.
 
@@ -357,13 +340,12 @@ def publish_product(
         raise ValueError("listing_id is missing")
 
     client = whapi or WhApiClient()
-    sheet = sheets or GoogleSheetsClient()
 
     # Idempotency: if the product already exists in WhatsApp, sync and return
     existing = client.find_product_by_retailer_id(listing_id)
     if existing:
         product_id = str(existing.get("id") or "")
-        _record_published(sheet, row_number, product_id)
+        _record_published(recorder, product_id)
         return {
             "status": "already_exists",
             "product_id": product_id,
@@ -397,7 +379,7 @@ def publish_product(
             found = client.find_product_by_retailer_id(listing_id)
             if found:
                 product_id = str(found.get("id") or "")
-                _record_published(sheet, row_number, product_id)
+                _record_published(recorder, product_id)
                 return {
                     "status": "recovered_duplicate",
                     "product_id": product_id,
@@ -433,7 +415,7 @@ def publish_product(
     if not product_id:
         raise RuntimeError(f"WhAPI returned no product ID: {result}")
 
-    _record_published(sheet, row_number, product_id)
+    _record_published(recorder, product_id)
     return {
         "status": "created",
         "product_id": product_id,

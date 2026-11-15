@@ -4,13 +4,10 @@ from src import phase1
 from src.pipeline import initial_row, deterministic
 from src import validate
 from shared.google_sheets import schema
-from shared.google_sheets.client import GoogleSheetsClient, GoogleSheetsCredentials
-
 
 def test_direct_property_type_wins_over_generic_wording():
     out = deterministic("Property Type: Semi Gated\nNote: gated community wording appears later\nRent: 40000")
     assert out["internal_property_type"] == "Semi Gated"
-
 
 def test_explicit_community_label_is_case_and_format_insensitive():
     cases = {
@@ -29,16 +26,13 @@ def test_explicit_community_label_is_case_and_format_insensitive():
         out = deterministic(f"2 BHK\nRent: 40000\n{source}")
         assert out["internal_property_type"] == expected
 
-
 def test_missing_property_type_remains_unresolved():
     out = deterministic("2 BHK\nRent: 40000\nLocation: Harlur")
     assert out["internal_property_type"] == ""
 
-
 def test_unknown_property_type_does_not_fabricate_standalone():
     out = deterministic("2 BHK\nRent: 40000\nCommunity: gated-ish")
     assert out["internal_property_type"] == ""
-
 
 def test_coupled_property_type_parking_amenities_state():
     gated = deterministic("2 BHK\nRent: 40000\nCommunity: Gated Community")
@@ -54,11 +48,9 @@ def test_coupled_property_type_parking_amenities_state():
     assert standalone["open_parking"] == "-"
     assert standalone["society_amenities"] == "-"
 
-
 def test_explicit_parking_counts_are_preserved():
     out = deterministic("2 BHK\nRent: 40000\nCommunity: Gated Community\n2 covered parking")
     assert out["covered_parking"] == "2"
-
 
 def test_landmark_uses_locality_final_fallback_and_never_maps_url():
     fallback = deterministic("2 BHK\nRent: 40000\nCommunity: Gated Community\nLocation: Harlur")
@@ -67,12 +59,10 @@ def test_landmark_uses_locality_final_fallback_and_never_maps_url():
     assert maps_landmark["landmark"] == "Harlur"
     assert maps_landmark["google_maps_url"] == "https://maps.app.goo.gl/example"
 
-
 def test_society_fallback_is_reported_for_later_review():
     result = phase1.run_phase1("2 BHK\nRent: 40000\nCommunity: Gated Community\nLocation: Harlur")
     assert result.row["society_name"] == "Harlur"
     assert "society_name_locality_fallback" in result.report["review_flags"]
-
 
 def test_maps_url_extraction_is_deterministic_and_does_not_resolve_network():
     result = phase1.run_phase1(
@@ -82,13 +72,11 @@ def test_maps_url_extraction_is_deterministic_and_does_not_resolve_network():
     assert result.row["google_maps_url"] == "https://share.google/AbC123"
     assert "google_maps_url" in result.report["trace"]["resolved"]
 
-
 def test_phase1_status_transition_happens_at_boundary():
     row = initial_row("EF-TEST-PHASE1")
     result = phase1.run_phase1("2 BHK\nRent: 40000\nCommunity: Gated Community\nLocation: Harlur", row=row)
     assert result.row["intake_status"] == "Processed"
     assert result.row["status"] == "Pending"
-
 
 def test_phase1_invalid_canonical_type_fails_closed():
     row = initial_row("EF-TEST-PHASE1-INVALID")
@@ -98,7 +86,6 @@ def test_phase1_invalid_canonical_type_fails_closed():
     phase = phase1.run_phase1("2 BHK\nRent: 40000\nLocation: Harlur", row=row)
     assert phase.row["status"] == "Needs Review"
     assert any("internal_property_type" in error for error in phase.issues)
-
 
 def test_open_parking_dash_is_valid_contract_value():
     row = initial_row("EF-TEST-PARKING")
@@ -113,46 +100,6 @@ def test_open_parking_dash_is_valid_contract_value():
     errors = validate.validate(row)
     assert not any("open_parking" in error for error in errors)
 
-
-def test_github_sheets_client_reuses_spreadsheet_and_worksheet():
-    class FakeWorksheet:
-        def get(self, range_name):
-            return [["ok"]]
-
-        def batch_update(self, payload):
-            return payload
-
-    class FakeSpreadsheet:
-        def __init__(self):
-            self.calls = 0
-            self.worksheet_obj = FakeWorksheet()
-
-        def worksheet(self, name):
-            self.calls += 1
-            return self.worksheet_obj
-
-    class FakeClient:
-        def __init__(self, spreadsheet):
-            self.spreadsheet = spreadsheet
-            self.opens = 0
-
-        def open_by_key(self, key):
-            self.opens += 1
-            return self.spreadsheet
-
-    spreadsheet = FakeSpreadsheet()
-    low = FakeClient(spreadsheet)
-    client = GoogleSheetsClient(
-        credentials=GoogleSheetsCredentials({"private_key": "test"}),
-        client=low,
-        max_retries=0,
-    )
-    client.read_range("sheet", "Housing_Listings", "A1:A1")
-    client.write_ranges("sheet", "Housing_Listings", [("A1:A1", [["ok"]])])
-    assert low.opens == 1
-    assert spreadsheet.calls == 1
-
-
 def test_phase1_report_exposes_populated_blank_unresolved_and_trace():
     result = phase1.run_phase1("2 BHK\nRent: 40000\nCommunity: Gated Community\nLocation: Harlur")
     report = result.report
@@ -161,11 +108,9 @@ def test_phase1_report_exposes_populated_blank_unresolved_and_trace():
     assert "source_segments" in report["trace"]
     assert "extracted_candidates" in report["trace"]
 
-
 def test_phase1_output_is_exactly_48_fields():
     result = phase1.run_phase1("2 BHK\nRent: 40000\nCommunity: Gated Community\nLocation: Harlur")
     assert tuple(result.row.keys()) == schema.NAMES
-
 
 def test_verified_maps_resolution_preserves_original_short_url():
     from types import SimpleNamespace
@@ -191,7 +136,6 @@ def test_verified_maps_resolution_preserves_original_short_url():
     assert out["society_name"] == "Verified Society"
     assert canonical_url not in out["google_maps_url"]
 
-
 def test_penthouse_normalizes_to_apartment_and_is_valid():
     result = phase1.run_phase1(
         "Property Type: Standalone\nProperty Subtype: Penthouse\nRent: 40000",
@@ -202,19 +146,16 @@ def test_penthouse_normalizes_to_apartment_and_is_valid():
     assert result.row["status"] == "Pending"
     assert "property_subtype" not in result.report["unresolved_fields"]
 
-
 def test_missing_property_subtype_fails_validation():
     row = initial_row("EF-TEST-SUBTYPE-REQUIRED")
     row.update(status="Pending", intake_status="Processed", monthly_rent="40000", internal_property_type="Standalone")
     errors = validate.validate(row)
     assert "property_subtype required" in errors
 
-
 def test_initial_raw_row_accepts_available_bootstrap_state():
     row = initial_row("EF-TEST-RAW-AVAILABLE", onboarded_on="2026-11-13 10:00 AM")
     assert row["listing_state"] == "Available"
     assert validate.validate_raw(row) == []
-
 
 def test_catalogue_ready_is_a_valid_intake_status():
     row = initial_row("EF-TEST-CATALOGUE-READY")
