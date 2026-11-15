@@ -12,6 +12,13 @@ Parameters:
   MapsSecretArn:
     Type: String
     AllowedPattern: '^arn:[^:]+:secretsmanager:[^:]+:[0-9]{12}:secret:.+$'
+  OlaMapsSecretArn:
+    Type: String
+    Default: ''
+    AllowedPattern: '^$|^arn:[^:]+:secretsmanager:[^:]+:[0-9]{12}:secret:.+$'
+
+Conditions:
+  HasOlaMapsSecret: !Not [!Equals [!Ref OlaMapsSecretArn, '']]
 
 Resources:
   NotionIntakeFailures:
@@ -42,6 +49,7 @@ Resources:
           NOTION_SECRET_ARN: !Ref NotionSecretArn
           CLOUDINARY_SECRET_ARN: !Ref CloudinarySecretArn
           MAPS_SECRET_ARN: !Ref MapsSecretArn
+          OLA_MAPS_API_KEY: !If [HasOlaMapsSecret, !Sub '{{resolve:secretsmanager:${OlaMapsSecretArn}:SecretString}}', !Ref 'AWS::NoValue']
           SUPABASE_URL: 'https://qttcutwzehtskfcwxkwj.supabase.co'
           SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF0dGN1dHd6ZWh0c2tmY3d4a3dqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA0MzcxNzksImV4cCI6MjEwNjAxMzE3OX0.C1sk2ZQqLjfvZUlsscrWOEWnqGYOFl6-xEnLmLsojic'
           PYTHONPATH: '.'
