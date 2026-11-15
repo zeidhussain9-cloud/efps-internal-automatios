@@ -30,7 +30,7 @@ Reverse geocoding uses the actual Ola `results` payload key, distinct from forwa
 
 ## Validation before cutover
 
-- 219 Python inventory/schema/Maps tests passed.
+- 220 Python inventory/schema/Maps tests passed.
 - Both SAM templates pass `sam validate --lint`.
 - Node 24.21.0: root Vite build and 11 targeted inventory/Notion tests passed.
 - Website formatter targeted TypeScript compilation passed in the prototype checkpoint; no subsequent TypeScript behavior change.
@@ -38,3 +38,15 @@ Reverse geocoding uses the actual Ola `results` payload key, distinct from forwa
 - Restricted redirects, malformed coordinates, Google source-link preservation, generic-candidate rejection and differing forward/reverse payloads have regression tests.
 
 Cutover and post-deploy evidence will be appended after actual execution. This pre-release section does not certify deployment. AI prototype/model benchmark remains separate and not deployed.
+
+## Verified live cutover - 2026-11-15 14:12 IST
+
+Both `efps-notion-property-intake` and `efps-whapi-panel-v2` are UPDATE_COMPLETE. All three Sydney Lambdas are Active / LastUpdateStatus Successful, with Ola configured and no GOOGLE_MAPS_API_KEY, GOOGLE_PLACES_API_KEY or MAPS_SECRET_ARN binding. Both stack parameter sets omit MapsSecretArn. Render CRM has no Google Maps key binding. Live/development public website source branches contain no paid Google Maps/Places requests.
+
+Downloaded deployed archives were scanned again: zero paid Google Maps/Places endpoint strings in executable Python/TypeScript/JavaScript. Deployed code hashes:
+- Notion intake: `Ly/uRWlrIyQNyMzudob7dR1ZANloyI1rhlxEk0/FYoY=`
+- Interactive and LeadWorker: `yvlAc46NQMAwwbNyuELuVg5rdTBdtJffnCXSP77s7xg=`
+
+Read-only replay using the downloaded production intake code plus live Ola against the current SJR raw text passed: Bellandur/SJR Pavillion/85000/original short link retained; Ola generic candidate rejected; pin not verified; caption labels original link not verified. This was not an actual Lambda invocation/end-to-end persisted intake test and did not modify the SJR listing or photos. Existing listing remains Pending with the same 10 URLs. No sends, catalogue actions, AI extraction activation or CRM scheduler changes.
+
+PR #106 CI test/verify checks passed at source commit 64ee3ec. Node 24 build/targeted checks, SAM lint and post-release source regression passed. Final documentation-only commit adds this evidence. AI reader was declined at 14:11 IST, never model-tested/paid, and remains parked only on a local prototype branch. No AI prototype code in this Maps release.

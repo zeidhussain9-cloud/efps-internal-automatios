@@ -1,4 +1,4 @@
-> Maps-only release in progress, 2026-11-15: source implementation uses Ola, not paid Google Maps/Places; source/client Google links remain. Runtime cutover evidence and provider limits: [migration record](../modules/efps-inventory-mgmnt/OLA_MAPS_MIGRATION.md). Older deployment snapshots below remain dated history. AI extraction is not part of this release.
+> Maps-only cutover verified 2026-11-15 14:12 IST: both Sydney stacks UPDATE_COMPLETE; all three live Lambda archives and bindings checked, no paid Google Maps/Places transport remains in the checked pipeline; source/client Google links remain. Scope, verification limits and provider caveats: [migration record](../modules/efps-inventory-mgmnt/OLA_MAPS_MIGRATION.md). Older deployment snapshots below remain dated history. AI extraction is not part of this release.
 
 # Deterministic Needs Review Contract
 

@@ -92,3 +92,13 @@ def test_reverse_payload_uses_results_not_forward_geocoding_results():
     parsed = OlaMapsClient._parse({'results': [{'formatted_address':'Bellandur', 'address_components': [{'long_name':'Bellandur', 'types':['sublocality']}]}]})
     assert parsed.confidence == 'OK'
     assert parsed.candidates == ('Bellandur',)
+
+
+def test_executable_sources_have_no_paid_google_endpoints():
+    root = Path(__file__).resolve().parents[3]
+    forbidden = ['maps.' + 'googleapis.com', 'places.' + 'googleapis.com']
+    hits = []
+    for file in [*root.glob('modules/**/*.py'), *root.glob('modules/**/*.ts'), *root.glob('shared/**/*.py')]:
+        if file.name.startswith('test_') or 'node_modules' in file.parts: continue
+        if any(word in file.read_text() for word in forbidden): hits.append(str(file.relative_to(root)))
+    assert not hits
