@@ -11,3 +11,9 @@ Approved scope: route current Notion intake, Housing edits and CRM mirror to the
 - Current publication/removal automation is not introduced. Existing channels and catalogue IDs do not prove a product is currently present.
 
 Implementation: notion_lifecycle.py, notion_intake.py, notion-inventory-state Edge projection, inventory UI stage label and source-audit readers. Old Housing properties remain untouched. Rollout evidence and limits must be recorded separately; source changes alone do not establish deployment success.
+
+## Deployment verification, 16 November 2026
+
+Production intake artifact downloaded and matched to the new adapter; Lambda Active/Successful. Mirror Edge v13 active with JWT checks preserved. Reconciliation completed104workers without failure. All104active mirror rows match canonical Notion availability/stage/channel inputs:71Posted,21Ready To Post,12Removed. All104Notion rows retain identical old4and new3property values across deployment. No historical mirror intake_status or old source status evidence was removed. CRM routing build is live and Pipeline status filtering returned21Ready To Post listings in the live UI.
+
+Validation:202Python tests,138Node/CRM tests and the browser journey passed. The downloaded deployed artifact was also exercised with isolated Notion/store adapters and the real parser for successful/review raw intake; outgoing payloads validated against captured live schema. No synthetic production listing was added and no real raw submission was edited solely for testing. Fresh operator-submitted raw intake remains the production acceptance check for a new create; existing Housing-to-mirror routing is verified end to end.
