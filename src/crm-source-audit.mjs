@@ -106,15 +106,15 @@ export async function housingNotionSnapshot(){
     const allRows=result.rows.map(({listing_id,listing_state,source_record={}})=>({
       listingId:String(listing_id||''),catalogTitle:String(source_record.catalog_title||source_record.Property||''),
       cloudinaryImages:String(source_record.cloudinary_image_urls||'').split(',').map(x=>x.trim()).filter(Boolean),
-      metaCatalogId:String(source_record.meta_catalog_id||''),metaCatalogStatus:String(source_record.meta_catalog_status||''),
+      metaCatalogId:String(source_record.meta_catalog_id||''),pipelineStatus:String(source_record['Pipeline Status']||''),liveAt:Array.isArray(source_record['live at'])?source_record['live at']:[],
       postedUrl:String(source_record.posted_url||''),bhk:String(source_record.BHK||''),listingState:String(listing_state||'')
     }));
     const availableRows=allRows.filter(row=>row.listingState==='Available');
     return {sourceKind:'housing_notion',rowCount:allRows.length,columnCount:48,
-      statusCounts:countField(result.rows.map(row=>[row.source_record?.status||''] ),0),
-      intakeStatusCounts:countField(result.rows.map(row=>[row.source_record?.intake_status||''] ),0),
+      statusCounts:countField(result.rows.map(row=>[row.source_record?.['Pipeline Status']||''] ),0),
+      intakeStatusCounts:{},
       listingStateCounts:countField(result.rows.map(row=>[row.listing_state||''] ),0),
-      metaCatalogStatusCounts:countField(result.rows.map(row=>[row.source_record?.meta_catalog_status||''] ),0),
+      metaCatalogStatusCounts:countField(result.rows.map(row=>[(row.source_record?.['live at']||[]).includes('Meta Catalogue')?'Meta Catalogue':'(not listed)'] ),0),
       metaCatalogIdCount:allRows.filter(row=>row.metaCatalogId).length,availableCatalogCount:availableRows.length,
       allRows,availableRows,readOnly:true};
   } finally {client.release();await pool.end();}

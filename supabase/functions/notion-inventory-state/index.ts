@@ -1,6 +1,6 @@
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts'
 import { createClient } from 'npm:@supabase/supabase-js@2.117.2'
-import { missingActivePageRows, responseForOperation } from './response-contract.mjs'
+import { canonicalInventoryState, missingActivePageRows, responseForOperation } from './response-contract.mjs'
 
 const EXPECTED_INTERNAL_KEY_SHA256 = 'a64a3cb25769eff7c88456645d5196cf5e4fa33fc1c9b80ac309f4a2d605c4c9'
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!
@@ -172,6 +172,15 @@ Deno.serve(async (req) => {
       const n = Number(value)
       return Number.isFinite(n) ? n : null
     }
+    // Retain existing source evidence and unused mirror columns during cutover.
+    const prior = await supabase.from('crm_inventory_snapshot').select('source_record').eq('listing_id', listingId).maybeSingle()
+    if (prior.error) return Response.json({ error: 'Inventory preservation read failed' }, { status: 500 })
+    const sourceRecord = { ...(prior.data?.source_record ?? {}), ...record }
+    const lifecycle = canonicalInventoryState(record)
+    if (!Object.hasOwn(record, 'Availability') || !Object.hasOwn(record, 'Pipeline Status') || !Array.isArray(record['live at'])) {
+      return Response.json({ error: 'Canonical Housing snapshot required; retry after intake routing update' }, { status: 503 })
+    }
+    record['live at'] = lifecycle.channels
     const urls = String(record.cloudinary_image_urls ?? '').split(',').map((x) => x.trim()).filter(Boolean)
     const result = await supabase.from('crm_inventory_snapshot').upsert({
       listing_id: listingId,
@@ -182,14 +191,13 @@ Deno.serve(async (req) => {
       bhk: String(record.BHK ?? ''),
       monthly_rent: numeric(record.monthly_rent),
       furnishing: String(record.furnish_type ?? ''),
-      listing_state: String(record.listing_state ?? 'Unknown'),
-      business_status: String(record.status ?? '').trim() || 'Not recorded',
-      intake_status: String(record.intake_status ?? ''),
+      listing_state: lifecycle.listing_state,
+      business_status: lifecycle.business_status,
       pet_friendly: String(record.pet_friendly ?? ''),
       cloudinary_image_urls: urls,
       source_snapshot_at: new Date().toISOString(),
       last_synced_at: new Date().toISOString(),
-      source_record: record,
+      source_record: sourceRecord,
       source_hash: sourceHash,
       deleted_at: body.deleted === true ? new Date().toISOString() : null,
     }, { onConflict: 'listing_id' })

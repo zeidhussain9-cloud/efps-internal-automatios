@@ -34,3 +34,10 @@ test('Notion reconciliation identifies only missing active page projections', ()
   ]
   assert.deepEqual(missingActivePageRows(['PAGE-A', 'page-c'], rows).map((row) => row.listing_id), ['EF-2611-BBBB', 'EF-2611-DDDD'])
 })
+
+test('canonical routing ignores preserved old status columns, without inferring channels', async () => {
+  const { canonicalInventoryState } = await import('../supabase/functions/notion-inventory-state/response-contract.mjs')
+  assert.deepEqual(canonicalInventoryState({Availability:'Available','Pipeline Status':'Ready To Post','live at':[],listing_state:'Rented Out',status:'Pending',intake_status:'Published',meta_catalog_status:'Posted'}),{listing_state:'Available',business_status:'Ready To Post',channels:[]})
+  assert.equal(canonicalInventoryState({listing_state:'Available'}).listing_state,'Unknown')
+  assert.deepEqual(canonicalInventoryState({'live at':['Meta Catalogue','Housing.com']}).channels,['Meta Catalogue','Housing.com'])
+})

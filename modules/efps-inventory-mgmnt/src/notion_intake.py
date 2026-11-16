@@ -20,10 +20,10 @@ from shared.google_sheets import schema
 from shared.ola_maps import OlaMapsClient
 
 try:
-    from . import pipeline
+    from . import pipeline, notion_lifecycle
     from .location_match import normalize_locality
 except ImportError:
-    import pipeline
+    import pipeline, notion_lifecycle
     from location_match import normalize_locality
 
 NOTION_VERSION = "2022-06-28"
@@ -124,9 +124,17 @@ class NotionClient:
         # The serializer uses the actual property type, so a Select conversion cannot
         # silently be sent as rich_text (or vice versa).
         schema = getattr(self, "_listing_schema", None) or self.validate_listing_schema()
+        existing = self.find_listing(str(row["listing_id"]))
+        row = dict(row)
+        if existing:
+            latest = listing_snapshot(existing)
+            # Re-read at the write boundary, not only before slow media processing.
+            for key in ("Availability", "live at", "meta_catalog_id", "posted_url", "posted_at", "error_notes"):
+                row[key] = latest.get(key, [] if key == "live at" else "")
+            if row.get("Pipeline Status") != "Needs Review" and latest.get("Pipeline Status") in {"Posted", "Removed"}:
+                row["Pipeline Status"] = latest["Pipeline Status"]
         properties = listing_notion_properties(row, schema=schema)
         validate_listing_properties(schema, properties)
-        existing = self.find_listing(str(row["listing_id"]))
         if existing:
             self.update_page(existing["id"], properties)
             return existing["id"]
@@ -268,7 +276,11 @@ def listing_snapshot(page: dict) -> dict:
     """Project one Housing Listings page into the existing dashboard snapshot contract."""
     properties = page.get("properties") or {}
     # The last two schema slots are reserved and must not be read from Notion.
-    row = {name: _notion_value(properties.get(name) or {}) for name in schema.NAMES[:-2]}
+    row = {name: _notion_value(properties.get(name) or {}) for name in schema.NAMES[:-2]
+           if name not in notion_lifecycle.LEGACY_STATUS_FIELDS}
+    for name in notion_lifecycle.CANONICAL_FIELDS:
+        row[name] = _notion_value(properties.get(name) or {})
+    row["live at"] = [str(x.get("name") or "") for x in (properties.get("live at", {}).get("multi_select") or [])]
     for name in ("Property", "WhatsApp Group", "whatsapp_post", "WhatsApp Destination"):
         row[name] = _notion_value(properties.get(name) or {})
     row["notion_page_id"] = str(page.get("id") or "")
@@ -373,7 +385,7 @@ TEXT_FIELDS = {
     "posted_at", "preferred_tenant_type", "property_highlights", "property_subtype",
     "raw_message_text", "society_amenities", "society_name", "status", "transaction_type",
     "whatsapp_post",
-}
+} - notion_lifecycle.LEGACY_STATUS_FIELDS
 NUMBER_FIELDS = {
     "age_of_property_years", "balconies", "bathrooms", "built_up_area", "carpet_area",
     "covered_parking", "monthly_rent", "pincode", "security_deposit", "total_floors",
@@ -389,7 +401,9 @@ def listing_property_types() -> dict[str, str]:
         **{field: "url" for field in URL_FIELDS},
         **{field: "checkbox" for field in ("pet_friendly", "servant_room", "maintenance_included")},
         "locality": "select",
-        "listing_state": "select",
+        "Availability": "select",
+        "Pipeline Status": "select",
+        "live at": "multi_select",
         "WhatsApp Group": "select",
         "WhatsApp Destination": "url",
     }
@@ -433,7 +447,8 @@ def validate_listing_schema(schema: dict) -> None:
         if actual not in {"rich_text", "select", "status"}:
             errors.append(f"{name}: expected a supported text-like property (rich_text, select, or status), found {actual}")
     for name, values in {
-        "listing_state": {"Available", "Rented Out", "On Hold"},
+        "Availability": set(notion_lifecycle.AVAILABILITY),
+        "Pipeline Status": set(notion_lifecycle.PIPELINE),
         "WhatsApp Group": {
             "1 RK / 1–1.5 BHK", "2 / 2.5 BHK", "3 / 3.5 BHK",
             "4 / 4.5 BHK", "5+ BHK",
@@ -444,6 +459,9 @@ def validate_listing_schema(schema: dict) -> None:
         missing = sorted(values - options)
         if missing:
             errors.append(f"{name}: missing select options {', '.join(missing)}")
+    channel_options = {str(x.get("name") or "") for x in (schema.get("live at", {}).get("multi_select", {}).get("options") or [])}
+    if not set(notion_lifecycle.CHANNELS).issubset(channel_options):
+        errors.append("live at: missing canonical channel options")
     if errors:
         raise IntakeError("Housing Listings schema validation failed: " + "; ".join(errors))
 
@@ -468,9 +486,14 @@ def listing_notion_properties(row: dict, *, schema: dict | None = None) -> dict:
     for field in TEXT_FIELDS:
         property_type = str(((schema or {}).get(field) or {}).get("type") or fallback_types[field])
         properties[field] = _serialize_text_field(row.get(field, ""), property_type, field)
-    listing_state = str(row.get("listing_state") or "").strip()
-    if listing_state:
-        properties["listing_state"] = {"select": {"name": listing_state}}
+    for field in ("Availability", "Pipeline Status"):
+        if field in row:
+            properties[field] = {"select": {"name": row[field]}} if row[field] else {"select": None}
+    if "live at" in row:
+        channels = row["live at"]
+        if not isinstance(channels, list) or any(x not in notion_lifecycle.CHANNELS for x in channels):
+            raise IntakeError("Invalid live at channel list")
+        properties["live at"] = {"multi_select": [{"name": x} for x in channels]}
     for field in NUMBER_FIELDS:
         value = _number(row.get(field))
         if value is not None:
@@ -742,10 +765,17 @@ def process_page(
         notion.update_page(page_id, {"Intake Status": {"status": {"name": "Processing"}}, "Listing ID": _rich(listing_id)})
         existing_listing = notion.find_listing(listing_id)
         row = pipeline.initial_row(listing_id, raw_text, str(page.get("created_time") or datetime.now(timezone.utc).isoformat()))
-        if existing_listing:
-            row.update(listing_snapshot(existing_listing))
+        previous = listing_snapshot(existing_listing) if existing_listing else None
+        if previous:
+            # The legacy parser remains a pure 48-field extraction boundary. Do not
+            # feed canonical lifecycle/metadata into it, or legacy status into routing.
+            row.update({k: v for k, v in previous.items() if k in schema.NAMES
+                        and k not in notion_lifecycle.LEGACY_STATUS_FIELDS})
             row["listing_id"] = listing_id
             row["raw_message_text"] = raw_text
+        protected = {k: row.get(k, "") for k in ("meta_catalog_id", "posted_url", "posted_at", "error_notes")}
+        for key in protected:
+            row[key] = ""
 
         urls, photo_issues = _upload_photos(page, listing_id, row, cloudinary)
         if urls:
@@ -792,8 +822,13 @@ def process_page(
             issues.append("WhatsApp caption not generated because a verified locality or Maps verification is missing.")
             processed["status"] = "Needs Review"
         processed["whatsapp_post"] = caption
-        listing_page_id = notion.save_listing(processed)
         final_state = "Needs Review" if processed.get("status") == "Needs Review" else "Processed"
+        lifecycle = notion_lifecycle.finish_processing(processed, previous)
+        processed.update(protected)
+        # No old Housing lifecycle keys enter the persistence payload.
+        processed = {k: v for k, v in processed.items() if k not in notion_lifecycle.LEGACY_STATUS_FIELDS}
+        processed.update(lifecycle)
+        listing_page_id = notion.save_listing(processed)
         note = "; ".join(issues) if issues else "Processed through the canonical EFPS inventory pipeline."
         combined_notes = _append_processing_notes(notion, page_id, note)
         notion.update_page(page_id, {

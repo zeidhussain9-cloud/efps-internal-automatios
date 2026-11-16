@@ -61,34 +61,40 @@ def test_notion_api_error_preserves_bounded_code_and_message():
 
 
 def test_listing_state_is_serialized_as_a_select():
-    props = intake.listing_notion_properties({"listing_id": "EF-TEST-STATE", "listing_state": "Available"})
-    assert props["listing_state"] == {"select": {"name": "Available"}}
+    props = intake.listing_notion_properties({"listing_id": "EF-TEST-STATE", "Availability": "Available"})
+    assert props["Availability"] == {"select": {"name": "Available"}}
 
 
 def test_live_listing_schema_contract_rejects_type_or_option_drift():
     schema = {name: {"type": kind} for name, kind in intake.listing_property_types().items()}
-    schema["listing_state"]["select"] = {"options": [{"name": name} for name in ("Available", "Rented Out", "On Hold")]}
+    schema["Pipeline Status"]["select"] = {"options": [{"name": n} for n in intake.notion_lifecycle.PIPELINE]}
+    schema["live at"]["multi_select"] = {"options": [{"name": n} for n in intake.notion_lifecycle.CHANNELS]}
+    schema["Availability"]["select"] = {"options": [{"name": name} for name in ("Available", "Rented Out", "On Hold")]}
     schema["WhatsApp Group"]["select"] = {"options": [{"name": name} for name in (
         "1 RK / 1–1.5 BHK", "2 / 2.5 BHK", "3 / 3.5 BHK", "4 / 4.5 BHK", "5+ BHK") ]}
     intake.validate_listing_schema(schema)
-    schema["listing_state"]["type"] = "rich_text"
+    schema["Availability"]["type"] = "rich_text"
     import pytest
-    with pytest.raises(intake.IntakeError, match="listing_state: expected select, found rich_text"):
+    with pytest.raises(intake.IntakeError, match="Availability: expected select, found rich_text"):
         intake.validate_listing_schema(schema)
 
 
 def test_outgoing_select_values_must_exist_in_live_schema():
     schema = {name: {"type": kind} for name, kind in intake.listing_property_types().items()}
-    schema["listing_state"]["select"] = {"options": [{"name": name} for name in ("Available", "Rented Out", "On Hold")]}
+    schema["Pipeline Status"]["select"] = {"options": [{"name": n} for n in intake.notion_lifecycle.PIPELINE]}
+    schema["live at"]["multi_select"] = {"options": [{"name": n} for n in intake.notion_lifecycle.CHANNELS]}
+    schema["Availability"]["select"] = {"options": [{"name": name} for name in ("Available", "Rented Out", "On Hold")]}
     schema["WhatsApp Group"]["select"] = {"options": [{"name": name} for name in (
         "1 RK / 1–1.5 BHK", "2 / 2.5 BHK", "3 / 3.5 BHK", "4 / 4.5 BHK", "5+ BHK") ]}
     with __import__("pytest").raises(intake.IntakeError, match="select option.*not defined"):
-        intake.validate_listing_properties(schema, {"listing_state": {"select": {"name": "Unavailable"}}})
+        intake.validate_listing_properties(schema, {"Availability": {"select": {"name": "Unavailable"}}})
 
 def test_locality_serialization_uses_live_select_schema_and_validates_option():
     schema = {name: {"type": kind} for name, kind in intake.listing_property_types().items()}
+    schema["Pipeline Status"]["select"] = {"options": [{"name": n} for n in intake.notion_lifecycle.PIPELINE]}
+    schema["live at"]["multi_select"] = {"options": [{"name": n} for n in intake.notion_lifecycle.CHANNELS]}
     schema["locality"] = {"type": "select", "select": {"options": [{"name": "Kasavanahalli"}]}}
-    schema["listing_state"]["select"] = {"options": [{"name": name} for name in ("Available", "Rented Out", "On Hold")]}
+    schema["Availability"]["select"] = {"options": [{"name": name} for name in ("Available", "Rented Out", "On Hold")]}
     schema["WhatsApp Group"]["select"] = {"options": [{"name": name} for name in (
         "1 RK / 1–1.5 BHK", "2 / 2.5 BHK", "3 / 3.5 BHK", "4 / 4.5 BHK", "5+ BHK") ]}
     intake.validate_listing_schema(schema)
@@ -102,6 +108,8 @@ def test_locality_serialization_uses_live_select_schema_and_validates_option():
 
 def test_all_string_fields_follow_their_live_text_property_type():
     schema = {name: {"type": kind} for name, kind in intake.listing_property_types().items()}
+    schema["Pipeline Status"]["select"] = {"options": [{"name": n} for n in intake.notion_lifecycle.PIPELINE]}
+    schema["live at"]["multi_select"] = {"options": [{"name": n} for n in intake.notion_lifecycle.CHANNELS]}
     schema["locality"] = {"type": "select", "select": {"options": [{"name": "Kasavanahalli"}]}}
     schema["city"] = {"type": "select", "select": {"options": [{"name": "Bengaluru"}]}}
     schema["landmark"] = {"type": "status", "status": {"options": [{"name": "Near Metro"}]}}
@@ -117,6 +125,8 @@ def test_all_string_fields_follow_their_live_text_property_type():
 
 def test_listing_id_keeps_rich_text_contract_for_query_identity():
     schema = {name: {"type": kind} for name, kind in intake.listing_property_types().items()}
+    schema["Pipeline Status"]["select"] = {"options": [{"name": n} for n in intake.notion_lifecycle.PIPELINE]}
+    schema["live at"]["multi_select"] = {"options": [{"name": n} for n in intake.notion_lifecycle.CHANNELS]}
     schema["listing_id"]["type"] = "select"
     import pytest
     with pytest.raises(intake.IntakeError, match="listing_id: expected rich_text, found select"):
@@ -138,8 +148,10 @@ def test_save_listing_fetches_live_schema_before_building_outgoing_payload():
             self.calls.append((method, path, payload))
             if method == "GET" and path == f"databases/{intake.LISTINGS_DATABASE_ID}":
                 schema = {name: {"type": kind} for name, kind in intake.listing_property_types().items()}
+                schema["Pipeline Status"]["select"] = {"options": [{"name": n} for n in intake.notion_lifecycle.PIPELINE]}
+                schema["live at"]["multi_select"] = {"options": [{"name": n} for n in intake.notion_lifecycle.CHANNELS]}
                 schema["locality"] = {"type": "select", "select": {"options": [{"name": "Kasavanahalli"}]}}
-                schema["listing_state"]["select"] = {"options": [{"name": name} for name in ("Available", "Rented Out", "On Hold")]}
+                schema["Availability"]["select"] = {"options": [{"name": name} for name in ("Available", "Rented Out", "On Hold")]}
                 schema["WhatsApp Group"]["select"] = {"options": [{"name": name} for name in (
                     "1 RK / 1–1.5 BHK", "2 / 2.5 BHK", "3 / 3.5 BHK", "4 / 4.5 BHK", "5+ BHK") ]}
                 return {"properties": schema}

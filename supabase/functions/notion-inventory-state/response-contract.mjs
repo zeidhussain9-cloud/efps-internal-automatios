@@ -11,3 +11,17 @@ export function missingActivePageRows(activePageIds, snapshotRows) {
     return !pageId || !active.has(pageId)
   })
 }
+
+
+// Canonical Housing fields only. Missing values stay unknown; never fall back to
+// the preserved old columns, which are no longer lifecycle inputs.
+export function canonicalInventoryState(record) {
+  const availability = String(record.Availability ?? '').trim()
+  const stage = String(record['Pipeline Status'] ?? '').trim()
+  const channels = Array.isArray(record['live at']) ? record['live at'] : []
+  return {
+    listing_state: ['Available', 'On Hold', 'Rented Out'].includes(availability) ? availability : 'Unknown',
+    business_status: ['Needs Review', 'Processing', 'Ready To Post', 'Posted', 'Removed'].includes(stage) ? stage : 'Not recorded',
+    channels: channels.filter(x => ['Meta Catalogue', 'WhatsApp Group', 'Housing.com'].includes(x)),
+  }
+}
