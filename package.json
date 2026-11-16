@@ -15,15 +15,15 @@
     "pretest": "npm run build"
   },
   "dependencies": {
-    "@aws-sdk/client-bedrock-runtime": "^3.1144.0",
-    "@modelcontextprotocol/sdk": "1.32.0",
-    "@supabase/supabase-js": "2.117.2",
-    "@vitejs/plugin-react": "4.3.4",
-    "lucide-react": "0.468.0",
-    "pg": "8.13.1",
-    "react": "18.3.1",
-    "react-dom": "18.3.1",
-    "vite": "6.4.3"
+    "@aws-sdk/client-bedrock-runtime": "^3.1168.0",
+    "@modelcontextprotocol/sdk": "1.32.2",
+    "@supabase/supabase-js": "2.119.0",
+    "@vitejs/plugin-react": "6.3.0",
+    "lucide-react": "1.72.0",
+    "pg": "8.23.1",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "vite": "8.3.8"
   },
   "devDependencies": {
     "playwright": "1.63.0"
