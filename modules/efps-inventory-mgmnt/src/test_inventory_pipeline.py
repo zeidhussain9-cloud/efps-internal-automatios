@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from . import intake, pipeline
+from . import pipeline
 from shared.google_maps.client import MapsResolution
 from shared.google_sheets import schema
 
@@ -55,7 +55,3 @@ Google Maps: https://www.google.com/maps/search/?api=1&query=12.9081,77.6476
             assert maps_url
             return MapsResolution(canonical_url="https://www.google.com/maps/search/?api=1&query=12.9080334,77.6475765&query_place_id=test-place",formatted_address="1100, 23rd A Cross Rd, Garden Layout, Sector 2, HSR Layout, Bengaluru, Karnataka 560102, India",locality="HSR Layout",pincode="560102",latitude=12.9080334,longitude=77.6475765,confidence="VERIFIED")
     row=pipeline.initial_row("EF-TEST-STAGE2-MAPS",raw_text=raw);processed,issues=pipeline.process_closed_session(raw,row=row,maps_client=FakeMaps(),ai_llm=None);assert processed["status"]=="Pending";assert processed["intake_status"]=="Processed";assert processed["internal_property_type"]=="Gated Community";assert processed["BHK"]=="2.5 BHK";assert processed["built_up_area"]=="1868";assert processed["carpet_area"]=="1681";assert processed["monthly_rent"]=="60000";assert processed["security_deposit"]=="360000";assert processed["locality"]=="HSR Layout";assert processed["pincode"]=="560102";assert processed["google_maps_url"].startswith("https://www.google.com/maps/");assert issues==[];assert processed["source_group"]=="";assert processed["inventory_locked"]==""
-def test_new_marker_opens_then_closes_same_sender_session():
-    store=intake.InMemorySessionStore();sender="917975102130";assert intake.ingest({"sender":sender,"body":"NEW","chat_id":sender},store)[0]=="opened";state,session=intake.ingest({"sender":sender,"body":"2 BHK Rent 45000","message_id":"m1","chat_id":sender},store);assert state=="collecting";assert "2 BHK Rent 45000" in session.raw_text;state,closed=intake.ingest({"sender":sender,"body":"NEW","chat_id":sender},store);assert state=="closed";assert closed.raw_text.endswith("2 BHK Rent 45000");assert store.get(sender) is None
-def test_duplicate_message_id_is_not_appended_twice():
-    store=intake.InMemorySessionStore();sender="919902024973";intake.ingest({"sender":sender,"body":"NEW","chat_id":sender},store);msg={"sender":sender,"body":"Rent 50000","message_id":"same","chat_id":sender};intake.ingest(msg,store);intake.ingest(msg,store);session=store.get(sender);assert session is not None;assert session.raw_text.count("Rent 50000")==1

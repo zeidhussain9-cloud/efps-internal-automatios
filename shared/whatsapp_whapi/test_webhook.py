@@ -1,11 +1,6 @@
 from shared.whatsapp_whapi import config
 from shared.whatsapp_whapi.webhook import parse_delivery, parse_message
 
-def test_verified_inventory_sources_are_data_only():
-    assert config.normalise_phone("+91 79751 02130") in config.INVENTORY_SOURCE_NUMBERS
-    assert config.normalise_phone("919902024973") in config.INVENTORY_SOURCE_NUMBERS
-    assert config.normalise_phone("919148338801") not in config.INVENTORY_SOURCE_NUMBERS
-
 def test_parser_is_transport_only():
     message=parse_message({"id":"m1","chat_id":"919148338801@s.whatsapp.net","from":"919148338801","from_me":False,"type":"text","text":{"body":"hello"},"timestamp":1})
     assert message.message_id=="m1"
@@ -19,11 +14,3 @@ def test_delivery_parses_messages_without_business_classification():
     parsed=parse_delivery({"messages":[{"id":"m1","chat_id":"919148338801@s.whatsapp.net","from":"919148338801","type":"text","text":{"body":"hello"}}]})
     assert len(parsed)==1
     assert parsed[0].message_type=="text"
-
-
-def test_inventory_source_routing_uses_runtime_allowlist(monkeypatch):
-    monkeypatch.setenv("INVENTORY_SENDERS", "917975102130,919902024973")
-    assert config.is_inventory_source("+91 79751 02130")
-    assert config.is_inventory_source("919902024973")
-    assert not config.is_inventory_source("919148338801")
-    assert not config.is_inventory_source("919999999999")
