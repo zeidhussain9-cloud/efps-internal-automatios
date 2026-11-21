@@ -76,3 +76,22 @@ def test_webhook_flag_defaults_enabled(monkeypatch: pytest.MonkeyPatch) -> None:
     assert config.webhook_enabled() is True
     monkeypatch.setenv("EFPS_WHAPI_WEBHOOK_ENABLED", "false")
     assert config.webhook_enabled() is False
+
+
+def test_requests_send_a_browser_user_agent(monkeypatch: pytest.MonkeyPatch) -> None:
+    # gate.whapi.cloud is behind Cloudflare, which rejects known bot UAs
+    # (HTTP 403, error 1010). Regression guard: every request must carry the
+    # real browser UA verified against the live gateway on 2026-11-21.
+    monkeypatch.setenv("EFPS_WHAPI_API_ENABLED", "true")
+    monkeypatch.setenv("EFPS_WHAPI_LIVE", "1")
+    seen = {}
+
+    def transport(req):
+        seen["ua"] = req.headers.get("User-agent")
+        return {"products": []}
+
+    client = WhApiClient(WhApiCredentials("test-token"), base_url="https://example.test", transport=transport)
+    client.get("/business/products")
+    assert seen["ua"] is not None
+    assert seen["ua"].startswith("Mozilla/5.0")
+    assert "node-fetch" not in seen["ua"]

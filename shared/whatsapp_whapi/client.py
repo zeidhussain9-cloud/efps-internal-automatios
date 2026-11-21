@@ -10,6 +10,13 @@ from urllib import error, parse, request
 
 from . import config
 
+# Verified against gate.whapi.cloud on 2026-11-21: plain script UAs are blocked.
+BROWSER_USER_AGENT = (
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+    "AppleWebKit/537.36 (KHTML, like Gecko) "
+    "Chrome/130.0.0.0 Safari/537.36"
+)
+
 
 class MissingWhApiCredentials(RuntimeError):
     """Raised when the WhAPI token is unavailable."""
@@ -136,7 +143,9 @@ class WhApiClient:
         headers = {
             "Authorization": f"Bearer {self.credentials.token}",
             "Accept": "application/json",
-            "User-Agent": "node-fetch/1.0",
+            # gate.whapi.cloud sits behind Cloudflare, which rejects known bot
+            # user-agents (HTTP 403, error 1010). Send a real browser UA.
+            "User-Agent": BROWSER_USER_AGENT,
         }
         if payload is not None:
             body = json.dumps(payload).encode("utf-8")
