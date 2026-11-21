@@ -227,13 +227,18 @@ def run_operation(operation: str, *, store: Any, whapi: Any, masters: Mapping[st
         cap = CAPS[operation]
         for row in eligible[:cap]:
             _execute(operation, run, row)
-        for row in eligible[cap:]:
-            if run.dry_run:
+        over_cap = eligible[cap:]
+        if run.dry_run:
+            for row in over_cap:
                 run.record(row, str(row.get("meta_catalog_id") or ""), "SKIPPED", f"per-run cap {cap} reached; row waits for next run")
-            else:
-                # Real runs: notes only for acted rows (approved 21 Nov, Notion 429 fix);
-                # skipped rows are still counted, just not written to the table.
-                run.counts["skipped"] += 1
+        else:
+            # Permanent design (approved 21 Nov): real runs write notes only for rows
+            # actually acted on. Over-cap rows are counted, and one summary line keeps
+            # the audit trail without a per-row Notion write (which tripped Notion's 429).
+            run.counts["skipped"] += len(over_cap)
+            if over_cap:
+                run.lines.append(log_line(operation, "-", "", "SKIPPED",
+                                          f"{len(over_cap)} rows over per-run cap {cap}; wait for next run", now=now))
 
     result = run.summary(states)
     if not dry_run:
