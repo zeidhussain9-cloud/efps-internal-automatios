@@ -717,9 +717,7 @@ def build_whatsapp_post(row: dict, raw_text: str, *, maps_verified: bool, verifi
         sections.append("\n".join(people))
 
     society = str(verified_society_name or row.get("society_name") or "").strip()
-    landmark = str(row.get("landmark") or "").strip()
-    label = society if society and society.casefold() != locality.casefold() else (
-        landmark if landmark and landmark.casefold() != locality.casefold() else locality)
+    label = society if society and society.casefold() != locality.casefold() else locality
     if resolved_maps_url:
         sections.append(f"*📍 {label}:*\n{resolved_maps_url}")
     elif maps_url and _short_mobile_maps_url(maps_url):
@@ -783,18 +781,12 @@ def build_catalogue_description(row: dict, raw_text: str, *, verified_society_na
     total is unknown). Maintenance is one of Rs amount / Included / Water
     Charges Additional. Availability is a full future date or 'Ready To
     Occupy'. Tenant type uses the locked LOV only. Gated listings close
-    with the society name, Semi Gated and Standalone with the landmark.
+    with the society name, Semi Gated and Standalone with dropdown locality.
     The map link is always the standardized long google.com/maps link;
     short links never appear. Lines render only when their data exists.
     """
-    title = str(row.get("catalog_title") or "").strip()
-    if not title:
-        base = " ".join(x for x in (str(row.get("furnish_type") or "").strip(), str(row.get("BHK") or "").strip()) if x)
-        locality0 = str(row.get("locality") or "").strip()
-        if base and locality0:
-            title = f"{base} - {locality0}"
-        else:
-            title = str(row.get("listing_id") or "").strip()
+    # Rebuild even when called directly on an existing, stale row.
+    title = build_catalog_title(row) if row.get("locality") else str(row.get("catalog_title") or row.get("listing_id") or "").strip()
     if not title:
         return ""
     raw = str(raw_text or "")
@@ -882,12 +874,8 @@ def build_catalogue_description(row: dict, raw_text: str, *, verified_society_na
         sections.append("\n".join(people))
 
     society = str(verified_society_name or row.get("society_name") or "").strip()
-    landmark = str(row.get("landmark") or "").strip()
     locality = str(row.get("locality") or "").strip()
-    if internal_type == "Gated Community":
-        label = society or landmark or locality
-    else:
-        label = landmark or society or locality
+    label = (society or locality) if internal_type == "Gated Community" else locality
     link = str(resolved_maps_url or "").strip()
     if not link:
         candidate = str(row.get("google_maps_url") or "").strip()
@@ -1248,6 +1236,18 @@ def process_listing_page(page: dict, *, notion: NotionClient, store: SupabaseInt
             # The standardized long Maps link is carried over from the existing
             # description when this path has no fresh resolved link, so an
             # unrelated edit never silently drops the verified link.
+            if str(row.get("locality") or "").strip():
+                title = build_catalog_title(row)
+                if title != str(row.get("catalog_title") or ""):
+                    notion.update_page(page_id, {"catalog_title": _rich(title), "Property": {"title": [{"text": {"content": title}}]}})
+                    row["catalog_title"] = title
+                existing_post = str(row.get("whatsapp_post") or "")
+                post_link = re.search(r"https://(?:www\.)?google\.com/maps\S+", existing_post)
+                post = build_whatsapp_post(row, str(row.get("raw_message_text") or ""), maps_verified=False,
+                    resolved_maps_url=post_link.group(0) if post_link else "")
+                if post and post != existing_post:
+                    notion.update_page(page_id, {"whatsapp_post": _rich(post)})
+                    row["whatsapp_post"] = post
             existing_desc = str(row.get("catalogue_description") or "")
             carry = re.search(r"https://(?:www\.)?google\.com/maps\S+", existing_desc)
             rebuilt = build_catalogue_description(

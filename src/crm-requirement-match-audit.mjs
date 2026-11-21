@@ -112,6 +112,8 @@ export function buildPropertyMatchingInputs(profile){
 }
 
 function rowMatches(row,input){
+  // Snapshot contract: listing_state is derived ONLY from Notion Availability
+  // by canonicalInventoryState; it is not the retired Housing listing_state.
   if(String(row?.listing_state||'')!=='Available')return false;
   if(input.bhkValues.length&&!input.bhkValues.includes(stringValue(row?.bhk)))return false;
   if(input.budget!==null&&Number(row?.monthly_rent)>input.budget)return false;

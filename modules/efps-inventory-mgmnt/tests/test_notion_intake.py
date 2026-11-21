@@ -888,7 +888,7 @@ def test_runtime_maps_client_does_not_block_when_secret_is_missing(monkeypatch):
 from datetime import date
 
 def test_catalogue_description_gated_card_full_rules():
-    row = {"catalog_title": "Semi Furnished 2 BHK - Kasavanahalli", "monthly_rent": "50000",
+    row = {"catalog_title": "Semi Furnished 2 BHK - Kasavanahalli", "furnish_type": "Semi Furnished", "BHK": "2 BHK", "monthly_rent": "50000",
            "security_deposit": "125000", "maintenance": "3000", "built_up_area": "1200",
            "floor_number": "3", "total_floors": "5", "preferred_tenant_type": "Family",
            "internal_property_type": "Gated Community", "locality": "Kasavanahalli",
@@ -909,7 +909,7 @@ def test_catalogue_description_gated_card_full_rules():
     assert "goo.gl" not in desc
 
 
-def test_catalogue_description_semi_gated_closes_with_landmark_and_no_total_floors():
+def test_catalogue_description_semi_gated_closes_with_dropdown_and_no_total_floors():
     row = {"catalog_title": "Semi Furnished 1 BHK - Haralur", "internal_property_type": "Semi Gated",
            "landmark": "Near Silver County", "society_name": "Some Layout", "locality": "Haralur",
            "floor_number": "2", "preferred_tenant_type": "Open For All"}
@@ -917,7 +917,8 @@ def test_catalogue_description_semi_gated_closes_with_landmark_and_no_total_floo
     assert "Floor 2nd" in desc and "of" not in desc.split("Floor 2nd")[1].split("\n")[0]
     assert "🏘️ Semi gated community" in desc
     assert "👥 Open For All" in desc
-    assert "*📍 Near Silver County:*" in desc
+    assert "*📍 Haralur:*" in desc
+    assert "Near Silver County" not in desc
     assert "Some Layout" not in desc
 
 
@@ -965,3 +966,43 @@ def test_catalogue_description_ordinals():
 
 def test_catalogue_description_is_a_written_text_field():
     assert "catalogue_description" in intake.TEXT_FIELDS
+
+
+def test_dropdown_edit_refreshes_all_customer_facing_names():
+    page_id = '12345678-1234-1234-1234-123456789abc'
+    page = {'id': page_id, 'properties': {
+        'listing_id': {'type':'rich_text', **intake._rich('EF-2611-TEST')},
+        'catalog_title': {'type':'rich_text', **intake._rich('Semi Furnished 1 BHK - Harlur')},
+        'whatsapp_post': {'type':'rich_text', **intake._rich('*🏠 Semi Furnished 1 BHK - Harlur*')},
+        'locality': {'type':'select', 'select':{'name':'Haralur'}},
+        'furnish_type': {'type':'select', 'select':{'name':'Semi Furnished'}},
+        'BHK': {'type':'rich_text', **intake._rich('1 BHK')},
+        'landmark': {'type':'rich_text', **intake._rich('Harlur')},
+    }}
+    class Store:
+        def claim(self,*a): return 'claimed', {}
+        def set_listing_id(self,*a): pass
+        def sync_inventory(self,*a,**k): self.row=a[1]
+        def finish(self,*a,**k): pass
+    class Notion:
+        def __init__(self): self.updates=[]
+        def update_page(self,pid,props): self.updates.append(props)
+    store,notion=Store(),Notion()
+    intake.process_listing_page(page,notion=notion,store=store)
+    merged={k:v for update in notion.updates for k,v in update.items()}
+    assert set(merged)=={'Property','catalog_title','catalogue_description','whatsapp_post'}
+    for value in merged.values():
+        text=str(value)
+        assert 'Haralur' in text and 'Harlur' not in text
+    assert store.row['catalog_title']=='Semi Furnished 1 BHK - Haralur'
+
+
+def test_description_direct_call_ignores_stale_title_and_landmark():
+    row={'catalog_title':'Semi Furnished 1 BHK - Harlur','locality':'Haralur',
+         'furnish_type':'Semi Furnished','BHK':'1 BHK','landmark':'Harlur',
+         'internal_property_type':'Semi Gated'}
+    desc=intake.build_catalogue_description(row,'',resolved_maps_url='https://www.google.com/maps/search/?api=1&query=1,2')
+    post=intake.build_whatsapp_post(row,'',maps_verified=True,resolved_maps_url='https://www.google.com/maps/search/?api=1&query=1,2')
+    assert desc.startswith('*🏠 Semi Furnished 1 BHK - Haralur*')
+    assert 'Harlur' not in desc and 'Harlur' not in post
+    assert '*📍 Haralur:*' in desc and '*📍 Haralur:*' in post
