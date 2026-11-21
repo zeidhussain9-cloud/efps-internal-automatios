@@ -100,7 +100,8 @@ def _self_invoke(lam: Any, fn: str, payload: Mapping[str, Any]) -> None:
 # --- Notion side ----------------------------------------------------------
 
 def _set_dry_run(store: Any, enabled: bool) -> None:
-    for page in store._query_all(store.SWITCHES_DATABASE_ID):
+    from catalogue_notion_store import SWITCHES_DATABASE_ID
+    for page in store._query_all(SWITCHES_DATABASE_ID):
         props = page.get("properties") or {}
         title = "".join(t.get("plain_text", "") for t in ((props.get("Name") or {}).get("title")) or [])
         if title.strip() == "DRY_RUN":
