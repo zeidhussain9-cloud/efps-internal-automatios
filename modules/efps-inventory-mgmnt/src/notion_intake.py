@@ -29,6 +29,7 @@ except ImportError:
 NOTION_VERSION = "2022-06-28"
 INTAKE_DATABASE_ID = "89dad7a3990849ca9dc23e5bcb3fa99f"
 LISTINGS_DATABASE_ID = "bccfd4f55e294b269daa093a928f873a"
+CATALOGUE_PANEL_DATABASE_ID = "41ffedf9b4e8815fb6cfd2ffe275110d"
 MAX_IMAGES = 10
 MAX_IMAGE_BYTES = 20 * 1024 * 1024
 ALLOWED_FILE_HOSTS = {"secure.notion-static.com", "prod-files-secure.s3.us-west-2.amazonaws.com"}
@@ -766,7 +767,24 @@ def process_page(
         return {"status": "ignored", "listing_id": "", "reason": "source_page_deleted"}
     parent = page.get("parent") or {}
     parent_database_id = str(parent.get("database_id") or parent.get("data_source_id") or "").replace("-", "").lower()
+    if parent_database_id == CATALOGUE_PANEL_DATABASE_ID:
+        props = page.get("properties") or {}
+        title = "".join(str(x.get("plain_text") or "") for x in ((props.get("Name") or {}).get("title") or []))
+        operation = title.strip().lower()
+        run_ticked = bool((props.get("Run") or {}).get("checkbox"))
+        import catalogue_trigger
+        if run_ticked and operation in catalogue_trigger.OPERATIONS:
+            _log_event("catalogue_panel_triggered", operation=operation, page_id=page_id)
+            return {"status": "panel_trigger", "operation": operation, "listing_id": ""}
+        return {"status": "ignored", "listing_id": ""}
     if parent_database_id == LISTINGS_DATABASE_ID:
+        if event_type == "page.properties_updated":
+            props = page.get("properties") or {}
+            post_prop_id = str((props.get("Post to Catalogue") or {}).get("id") or "").strip()
+            changed_ids = {str(v).strip() for v in (updated_property_ids or []) if str(v).strip()}
+            if post_prop_id and post_prop_id in changed_ids and bool((props.get("Post to Catalogue") or {}).get("checkbox")):
+                _log_event("catalogue_post_checkbox_ticked", page_id=page_id)
+                return {"status": "catalogue_tick", "operation": "create", "listing_id": ""}
         return process_listing_page(page, notion=notion, store=store)
     if parent_database_id != INTAKE_DATABASE_ID:
         if event_type in {"page.moved", "page.undeleted"} and store.find_inventory(page_id).get("found"):
@@ -994,6 +1012,17 @@ def _enqueue_worker(
         raise IntakeError("Notion intake worker enqueue was not accepted")
 
 
+def _enqueue_catalogue_trigger(operation: str, function_arn: str):
+    import boto3
+    response = boto3.client("lambda").invoke(
+        FunctionName=function_arn,
+        InvocationType="Event",
+        Payload=json.dumps({"_efps_catalogue_trigger": True, "operation": operation}).encode("utf-8"),
+    )
+    if int(response.get("StatusCode") or 0) != 202:
+        raise IntakeError("Catalogue trigger enqueue was not accepted")
+
+
 NOTION_PAGE_EVENT_TYPES = {
     "page.created", "page.properties_updated", "page.content_updated", "page.moved",
     "page.deleted", "page.undeleted", "page.locked", "page.unlocked", "page.updated",
@@ -1167,6 +1196,23 @@ def _record_unverified_delivery(raw_body: str, reason: str, context, request_eve
 
 
 def lambda_handler(event, context):
+    if event.get("_efps_catalogue_trigger"):
+        operation = str(event.get("operation") or "").strip().lower()
+        started = time.monotonic()
+        try:
+            import catalogue_trigger
+            result = catalogue_trigger.run_catalogue_operation(operation, notion_token=_notion_secret_value("api_token"))
+            _log_event("catalogue_operation_completed", operation=operation,
+                       aws_request_id=getattr(context, "aws_request_id", ""),
+                       duration_ms=round((time.monotonic() - started) * 1000),
+                       counts=result.get("counts") or {}, dry_run=bool(result.get("dry_run")))
+            return {"status": "completed", "operation": operation, **result}
+        except Exception as exc:
+            _log_event("catalogue_operation_failed", operation=operation,
+                       aws_request_id=getattr(context, "aws_request_id", ""),
+                       error_type=type(exc).__name__, error=str(exc)[:800],
+                       duration_ms=round((time.monotonic() - started) * 1000))
+            raise
     if event.get("_efps_notion_backfill"):
         started = time.monotonic()
         try:
@@ -1199,6 +1245,9 @@ def lambda_handler(event, context):
         _log_event("worker_started", page_id=page_id, event_type=event_type, event_id=event_id, aws_request_id=getattr(context, "aws_request_id", ""))
         try:
             result = process_page(page_id, event_type=event_type, updated_property_ids=updated_property_ids)
+            if str(result.get("status") or "") in {"panel_trigger", "catalogue_tick"}:
+                _enqueue_catalogue_trigger(str(result.get("operation") or ""), context.invoked_function_arn)
+                result = {**result, "status": "queued", "enqueued": str(result.get("operation") or "")}
         except Exception as exc:
             if _is_missing_notion_page_error(exc):
                 if event_store:
@@ -1265,6 +1314,27 @@ def lambda_handler(event, context):
 
     headers = {str(k).lower(): str(v) for k, v in (event.get("headers") or {}).items()}
     raw_body = event.get("body") or "{}"
+
+    # Operator trigger route: HMAC-signed, enqueues the gated catalogue operation.
+    http_ctx = (event.get("requestContext") or {}).get("http") or {}
+    route_path = str(event.get("rawPath") or http_ctx.get("path") or event.get("path") or "")
+    if route_path.rstrip("/").endswith("/catalogue/run"):
+        try:
+            secret = _aws_secret_value("CATALOGUE_TRIGGER_SECRET_ARN")
+        except Exception as exc:
+            _log_event("catalogue_trigger_unavailable", error_type=type(exc).__name__)
+            return {"statusCode": 503, "headers": {"Content-Type": "application/json"}, "body": json.dumps({"error": "catalogue trigger is not configured"})}
+        import catalogue_trigger
+        if not catalogue_trigger.verify_signature(headers, secret=secret):
+            _log_event("catalogue_trigger_rejected", reason="invalid_signature")
+            return {"statusCode": 401, "headers": {"Content-Type": "application/json"}, "body": json.dumps({"error": "invalid signature"})}
+        try:
+            operation = catalogue_trigger.parse_operation(raw_body)
+        except catalogue_trigger.CatalogueTriggerError as exc:
+            return {"statusCode": 400, "headers": {"Content-Type": "application/json"}, "body": json.dumps({"error": str(exc)[:300]})}
+        _enqueue_catalogue_trigger(operation, context.invoked_function_arn)
+        _log_event("catalogue_trigger_accepted", operation=operation)
+        return {"statusCode": 202, "headers": {"Content-Type": "application/json"}, "body": json.dumps({"ok": True, "operation": operation})}
     if event.get("isBase64Encoded"):
         import base64
         raw_body = base64.b64decode(raw_body).decode("utf-8")

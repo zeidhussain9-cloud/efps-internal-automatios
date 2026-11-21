@@ -40,6 +40,11 @@ Parameters:
     Default: ''
     AllowedPattern: '^$|^arn:[^:]+:secretsmanager:[^:]+:[0-9]{12}:secret:.+$'
     Description: Optional Secrets Manager ARN whose JSON api_token and webhook_secret fields enable the Notion property intake Lambda
+  CatalogueTriggerSecretArn:
+    Type: String
+    Default: ''
+    AllowedPattern: '^$|^arn:[^:]+:secretsmanager:[^:]+:[0-9]{12}:secret:.+$'
+    Description: Optional Secrets Manager ARN whose SecretString is the shared HMAC secret for the /catalogue/run operator trigger
   OlaMapsSecretArn:
     Type: String
     Default: ''
@@ -91,10 +96,18 @@ Resources:
         Variables:
           NOTION_API_TOKEN: !Sub '{{resolve:secretsmanager:${NotionSecretArn}:SecretString:api_token}}'
           NOTION_WEBHOOK_SECRET: !Sub '{{resolve:secretsmanager:${NotionSecretArn}:SecretString:webhook_secret}}'
+          NOTION_SECRET_ARN: !Ref NotionSecretArn
+          CATALOGUE_TRIGGER_SECRET_ARN: !Ref CatalogueTriggerSecretArn
+          WHAPI_SECRET_ARN: !Ref WhApiSecretArn
+          EFPS_WHAPI_LIVE: '0'
+          EFPS_WHAPI_API_ENABLED: '0'
       Events:
         Intake:
           Type: Api
           Properties: { Path: /notion/intake, Method: post }
+        CatalogueRun:
+          Type: Api
+          Properties: { Path: /catalogue/run, Method: post }
       Policies:
         - Statement:
             - Effect: Allow

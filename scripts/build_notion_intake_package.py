@@ -21,9 +21,14 @@ for name in ("__init__.py", "credentials.py"):
     source = ROOT / "shared" / name
     if source.exists():
         shutil.copy2(source, shared_dest / name)
-for package in ("cloudinary", "ola_maps"):
+for package in ("cloudinary", "ola_maps", "whatsapp_whapi"):
     shutil.copytree(ROOT / "shared" / package, shared_dest / package,
                     ignore=shutil.ignore_patterns("__pycache__", "*.pyc", "tests", "test_*"))
+
+# Gated catalogue operations: runner + live Notion store + trigger surface.
+catalogue_src = ROOT / "modules" / "efps_meta_catalogue_mgmnt" / "src"
+for name in ("catalogue_runner.py", "catalogue_notion_store.py", "catalogue_trigger.py"):
+    shutil.copy2(catalogue_src / name, DEST / name)
 # The inventory pipeline still uses the historical field schema as a pure data contract.
 # Ship only that schema module, never the Sheets client or Google Sheets SDK.
 sheets_schema = shared_dest / "google_sheets"
