@@ -568,12 +568,40 @@ def _available_from(raw_text: str) -> str:
     return "Ready to Occupy" if re.search(r"\b(?:now|immediate|immediately|ready\s+to\s+occupy)\b", value, re.I) else value
 
 
-def build_whatsapp_post(row: dict, raw_text: str, *, maps_verified: bool, verified_society_name: str = "", allow_unverified_source_map: bool = False, resolved_maps_url: str = "") -> str:
-    """Build a caption from explicit facts; an unverified source URL is opt-in and remains labelled unverified.
+def _rupee_amount(value: object) -> str:
+    """Full Indian-grouped amount for catalogue captions (125000 -> '1,25,000')."""
+    try:
+        amount = Decimal(str(value).replace(",", "").strip())
+    except (InvalidOperation, TypeError, ValueError):
+        return ""
+    if amount <= 0:
+        return ""
+    text = str(int(amount))
+    if len(text) <= 3:
+        return text
+    head, tail = text[:-3], text[-3:]
+    groups = []
+    while len(head) > 2:
+        groups.insert(0, head[-2:])
+        head = head[:-2]
+    if head:
+        groups.insert(0, head)
+    return ",".join(groups) + "," + tail
 
-    resolved_maps_url is the canonical google.com/maps/search caption link produced
-    by the pipeline from the expanded source link. When present it is the only map
-    link the caption carries: short goo.gl/share.google URLs never reach a post.
+
+def build_whatsapp_post(row: dict, raw_text: str, *, maps_verified: bool, verified_society_name: str = "", allow_unverified_source_map: bool = False, resolved_maps_url: str = "") -> str:
+    """Build the card-style catalogue caption from explicit facts.
+
+    Template approved by Zeid (21 Nov, "Option B"): emoji-labelled lines in
+    blank-line sections, rupee amounts written out in full, map link last.
+    Lines and sections appear only when their data exists; an unverified
+    source URL is opt-in and remains labelled unverified; no verified map
+    link or no locality means no caption at all (fail safe).
+
+    resolved_maps_url is the canonical google.com/maps/search caption link
+    produced by the pipeline from the expanded source link. When present it
+    is the only map link the caption carries: short goo.gl/share.google URLs
+    never reach a post.
     """
     maps_url = str(row.get("google_maps_url") or "").strip()
     resolved_maps_url = str(resolved_maps_url or "").strip()
@@ -584,64 +612,104 @@ def build_whatsapp_post(row: dict, raw_text: str, *, maps_verified: bool, verifi
     locality = str(row.get("locality") or "").strip()
     if not locality:
         return ""
-    title_parts = [str(row.get("furnish_type") or "").strip(), str(row.get("BHK") or "").strip()]
-    title = " ".join(x for x in title_parts if x)
+
+    base = " ".join(x for x in (str(row.get("furnish_type") or "").strip(), str(row.get("BHK") or "").strip()) if x)
+    if base:
+        headline = f"*🏠 {base} - {locality}*"
+    else:
+        fallback = str(row.get("catalog_title") or row.get("listing_id") or "").strip()
+        if not fallback:
+            return ""
+        headline = f"*🏠 {fallback}*"
+
     raw = str(raw_text or "")
     features = []
-    if re.search(r"\bprivate\s+terrace\b", raw, re.I): features.append("Private Terrace")
-    if re.search(r"\butility\b", raw, re.I): features.append("Utility")
+    if re.search(r"\bprivate\s+terrace\b", raw, re.I):
+        features.append("private terrace")
+    if re.search(r"\butility\b", raw, re.I):
+        features.append("utility")
     attached = re.search(r"\b(\d+)\s+attached\s+bathrooms?\b", raw, re.I)
-    if attached: features.append(f"{attached.group(1)} Attached Bathrooms")
+    if attached:
+        features.append(f"{attached.group(1)} attached bathrooms")
     elif row.get("bathrooms"):
         count = str(row["bathrooms"]).strip()
-        features.append(f"{count} Bathroom" + ("" if count == "1" else "s"))
+        features.append(f"{count} bathroom" + ("" if count == "1" else "s"))
     balconies = str(row.get("balconies") or "").strip()
     if balconies and balconies not in {"0", "0.0"}:
-        features.append(f"{balconies} " + ("Balcony" if balconies == "1" else "Balconies"))
-    if features: title += (" with " if title else "") + " & ".join(features[:3])
-    if not title: title = str(row.get("catalog_title") or row.get("listing_id") or "").strip()
-    if not title: return ""
-    lines = [f"*👉{title}*"]
-    rent = _compact_amount(row.get("monthly_rent"))
-    if rent: lines.append(f"Rent: {rent}")
+        features.append(f"{balconies} " + ("balcony" if balconies == "1" else "balconies"))
+    features = features[:3]
+
+    sections = [headline]
+
+    money = []
+    rent = _rupee_amount(row.get("monthly_rent"))
     maintenance = str(row.get("maintenance") or "").strip()
-    if str(row.get("maintenance_included") or "").strip().lower() == "yes": maintenance = "Included"
-    if maintenance: lines.append(f"Maintenance: {maintenance}")
-    deposit = _compact_amount(row.get("security_deposit"))
-    if deposit: lines.append(f"Deposit: {deposit}")
+    included = str(row.get("maintenance_included") or "").strip().lower() == "yes"
+    if rent:
+        line = f"💰 Rent: Rs {rent}"
+        if included:
+            line += " (maintenance included)"
+        money.append(line)
+    if maintenance and not included:
+        amount = _rupee_amount(maintenance)
+        money.append(f"🧾 Maintenance: Rs {amount}" if amount else f"🧾 Maintenance: {maintenance}")
+    deposit = _rupee_amount(row.get("security_deposit"))
+    if deposit:
+        money.append(f"🔑 Deposit: Rs {deposit}")
+    if money:
+        sections.append("\n".join(money))
+
+    specs = []
     sqft = str(row.get("built_up_area") or "").strip()
-    if sqft: lines.append(f"Sqft: {sqft}")
     floor = str(row.get("floor_number") or "").strip()
     total_floors = str(row.get("total_floors") or "").strip()
     if floor and total_floors and "/" not in floor and floor.lower() not in {"villa", "independent house", "duplex"}:
         floor = f"{floor}/{total_floors}"
-    if floor: lines.append(f"Floor: {floor}")
+    spec_parts = []
+    if sqft:
+        spec_parts.append(f"{sqft} sqft")
+    if floor:
+        spec_parts.append(f"Floor {floor}")
+    if spec_parts:
+        specs.append("📐 " + " | ".join(spec_parts))
+    if features:
+        specs.append("🛁 " + " + ".join(features))
     availability = _available_from(raw)
-    if availability: lines.append(f"Available from: {availability}")
+    if availability:
+        specs.append(f"🗓️ Available: {availability}")
+    if specs:
+        sections.append("\n".join(specs))
+
+    people = []
     tenant = str(row.get("preferred_tenant_type") or "").strip()
     if tenant:
-        tenant = "Open For All" if tenant.lower() in {"anyone", "open for all"} else tenant
-        lines.append(f"Preferred tenant: {tenant}")
+        if tenant.lower() in {"anyone", "open for all"}:
+            people.append("👥 Open For All")
+        else:
+            people.append(f"👨‍👩‍👧 {tenant}")
     pets = _explicit_pet_policy(raw)
-    if pets: lines.append(f"Pets: {pets}")
+    if pets:
+        people.append(f"🐾 Pets: {pets}")
     internal_type = str(row.get("internal_property_type") or "").strip()
-    if internal_type == "Gated Community": lines.append("Gated Community")
-    elif internal_type == "Semi Gated": lines.append("Semi Gated Community")
-    lines.append(f"Location: *{locality}*")
+    if internal_type == "Gated Community":
+        people.append("🏢 Gated community")
+    elif internal_type == "Semi Gated":
+        people.append("🏘️ Semi gated community")
+    if people:
+        sections.append("\n".join(people))
+
+    society = str(verified_society_name or row.get("society_name") or "").strip()
+    landmark = str(row.get("landmark") or "").strip()
+    label = society if society and society.casefold() != locality.casefold() else (
+        landmark if landmark and landmark.casefold() != locality.casefold() else locality)
     if resolved_maps_url:
-        society = str(verified_society_name or row.get("society_name") or "").strip()
-        landmark = str(row.get("landmark") or "").strip()
-        label = society if society and society.casefold() != locality.casefold() else ("Landmark" if landmark and landmark.casefold() != locality.casefold() else "")
-        if label: lines.extend(["", f"*📍 {label}:", resolved_maps_url])
+        sections.append(f"*📍 {label}:*\n{resolved_maps_url}")
     elif maps_url and _short_mobile_maps_url(maps_url):
         if allow_unverified_source_map and not maps_verified:
-            lines.extend(["", "*📍 Original Maps link (not verified):", maps_url])
+            sections.append(f"*📍 Original Maps link (not verified):*\n{maps_url}")
         else:
-            society = str(verified_society_name or row.get("society_name") or "").strip()
-            landmark = str(row.get("landmark") or "").strip()
-            label = society if society and society.casefold() != locality.casefold() else ("Landmark" if landmark and landmark.casefold() != locality.casefold() else "")
-            if label: lines.extend(["", f"*📍 {label}:", maps_url])
-    return "\n".join(lines)
+            sections.append(f"*📍 {label}:*\n{maps_url}")
+    return "\n\n".join(sections)
 
 
 def _upload_photos(page: dict, listing_id: str, row: dict, cloudinary: CloudinaryClient):

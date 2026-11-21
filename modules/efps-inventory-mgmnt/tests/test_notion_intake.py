@@ -619,12 +619,14 @@ def test_v71_caption_uses_verified_short_map_and_never_guesses_pet_policy():
            "google_maps_url": "https://maps.app.goo.gl/AbC123", "bathrooms": "2", "balconies": "2"}
     raw = "Pets allowed\nAvailability: Ready to Occupy\n2 attached bathrooms\nUtility"
     caption = intake.build_whatsapp_post(row, raw, maps_verified=True, verified_society_name="Verified Society")
-    assert caption.startswith("*👉Semi Furnished 2 BHK with Utility & 2 Attached Bathrooms & 2 Balconies*")
-    assert "Rent: 50K" in caption and "Deposit: 1.25L" in caption
-    assert "Available from: Ready to Occupy" in caption
-    assert "Preferred tenant: Open For All" in caption
-    assert "Pets: Allowed\nGated Community\nLocation: *Kasavanahalli*" in caption
-    assert "*📍 Verified Society:\nhttps://maps.app.goo.gl/AbC123" in caption
+    assert caption.startswith("*🏠 Semi Furnished 2 BHK - Kasavanahalli*")
+    assert "💰 Rent: Rs 50,000" in caption and "🔑 Deposit: Rs 1,25,000" in caption
+    assert "📐 1200 sqft | Floor 3/12" in caption
+    assert "🛁 utility + 2 attached bathrooms + 2 balconies" in caption
+    assert "🗓️ Available: Ready to Occupy" in caption
+    assert "👥 Open For All" in caption
+    assert "🐾 Pets: Allowed\n🏢 Gated community" in caption
+    assert "*📍 Verified Society:*\nhttps://maps.app.goo.gl/AbC123" in caption
 
 
 def test_v71_caption_requires_maps_verification_and_omits_long_map_url():
@@ -638,14 +640,14 @@ def test_v71_caption_allows_exact_short_source_map_only_for_api_unavailable_fall
            "society_name": "Source Society", "google_maps_url": "https://maps.app.goo.gl/AbC123"}
     assert intake.build_whatsapp_post(row, "Pets allowed", maps_verified=False) == ""
     caption = intake.build_whatsapp_post(row, "Pets allowed", maps_verified=False, allow_unverified_source_map=True)
-    assert "Location: *Harlur*" in caption
-    assert "*📍 Original Maps link (not verified):\nhttps://maps.app.goo.gl/AbC123" in caption
+    assert caption.startswith("*🏠 Fully Furnished 1 BHK - Harlur*")
+    assert "*📍 Original Maps link (not verified):*\nhttps://maps.app.goo.gl/AbC123" in caption
     row["google_maps_url"] = "https://www.google.com/maps/search/?api=1&query=Harlur"
     assert intake.build_whatsapp_post(row, "Pets allowed", maps_verified=False, allow_unverified_source_map=True) == ""
     row["google_maps_url"] = "https://www.google.com/maps/search/?api=1&query=Harlur"
     caption = intake.build_whatsapp_post(row, "Pets allowed", maps_verified=True)
-    assert "google.com/maps" not in caption and "Location: *Harlur*" in caption
-    assert "Pets: Allowed" in caption
+    assert "google.com/maps" not in caption and caption.startswith("*🏠 Fully Furnished 1 BHK - Harlur*")
+    assert "🐾 Pets: Allowed" in caption
 
 
 def test_v71_caption_does_not_infer_pet_policy_from_inventory_default():
@@ -709,8 +711,8 @@ def test_process_page_persists_one_listing_and_reconciles_intake(monkeypatch):
     result = intake.process_page("intake-page-id", notion=fake_notion, store=fake_store,
                                  cloudinary=object(), maps_client=object())
     assert result["status"] == "Processed" and result["listing_id"] == "EF-TEST-INTAKE"
-    assert fake_notion.saved[0]["whatsapp_post"].startswith("*👉Semi Furnished 2 BHK*")
-    assert fake_notion.saved[0]["whatsapp_post"].endswith("Location: *Harlur*")
+    assert fake_notion.saved[0]["whatsapp_post"].startswith("*🏠 Semi Furnished 2 BHK - Harlur*")
+    assert "💰 Rent: Rs 50,000" in fake_notion.saved[0]["whatsapp_post"]
     assert fake_notion.updates[-1]["Intake Status"]["status"]["name"] == "Processed"
     assert fake_notion.updates[-1]["Processed Property"]["relation"][0]["id"] == "housing-page-id"
     assert fake_store.finished[0][0] == "processed"

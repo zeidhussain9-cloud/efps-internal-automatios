@@ -62,14 +62,14 @@ def test_caption_carries_only_the_canonical_maps_url():
     assert resolved in caption
     assert "goo.gl" not in caption
     assert "Original Maps link" not in caption
-    assert "*📍 CLPD Sunrise:" in caption
+    assert "*📍 CLPD Sunrise:*\n" in caption
 
 
 def test_caption_without_resolution_keeps_legacy_unverified_behaviour():
     caption = intake.build_whatsapp_post(
         _row(), "Pets: Not Allowed", maps_verified=False, allow_unverified_source_map=True,
     )
-    assert "*📍 Original Maps link (not verified):\nhttps://maps.app.goo.gl/AbC123" in caption
+    assert "*📍 Original Maps link (not verified):*\nhttps://maps.app.goo.gl/AbC123" in caption
 
 
 def test_merged_pets_gating_line_splits_in_caption():
@@ -81,8 +81,8 @@ def test_merged_pets_gating_line_splits_in_caption():
         projected, raw, maps_verified=True,
         resolved_maps_url="https://www.google.com/maps/search/?api=1&query=Chikkanayakanahalli",
     )
-    assert "\nPets: Allowed\n" in caption + "\n"
-    assert "Semi Gated Community" in caption
+    assert "\n🐾 Pets: Allowed\n" in caption + "\n"
+    assert "🏘️ Semi gated community" in caption
     assert "Allowed Semi Gated" not in caption
 
 

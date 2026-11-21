@@ -25,7 +25,7 @@ def test_exact_real_submission_extracts_names_without_changing_raw_or_defaults()
     result = normalize_locality(row['locality'], ['Haralur', 'Bellandur'])
     assert result.canonical == 'Bellandur'
     caption = build_whatsapp_post(row, RAW, maps_verified=False, allow_unverified_source_map=True)
-    assert 'Location: *Bellandur*' in caption
+    assert caption.startswith('*🏠') and ' - Bellandur*' in caption
     assert 'Original Maps link (not verified)' in caption
     assert 'https://maps.app.goo.gl/oMaQfeb3An1MucrBA' in caption
 
@@ -94,6 +94,6 @@ def test_full_intake_exact_submission_maps_outage_reuses_listing(monkeypatch):
     assert result['listing_id'] == 'EF-2611-5519'
     assert notion.saved['locality'] == 'Bellandur'
     assert notion.saved['society_name'] == 'SJR Pavillion'
-    assert 'Location: *Bellandur*' in notion.saved['whatsapp_post']
+    assert notion.saved['whatsapp_post'].startswith('*🏠') and ' - Bellandur*' in notion.saved['whatsapp_post']
     assert notion.final['Processed Property']['relation'] == [{'id':'existing-housing-id'}]
     assert store.state == 'processed'

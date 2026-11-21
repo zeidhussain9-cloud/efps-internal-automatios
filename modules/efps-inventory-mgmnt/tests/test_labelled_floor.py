@@ -34,4 +34,4 @@ def test_park_vista_formatted_shape_carries_floor_into_caption():
     row = pipeline.deterministic(raw, row=pipeline.initial_row('EF-TEST-FLOOR', raw))
     assert row['floor_number'] == '3'
     assert row['total_floors'] == ''
-    assert 'Floor: 3\n' in build_whatsapp_post(row, raw, maps_verified=False, allow_unverified_source_map=True)
+    assert '📐 1219 sqft | Floor 3' in build_whatsapp_post(row, raw, maps_verified=False, allow_unverified_source_map=True)
