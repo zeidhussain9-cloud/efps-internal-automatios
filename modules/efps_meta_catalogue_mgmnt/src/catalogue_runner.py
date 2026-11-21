@@ -228,7 +228,12 @@ def run_operation(operation: str, *, store: Any, whapi: Any, masters: Mapping[st
         for row in eligible[:cap]:
             _execute(operation, run, row)
         for row in eligible[cap:]:
-            run.record(row, str(row.get("meta_catalog_id") or ""), "SKIPPED", f"per-run cap {cap} reached; row waits for next run")
+            if run.dry_run:
+                run.record(row, str(row.get("meta_catalog_id") or ""), "SKIPPED", f"per-run cap {cap} reached; row waits for next run")
+            else:
+                # Real runs: notes only for acted rows (approved 21 Nov, Notion 429 fix);
+                # skipped rows are still counted, just not written to the table.
+                run.counts["skipped"] += 1
 
     result = run.summary(states)
     if not dry_run:

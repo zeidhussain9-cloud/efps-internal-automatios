@@ -214,6 +214,18 @@ def test_create_cap_is_10():
     store = FakeStore(rows, switches={**ALL_SWITCHES, "ASSIGN": False})
     result = run("create", store, FakeWhapi())
     assert result["counts"]["ok"] == 10
+    # Real runs: no per-row skip notes (approved 21 Nov, Notion 429 fix), count still tracked.
+    assert result["counts"]["skipped"] == 2
+    assert sum(1 for l in result["lines"] if "cap 10 reached" in l) == 0
+    assert not any("cap 10 reached" in line for _, line in store.activity)
+
+
+def test_cap_skip_lines_only_in_dry_run():
+    rows = [make_row(page_id=f"p{i}", listing_id=f"EF-2611-{i:04d}") for i in range(12)]
+    store = FakeStore(rows, switches={**ALL_SWITCHES, "ASSIGN": False, "DRY_RUN": True})
+    result = run("create", store, FakeWhapi())
+    assert result["counts"]["would"] == 10
+    assert result["counts"]["skipped"] == 2
     assert sum(1 for l in result["lines"] if "cap 10 reached" in l) == 2
 
 
@@ -284,10 +296,29 @@ def test_delete_cap_is_3():
         whapi.products[pid] = {"id": pid}
         rows.append(make_row(page_id=f"p{i}", listing_id=f"EF-2611-{i:04d}", Availability="Rented Out",
                              meta_catalog_id=pid, **{"live at": ["Meta Catalogue"]}))
-    result = run("delete", FakeStore(rows), whapi)
+    store = FakeStore(rows)
+    result = run("delete", store, whapi)
     assert result["counts"]["ok"] == 3
-    assert sum(1 for l in result["lines"] if "cap 3 reached" in l) == 2
+    # Real runs: no per-row skip notes (approved 21 Nov, Notion 429 fix), count still tracked.
+    assert result["counts"]["skipped"] == 2
+    assert sum(1 for l in result["lines"] if "cap 3 reached" in l) == 0
+    assert not any("cap 3 reached" in line for _, line in store.activity)
     assert len(whapi.products) == 2
+
+
+def test_delete_cap_skip_lines_only_in_dry_run():
+    whapi = FakeWhapi()
+    rows = []
+    for i in range(5):
+        pid = str(500 + i)
+        whapi.products[pid] = {"id": pid}
+        rows.append(make_row(page_id=f"p{i}", listing_id=f"EF-2611-{i:04d}", Availability="Rented Out",
+                             meta_catalog_id=pid, **{"live at": ["Meta Catalogue"]}))
+    result = run("delete", FakeStore(rows, switches={**ALL_SWITCHES, "DRY_RUN": True}), whapi)
+    assert result["counts"]["would"] == 3
+    assert result["counts"]["skipped"] == 2
+    assert sum(1 for l in result["lines"] if "cap 3 reached" in l) == 2
+    assert len(whapi.products) == 5
 
 
 def test_delete_404_is_a_correction_not_a_failure():

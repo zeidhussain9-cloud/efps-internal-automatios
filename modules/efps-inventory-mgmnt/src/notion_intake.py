@@ -57,17 +57,33 @@ class NotionClient:
         self.session = session or requests.Session()
 
     def request(self, method: str, path: str, *, payload=None):
-        response = self.session.request(
-            method,
-            "https://api.notion.com/v1/" + path.lstrip("/"),
-            headers={
-                "Authorization": f"Bearer {self.token}",
-                "Notion-Version": NOTION_VERSION,
-                "Content-Type": "application/json",
-            },
-            json=payload,
-            timeout=25,
-        )
+        delay = 2.0
+        for _attempt in range(5):
+            response = self.session.request(
+                method,
+                "https://api.notion.com/v1/" + path.lstrip("/"),
+                headers={
+                    "Authorization": f"Bearer {self.token}",
+                    "Notion-Version": NOTION_VERSION,
+                    "Content-Type": "application/json",
+                },
+                json=payload,
+                timeout=25,
+            )
+            if getattr(response, "status_code", 200) != 429:
+                break
+            # Notion rate limit: honor retry-after, bounded exponential backoff.
+            retry_after = 0.0
+            try:
+                retry_after = float(response.headers.get("Retry-After") or 0)
+            except (TypeError, ValueError):
+                retry_after = 0.0
+            try:
+                retry_after = max(retry_after, float((response.json().get("additional_data") or {}).get("retry_after") or 0))
+            except (TypeError, ValueError):
+                pass
+            time.sleep(min(max(retry_after, delay), 30.0))
+            delay = min(delay * 2, 30.0)
         if not response.ok:
             try:
                 error = response.json()

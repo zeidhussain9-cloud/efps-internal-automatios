@@ -17,6 +17,8 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
+import time
+
 import requests
 
 NOTION_VERSION = "2022-06-28"
@@ -80,6 +82,20 @@ def listing_row(page: dict) -> dict:
     }
 
 
+def _retry_after_seconds(response) -> float:
+    """Seconds Notion asks us to wait on a 429 (header or JSON body)."""
+    try:
+        header = float(response.headers.get("Retry-After") or 0)
+    except (TypeError, ValueError):
+        header = 0.0
+    body = 0.0
+    try:
+        body = float((response.json().get("additional_data") or {}).get("retry_after") or 0)
+    except (TypeError, ValueError):
+        body = 0.0
+    return max(header, body)
+
+
 class NotionCatalogueStore:
     def __init__(self, token: str, *, session=None, now=None):
         if not token:
@@ -91,17 +107,24 @@ class NotionCatalogueStore:
     # --- low level ------------------------------------------------------
 
     def request(self, method: str, path: str, *, payload=None) -> dict:
-        response = self.session.request(
-            method,
-            "https://api.notion.com/v1/" + path.lstrip("/"),
-            headers={
-                "Authorization": f"Bearer {self.token}",
-                "Notion-Version": NOTION_VERSION,
-                "Content-Type": "application/json",
-            },
-            json=payload,
-            timeout=25,
-        )
+        delay = 2.0
+        for _attempt in range(5):
+            response = self.session.request(
+                method,
+                "https://api.notion.com/v1/" + path.lstrip("/"),
+                headers={
+                    "Authorization": f"Bearer {self.token}",
+                    "Notion-Version": NOTION_VERSION,
+                    "Content-Type": "application/json",
+                },
+                json=payload,
+                timeout=25,
+            )
+            if response.status_code != 429:
+                break
+            # Notion rate limit: honor retry-after, bounded exponential backoff.
+            time.sleep(min(max(_retry_after_seconds(response), delay), 30.0))
+            delay = min(delay * 2, 30.0)
         if not response.ok:
             raise CatalogueStoreError(
                 f"Notion API {method} {path} failed ({response.status_code}): {response.text[:300]}"
