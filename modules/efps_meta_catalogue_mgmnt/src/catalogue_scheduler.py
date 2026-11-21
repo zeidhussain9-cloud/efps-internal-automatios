@@ -196,13 +196,21 @@ def _batch(event, lam, store, context, *, run_delete, sleep, now) -> dict:
     for key in ("ok", "failed", "skipped"):
         totals[key] = int(totals.get(key) or 0) + int(counts.get(key) or 0)
     for line in lines:
-        # Format: "[<ts>] DELETE <listing_id> product=<id> OK|FAILED <reason>"
+        # Format: "[<ts>] DELETE <listing_id> [product=<id>] OK|FAILED <reason>"
+        # (the timestamp itself contains a space - anchor on the DELETE token)
         parts = line.split()
-        if len(parts) >= 5 and parts[1] == "DELETE":
-            if parts[4].startswith("OK"):
-                deleted.append(parts[2])
-            elif parts[4].startswith("FAILED"):
-                failures.append(line[:300])
+        if "DELETE" not in parts:
+            continue
+        i = parts.index("DELETE")
+        rest = parts[i + 1:]
+        if len(rest) < 2:
+            continue
+        lid = rest[0]
+        outcome = rest[2] if len(rest) >= 3 and rest[1].startswith("product=") else rest[1]
+        if outcome.startswith("OK"):
+            deleted.append(lid)
+        elif outcome.startswith("FAILED"):
+            failures.append(line[:300])
     _log("catalogue_schedule_batch", run_id=run_id, batch=batch,
          ok=ok, failed=failed, would=would, dry_run=dry_run)
 
