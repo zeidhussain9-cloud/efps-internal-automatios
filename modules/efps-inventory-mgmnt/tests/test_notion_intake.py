@@ -555,7 +555,10 @@ def test_processed_notion_page_repairs_a_missing_inventory_projection():
     assert len(store.synced) == 1
     assert store.synced[0][1]["listing_id"] == "EF-2611-ABCD"
     assert store.listing_ids == [(page_id, "EF-2611-ABCD")]
-    assert notion.updates == [(page_id, {"listing_id": intake._rich("EF-2611-ABCD")})]
+    assert notion.updates == [
+        (page_id, {"listing_id": intake._rich("EF-2611-ABCD")}),
+        (page_id, {"catalogue_description": intake._rich("*🏠 EF-2611-ABCD*")}),
+    ]
     assert store.finished[0][0] == "processed"
 
 def test_duplicate_notion_page_restore_reactivates_soft_deleted_projection():
@@ -576,7 +579,10 @@ def test_duplicate_notion_page_restore_reactivates_soft_deleted_projection():
     assert result == {"status": "synced", "listing_id": "EF-2611-ABCD"}
     assert len(store.synced) == 1 and store.synced[0][1] is False
     assert store.listing_ids == [(page_id, "EF-2611-ABCD")]
-    assert notion.updates == [(page_id, {"listing_id": intake._rich("EF-2611-ABCD")})]
+    assert notion.updates == [
+        (page_id, {"listing_id": intake._rich("EF-2611-ABCD")}),
+        (page_id, {"catalogue_description": intake._rich("*🏠 EF-2611-ABCD*")}),
+    ]
 
 
 def test_photo_upload_retry_reuses_deterministic_indexes(monkeypatch):
@@ -877,3 +883,85 @@ def test_runtime_maps_client_does_not_block_when_secret_is_missing(monkeypatch):
     monkeypatch.setattr("shared.credentials.get_secret", lambda _name: (_ for _ in ()).throw(RuntimeError("not available")))
     client = intake._runtime_maps_client()
     assert client.ola.api_key == ""
+
+
+from datetime import date
+
+def test_catalogue_description_gated_card_full_rules():
+    row = {"catalog_title": "Semi Furnished 2 BHK - Kasavanahalli", "monthly_rent": "50000",
+           "security_deposit": "125000", "maintenance": "3000", "built_up_area": "1200",
+           "floor_number": "3", "total_floors": "5", "preferred_tenant_type": "Family",
+           "internal_property_type": "Gated Community", "locality": "Kasavanahalli",
+           "bathrooms": "2", "balconies": "1", "society_name": "Adarsh Palm Retreat",
+           "google_maps_url": "https://maps.app.goo.gl/short"}
+    raw = "Pets not allowed\nAvailability: Ready to Occupy\nUtility"
+    desc = intake.build_catalogue_description(row, raw, resolved_maps_url="https://www.google.com/maps/search/?api=1&query=x")
+    assert desc.startswith("*🏠 Semi Furnished 2 BHK - Kasavanahalli*")
+    assert "💰 Rent: Rs 50,000" in desc
+    assert "🧾 Maintenance: Rs 3,000" in desc
+    assert "🔑 Deposit: Rs 1,25,000" in desc
+    assert "📐 1200 sqft | Floor 3rd of 5th floors" in desc
+    assert "🗓️ Available: Ready To Occupy" in desc
+    assert "👨‍👩‍👧 Family Only" in desc
+    assert "🐾 Pets: Not Allowed" in desc
+    assert "🏢 Gated community" in desc
+    assert "*📍 Adarsh Palm Retreat:*\nhttps://www.google.com/maps/search/?api=1&query=x" in desc
+    assert "goo.gl" not in desc
+
+
+def test_catalogue_description_semi_gated_closes_with_landmark_and_no_total_floors():
+    row = {"catalog_title": "Semi Furnished 1 BHK - Haralur", "internal_property_type": "Semi Gated",
+           "landmark": "Near Silver County", "society_name": "Some Layout", "locality": "Haralur",
+           "floor_number": "2", "preferred_tenant_type": "Open For All"}
+    desc = intake.build_catalogue_description(row, "", resolved_maps_url="https://www.google.com/maps/search/?api=1&query=y")
+    assert "Floor 2nd" in desc and "of" not in desc.split("Floor 2nd")[1].split("\n")[0]
+    assert "🏘️ Semi gated community" in desc
+    assert "👥 Open For All" in desc
+    assert "*📍 Near Silver County:*" in desc
+    assert "Some Layout" not in desc
+
+
+def test_catalogue_description_standalone_has_no_community_line():
+    row = {"catalog_title": "Semi Furnished 2 BHK - Kasavanahalli", "internal_property_type": "Standalone",
+           "locality": "Kasavanahalli"}
+    desc = intake.build_catalogue_description(row, "")
+    assert "community" not in desc
+
+
+def test_catalogue_description_availability_rules():
+    assert intake._catalogue_availability("1st December", today=date(2026, 11, 21)) == "1st December 2026"
+    assert intake._catalogue_availability("Nov 1", today=date(2026, 11, 21)) == "Ready To Occupy"
+    assert intake._catalogue_availability("Ready to occupy", today=date(2026, 11, 21)) == "Ready To Occupy"
+    assert intake._catalogue_availability("October 15", today=date(2026, 11, 21)) == "Ready To Occupy"
+    assert intake._catalogue_availability("15th January 2027", today=date(2026, 11, 21)) == "15th January 2027"
+    assert intake._catalogue_availability("call owner", today=date(2026, 11, 21)) == "call owner"
+
+
+def test_catalogue_description_maintenance_three_clean_values():
+    base = {"catalog_title": "T", "locality": "L"}
+    row = dict(base, maintenance="7000")
+    assert "🧾 Maintenance: Rs 7,000" in intake.build_catalogue_description(row, "")
+    row = dict(base, maintenance="water charges extra")
+    assert "🧾 Maintenance: Water Charges Additional" in intake.build_catalogue_description(row, "")
+    row = dict(base, monthly_rent="30000", maintenance="5000", maintenance_included="yes")
+    desc = intake.build_catalogue_description(row, "")
+    assert "💰 Rent: Rs 30,000 (maintenance included)" in desc and "🧾" not in desc
+
+
+def test_catalogue_description_never_uses_short_map_link():
+    row = {"catalog_title": "T", "locality": "Harlur", "google_maps_url": "https://maps.app.goo.gl/abc"}
+    assert "goo.gl" not in intake.build_catalogue_description(row, "")
+    row["google_maps_url"] = "https://www.google.com/maps/search/?api=1&query=z"
+    assert "https://www.google.com/maps/search/?api=1&query=z" in intake.build_catalogue_description(row, "")
+
+
+def test_catalogue_description_ordinals():
+    assert intake._ordinal(1) == "1st" and intake._ordinal(2) == "2nd"
+    assert intake._ordinal(3) == "3rd" and intake._ordinal(4) == "4th"
+    assert intake._ordinal(11) == "11th" and intake._ordinal(12) == "12th"
+    assert intake._ordinal(13) == "13th" and intake._ordinal(21) == "21st"
+    assert intake._ordinal(23) == "23rd" and intake._ordinal(28) == "28th"
+
+
+def test_catalogue_description_is_a_written_text_field():
+    assert "catalogue_description" in intake.TEXT_FIELDS

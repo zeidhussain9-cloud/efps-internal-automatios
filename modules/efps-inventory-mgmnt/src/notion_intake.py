@@ -380,7 +380,7 @@ def _bhk_group(bhk: str):
 
 
 TEXT_FIELDS = {
-    "BHK", "catalog_title", "city", "cloudinary_image_urls",
+    "BHK", "catalog_title", "catalogue_description", "city", "cloudinary_image_urls",
     "error_notes", "flat_furnishings", "floor_number", "furnish_type", "intake_status",
     "internal_property_type", "landmark", "listing_id", "locality",
     "maintenance", "meta_catalog_id", "meta_catalog_status", "onboarded_on", "open_parking",
@@ -712,6 +712,176 @@ def build_whatsapp_post(row: dict, raw_text: str, *, maps_verified: bool, verifi
     return "\n\n".join(sections)
 
 
+_MONTH_LOOKUP = {
+    "jan": 1, "feb": 2, "mar": 3, "apr": 4, "may": 5, "jun": 6,
+    "jul": 7, "aug": 8, "sep": 9, "oct": 10, "nov": 11, "dec": 12,
+}
+
+
+def _ordinal(n: int) -> str:
+    """1st, 2nd, 3rd, 4th... with the 11th/12th/13th exception."""
+    if 10 <= n % 100 <= 20:
+        return f"{n}th"
+    return f"{n}" + {1: "st", 2: "nd", 3: "rd"}.get(n % 10, "th")
+
+
+def _catalogue_availability(value: str, *, today) -> str:
+    """Zeid's 21 Nov rule: a future date in full ('1st December 2026');
+    anything present or past is 'Ready To Occupy'. Unparseable text is
+    preserved verbatim, never rewritten into a guess."""
+    text = str(value or "").strip()
+    if not text:
+        return ""
+    if re.search(r"\bready\s*to\s*occupy\b", text, re.I):
+        return "Ready To Occupy"
+    day = month = year = None
+    m = re.search(r"(\d{1,2})(?:st|nd|rd|th)?\s+(?:of\s+)?([A-Za-z]+)\s*,?\s*(\d{4})?", text)
+    if m:
+        day, mon, year = int(m.group(1)), m.group(2), m.group(3)
+    else:
+        m = re.search(r"([A-Za-z]+)\s+(\d{1,2})(?:st|nd|rd|th)?\s*,?\s*(\d{4})?", text)
+        if m:
+            mon, day, year = m.group(1), int(m.group(2)), m.group(3)
+    if day is None:
+        return text
+    month = _MONTH_LOOKUP.get(mon.lower()[:3])
+    if not month:
+        return text
+    year = int(year) if year else today.year
+    try:
+        d = datetime(year, month, day).date()
+    except ValueError:
+        return text
+    if d <= today:
+        return "Ready To Occupy"
+    return f"{_ordinal(day)} {datetime(year, month, day).strftime('%B')} {year}"
+
+
+def build_catalogue_description(row: dict, raw_text: str, *, verified_society_name: str = "", resolved_maps_url: str = "", today=None) -> str:
+    """Catalogue product description per the rules Zeid stamped on 21 Nov 2026.
+
+    Option B card style. Product name is the standardized catalog_title.
+    Floors use proper ordinals ('3rd of 5th floors', just '3rd' when the
+    total is unknown). Maintenance is one of Rs amount / Included / Water
+    Charges Additional. Availability is a full future date or 'Ready To
+    Occupy'. Tenant type uses the locked LOV only. Gated listings close
+    with the society name, Semi Gated and Standalone with the landmark.
+    The map link is always the standardized long google.com/maps link;
+    short links never appear. Lines render only when their data exists.
+    """
+    title = str(row.get("catalog_title") or "").strip()
+    if not title:
+        base = " ".join(x for x in (str(row.get("furnish_type") or "").strip(), str(row.get("BHK") or "").strip()) if x)
+        locality0 = str(row.get("locality") or "").strip()
+        if base and locality0:
+            title = f"{base} - {locality0}"
+        else:
+            title = str(row.get("listing_id") or "").strip()
+    if not title:
+        return ""
+    raw = str(raw_text or "")
+    sections = [f"*🏠 {title}*"]
+
+    money = []
+    rent = _rupee_amount(row.get("monthly_rent"))
+    included = str(row.get("maintenance_included") or "").strip().lower() == "yes"
+    if rent:
+        line = f"💰 Rent: Rs {rent}"
+        if included:
+            line += " (maintenance included)"
+        money.append(line)
+    maintenance = str(row.get("maintenance") or "").strip()
+    if maintenance and not included:
+        amount = _rupee_amount(maintenance)
+        if amount:
+            money.append(f"🧾 Maintenance: Rs {amount}")
+        elif re.search(r"\bwater\b", maintenance, re.I):
+            money.append("🧾 Maintenance: Water Charges Additional")
+        else:
+            money.append(f"🧾 Maintenance: {maintenance}")
+    deposit = _rupee_amount(row.get("security_deposit"))
+    if deposit:
+        money.append(f"🔑 Deposit: Rs {deposit}")
+    if money:
+        sections.append("\n".join(money))
+
+    specs = []
+    spec_parts = []
+    sqft = str(row.get("built_up_area") or "").strip()
+    if sqft:
+        spec_parts.append(f"{sqft} sqft")
+    floor = str(row.get("floor_number") or "").strip()
+    total_floors = str(row.get("total_floors") or "").strip()
+    if floor and floor.lower() not in {"villa", "independent house", "duplex"}:
+        if floor.isdigit() and total_floors.isdigit():
+            spec_parts.append(f"Floor {_ordinal(int(floor))} of {_ordinal(int(total_floors))} floors")
+        elif floor.isdigit():
+            spec_parts.append(f"Floor {_ordinal(int(floor))}")
+        else:
+            spec_parts.append(f"Floor {floor}")
+    elif floor:
+        spec_parts.append(floor)
+    if spec_parts:
+        specs.append("📐 " + " | ".join(spec_parts))
+    features = []
+    if re.search(r"\bprivate\s+terrace\b", raw, re.I):
+        features.append("private terrace")
+    if re.search(r"\butility\b", raw, re.I):
+        features.append("utility")
+    attached = re.search(r"\b(\d+)\s+attached\s+bathrooms?\b", raw, re.I)
+    if attached:
+        features.append(f"{attached.group(1)} attached bathrooms")
+    elif row.get("bathrooms"):
+        count = str(row["bathrooms"]).strip()
+        features.append(f"{count} bathroom" + ("" if count == "1" else "s"))
+    balconies = str(row.get("balconies") or "").strip()
+    if balconies and balconies not in {"0", "0.0"}:
+        features.append(f"{balconies} " + ("balcony" if balconies == "1" else "balconies"))
+    features = features[:3]
+    if features:
+        specs.append("🛁 " + " + ".join(features))
+    availability = _catalogue_availability(_available_from(raw), today=today or datetime.now(timezone.utc).date())
+    if availability:
+        specs.append(f"🗓️ Available: {availability}")
+    if specs:
+        sections.append("\n".join(specs))
+
+    people = []
+    tenant = str(row.get("preferred_tenant_type") or "").strip()
+    if tenant.lower() in {"family", "family only"}:
+        people.append("👨‍👩‍👧 Family Only")
+    elif tenant.lower() in {"anyone", "open for all"}:
+        people.append("👥 Open For All")
+    pets = _explicit_pet_policy(raw)
+    if pets:
+        people.append(f"🐾 Pets: {pets}")
+    internal_type = str(row.get("internal_property_type") or "").strip()
+    if internal_type == "Gated Community":
+        people.append("🏢 Gated community")
+    elif internal_type == "Semi Gated":
+        people.append("🏘️ Semi gated community")
+    if people:
+        sections.append("\n".join(people))
+
+    society = str(verified_society_name or row.get("society_name") or "").strip()
+    landmark = str(row.get("landmark") or "").strip()
+    locality = str(row.get("locality") or "").strip()
+    if internal_type == "Gated Community":
+        label = society or landmark or locality
+    else:
+        label = landmark or society or locality
+    link = str(resolved_maps_url or "").strip()
+    if not link:
+        candidate = str(row.get("google_maps_url") or "").strip()
+        if candidate.startswith("https://www.google.com/maps") or candidate.startswith("https://maps.google.com"):
+            link = candidate
+    if link and label:
+        sections.append(f"*📍 {label}:*\n{link}")
+    elif link:
+        sections.append(f"*📍 Location:*\n{link}")
+    return "\n\n".join(sections)
+
+
 def _upload_photos(page: dict, listing_id: str, row: dict, cloudinary: CloudinaryClient):
     files = _photos(page)
     existing = [x.strip() for x in str(row.get("cloudinary_image_urls") or "").split(",") if x.strip()]
@@ -961,6 +1131,13 @@ def process_page(
             issues.append("WhatsApp caption not generated because a verified locality or Maps verification is missing.")
             processed["status"] = "Needs Review"
         processed["whatsapp_post"] = caption
+        # Stamped 21 Nov: catalogue_description regenerates on every intake
+        # processing so the catalogue field never drifts from the row.
+        processed["catalogue_description"] = build_catalogue_description(
+            processed, raw_text,
+            verified_society_name=verified_society,
+            resolved_maps_url=caption_maps_url,
+        )
         final_state = "Needs Review" if processed.get("status") == "Needs Review" else "Processed"
         lifecycle = notion_lifecycle.finish_processing(processed, previous)
         processed.update(protected)
@@ -1043,6 +1220,22 @@ def process_listing_page(page: dict, *, notion: NotionClient, store: SupabaseInt
             notion.update_page(page_id, {"listing_id": _rich(listing_id)})
         row["listing_id"] = listing_id
         store.set_listing_id(page_id, listing_id)
+        if not deleted:
+            # Stamped 21 Nov: every Housing row edit refreshes the catalogue
+            # description. Deterministic rebuild; written only when it changed,
+            # which keeps the webhook loop finite (next event sees equality).
+            # The standardized long Maps link is carried over from the existing
+            # description when this path has no fresh resolved link, so an
+            # unrelated edit never silently drops the verified link.
+            existing_desc = str(row.get("catalogue_description") or "")
+            carry = re.search(r"https://(?:www\.)?google\.com/maps\S+", existing_desc)
+            rebuilt = build_catalogue_description(
+                row, str(row.get("raw_message_text") or ""),
+                resolved_maps_url=carry.group(0) if carry else "",
+            )
+            if rebuilt and rebuilt != existing_desc.strip():
+                notion.update_page(page_id, {"catalogue_description": _rich(rebuilt)})
+                row["catalogue_description"] = rebuilt
         store.sync_inventory(page_id, row, deleted=deleted)
         note = "Synced from canonical Notion Housing Listings."
         store.finish(page_id, "processed", listing_page_id=page_id, note=note)
