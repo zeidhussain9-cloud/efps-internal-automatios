@@ -57,7 +57,7 @@ _ROWS = [
 ("maintenance",PANEL,STAGE_2,(),("maintenance_included",),"Source value; numeric k/lakh normalized, mixed suffixes preserved."),
 ("maintenance_included",PANEL,STAGE_2,("Yes","No"),(),"Interdependent with maintenance."),
 ("security_deposit",PANEL,STAGE_2,(),("monthly_rent",),"Explicit amount or explicitly stated months converted using rent."),
-("preferred_tenant_type",PANEL,STAGE_2,("Family","Open For All"),(),"Exact live Sheet dropdown vocabulary; deterministic source variants normalized."),
+("preferred_tenant_type",PANEL,STAGE_2,("Family Only","Open For All"),(),"Locked dropdown vocabulary (owner, 21 Nov 2026): family variants normalize to Family Only; deterministic source variants normalized."),
 ("bachelor_preference",PANEL,STAGE_2,("Female Only ","Male Only","Open for both"),("preferred_tenant_type",),"Exact live Sheet dropdown vocabulary. Family clears this field; Open For All defaults exactly to Open for both unless explicit source evidence overrides it."),
 ("pet_friendly",PANEL,STAGE_2,("Yes","No"),(),"Explicit no-pet wording -> No; allowed/restricted-pet wording is retained as pet-friendly rather than inventing a prohibition."),
 ("servant_room",PANEL,STAGE_2,("Yes","No"),(),"Explicit source Yes only; otherwise No."),

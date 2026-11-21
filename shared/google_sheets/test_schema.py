@@ -9,7 +9,7 @@ def test_contract_is_exactly_latest_48_columns():
 def test_verified_sheet_vocabularies_are_recorded_in_schema():
     assert schema.BY_NAME["internal_property_type"].allowed_values==("Gated Community","Semi Gated","Standalone")
     assert schema.BY_NAME["furnish_type"].allowed_values==("Fully Furnished","Semi Furnished")
-    assert schema.BY_NAME["preferred_tenant_type"].allowed_values==("Family","Open For All")
+    assert schema.BY_NAME["preferred_tenant_type"].allowed_values==("Family Only","Open For All")
     assert schema.BY_NAME["bachelor_preference"].allowed_values==("Female Only ","Male Only","Open for both")
     assert schema.BY_NAME["pet_friendly"].allowed_values==("Yes","No")
     assert schema.BY_NAME["society_amenities"].allowed_values==("Security, Lift, CCTV, Power Backup","Club House, Lift, Gym, CCTV, Power Backup, Swimming Pool, Garden, Sports, Kids Area","-")

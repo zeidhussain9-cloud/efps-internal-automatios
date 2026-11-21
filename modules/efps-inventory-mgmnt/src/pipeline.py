@@ -4,6 +4,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 
 from shared.ola_maps.inventory import OlaInventoryMaps
+from shared.ola_maps.links import MapsLinks
 from shared.google_sheets import schema
 try:
     from . import ai, listing_id, validate
@@ -119,6 +120,17 @@ def process_closed_session(raw_text: str, *, row: dict | None = None, maps_clien
             issues.extend(str(x) for x in out["_ai_conflicts"])
             out["status"] = "Needs Review"
             out.pop("_ai_conflicts", None)
+    if maps_url:
+        # Permanent rule (map-link standard): the caption carries one canonical
+        # google.com/maps/search URL built from the expanded link, never the
+        # short goo.gl/share.google source. The source link stays in the row.
+        # Internal handoff key: added after validation so the 48-field row
+        # contract is untouched, and popped by the intake before persistence.
+        evidence = getattr(resolved, "evidence", None) or {}
+        expanded = str(evidence.get("expanded_url") or "") if resolved is not None else ""
+        caption_link = MapsLinks.standard_search_url(expanded) or MapsLinks.standard_search_url(maps_url)
+        if caption_link:
+            out["_caption_maps_url"] = caption_link
     out["intake_status"] = "Processed"
     return out, issues
 

@@ -30,6 +30,8 @@ class OlaInventoryMaps:
         if link:
             evidence['link_status'] = 'reachable' if link.reachable else 'unreachable_or_unsupported'
             evidence['link_issue'] = link.issue
+            if link.reachable and link.expanded_url:
+                evidence['expanded_url'] = link.expanded_url
         if link and link.reachable and link.latitude is not None:
             result = self.ola.reverse_geocode(link.latitude, link.longitude)
             if result.confidence == 'OK':

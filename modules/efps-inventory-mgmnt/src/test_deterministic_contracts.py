@@ -55,7 +55,7 @@ def test_tenant_variants_normalize_to_sheet_vocabulary():
             f"2 BHK\nRent: 40000\nPreferred Tenant: {raw_value}",
             pipeline.initial_row("EF-TEST-TENANT-001"),
         )
-        assert row["preferred_tenant_type"] in {"Family", "Open For All"}
+        assert row["preferred_tenant_type"] in {"Family Only", "Open For All"}
 
 
 def test_standalone_amenities_use_sheet_dash():
@@ -76,7 +76,7 @@ def test_property_subtype_is_direct_when_present_and_apartment_only_as_fallback(
 def test_catalog_title_and_highlights_are_deterministic_fallbacks():
     raw = "Semi Furnished 2 BHK\nRent: 40000\nLocation: Harlur\nUtility area"
     row = pipeline.deterministic(raw, pipeline.initial_row("EF-TEST-WORDING-001"))
-    assert row["catalog_title"] == "Semi Furnished 2 BHK for Rent - Harlur"
+    assert row["catalog_title"] == "Semi Furnished 2 BHK - Harlur"
     assert "Utility area" in row["property_highlights"]
 
 

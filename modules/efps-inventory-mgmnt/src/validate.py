@@ -30,7 +30,7 @@ def validate(row:dict)->list[str]:
     if row["furnish_type"] and row["furnish_type"] not in FURNISH_TYPES:errors.append("invalid furnish_type")
     if row["preferred_tenant_type"] and row["preferred_tenant_type"] not in PREFERRED_TENANT_TYPES:errors.append("invalid preferred_tenant_type")
     if row["bachelor_preference"] and row["bachelor_preference"] not in BACHELOR_PREFERENCES:errors.append("invalid bachelor_preference")
-    if row["preferred_tenant_type"]=="Family" and row["bachelor_preference"]:errors.append("bachelor_preference must be blank when preferred_tenant_type is Family")
+    if row["preferred_tenant_type"]=="Family Only" and row["bachelor_preference"]:errors.append("bachelor_preference must be blank when preferred_tenant_type is Family Only")
     elif row["preferred_tenant_type"]=="Open For All" and row["bachelor_preference"] not in BACHELOR_PREFERENCES:errors.append("bachelor_preference must be a canonical value when preferred_tenant_type is Open For All")
     if row["pet_friendly"] and row["pet_friendly"] not in PET_FRIENDLY:errors.append("invalid pet_friendly")
     if row["internal_property_type"] not in PROPERTY_TYPES:errors.append("internal_property_type must be exactly one of Gated Community, Semi Gated, Standalone")

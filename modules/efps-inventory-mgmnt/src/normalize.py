@@ -52,9 +52,10 @@ def _usable(value:str)->bool:return bool(str(value or "").strip()) and str(value
 def _canonical_tenant(value:str)->str:
     raw=str(value or "").strip().lower()
     if not raw:return ""
-    if raw in {"anyone","anybody","open for all","all","all tenants","everyone"}:return "Open For All"
-    if "family" in raw:return "Family"
-    return "Open For All" if raw in {"open","open tenant"} else value.strip()
+    if raw in {"anyone","anybody","open for all","all","all tenants","everyone","open","open tenant","any"}:return "Open For All"
+    if "famil" in raw:return "Family Only"
+    if "bachelor" in raw:return "Open For All"
+    return value.strip()
 def _pet_value(raw_text:str)->str:
     text=str(raw_text or "")
     if re.search(r"\b(?:pets?|animals?)\s*(?::|=|-)?\s*(?:are\s*)?(?:not\s*allowed|not\s*permitted|prohibited|banned)\b",text,re.I):return "No"
@@ -96,7 +97,7 @@ def apply_tenant_bachelor_rule(row:dict,raw_text:str)->dict:
     current=str(row.get("bachelor_preference","")).strip()
     if current and not _verified_in_text(current,raw_text):current=""
     if current:row["bachelor_preference"]=current
-    elif tenant=="Family":row["bachelor_preference"]=""
+    elif tenant=="Family Only":row["bachelor_preference"]=""
     elif tenant=="Open For All":row["bachelor_preference"]="Open for both"
     return row
 def normalize_bachelor_preference(row:dict)->dict:
@@ -117,16 +118,9 @@ def construct_deterministic_highlights(row:dict,raw_text:str,original_subtype:st
     return list(dict.fromkeys(fragments))
 def build_catalog_title(row:dict)->str:
     if _usable(row.get("catalog_title","")):return str(row["catalog_title"]).strip()
-    parts=[];furnish=str(row.get("furnish_type","")).strip();bhk=str(row.get("BHK","")).strip();location=str(row.get("locality","")).strip();internal_type=str(row.get("internal_property_type","")).strip()
-    # Detect special features (Duplex, Villa, etc.)
-    special_features=["Duplex","Villa","Penthouse","Independent House","Row House"];special_feature=None
-    for feature in special_features:
-        if feature.lower()in internal_type.lower():special_feature=feature;break
-    # Build title: furnish + special_feature + BHK + for Rent
-    if furnish:parts.append(furnish)
-    if special_feature:parts.append(special_feature)
-    if bhk:parts.append(bhk)
-    title=" ".join(parts)+" for Rent" if parts else "Property for Rent"
+    # Permanent standard (owner, 21 Nov 2026): "<Furnish> <BHK> - <Location>".
+    furnish=str(row.get("furnish_type","")).strip();bhk=str(row.get("BHK","")).strip();location=str(row.get("locality","")).strip()
+    title=" ".join(part for part in (furnish,bhk) if part) or "Property"
     return f"{title} - {location}" if location else title
 def preserve_rk_wording(row:dict,raw_text:str)->dict:
     match=_RK_RE.search(raw_text or "")

@@ -135,6 +135,7 @@ class NotionClient:
                 row["Pipeline Status"] = latest["Pipeline Status"]
         properties = listing_notion_properties(row, schema=schema)
         validate_listing_properties(schema, properties)
+        enforce_select_vocabulary(schema, properties)
         if existing:
             self.update_page(existing["id"], properties)
             return existing["id"]
@@ -541,9 +542,9 @@ def _short_mobile_maps_url(url: str) -> bool:
 
 def _explicit_pet_policy(raw_text: str) -> str:
     text = str(raw_text or "")
-    if re.search(r"\b(?:no\s+pets?|pets?\s+not\s+allowed|pets?\s+prohibited|not\s+pet\s+friendly)\b", text, re.I):
+    if re.search(r"\b(?:no\s+pets?|pets?\s*(?::|=|-)?\s*(?:are\s*)?not\s+allowed|pets?\s*(?::|=|-)?\s*prohibited|not\s+pet\s+friendly)\b", text, re.I):
         return "Not Allowed"
-    if re.search(r"\b(?:pets?\s+allowed|pet\s+friendly|pets?\s+welcome)\b", text, re.I):
+    if re.search(r"\b(?:pets?\s*(?::|=|-)?\s*(?:are\s*)?allowed|pet\s+friendly|pets?\s*(?::|=|-)?\s*welcome|(?:only\s+)?(?:one|\d+)\s+pets?\s+allowed)\b", text, re.I):
         return "Allowed"
     return ""
 
@@ -557,12 +558,18 @@ def _available_from(raw_text: str) -> str:
     return "Ready to Occupy" if re.search(r"\b(?:now|immediate|immediately|ready\s+to\s+occupy)\b", value, re.I) else value
 
 
-def build_whatsapp_post(row: dict, raw_text: str, *, maps_verified: bool, verified_society_name: str = "", allow_unverified_source_map: bool = False) -> str:
-    """Build a caption from explicit facts; an unverified source URL is opt-in and remains labelled unverified."""
+def build_whatsapp_post(row: dict, raw_text: str, *, maps_verified: bool, verified_society_name: str = "", allow_unverified_source_map: bool = False, resolved_maps_url: str = "") -> str:
+    """Build a caption from explicit facts; an unverified source URL is opt-in and remains labelled unverified.
+
+    resolved_maps_url is the canonical google.com/maps/search caption link produced
+    by the pipeline from the expanded source link. When present it is the only map
+    link the caption carries: short goo.gl/share.google URLs never reach a post.
+    """
     maps_url = str(row.get("google_maps_url") or "").strip()
-    if maps_url and not maps_verified and not allow_unverified_source_map:
+    resolved_maps_url = str(resolved_maps_url or "").strip()
+    if maps_url and not maps_verified and not allow_unverified_source_map and not resolved_maps_url:
         return ""
-    if allow_unverified_source_map and maps_url and not _short_mobile_maps_url(maps_url):
+    if allow_unverified_source_map and maps_url and not _short_mobile_maps_url(maps_url) and not resolved_maps_url:
         return ""
     locality = str(row.get("locality") or "").strip()
     if not locality:
@@ -607,9 +614,16 @@ def build_whatsapp_post(row: dict, raw_text: str, *, maps_verified: bool, verifi
         lines.append(f"Preferred tenant: {tenant}")
     pets = _explicit_pet_policy(raw)
     if pets: lines.append(f"Pets: {pets}")
-    if str(row.get("internal_property_type") or "").strip() == "Gated Community": lines.append("Gated Community")
+    internal_type = str(row.get("internal_property_type") or "").strip()
+    if internal_type == "Gated Community": lines.append("Gated Community")
+    elif internal_type == "Semi Gated": lines.append("Semi Gated Community")
     lines.append(f"Location: *{locality}*")
-    if maps_url and _short_mobile_maps_url(maps_url):
+    if resolved_maps_url:
+        society = str(verified_society_name or row.get("society_name") or "").strip()
+        landmark = str(row.get("landmark") or "").strip()
+        label = society if society and society.casefold() != locality.casefold() else ("Landmark" if landmark and landmark.casefold() != locality.casefold() else "")
+        if label: lines.extend(["", f"*📍 {label}:", resolved_maps_url])
+    elif maps_url and _short_mobile_maps_url(maps_url):
         if allow_unverified_source_map and not maps_verified:
             lines.extend(["", "*📍 Original Maps link (not verified):", maps_url])
         else:
@@ -675,6 +689,35 @@ def _runtime_ola_client() -> OlaMapsClient:
     # key configured, locality normalization still runs on text similarity and
     # simply skips the Ola lookup.
     return OlaMapsClient()
+
+
+def _option_names(definition: dict) -> set[str]:
+    select = definition.get("select") or definition.get("multi_select") or {}
+    return {str(option.get("name") or "") for option in (select.get("options") or []) if str(option.get("name") or "")}
+
+
+def enforce_select_vocabulary(schema: dict, properties: dict) -> None:
+    """Dropdown fields only ever take an existing option - data never creates options.
+
+    A value outside the live vocabulary stops the write instead of letting Notion
+    auto-create a new dropdown option; the intake marks the listing Needs Review.
+    """
+    for name, payload in (properties or {}).items():
+        definition = (schema or {}).get(name) or {}
+        property_type = definition.get("type")
+        if property_type == "select":
+            value = str(((payload.get("select") or {}) or {}).get("name") or "")
+            if not value:
+                continue
+            options = _option_names(definition)
+            if options and value not in options:
+                raise IntakeError(f"{name}: '{value}' is not an existing dropdown option; refusing to create a new one")
+        elif property_type == "multi_select":
+            values = [str(item.get("name") or "") for item in (payload.get("multi_select") or []) if str(item.get("name") or "")]
+            options = _option_names(definition)
+            unknown = [value for value in values if options and value not in options]
+            if unknown:
+                raise IntakeError(f"{name}: {unknown} not existing dropdown options; refusing to create new ones")
 
 
 def _locality_select_options(listing_schema: dict) -> list[str]:
@@ -810,14 +853,15 @@ def process_page(
                 )
         processed["cloudinary_image_urls"] = row.get("cloudinary_image_urls", processed.get("cloudinary_image_urls", ""))
         maps_url = str(processed.get("google_maps_url") or "").strip()
+        caption_maps_url = str(processed.pop("_caption_maps_url", "") or "").strip()
         ola_checked = any(issue.startswith("Ola background checks:") for issue in issues)
         maps_failed = bool(maps_url) and (ola_checked or any(issue.startswith(("Google Maps verification failed", "Google Maps API unavailable", "Background Maps check unavailable")) for issue in issues))
         maps_api_unavailable = bool(maps_url) and (ola_checked or any(issue.startswith(("Google Maps API unavailable", "Background Maps check unavailable")) for issue in issues))
-        if maps_url and not _short_mobile_maps_url(maps_url):
+        if maps_url and not _short_mobile_maps_url(maps_url) and not caption_maps_url:
             issues.append("Original Maps URL is not a supported short mobile link; omitted from the caption and requires review.")
             processed["status"] = "Needs Review"
         verified_society = next((issue.split(":", 1)[1].strip() for issue in issues if issue.startswith("Google Maps verified place name:")), "")
-        caption = build_whatsapp_post(processed, raw_text, maps_verified=not maps_failed, verified_society_name=verified_society, allow_unverified_source_map=maps_api_unavailable)
+        caption = build_whatsapp_post(processed, raw_text, maps_verified=not maps_failed, verified_society_name=verified_society, allow_unverified_source_map=maps_api_unavailable, resolved_maps_url=caption_maps_url)
         if not caption:
             issues.append("WhatsApp caption not generated because a verified locality or Maps verification is missing.")
             processed["status"] = "Needs Review"
