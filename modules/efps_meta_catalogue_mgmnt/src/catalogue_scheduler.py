@@ -260,13 +260,12 @@ def _finalize(event, lam, store, context, *, sleep, now) -> dict:
     try:
         _append_decision_log(store, [title] + body)
     except Exception as exc:  # never let logging block the restore outcome
-        if "object_not_found" in str(exc) or "404" in str(exc):
-            # The Decision Log page is not shared with the Lambda's Notion
-            # connection. The agent relaying the weekly scorecard appends the
-            # entry from this completion event instead.
-            _log("catalogue_schedule_log_unshared", run_id=run_id)
-        else:
-            _log("catalogue_schedule_log_failed", run_id=run_id, error=str(exc)[:300])
+        from known_errors import known_recovery
+        recovery = known_recovery("append_decision_log", exc)
+        _log("catalogue_schedule_log_unshared" if recovery else "catalogue_schedule_log_failed",
+             run_id=run_id, error=str(exc)[:300], recovery=recovery,
+             pending_decision_log=[title] + body)
+
 
     _log("catalogue_schedule_completed" if status == "completed" else "catalogue_schedule_failed",
          run_id=run_id, status=status, totals=totals, deleted=deleted,
