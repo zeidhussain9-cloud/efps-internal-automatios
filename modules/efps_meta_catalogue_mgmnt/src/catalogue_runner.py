@@ -130,10 +130,10 @@ def eligible_delete(row: Mapping[str, Any]) -> bool:
     # Only a row still marked as live on Meta Catalogue can carry a live product.
     if META_CHANNEL not in _live_at(row):
         return False
-    return (
-        str(row.get("Availability") or "") in {"Rented Out", "On Hold"}
-        or not _truthy(row.get("post_to_catalogue"))
-    )
+    # Locked 21 Nov (Zeid): ONLY Rented Out/On Hold arms deletion. A missing
+    # "Post to Catalogue" tick never qualifies - legacy products predate the
+    # tick system, so unticked is the normal state for live listings.
+    return str(row.get("Availability") or "") in {"Rented Out", "On Hold"}
 
 
 def eligible_assign(row: Mapping[str, Any]) -> bool:
@@ -351,17 +351,13 @@ def _op_update_row(run: _Run, row: Mapping[str, Any]) -> None:
 
 def _op_delete_row(run: _Run, row: Mapping[str, Any]) -> None:
     product_id = str(row.get("meta_catalog_id") or "").strip()
-    reason = []
-    if str(row.get("Availability") or "") in {"Rented Out", "On Hold"}:
-        reason.append(f"Availability={row.get('Availability')}")
-    if not _truthy(row.get("post_to_catalogue")):
-        reason.append("Post to Catalogue unticked")
+    reason = f"Availability={row.get('Availability')}"
     if run.dry_run:
-        run.record(row, product_id, "WOULD", f"delete product ({'; '.join(reason)})")
+        run.record(row, product_id, "WOULD", f"delete product ({reason})")
         return
     try:
         _call_with_retry(lambda: run.whapi.delete_product(product_id), sleeper=run.sleeper)
-        note = f"deleted ({'; '.join(reason)})"
+        note = f"deleted ({reason})"
     except Exception as exc:  # noqa: BLE001
         if "404" in str(exc):
             note = "product already gone on WhatsApp (404); status corrected"

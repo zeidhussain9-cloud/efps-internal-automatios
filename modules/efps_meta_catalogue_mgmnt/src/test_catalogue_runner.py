@@ -264,12 +264,15 @@ def test_delete_by_exact_id_keeps_red_id_and_clears_channel():
     assert any("DELETE EF-2611-AAAA product=77 OK" in line for _, line in store.activity)
 
 
-def test_delete_triggers_on_rented_out_on_hold_and_unticked():
-    for kw in ({"Availability": "Rented Out"}, {"Availability": "On Hold"}, {"post_to_catalogue": False}):
+def test_delete_triggers_only_on_rented_out_or_on_hold():
+    for kw in ({"Availability": "Rented Out"}, {"Availability": "On Hold"}):
         row = make_row(meta_catalog_id="77", **{"live at": ["Meta Catalogue"]}, **kw)
         assert runner.eligible_delete(row), kw
-    assert not runner.eligible_delete(make_row(meta_catalog_id="77"))
+    # A missing tick alone never arms deletion (legacy products predate the tick).
+    assert not runner.eligible_delete(make_row(meta_catalog_id="77", post_to_catalogue=False,
+                                               **{"live at": ["Meta Catalogue"]}))
     # Available + ticked stays live; no Meta Catalogue channel means nothing to delete.
+    assert not runner.eligible_delete(make_row(meta_catalog_id="77"))
     assert not runner.eligible_delete(make_row(meta_catalog_id="77", Availability="Rented Out"))
 
 
