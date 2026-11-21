@@ -394,3 +394,12 @@ def test_queued_decisions_execute_before_the_normal_pass():
     result = run("create", store, whapi)
     assert store.review_done == [("q1", "executed via create")]
     assert any("ADOPTED" in l for l in result["lines"])
+
+
+def test_reconcile_dry_run_queues_nothing():
+    whapi = FakeWhapi()
+    whapi.products["9"] = {"id": "9", "product_retailer_id": "EF-ORPHAN"}
+    store = FakeStore([make_row()], switches={**ALL_SWITCHES, "DRY_RUN": True})
+    result = run("reconcile", store, whapi)
+    assert any("would queue for review" in l for l in result["lines"])
+    assert store.review_entries == [] and store.updates == [] and store.activity == [] and store.panel == []

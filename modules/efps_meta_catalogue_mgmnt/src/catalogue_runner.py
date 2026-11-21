@@ -205,9 +205,11 @@ def run_operation(operation: str, *, store: Any, whapi: Any, masters: Mapping[st
     if operation != "reconcile":
         if not (states["EFPS_WHAPI_LIVE"] and states["EFPS_WHAPI_API_ENABLED"]):
             run.lines.append(log_line(operation, "-", "", "FAILED", "master kill switch off; nothing ran", now=now))
+            run.counts["failed"] += 1
             return run.summary(states)
         if not states[SWITCH_BY_OPERATION[operation]]:
             run.lines.append(log_line(operation, "-", "", "SKIPPED", f"{SWITCH_BY_OPERATION[operation]} switch off; nothing ran", now=now))
+            run.counts["skipped"] += 1
             return run.summary(states)
 
     # Queued review decisions for this operation execute FIRST, through the
@@ -417,6 +419,9 @@ def _op_reconcile(run: _Run, rows: list[Mapping[str, Any]]) -> None:
     known_listings = {str(r.get("listing_id") or "") for r in rows}
     for retailer_id, product in by_retailer.items():
         if retailer_id and retailer_id not in known_listings:
+            if run.dry_run:
+                run.lines.append(log_line("reconcile", retailer_id, str(product.get("id") or ""), "WOULD", "orphan on WhatsApp; would queue for review", now=run.now))
+                continue
             run.store.add_review_entry({
                 "type": "Orphan product",
                 "listing_id": "",
