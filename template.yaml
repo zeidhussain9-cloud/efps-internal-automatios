@@ -99,8 +99,8 @@ Resources:
           NOTION_SECRET_ARN: !Ref NotionSecretArn
           CATALOGUE_TRIGGER_SECRET_ARN: !Ref CatalogueTriggerSecretArn
           WHAPI_SECRET_ARN: !Ref WhApiSecretArn
-          EFPS_WHAPI_LIVE: '0'
-          EFPS_WHAPI_API_ENABLED: '0'
+          EFPS_WHAPI_LIVE: '1'
+          EFPS_WHAPI_API_ENABLED: '1'
       Events:
         Intake:
           Type: Api
