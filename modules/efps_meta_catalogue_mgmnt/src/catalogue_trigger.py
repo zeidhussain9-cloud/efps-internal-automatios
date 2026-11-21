@@ -97,9 +97,13 @@ def run_catalogue_operation(operation: str, *, notion_token: str, store=None, wh
         if not secret_arn:
             raise CatalogueTriggerError("WHAPI_SECRET_ARN is not configured")
         secret = json.loads(boto3.client("secretsmanager").get_secret_value(SecretId=secret_arn)["SecretString"])
-        token = str(secret.get("api_token") or "").strip()
+        token = ""
+        for key in ("token", "api_token", "value"):
+            if secret.get(key):
+                token = str(secret[key]).strip()
+                break
         if not token:
-            raise CatalogueTriggerError("WhAPI secret has no api_token field")
+            raise CatalogueTriggerError("WhAPI secret has no token field")
         whapi = WhApiClient(credentials=WhApiCredentials(token=token))
     from catalogue_runner import run_operation
 

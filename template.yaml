@@ -22,7 +22,7 @@ Parameters:
   WhApiSecretArn:
     Type: String
     AllowedPattern: '^arn:[^:]+:secretsmanager:[^:]+:[0-9]{12}:secret:.+$'
-    Description: Existing Secrets Manager secret ARN whose JSON api_token field contains the WhAPI token
+    Description: Existing Secrets Manager secret ARN whose JSON token field contains the WhAPI token
   SlackSecretArn:
     Type: String
     AllowedPattern: '^arn:[^:]+:secretsmanager:[^:]+:[0-9]{12}:secret:.+$'
