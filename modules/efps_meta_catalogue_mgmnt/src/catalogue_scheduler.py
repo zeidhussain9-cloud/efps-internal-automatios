@@ -196,11 +196,12 @@ def _batch(event, lam, store, context, *, run_delete, sleep, now) -> dict:
     for key in ("ok", "failed", "skipped"):
         totals[key] = int(totals.get(key) or 0) + int(counts.get(key) or 0)
     for line in lines:
+        # Format: "[<ts>] DELETE <listing_id> product=<id> OK|FAILED <reason>"
         parts = line.split()
-        if len(parts) >= 4 and parts[0] == "DELETE":
-            if parts[3].startswith("OK"):
-                deleted.append(parts[1])
-            elif parts[3].startswith("FAILED"):
+        if len(parts) >= 5 and parts[1] == "DELETE":
+            if parts[4].startswith("OK"):
+                deleted.append(parts[2])
+            elif parts[4].startswith("FAILED"):
                 failures.append(line[:300])
     _log("catalogue_schedule_batch", run_id=run_id, batch=batch,
          ok=ok, failed=failed, would=would, dry_run=dry_run)
@@ -251,7 +252,13 @@ def _finalize(event, lam, store, context, *, sleep, now) -> dict:
     try:
         _append_decision_log(store, [title] + body)
     except Exception as exc:  # never let logging block the restore outcome
-        _log("catalogue_schedule_log_failed", run_id=run_id, error=str(exc)[:300])
+        if "object_not_found" in str(exc) or "404" in str(exc):
+            # The Decision Log page is not shared with the Lambda's Notion
+            # connection. The agent relaying the weekly scorecard appends the
+            # entry from this completion event instead.
+            _log("catalogue_schedule_log_unshared", run_id=run_id)
+        else:
+            _log("catalogue_schedule_log_failed", run_id=run_id, error=str(exc)[:300])
 
     _log("catalogue_schedule_completed" if status == "completed" else "catalogue_schedule_failed",
          run_id=run_id, status=status, totals=totals, deleted=deleted,

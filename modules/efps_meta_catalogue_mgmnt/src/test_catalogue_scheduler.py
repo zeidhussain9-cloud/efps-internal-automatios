@@ -102,7 +102,7 @@ class BatchTests(unittest.TestCase):
 
     def test_ok_batch_chains_next_with_totals(self):
         lam, store = FakeLambda("true"), FakeStore(dry_run=False)
-        res = run_delete_result(ok=3, skipped=57, lines=["DELETE EF-1 p1 OK deleted"])
+        res = run_delete_result(ok=3, skipped=57, lines=["[2026-11-24 03:30:00Z] DELETE EF-1 product=p1 OK deleted"])
         with base_env("true"):
             out = cs.handle_schedule(self.event(), Ctx(), notion_token="t",
                                      lam=lam, store=store, run_delete=lambda: res, sleep=lambda s: None)
@@ -115,7 +115,7 @@ class BatchTests(unittest.TestCase):
 
     def test_zero_eligible_finalizes_success_and_restores(self):
         lam, store = FakeLambda("true"), FakeStore(dry_run=False)
-        res = run_delete_result(ok=0, lines=["DELETE -  SKIPPED no eligible rows"])
+        res = run_delete_result(ok=0, lines=["[2026-11-24 03:30:00Z] DELETE - SKIPPED no eligible rows"])
         with base_env("true"):
             out = cs.handle_schedule(self.event(batch=2, totals={"ok": 3, "failed": 0, "skipped": 0},
                                                 deleted=["EF-1"]), Ctx(), notion_token="t",
@@ -131,8 +131,8 @@ class BatchTests(unittest.TestCase):
 
     def test_failed_batch_stops_safe_no_rerun(self):
         lam, store = FakeLambda("true"), FakeStore(dry_run=False)
-        res = run_delete_result(ok=2, failed=1, lines=["DELETE EF-1 p1 OK deleted",
-                                                       "DELETE EF-2 p2 FAILED boom"])
+        res = run_delete_result(ok=2, failed=1, lines=["[2026-11-24 03:30:00Z] DELETE EF-1 product=p1 OK deleted",
+                                                       "[2026-11-24 03:30:00Z] DELETE EF-2 product=p2 FAILED boom"])
         with base_env("true"):
             out = cs.handle_schedule(self.event(), Ctx(), notion_token="t",
                                      lam=lam, store=store, run_delete=lambda: res, sleep=lambda s: None)
@@ -176,7 +176,7 @@ class BatchTests(unittest.TestCase):
 
     def test_batch_cap_finalizes_with_error(self):
         lam, store = FakeLambda("true"), FakeStore(dry_run=False)
-        res = run_delete_result(ok=3, lines=["DELETE EF-9 p9 OK deleted"])
+        res = run_delete_result(ok=3, lines=["[2026-11-24 03:30:00Z] DELETE EF-9 product=p9 OK deleted"])
         with base_env("true"):
             out = cs.handle_schedule(self.event(batch=cs.MAX_BATCHES), Ctx(), notion_token="t",
                                      lam=lam, store=store, run_delete=lambda: res, sleep=lambda s: None)
