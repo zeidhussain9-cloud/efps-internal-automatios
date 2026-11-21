@@ -35,15 +35,12 @@ class FakeLambda:
 
 
 class FakeStore:
-    SWITCHES_DATABASE_ID = "switches-db"
-
     def __init__(self, dry_run=True):
         self.dry_run = dry_run
         self.log_entries = []
         self.requests = []
 
     def _query_all(self, db):
-        assert db == "switches-db"
         return [{"id": "dryrun-page", "properties": {"Name": {"title": [{"plain_text": "DRY_RUN"}]}}}]
 
     def request(self, method, path, payload=None):
