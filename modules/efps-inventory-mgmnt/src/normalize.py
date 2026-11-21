@@ -118,11 +118,17 @@ def construct_deterministic_highlights(row:dict,raw_text:str,original_subtype:st
     if match:fragments.append(f"{match.group(1)} RK")
     return list(dict.fromkeys(fragments))
 def build_catalog_title(row:dict)->str:
-    if _usable(row.get("catalog_title","")):return str(row["catalog_title"]).strip()
     # Permanent standard (owner, 21 Nov 2026): "<Furnish> <BHK> - <Location>".
+    # Locked 21 Nov 2026 (owner): the dropdown `locality` value is the single
+    # place-name source for a property everywhere customer-facing - catalogue
+    # card, catalogue description, WhatsApp group post. When a locality value
+    # exists, the title is ALWAYS rebuilt from it so a raw-text area name can
+    # never survive onto the card.
     furnish=str(row.get("furnish_type","")).strip();bhk=str(row.get("BHK","")).strip();location=str(row.get("locality","")).strip()
     title=" ".join(part for part in (furnish,bhk) if part) or "Property"
-    return f"{title} - {location}" if location else title
+    if location:return f"{title} - {location}"
+    if _usable(row.get("catalog_title","")):return str(row["catalog_title"]).strip()
+    return title
 def preserve_rk_wording(row:dict,raw_text:str)->dict:
     match=_RK_RE.search(raw_text or "")
     if not match:return row
@@ -168,5 +174,5 @@ def normalize(row:dict,raw_text:str="",*,resolved_internal_property_type:str="")
     apply_tenant_bachelor_rule(out,raw_text);normalize_bachelor_preference(out)
     fragments=construct_deterministic_highlights(out,raw_text,original_subtype)
     if fragments and not _usable(out.get("property_highlights","")):out["property_highlights"]=" | ".join(fragments)
-    if not _usable(out.get("catalog_title","")):out["catalog_title"]=build_catalog_title(out)
+    out["catalog_title"]=build_catalog_title(out)
     preserve_rk_wording(out,raw_text);return out

@@ -22,9 +22,11 @@ from shared.ola_maps import OlaMapsClient
 try:
     from . import pipeline, notion_lifecycle
     from .location_match import normalize_locality
+    from .normalize import build_catalog_title
 except ImportError:
     import pipeline, notion_lifecycle
     from location_match import normalize_locality
+    from normalize import build_catalog_title
 
 NOTION_VERSION = "2022-06-28"
 INTAKE_DATABASE_ID = "89dad7a3990849ca9dc23e5bcb3fa99f"
@@ -1132,6 +1134,9 @@ def process_page(
                     "(checked the list and Ola Maps). Pick the right locality from the dropdown; "
                     "the original Location stays in Raw Property Data."
                 )
+        # Dropdown locality wins everywhere (owner rule, 21 Nov): rebuild the
+        # card title AFTER locality normalization so the canonical value lands.
+        processed["catalog_title"] = build_catalog_title(processed)
         processed["cloudinary_image_urls"] = row.get("cloudinary_image_urls", processed.get("cloudinary_image_urls", ""))
         maps_url = str(processed.get("google_maps_url") or "").strip()
         caption_maps_url = str(processed.pop("_caption_maps_url", "") or "").strip()
