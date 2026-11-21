@@ -62,6 +62,6 @@ def test_open_for_all_defaults_to_exact_bachelor_dropdown_value():
 def test_family_requires_blank_bachelor_preference():
     out=deterministic("2 BHK\nRent: 40000\nLocation: Harlur\nPreferred Tenant: Family");assert out["preferred_tenant_type"]=="Family Only";assert out["bachelor_preference"]=="";assert not any("bachelor_preference" in e for e in validate.validate(out))
 def test_explicit_bachelor_preference_is_preserved_for_open_for_all():
-    out=deterministic("2 BHK\nRent: 40000\nLocation: Harlur\nPreferred Tenant: Open For All\nBachelor: Female Only");assert out["preferred_tenant_type"]=="Open For All";assert out["bachelor_preference"]=="Female Only ";assert out["bachelor_preference"] in validate.BACHELOR_PREFERENCES;assert not any("bachelor_preference" in e for e in validate.validate(out))
+    out=deterministic("2 BHK\nRent: 40000\nLocation: Harlur\nPreferred Tenant: Open For All\nBachelor: Female Only");assert out["preferred_tenant_type"]=="Open For All";assert out["bachelor_preference"]=="Female Only";assert out["bachelor_preference"] in validate.BACHELOR_PREFERENCES;assert not any("bachelor_preference" in e for e in validate.validate(out))
 def test_model_projection_normalizes_units_but_does_not_use_sheet_values():
     raw="Semi Furnished 2.5 BHK\nMaintenance: 8.2K\nLocation: Harlur";row={"BHK":"5 BHK","maintenance":"8","internal_property_type":"Gated Community"};out=deterministic(raw,row=row);assert out["BHK"]=="2.5 BHK";assert out["maintenance"]=="8200";assert out["internal_property_type"]==""

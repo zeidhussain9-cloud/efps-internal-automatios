@@ -379,11 +379,11 @@ def _bhk_group(bhk: str):
 
 
 TEXT_FIELDS = {
-    "BHK", "bachelor_preference", "catalog_title", "city", "cloudinary_image_urls",
+    "BHK", "catalog_title", "city", "cloudinary_image_urls",
     "error_notes", "flat_furnishings", "floor_number", "furnish_type", "intake_status",
     "internal_property_type", "landmark", "listing_id", "locality",
     "maintenance", "meta_catalog_id", "meta_catalog_status", "onboarded_on", "open_parking",
-    "posted_at", "preferred_tenant_type", "property_highlights", "property_subtype",
+    "posted_at", "property_highlights", "property_subtype",
     "raw_message_text", "society_amenities", "society_name", "status", "transaction_type",
     "whatsapp_post",
 } - notion_lifecycle.LEGACY_STATUS_FIELDS
@@ -402,6 +402,8 @@ def listing_property_types() -> dict[str, str]:
         **{field: "url" for field in URL_FIELDS},
         **{field: "checkbox" for field in ("pet_friendly", "servant_room", "maintenance_included")},
         "locality": "select",
+        "preferred_tenant_type": "select",
+        "bachelor_preference": "select",
         "Availability": "select",
         "Pipeline Status": "select",
         "live at": "multi_select",
@@ -450,6 +452,8 @@ def validate_listing_schema(schema: dict) -> None:
     for name, values in {
         "Availability": set(notion_lifecycle.AVAILABILITY),
         "Pipeline Status": set(notion_lifecycle.PIPELINE),
+        "preferred_tenant_type": {"Family Only", "Open For All"},
+        "bachelor_preference": {"Female Only", "Male Only", "Not Allowed", "Open for both"},
         "WhatsApp Group": {
             "1 RK / 1–1.5 BHK", "2 / 2.5 BHK", "3 / 3.5 BHK",
             "4 / 4.5 BHK", "5+ BHK",
@@ -490,6 +494,10 @@ def listing_notion_properties(row: dict, *, schema: dict | None = None) -> dict:
     for field in ("Availability", "Pipeline Status"):
         if field in row:
             properties[field] = {"select": {"name": row[field]}} if row[field] else {"select": None}
+    for field in ("preferred_tenant_type", "bachelor_preference"):
+        if field in row:
+            value = str(row.get(field) or "").strip()
+            properties[field] = {"select": {"name": value}} if value else {"select": None}
     if "live at" in row:
         channels = row["live at"]
         if not isinstance(channels, list) or any(x not in notion_lifecycle.CHANNELS for x in channels):

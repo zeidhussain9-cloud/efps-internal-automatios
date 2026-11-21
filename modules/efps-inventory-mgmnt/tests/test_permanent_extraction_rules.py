@@ -127,3 +127,41 @@ def test_multi_select_vocabulary_lock_blocks_unknown_option():
     schema = {"live at": {"type": "multi_select", "multi_select": {"options": [{"name": "Meta Catalogue"}]}}}
     with pytest.raises(intake.IntakeError):
         intake.enforce_select_vocabulary(schema, {"live at": {"multi_select": [{"name": "Meta Catalogue"}, {"name": "Flyer"}]}})
+
+
+def test_tenant_and_bachelor_serialize_as_dropdown_selects():
+    from notion_intake import listing_notion_properties
+    row = {
+        "listing_id": "EF-2611-TEST", "catalog_title": "Semi Furnished 2 BHK - Haralur",
+        "preferred_tenant_type": "Open For All", "bachelor_preference": "Female Only",
+    }
+    props = listing_notion_properties(row)
+    assert props["preferred_tenant_type"] == {"select": {"name": "Open For All"}}
+    assert props["bachelor_preference"] == {"select": {"name": "Female Only"}}
+    # Blank values clear the dropdown instead of writing free text.
+    row["bachelor_preference"] = ""
+    props = listing_notion_properties(row)
+    assert props["bachelor_preference"] == {"select": None}
+
+
+def test_tenant_and_bachelor_locked_to_dropdown_options():
+    import pytest
+    from notion_intake import IntakeError, enforce_select_vocabulary, listing_notion_properties
+    schema = {
+        "preferred_tenant_type": {"type": "select", "select": {"options": [{"name": "Family Only"}, {"name": "Open For All"}]}},
+        "bachelor_preference": {"type": "select", "select": {"options": [{"name": "Open for both"}, {"name": "Female Only"}, {"name": "Male Only"}, {"name": "Not Allowed"}]}},
+    }
+    row = {"listing_id": "EF-2611-TEST", "catalog_title": "T", "preferred_tenant_type": "Family", "bachelor_preference": "Females welcome"}
+    with pytest.raises(IntakeError):
+        enforce_select_vocabulary(schema, listing_notion_properties(row))
+
+
+def test_bachelor_variants_normalize_to_dropdown_options():
+    import pipeline
+    for raw_bachelor, expected in (
+        ("Bachelor: Female Only", "Female Only"),
+        ("Bachelor: Not Allowed", "Not Allowed"),
+        ("Bachelor: Open for both", "Open for both"),
+    ):
+        row = pipeline.deterministic(f"2 BHK\nRent: 40000\nPreferred Tenant: Open For All\n{raw_bachelor}", pipeline.initial_row("EF-2609-TST1"))
+        assert row["bachelor_preference"] == expected, raw_bachelor
