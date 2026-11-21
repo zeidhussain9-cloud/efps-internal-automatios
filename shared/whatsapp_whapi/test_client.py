@@ -9,20 +9,45 @@ def test_api_is_disabled_by_default(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("EFPS_WHAPI_API_ENABLED", raising=False)
     monkeypatch.setenv("EFPS_WHAPI_LIVE", "1")
     client = WhApiClient(WhApiCredentials("test-token"), base_url="https://example.test")
-    with pytest.raises(WhApiLiveTrafficBlocked, match="outside the catalog-creation allowlist"):
+    with pytest.raises(WhApiLiveTrafficBlocked, match="outside the catalogue-operation allowlist"):
         client.get("groups")
 
 
-def test_non_catalog_whapi_operations_are_always_blocked(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_catalogue_reads_are_gated_but_allowed(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("EFPS_WHAPI_API_ENABLED", "true")
+    monkeypatch.setenv("EFPS_WHAPI_LIVE", "1")
+    client = WhApiClient(WhApiCredentials("test-token"), base_url="https://example.test", transport=lambda req: {"products": []})
+    assert client.get("/business/products") == {"products": []}
+    assert client.get_product("p1") == {"products": []}
+    monkeypatch.delenv("EFPS_WHAPI_LIVE", raising=False)
+    with pytest.raises(WhApiLiveTrafficBlocked):
+        client.get("/business/products")
+
+
+def test_non_catalogue_whapi_operations_are_always_blocked(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("EFPS_WHAPI_API_ENABLED", "true")
     monkeypatch.setenv("EFPS_WHAPI_LIVE", "1")
     client = WhApiClient(WhApiCredentials("test-token"), base_url="https://example.test")
-    with pytest.raises(WhApiLiveTrafficBlocked, match="outside the catalog-creation allowlist"):
-        client.get("/business/products")
-    with pytest.raises(WhApiLiveTrafficBlocked, match="outside the catalog-creation allowlist"):
-        client.edit_collection("c1", add_products=["p1"])
-    with pytest.raises(WhApiLiveTrafficBlocked, match="outside the catalog-creation allowlist"):
+    with pytest.raises(WhApiLiveTrafficBlocked, match="outside the catalogue-operation allowlist"):
         client.send_text({"to": "919999999999", "body": "test"})
+    with pytest.raises(WhApiLiveTrafficBlocked, match="outside the catalogue-operation allowlist"):
+        client.get("groups")
+
+
+def test_catalogue_writes_require_the_write_flag(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("EFPS_WHAPI_API_ENABLED", "true")
+    monkeypatch.setenv("EFPS_WHAPI_LIVE", "1")
+    monkeypatch.delenv("EFPS_WHAPI_CATALOG_WRITE_ENABLED", raising=False)
+    client = WhApiClient(WhApiCredentials("test-token"), base_url="https://example.test", transport=lambda req: {"ok": True})
+    with pytest.raises(WhApiLiveTrafficBlocked, match="non-approved WhAPI operation"):
+        client.edit_collection("c1", add_products=["p1"])
+    with pytest.raises(WhApiLiveTrafficBlocked, match="non-approved WhAPI operation"):
+        client.delete_product("p1")
+    with pytest.raises(WhApiLiveTrafficBlocked, match="non-approved WhAPI operation"):
+        client.update_product("p1", {"name": "x"})
+    monkeypatch.setenv("EFPS_WHAPI_CATALOG_WRITE_ENABLED", "true")
+    assert client.delete_product("p1") == {"ok": True}
+    assert client.update_product("p1", {"name": "x"}) == {"ok": True}
 
 
 def test_catalog_creation_requires_both_explicit_flags(monkeypatch: pytest.MonkeyPatch) -> None:

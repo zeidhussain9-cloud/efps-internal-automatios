@@ -115,11 +115,21 @@ class WhApiClient:
         self, method: str, path: str, payload: Mapping[str, Any] | None = None
     ) -> Any:
         operation=f"{method} {path}"
-        if method.upper()=="POST" and path.rstrip("/")=="/business/products":
+        verb = method.upper()
+        base = path.split("?")[0].rstrip("/")
+        read_paths = (verb == "GET" and (base == "/business/products" or base.startswith("/business/products/") or base == "/business/collections"))
+        write_paths = (
+            (verb == "POST" and base == "/business/products")
+            or (verb in {"PATCH", "DELETE"} and base.startswith("/business/products/"))
+            or (verb == "PATCH" and base.startswith("/business/collections/"))
+        )
+        if read_paths:
+            self.assert_live_allowed(operation)
+        elif write_paths:
             self.assert_catalog_write_allowed(operation)
         else:
             raise WhApiLiveTrafficBlocked(
-                f"BLOCKED: WhAPI operation is outside the catalog-creation allowlist ({operation})."
+                f"BLOCKED: WhAPI operation is outside the catalogue-operation allowlist ({operation})."
             )
         url = f"{self.base_url}/{path.lstrip('/')}"
         body = None
@@ -162,6 +172,9 @@ class WhApiClient:
 
     def patch(self, path: str, payload: Mapping[str, Any]) -> Any:
         return self._request("PATCH", path, payload)
+
+    def delete(self, path: str) -> Any:
+        return self._request("DELETE", path)
 
     # Neutral, currently documented endpoint primitives. These methods contain
     # no EFPS business routing or persistence logic.
@@ -254,3 +267,15 @@ class WhApiClient:
         if remove_products:
             payload["remove_products"] = remove_products
         return self.patch(f"/business/collections/{collection_id}", payload)
+
+    def get_product(self, product_id: str) -> dict:
+        result = self.get(f"/business/products/{product_id}")
+        if isinstance(result, dict) and "product" in result:
+            return result["product"]
+        return result or {}
+
+    def update_product(self, product_id: str, payload: Mapping[str, Any]) -> Any:
+        return self.patch(f"/business/products/{product_id}", payload)
+
+    def delete_product(self, product_id: str) -> Any:
+        return self.delete(f"/business/products/{product_id}")
