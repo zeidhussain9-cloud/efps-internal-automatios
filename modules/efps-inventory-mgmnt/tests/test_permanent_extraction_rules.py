@@ -149,7 +149,7 @@ def test_tenant_and_bachelor_locked_to_dropdown_options():
     from notion_intake import IntakeError, enforce_select_vocabulary, listing_notion_properties
     schema = {
         "preferred_tenant_type": {"type": "select", "select": {"options": [{"name": "Family Only"}, {"name": "Open For All"}]}},
-        "bachelor_preference": {"type": "select", "select": {"options": [{"name": "Open for both"}, {"name": "Female Only"}, {"name": "Male Only"}, {"name": "Not Allowed"}]}},
+        "bachelor_preference": {"type": "select", "select": {"options": [{"name": "Open for both"}, {"name": "Female Only"}, {"name": "Male Only"}]}},
     }
     row = {"listing_id": "EF-2611-TEST", "catalog_title": "T", "preferred_tenant_type": "Family", "bachelor_preference": "Females welcome"}
     with pytest.raises(IntakeError):

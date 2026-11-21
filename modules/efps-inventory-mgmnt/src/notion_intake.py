@@ -404,6 +404,7 @@ def listing_property_types() -> dict[str, str]:
         "locality": "select",
         "preferred_tenant_type": "select",
         "bachelor_preference": "select",
+        "bachelor_display": "formula",
         "Availability": "select",
         "Pipeline Status": "select",
         "live at": "multi_select",
@@ -453,7 +454,7 @@ def validate_listing_schema(schema: dict) -> None:
         "Availability": set(notion_lifecycle.AVAILABILITY),
         "Pipeline Status": set(notion_lifecycle.PIPELINE),
         "preferred_tenant_type": {"Family Only", "Open For All"},
-        "bachelor_preference": {"Female Only", "Male Only", "Not Allowed", "Open for both"},
+        "bachelor_preference": {"Female Only", "Male Only", "Open for both"},
         "WhatsApp Group": {
             "1 RK / 1–1.5 BHK", "2 / 2.5 BHK", "3 / 3.5 BHK",
             "4 / 4.5 BHK", "5+ BHK",

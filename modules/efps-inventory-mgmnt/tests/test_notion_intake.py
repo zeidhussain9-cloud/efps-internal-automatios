@@ -73,7 +73,7 @@ def test_live_listing_schema_contract_rejects_type_or_option_drift():
     schema["WhatsApp Group"]["select"] = {"options": [{"name": name} for name in (
         "1 RK / 1–1.5 BHK", "2 / 2.5 BHK", "3 / 3.5 BHK", "4 / 4.5 BHK", "5+ BHK") ]}
     schema["preferred_tenant_type"]["select"] = {"options": [{"name": n} for n in ("Family Only", "Open For All")]}
-    schema["bachelor_preference"]["select"] = {"options": [{"name": n} for n in ("Female Only", "Male Only", "Not Allowed", "Open for both")]}
+    schema["bachelor_preference"]["select"] = {"options": [{"name": n} for n in ("Female Only", "Male Only", "Open for both")]}
     intake.validate_listing_schema(schema)
     schema["Availability"]["type"] = "rich_text"
     import pytest
@@ -89,7 +89,7 @@ def test_outgoing_select_values_must_exist_in_live_schema():
     schema["WhatsApp Group"]["select"] = {"options": [{"name": name} for name in (
         "1 RK / 1–1.5 BHK", "2 / 2.5 BHK", "3 / 3.5 BHK", "4 / 4.5 BHK", "5+ BHK") ]}
     schema["preferred_tenant_type"]["select"] = {"options": [{"name": n} for n in ("Family Only", "Open For All")]}
-    schema["bachelor_preference"]["select"] = {"options": [{"name": n} for n in ("Female Only", "Male Only", "Not Allowed", "Open for both")]}
+    schema["bachelor_preference"]["select"] = {"options": [{"name": n} for n in ("Female Only", "Male Only", "Open for both")]}
     with __import__("pytest").raises(intake.IntakeError, match="select option.*not defined"):
         intake.validate_listing_properties(schema, {"Availability": {"select": {"name": "Unavailable"}}})
 
@@ -102,7 +102,7 @@ def test_locality_serialization_uses_live_select_schema_and_validates_option():
     schema["WhatsApp Group"]["select"] = {"options": [{"name": name} for name in (
         "1 RK / 1–1.5 BHK", "2 / 2.5 BHK", "3 / 3.5 BHK", "4 / 4.5 BHK", "5+ BHK") ]}
     schema["preferred_tenant_type"]["select"] = {"options": [{"name": n} for n in ("Family Only", "Open For All")]}
-    schema["bachelor_preference"]["select"] = {"options": [{"name": n} for n in ("Female Only", "Male Only", "Not Allowed", "Open for both")]}
+    schema["bachelor_preference"]["select"] = {"options": [{"name": n} for n in ("Female Only", "Male Only", "Open for both")]}
     intake.validate_listing_schema(schema)
     props = intake.listing_notion_properties({"listing_id": "EF-TEST-LOCALITY", "locality": "Kasavanahalli"}, schema=schema)
     assert props["locality"] == {"select": {"name": "Kasavanahalli"}}
@@ -161,7 +161,7 @@ def test_save_listing_fetches_live_schema_before_building_outgoing_payload():
                 schema["WhatsApp Group"]["select"] = {"options": [{"name": name} for name in (
                     "1 RK / 1–1.5 BHK", "2 / 2.5 BHK", "3 / 3.5 BHK", "4 / 4.5 BHK", "5+ BHK") ]}
                 schema["preferred_tenant_type"]["select"] = {"options": [{"name": n} for n in ("Family Only", "Open For All")]}
-                schema["bachelor_preference"]["select"] = {"options": [{"name": n} for n in ("Female Only", "Male Only", "Not Allowed", "Open for both")]}
+                schema["bachelor_preference"]["select"] = {"options": [{"name": n} for n in ("Female Only", "Male Only", "Open for both")]}
                 return {"properties": schema}
             if method == "POST" and path == f"databases/{intake.LISTINGS_DATABASE_ID}/query":
                 return {"results": []}

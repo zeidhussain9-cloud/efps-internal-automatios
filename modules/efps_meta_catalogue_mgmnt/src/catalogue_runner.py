@@ -52,8 +52,6 @@ KNOWN_COLLECTION_IDS = frozenset({
     "2585336038575419",
 })
 META_CHANNEL = "Meta Catalogue"
-POSTED = "Posted"
-REMOVED = "Removed"
 
 
 def _ts(now: datetime | None = None) -> str:
@@ -122,17 +120,15 @@ def eligible_create(row: Mapping[str, Any]) -> bool:
 
 
 def eligible_update(row: Mapping[str, Any]) -> bool:
-    return (
-        META_CHANNEL in _live_at(row)
-        and bool(str(row.get("meta_catalog_id") or "").strip())
-        and str(row.get("meta_catalog_status") or "") == POSTED
-    )
+    # "Posted" state = Meta Catalogue membership in live at + a product ID.
+    return META_CHANNEL in _live_at(row) and bool(str(row.get("meta_catalog_id") or "").strip())
 
 
 def eligible_delete(row: Mapping[str, Any]) -> bool:
     if not str(row.get("meta_catalog_id") or "").strip():
         return False
-    if str(row.get("meta_catalog_status") or "") == REMOVED:
+    # Only a row still marked as live on Meta Catalogue can carry a live product.
+    if META_CHANNEL not in _live_at(row):
         return False
     return (
         str(row.get("Availability") or "") in {"Rented Out", "On Hold"}
@@ -145,7 +141,7 @@ def eligible_assign(row: Mapping[str, Any]) -> bool:
     # instead of silently ignoring the row.
     return (
         bool(str(row.get("meta_catalog_id") or "").strip())
-        and str(row.get("meta_catalog_status") or "") == POSTED
+        and META_CHANNEL in _live_at(row)
     )
 
 
@@ -297,7 +293,10 @@ def _op_create_row(run: _Run, row: Mapping[str, Any]) -> None:
     except Exception:  # noqa: BLE001
         switches = {}
     if _truthy(switches.get("ASSIGN")):
-        _op_assign_row(run, {**row, "meta_catalog_id": product_id, "meta_catalog_status": POSTED})
+        live = _live_at(row)
+        if META_CHANNEL not in live:
+            live = live + [META_CHANNEL]
+        _op_assign_row(run, {**row, "meta_catalog_id": product_id, "live at": live})
 
 
 def _mark_posted(run: _Run, row: Mapping[str, Any], product_id: str) -> None:
@@ -306,7 +305,6 @@ def _mark_posted(run: _Run, row: Mapping[str, Any], product_id: str) -> None:
         live = live + [META_CHANNEL]
     run.store.update_listing(str(row.get("page_id") or ""), {
         "meta_catalog_id": product_id,
-        "meta_catalog_status": POSTED,
         "live at": live,
     })
 
@@ -320,8 +318,9 @@ def _op_update_row(run: _Run, row: Mapping[str, Any]) -> None:
         product = _call_with_retry(lambda: run.whapi.get_product(product_id), sleeper=run.sleeper)
     except Exception as exc:  # noqa: BLE001
         if "404" in str(exc):
-            run.store.update_listing(str(row.get("page_id") or ""), {"meta_catalog_status": REMOVED})
-            run.record(row, product_id, "OK", "product 404 on WhatsApp; status corrected to Removed")
+            live = [c for c in _live_at(row) if c != META_CHANNEL]
+            run.store.update_listing(str(row.get("page_id") or ""), {"live at": live})
+            run.record(row, product_id, "OK", "product 404 on WhatsApp; removed Meta Catalogue from live at")
             return
         raise
     title = str(row.get("catalog_title") or "").strip()
@@ -368,7 +367,6 @@ def _op_delete_row(run: _Run, row: Mapping[str, Any]) -> None:
             raise
     live = [c for c in _live_at(row) if c != META_CHANNEL]
     run.store.update_listing(str(row.get("page_id") or ""), {
-        "meta_catalog_status": REMOVED,
         "live at": live,
     })
     # The product ID stays in meta_catalog_id for history, rewritten in red.
@@ -413,7 +411,7 @@ def _op_reconcile(run: _Run, rows: list[Mapping[str, Any]]) -> None:
         else:
             run.record(row, product_id, "OK", "present on WhatsApp")
     for row in rows:
-        if str(row.get("Availability") or "") in {"Rented Out", "On Hold"} and str(row.get("meta_catalog_status") or "") == POSTED:
+        if str(row.get("Availability") or "") in {"Rented Out", "On Hold"} and META_CHANNEL in _live_at(row):
             if str(row.get("listing_id") or "") in by_retailer:
                 run.record(row, str(row.get("meta_catalog_id") or ""), "FAILED", "drift: leftover product for a Rented Out/On Hold row (DELETE fixes)")
     known_listings = {str(r.get("listing_id") or "") for r in rows}

@@ -125,7 +125,7 @@ def make_row(**kw):
     row = {
         "page_id": "page-1", "listing_id": "EF-2611-AAAA",
         "Availability": "Available", "live at": [], "post_to_catalogue": True,
-        "meta_catalog_id": "", "meta_catalog_status": "", "meta_catalog_collection_id": "",
+        "meta_catalog_id": "", "meta_catalog_collection_id": "",
         "cloudinary_image_urls": "https://img/1.jpg https://img/2.jpg",
         "monthly_rent": "40000", "catalog_title": "Semi Furnished 2 BHK - Haralur",
         "whatsapp_post": "post text", "google_maps_url": "https://www.google.com/maps/search/?api=1&query=x",
@@ -178,7 +178,7 @@ def test_create_writes_product_id_and_meta_channel_only_after_success():
     assert result["counts"]["ok"] == 1
     page_id, props = store.updates[0]
     assert page_id == "page-1"
-    assert props["meta_catalog_status"] == "Posted"
+    assert "meta_catalog_status" not in props
     assert props["meta_catalog_id"] == "101"
     assert props["live at"] == ["Meta Catalogue"]
     assert any("CREATE EF-2611-AAAA product=101 OK" in line for _, line in store.activity)
@@ -223,7 +223,7 @@ def test_update_patches_only_when_content_differs():
     whapi = FakeWhapi()
     whapi.products["9"] = {"id": "9", "product_retailer_id": "EF-2611-AAAA", "name": "old title",
                            "description": "post text", "price": 40000, "currency": "INR", "images": []}
-    row = make_row(**{"live at": ["Meta Catalogue"]}, meta_catalog_id="9", meta_catalog_status="Posted")
+    row = make_row(**{"live at": ["Meta Catalogue"]}, meta_catalog_id="9")
     result = run("update", FakeStore([row]), whapi)
     assert ("update", "9") in whapi.calls
     assert "updated:" in result["lines"][-1] and "name" in result["lines"][-1]
@@ -234,7 +234,7 @@ def test_update_in_sync_logs_and_skips_patch():
     whapi.products["9"] = {"id": "9", "product_retailer_id": "EF-2611-AAAA", "name": "Semi Furnished 2 BHK - Haralur",
                            "description": "post text", "price": 40000, "currency": "INR",
                            "images": ["https://img/1.jpg", "https://img/2.jpg"]}
-    row = make_row(**{"live at": ["Meta Catalogue"]}, meta_catalog_id="9", meta_catalog_status="Posted")
+    row = make_row(**{"live at": ["Meta Catalogue"]}, meta_catalog_id="9")
     result = run("update", FakeStore([row]), whapi)
     assert "already in sync" in result["lines"][0]
     assert not any(c[0] == "update" for c in whapi.calls)
@@ -242,11 +242,11 @@ def test_update_in_sync_logs_and_skips_patch():
 
 def test_update_404_corrects_status():
     whapi = FakeWhapi()
-    row = make_row(**{"live at": ["Meta Catalogue"]}, meta_catalog_id="ghost", meta_catalog_status="Posted")
+    row = make_row(**{"live at": ["Meta Catalogue"]}, meta_catalog_id="ghost")
     store = FakeStore([row])
     result = run("update", store, whapi)
-    assert "status corrected" in result["lines"][0]
-    assert store.rows[0]["meta_catalog_status"] == "Removed"
+    assert "removed Meta Catalogue from live at" in result["lines"][0]
+    assert store.rows[0]["live at"] == []
 
 
 # --- DELETE ---
@@ -255,11 +255,10 @@ def test_delete_by_exact_id_keeps_red_id_and_clears_channel():
     whapi = FakeWhapi()
     whapi.products["77"] = {"id": "77", "product_retailer_id": "EF-2611-AAAA"}
     row = make_row(Availability="Rented Out", **{"live at": ["Meta Catalogue", "WhatsApp Group"]},
-                   meta_catalog_id="77", meta_catalog_status="Posted")
+                   meta_catalog_id="77")
     store = FakeStore([row])
     result = run("delete", store, whapi)
     assert ("delete", "77") in whapi.calls
-    assert store.rows[0]["meta_catalog_status"] == "Removed"
     assert store.rows[0]["live at"] == ["WhatsApp Group"]
     assert store.red_marks == [("page-1", "77")]
     assert any("DELETE EF-2611-AAAA product=77 OK" in line for _, line in store.activity)
@@ -267,9 +266,11 @@ def test_delete_by_exact_id_keeps_red_id_and_clears_channel():
 
 def test_delete_triggers_on_rented_out_on_hold_and_unticked():
     for kw in ({"Availability": "Rented Out"}, {"Availability": "On Hold"}, {"post_to_catalogue": False}):
-        row = make_row(meta_catalog_id="77", meta_catalog_status="Posted", **kw)
+        row = make_row(meta_catalog_id="77", **{"live at": ["Meta Catalogue"]}, **kw)
         assert runner.eligible_delete(row), kw
-    assert not runner.eligible_delete(make_row(meta_catalog_id="77", meta_catalog_status="Posted"))
+    assert not runner.eligible_delete(make_row(meta_catalog_id="77"))
+    # Available + ticked stays live; no Meta Catalogue channel means nothing to delete.
+    assert not runner.eligible_delete(make_row(meta_catalog_id="77", Availability="Rented Out"))
 
 
 def test_delete_cap_is_3():
@@ -279,7 +280,7 @@ def test_delete_cap_is_3():
         pid = str(500 + i)
         whapi.products[pid] = {"id": pid}
         rows.append(make_row(page_id=f"p{i}", listing_id=f"EF-2611-{i:04d}", Availability="Rented Out",
-                             meta_catalog_id=pid, meta_catalog_status="Posted"))
+                             meta_catalog_id=pid, **{"live at": ["Meta Catalogue"]}))
     result = run("delete", FakeStore(rows), whapi)
     assert result["counts"]["ok"] == 3
     assert sum(1 for l in result["lines"] if "cap 3 reached" in l) == 2
@@ -287,7 +288,7 @@ def test_delete_cap_is_3():
 
 
 def test_delete_404_is_a_correction_not_a_failure():
-    row = make_row(Availability="Rented Out", meta_catalog_id="gone", meta_catalog_status="Posted")
+    row = make_row(Availability="Rented Out", meta_catalog_id="gone", **{"live at": ["Meta Catalogue"]})
     result = run("delete", FakeStore([row]), FakeWhapi())
     assert "404" in result["lines"][0]
     assert result["counts"]["failed"] == 0
@@ -298,7 +299,7 @@ def test_delete_404_is_a_correction_not_a_failure():
 def test_assign_uses_formula_id_and_checks_membership_live():
     whapi = FakeWhapi()
     whapi.products["31"] = {"id": "31", "collection_ids": [COLLECTION]}
-    row = make_row(meta_catalog_id="31", meta_catalog_status="Posted", meta_catalog_collection_id=COLLECTION)
+    row = make_row(meta_catalog_id="31", meta_catalog_collection_id=COLLECTION, **{"live at": ["Meta Catalogue"]})
     result = run("assign", FakeStore([row]), whapi)
     assert "already in collection" in result["lines"][0]
     assert not any(c[0] == "assign" for c in whapi.calls)
@@ -307,14 +308,14 @@ def test_assign_uses_formula_id_and_checks_membership_live():
 def test_assign_hard_stops_on_unknown_collection_id():
     whapi = FakeWhapi()
     whapi.products["31"] = {"id": "31", "collection_ids": []}
-    row = make_row(meta_catalog_id="31", meta_catalog_status="Posted", meta_catalog_collection_id="999999")
+    row = make_row(meta_catalog_id="31", meta_catalog_collection_id="999999", **{"live at": ["Meta Catalogue"]})
     result = run("assign", FakeStore([row]), whapi)
     assert "not one of the 4 known IDs" in result["lines"][0]
     assert not any(c[0] == "assign" for c in whapi.calls)
 
 
 def test_assign_skips_unmapped_bhk_without_guessing():
-    row = make_row(meta_catalog_id="31", meta_catalog_status="Posted", meta_catalog_collection_id="")
+    row = make_row(meta_catalog_id="31", meta_catalog_collection_id="", **{"live at": ["Meta Catalogue"]})
     result = run("assign", FakeStore([row]), FakeWhapi())
     assert "unmapped BHK" in result["lines"][0]
 
@@ -351,7 +352,7 @@ def test_dry_run_decides_everything_and_writes_nothing():
     whapi.products["77"] = {"id": "77"}
     rows = [
         make_row(page_id="c1", listing_id="EF-CREATE"),
-        make_row(page_id="d1", listing_id="EF-DELETE", Availability="Rented Out", meta_catalog_id="77", meta_catalog_status="Posted"),
+        make_row(page_id="d1", listing_id="EF-DELETE", Availability="Rented Out", meta_catalog_id="77", **{"live at": ["Meta Catalogue"]}),
     ]
     store = FakeStore(rows, switches={**ALL_SWITCHES, "DRY_RUN": True})
     create = run("create", store, whapi)
@@ -368,8 +369,8 @@ def test_reconcile_reports_drift_and_orphans_without_touching_anything():
     whapi = FakeWhapi()
     whapi.products["1"] = {"id": "1", "product_retailer_id": "EF-ORPHAN"}
     rows = [
-        make_row(listing_id="EF-MISSING", **{"live at": ["Meta Catalogue"]}, meta_catalog_id="x", meta_catalog_status="Posted"),
-        make_row(page_id="r1", listing_id="EF-LEFTOVER", Availability="Rented Out", meta_catalog_id="1x", meta_catalog_status="Posted"),
+        make_row(listing_id="EF-MISSING", **{"live at": ["Meta Catalogue"]}, meta_catalog_id="x"),
+        make_row(page_id="r1", listing_id="EF-LEFTOVER", Availability="Rented Out", meta_catalog_id="1x", **{"live at": ["Meta Catalogue"]}),
     ]
     whapi.products["1x"] = {"id": "1x", "product_retailer_id": "EF-LEFTOVER"}
     store = FakeStore(rows)

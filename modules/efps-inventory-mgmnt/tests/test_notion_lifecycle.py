@@ -5,7 +5,7 @@ import pytest
 
 def canonical_schema():
     s = {name: {'type': kind} for name, kind in intake.listing_property_types().items()}
-    for name, values in [('Availability', intake.notion_lifecycle.AVAILABILITY), ('Pipeline Status', intake.notion_lifecycle.PIPELINE), ('WhatsApp Group', ('1 RK / 1–1.5 BHK', '2 / 2.5 BHK', '3 / 3.5 BHK', '4 / 4.5 BHK', '5+ BHK')), ('preferred_tenant_type', ('Family Only', 'Open For All')), ('bachelor_preference', ('Female Only', 'Male Only', 'Not Allowed', 'Open for both'))]:
+    for name, values in [('Availability', intake.notion_lifecycle.AVAILABILITY), ('Pipeline Status', intake.notion_lifecycle.PIPELINE), ('WhatsApp Group', ('1 RK / 1–1.5 BHK', '2 / 2.5 BHK', '3 / 3.5 BHK', '4 / 4.5 BHK', '5+ BHK')), ('preferred_tenant_type', ('Family Only', 'Open For All')), ('bachelor_preference', ('Female Only', 'Male Only', 'Open for both'))]:
         s[name]['select'] = {'options': [{'name': n} for n in values]}
     s['live at']['multi_select'] = {'options': [{'name': n} for n in intake.notion_lifecycle.CHANNELS]}
     return s
