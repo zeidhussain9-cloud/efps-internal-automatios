@@ -1,0 +1,238 @@
+"""Tests for the Tuesday scheduled cleanup orchestrator (approved 21 Nov)."""
+from __future__ import annotations
+
+import os
+import sys
+import unittest
+from datetime import datetime, timezone
+from unittest import mock
+
+sys.path.insert(0, os.path.dirname(__file__))
+
+import catalogue_scheduler as cs
+
+
+class FakeLambda:
+    def __init__(self, flag="false"):
+        self.flag = flag
+        self.invocations = []
+        self.updates = []
+        self.fail_update = False
+
+    def get_function_configuration(self, FunctionName):
+        return {"Environment": {"Variables": {cs.CATALOG_WRITE_FLAG: self.flag}},
+                "LastUpdateStatus": "Successful"}
+
+    def update_function_configuration(self, FunctionName, Environment):
+        if self.fail_update:
+            raise RuntimeError("iam denied")
+        self.updates.append(Environment["Variables"][cs.CATALOG_WRITE_FLAG])
+        self.flag = Environment["Variables"][cs.CATALOG_WRITE_FLAG]
+
+    def invoke(self, FunctionName, InvocationType, Payload):
+        import json
+        self.invocations.append(json.loads(Payload.decode()))
+
+
+class FakeStore:
+    SWITCHES_DATABASE_ID = "switches-db"
+
+    def __init__(self, dry_run=True):
+        self.dry_run = dry_run
+        self.log_entries = []
+        self.requests = []
+
+    def _query_all(self, db):
+        assert db == "switches-db"
+        return [{"id": "dryrun-page", "properties": {"Name": {"title": [{"plain_text": "DRY_RUN"}]}}}]
+
+    def request(self, method, path, payload=None):
+        self.requests.append((method, path, payload))
+        if path.startswith("pages/"):
+            self.dry_run = payload["properties"]["Enabled"]["checkbox"]
+        if path.startswith("blocks/"):
+            self.log_entries.append(payload)
+        return {}
+
+
+class Ctx:
+    invoked_function_arn = "arn:aws:lambda:ap-southeast-2:123:function:efps-notion-intake"
+
+
+def run_delete_result(ok=0, failed=0, skipped=0, would=0, dry=False, lines=None):
+    return {"counts": {"ok": ok, "failed": failed, "skipped": skipped, "would": would},
+            "dry_run": dry, "lines": lines or []}
+
+
+TUE_AM_IST = datetime(2026, 11, 24, 3, 45, tzinfo=timezone.utc)  # Tuesday 9:15 IST
+WED_AM_IST = datetime(2026, 11, 25, 4, 35, tzinfo=timezone.utc)  # Wednesday 10:05 IST
+
+
+def base_env(flag):
+    return mock.patch.dict(os.environ, {cs.CATALOG_WRITE_FLAG: flag})
+
+
+class BeginTests(unittest.TestCase):
+    def test_begin_flips_flags_and_chains_first_batch(self):
+        lam, store = FakeLambda("false"), FakeStore()
+        with base_env("false"):
+            out = cs.handle_schedule({"step": "begin"}, Ctx(), notion_token="t",
+                                     lam=lam, store=store, run_delete=lambda: {}, sleep=lambda s: None)
+        self.assertEqual(out["status"], "started")
+        self.assertEqual(lam.updates, ["true"])
+        self.assertFalse(store.dry_run)
+        self.assertEqual(lam.invocations[0]["step"], "batch")
+        self.assertEqual(lam.invocations[0]["batch"], 1)
+        self.assertTrue(lam.invocations[0]["run_id"].startswith("tue-"))
+
+    def test_begin_aborts_if_gate_already_open(self):
+        lam, store = FakeLambda("true"), FakeStore()
+        with base_env("true"):
+            out = cs.handle_schedule({"step": "begin"}, Ctx(), notion_token="t",
+                                     lam=lam, store=store, run_delete=lambda: {}, sleep=lambda s: None)
+        self.assertEqual(out["status"], "aborted")
+        self.assertEqual(lam.updates, [])
+        self.assertEqual(lam.invocations, [])
+        self.assertTrue(store.dry_run)
+
+
+class BatchTests(unittest.TestCase):
+    def event(self, **kw):
+        base = {"step": "batch", "run_id": "tue-x", "batch": 1,
+                "totals": {"ok": 0, "failed": 0, "skipped": 0}, "deleted": [], "failures": []}
+        base.update(kw)
+        return base
+
+    def test_ok_batch_chains_next_with_totals(self):
+        lam, store = FakeLambda("true"), FakeStore(dry_run=False)
+        res = run_delete_result(ok=3, skipped=57, lines=["DELETE EF-1 p1 OK deleted"])
+        with base_env("true"):
+            out = cs.handle_schedule(self.event(), Ctx(), notion_token="t",
+                                     lam=lam, store=store, run_delete=lambda: res, sleep=lambda s: None)
+        self.assertEqual(out["status"], "chained")
+        nxt = lam.invocations[0]
+        self.assertEqual(nxt["batch"], 2)
+        self.assertEqual(nxt["totals"]["ok"], 3)
+        self.assertEqual(nxt["totals"]["skipped"], 57)
+        self.assertEqual(nxt["deleted"], ["EF-1"])
+
+    def test_zero_eligible_finalizes_success_and_restores(self):
+        lam, store = FakeLambda("true"), FakeStore(dry_run=False)
+        res = run_delete_result(ok=0, lines=["DELETE -  SKIPPED no eligible rows"])
+        with base_env("true"):
+            out = cs.handle_schedule(self.event(batch=2, totals={"ok": 3, "failed": 0, "skipped": 0},
+                                                deleted=["EF-1"]), Ctx(), notion_token="t",
+                                     lam=lam, store=store, run_delete=lambda: res, sleep=lambda s: None)
+        self.assertEqual(out["status"], "completed")
+        self.assertEqual(lam.updates, ["false"])
+        self.assertTrue(store.dry_run)
+        self.assertEqual(lam.invocations, [])
+        self.assertTrue(store.log_entries, "decision log entry written")
+        text = str(store.log_entries[0])
+        self.assertIn("COMPLETED", text)
+        self.assertIn("EF-1", text)
+
+    def test_failed_batch_stops_safe_no_rerun(self):
+        lam, store = FakeLambda("true"), FakeStore(dry_run=False)
+        res = run_delete_result(ok=2, failed=1, lines=["DELETE EF-1 p1 OK deleted",
+                                                       "DELETE EF-2 p2 FAILED boom"])
+        with base_env("true"):
+            out = cs.handle_schedule(self.event(), Ctx(), notion_token="t",
+                                     lam=lam, store=store, run_delete=lambda: res, sleep=lambda s: None)
+        self.assertEqual(out["status"], "failed")
+        self.assertIn("no auto-rerun", out["error"])
+        self.assertEqual(lam.invocations, [])
+        self.assertEqual(lam.updates, ["false"])
+        self.assertTrue(store.dry_run)
+        self.assertIn("boom", str(store.log_entries[0]))
+
+    def test_dry_run_still_on_aborts(self):
+        lam, store = FakeLambda("true"), FakeStore(dry_run=False)
+        res = run_delete_result(would=3, dry=True)
+        with base_env("true"):
+            out = cs.handle_schedule(self.event(), Ctx(), notion_token="t",
+                                     lam=lam, store=store, run_delete=lambda: res, sleep=lambda s: None)
+        self.assertEqual(out["status"], "failed")
+        self.assertIn("DRY_RUN", out["error"])
+        self.assertEqual(lam.invocations, [])
+
+    def test_flag_off_midrun_stops_safe(self):
+        lam, store = FakeLambda("false"), FakeStore()
+        with base_env("false"):
+            out = cs.handle_schedule(self.event(), Ctx(), notion_token="t",
+                                     lam=lam, store=store, run_delete=lambda: 1 / 0, sleep=lambda s: None)
+        self.assertEqual(out["status"], "failed")
+        self.assertIn("OFF mid-run", out["error"])
+
+    def test_raised_batch_stops_safe_no_rerun(self):
+        lam, store = FakeLambda("true"), FakeStore(dry_run=False)
+        def boom():
+            raise RuntimeError("whapi exploded")
+        with base_env("true"):
+            out = cs.handle_schedule(self.event(), Ctx(), notion_token="t",
+                                     lam=lam, store=store, run_delete=boom, sleep=lambda s: None)
+        self.assertEqual(out["status"], "failed")
+        self.assertIn("whapi exploded", out["error"])
+        self.assertEqual(lam.invocations, [])
+        self.assertEqual(lam.updates, ["false"])
+        self.assertTrue(store.dry_run)
+
+    def test_batch_cap_finalizes_with_error(self):
+        lam, store = FakeLambda("true"), FakeStore(dry_run=False)
+        res = run_delete_result(ok=3, lines=["DELETE EF-9 p9 OK deleted"])
+        with base_env("true"):
+            out = cs.handle_schedule(self.event(batch=cs.MAX_BATCHES), Ctx(), notion_token="t",
+                                     lam=lam, store=store, run_delete=lambda: res, sleep=lambda s: None)
+        self.assertEqual(out["status"], "failed")
+        self.assertIn("batch cap", out["error"])
+        self.assertEqual(lam.invocations, [])
+
+    def test_finalize_restores_both_even_if_env_update_fails(self):
+        lam, store = FakeLambda("true"), FakeStore(dry_run=False)
+        lam.fail_update = True
+        res = run_delete_result(ok=0)
+        with base_env("true"):
+            out = cs.handle_schedule(self.event(), Ctx(), notion_token="t",
+                                     lam=lam, store=store, run_delete=lambda: res, sleep=lambda s: None)
+        self.assertEqual(out["status"], "failed")
+        self.assertTrue(out["restore_errors"])
+        self.assertTrue(store.dry_run, "DRY_RUN restore still attempted after env failure")
+
+
+class WatchdogTests(unittest.TestCase):
+    def test_watchdog_restores_flag_on_outside_window(self):
+        lam, store = FakeLambda("true"), FakeStore(dry_run=False)
+        with base_env("true"):
+            out = cs.handle_schedule({"step": "watchdog"}, Ctx(), notion_token="t",
+                                     lam=lam, store=store, run_delete=lambda: {}, sleep=lambda s: None,
+                                     now=lambda: WED_AM_IST)
+        self.assertEqual(out["status"], "alarmed")
+        self.assertEqual(lam.updates, ["false"])
+        self.assertTrue(store.dry_run)
+        self.assertIn("WATCHDOG ALARM", str(store.log_entries[0]))
+
+    def test_watchdog_quiet_when_flag_off(self):
+        lam, store = FakeLambda("false"), FakeStore()
+        out = cs.handle_schedule({"step": "watchdog"}, Ctx(), notion_token="t",
+                                 lam=lam, store=store, run_delete=lambda: {}, sleep=lambda s: None,
+                                 now=lambda: WED_AM_IST)
+        self.assertEqual(out["status"], "ok")
+        self.assertEqual(lam.updates, [])
+        self.assertEqual(store.log_entries, [])
+
+    def test_watchdog_allows_flag_during_tuesday_window(self):
+        lam, store = FakeLambda("true"), FakeStore(dry_run=False)
+        out = cs.handle_schedule({"step": "watchdog"}, Ctx(), notion_token="t",
+                                 lam=lam, store=store, run_delete=lambda: {}, sleep=lambda s: None,
+                                 now=lambda: TUE_AM_IST)
+        self.assertEqual(out["status"], "ok")
+        self.assertEqual(lam.updates, [])
+
+    def test_unknown_step_raises(self):
+        with self.assertRaises(cs.ScheduleError):
+            cs.handle_schedule({"step": "nope"}, Ctx(), notion_token="t",
+                               lam=FakeLambda(), store=FakeStore(), run_delete=lambda: {})
+
+
+if __name__ == "__main__":
+    unittest.main()

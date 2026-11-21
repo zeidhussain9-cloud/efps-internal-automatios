@@ -1473,6 +1473,11 @@ def _record_unverified_delivery(raw_body: str, reason: str, context, request_eve
 
 
 def lambda_handler(event, context):
+    if event.get("_efps_catalogue_schedule"):
+        # Tuesday 9 AM IST scheduled cleanup + daily watchdog (approved 21 Nov).
+        import catalogue_scheduler
+        return catalogue_scheduler.handle_schedule(
+            event, context, notion_token=_notion_secret_value("api_token"))
     if event.get("_efps_catalogue_trigger"):
         operation = str(event.get("operation") or "").strip().lower()
         started = time.monotonic()
