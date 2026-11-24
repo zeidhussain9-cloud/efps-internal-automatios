@@ -773,17 +773,20 @@ def _catalogue_availability(value: str, *, today) -> str:
     return f"{_ordinal(day)} {datetime(year, month, day).strftime('%B')} {year}"
 
 
-def build_catalogue_description(row: dict, raw_text: str, *, verified_society_name: str = "", resolved_maps_url: str = "", today=None) -> str:
+def build_catalogue_description(row: dict, raw_text: str, *, verified_society_name: str = "", verified_landmark_name: str = "", resolved_maps_url: str = "", today=None) -> str:
     """Catalogue product description per the rules Zeid stamped on 21 Nov 2026.
 
     Option B card style. Product name is the standardized catalog_title.
     Floors use proper ordinals ('3rd of 5th floors', just '3rd' when the
     total is unknown). Maintenance is one of Rs amount / Included / Water
     Charges Additional. Availability is a full future date or 'Ready To
-    Occupy'. Tenant type uses the locked LOV only. Gated listings close
-    with the society name, Semi Gated and Standalone with dropdown locality.
-    The map link is always the standardized long google.com/maps link;
-    short links never appear. Lines render only when their data exists.
+    Occupy'. Tenant type uses the locked LOV only. Locked 24 Nov (Zeid):
+    named properties close with the society name, unnamed ones with
+    "Landmark: <landmark>", each followed by the map link. A stored society
+    or landmark is used only when Maps-verified by the caller or present in
+    the raw source text; there is no locality stand-in. The map link is
+    always the standardized long google.com/maps link; short links never
+    appear. Lines render only when their data exists.
     """
     # Rebuild even when called directly on an existing, stale row.
     title = build_catalog_title(row) if row.get("locality") else str(row.get("catalog_title") or row.get("listing_id") or "").strip()
@@ -873,18 +876,37 @@ def build_catalogue_description(row: dict, raw_text: str, *, verified_society_na
     if people:
         sections.append("\n".join(people))
 
-    society = str(verified_society_name or row.get("society_name") or "").strip()
+    # Locked 24 Nov (Zeid): the description closes with the society name for
+    # named properties, or "Landmark: <landmark>" for unnamed ones, each followed
+    # by the long map link. Stored labels are used only when Maps-verified by the
+    # caller or present in the raw source text. No locality stand-in: a row with
+    # neither a verified society nor a distinct verified landmark gets no ending.
+    def _squash(value: str) -> str:
+        return re.sub(r"[^a-z0-9]", "", (value or "").lower())
+
+    raw_squashed = _squash(raw)
     locality = str(row.get("locality") or "").strip()
-    label = (society or locality) if internal_type == "Gated Community" else locality
+    society = str(verified_society_name or "").strip()
+    if not society:
+        candidate_society = str(row.get("society_name") or "").strip()
+        if (candidate_society and candidate_society.lower() != locality.lower()
+                and _squash(candidate_society) in raw_squashed):
+            society = candidate_society
+    landmark = str(verified_landmark_name or "").strip()
+    if not landmark:
+        candidate_landmark = str(row.get("landmark") or "").strip()
+        if (candidate_landmark and candidate_landmark.lower() != locality.lower()
+                and _squash(candidate_landmark) in raw_squashed):
+            landmark = candidate_landmark
     link = str(resolved_maps_url or "").strip()
     if not link:
         candidate = str(row.get("google_maps_url") or "").strip()
         if candidate.startswith("https://www.google.com/maps") or candidate.startswith("https://maps.google.com"):
             link = candidate
-    if link and label:
-        sections.append(f"*📍 {label}:*\n{link}")
-    elif link:
-        sections.append(f"*📍 Location:*\n{link}")
+    if link and society:
+        sections.append(f"✨ {society}\n{link}")
+    elif link and landmark:
+        sections.append(f"📍 Landmark: {landmark}\n{link}")
     return "\n\n".join(sections)
 
 
