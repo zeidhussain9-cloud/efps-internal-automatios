@@ -68,8 +68,10 @@ def listing_row(page: dict) -> dict:
         "page_id": str(page.get("id") or ""),
         "listing_id": text("listing_id"),
         "Availability": _select_name(props.get("Availability")),
+        "Pipeline Status": _select_name(props.get("Pipeline Status")),
         "BHK": text("BHK"),
         "catalog_title": text("catalog_title"),
+        "catalogue_description": text("catalogue_description"),
         "whatsapp_post": text("whatsapp_post"),
         "monthly_rent": (props.get("monthly_rent") or {}).get("number") or 0,
         "cloudinary_image_urls": text("cloudinary_image_urls"),
@@ -173,6 +175,8 @@ class NotionCatalogueStore:
             properties["live at"] = {
                 "multi_select": [{"name": str(name)} for name in (updates["live at"] or [])]
             }
+        if "Pipeline Status" in updates:
+            properties["Pipeline Status"] = {"select": {"name": str(updates["Pipeline Status"])}}
         if not properties:
             return
         self.request("PATCH", f"pages/{page_id}", payload={"properties": properties})

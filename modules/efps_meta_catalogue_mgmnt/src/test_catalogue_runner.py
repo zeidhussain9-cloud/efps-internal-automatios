@@ -124,10 +124,11 @@ class FakeStore:
 def make_row(**kw):
     row = {
         "page_id": "page-1", "listing_id": "EF-2611-AAAA",
-        "Availability": "Available", "live at": [],
+        "Availability": "Available", "Pipeline Status": "Ready To Post", "live at": [],
         "meta_catalog_id": "", "meta_catalog_collection_id": "",
         "cloudinary_image_urls": "https://img/1.jpg https://img/2.jpg",
         "monthly_rent": "40000", "catalog_title": "Semi Furnished 2 BHK - Haralur",
+        "catalogue_description": "desc text",
         "whatsapp_post": "post text", "google_maps_url": "https://www.google.com/maps/search/?api=1&query=x",
         "BHK": "2 BHK",
     }
@@ -135,24 +136,35 @@ def make_row(**kw):
     return row
 
 
-@pytest.fixture(autouse=True)
-def _enable_create_selection(monkeypatch):
-    # Production default is fail-closed (CREATE_SELECTION_ENABLED=False, 24 Nov
-    # retirement of the Post to Catalogue tick); machinery tests opt in.
-    monkeypatch.setattr(runner, "CREATE_SELECTION_ENABLED", True)
-
-
 def run(op, store, whapi, sleeper=lambda s: None):
     return runner.run_operation(op, store=store, whapi=whapi, masters=MASTERS_ON, sleeper=sleeper)
 
 
-def test_create_selection_is_fail_closed_by_default(monkeypatch):
-    monkeypatch.setattr(runner, "CREATE_SELECTION_ENABLED", False)
-    row = make_row()
-    assert not runner.eligible_create(row)
-    store = FakeStore([row], switches={**ALL_SWITCHES, "ASSIGN": False})
-    result = run("create", store, FakeWhapi())
-    assert result["counts"]["ok"] == 0 and store.updates == []
+# --- create selection: the four locked conditions (24 Nov 2026) ---
+
+def test_create_selection_requires_all_four_conditions():
+    assert runner.eligible_create(make_row())
+    assert not runner.eligible_create(make_row(**{"Pipeline Status": "New"}))
+    assert not runner.eligible_create(make_row(**{"Pipeline Status": ""}))
+    assert not runner.eligible_create(make_row(Availability="On Hold"))
+    assert not runner.eligible_create(make_row(Availability="Rented Out"))
+    assert not runner.eligible_create(make_row(**{"live at": ["Meta Catalogue"]}))
+    assert runner.eligible_create(make_row(**{"live at": ["WhatsApp Groups"]}))
+    assert not runner.eligible_create(make_row(meta_catalog_id="77"))
+
+
+def test_create_prechecks_skip_with_reason():
+    for kw, reason in [
+        ({"listing_id": ""}, "listing_id blank"),
+        ({"catalog_title": ""}, "catalog_title blank"),
+        ({"catalogue_description": ""}, "catalogue_description blank"),
+        ({"monthly_rent": "0"}, "monthly_rent"),
+        ({"cloudinary_image_urls": ""}, "no photos"),
+    ]:
+        store = FakeStore([make_row(**kw)], switches={**ALL_SWITCHES, "ASSIGN": False})
+        result = run("create", store, FakeWhapi())
+        assert reason in result["lines"][0], (kw, result["lines"])
+        assert store.updates == []
 
 
 # --- gating ---
@@ -197,7 +209,11 @@ def test_create_writes_product_id_and_meta_channel_only_after_success():
     assert "meta_catalog_status" not in props
     assert props["meta_catalog_id"] == "101"
     assert props["live at"] == ["Meta Catalogue"]
+    assert props["Pipeline Status"] == "Posted"
     assert any("CREATE EF-2611-AAAA product=101 OK" in line for _, line in store.activity)
+    created = whapi.products["101"]
+    assert created["name"] == "Semi Furnished 2 BHK - Haralur"
+    assert created["description"] == "desc text"  # catalogue_description, never whatsapp_post
 
 
 def test_create_adopts_existing_product_instead_of_duplicating():
@@ -217,12 +233,14 @@ def test_create_requires_photos():
     assert store.updates == []
 
 
-def test_create_then_assign_with_30s_gap():
+def test_create_never_chains_assignment():
+    # Zeid 24 Nov 3:04 PM: collection assignment is a separate flow; a create
+    # run must not assign, even when ASSIGN is on and a collection is mapped.
     sleeps = []
     whapi, store = FakeWhapi(), FakeStore([make_row(meta_catalog_collection_id=COLLECTION)])
     run("create", store, whapi, sleeper=sleeps.append)
-    assert 30 in sleeps
-    assert ("assign", COLLECTION, ("101",)) in whapi.calls
+    assert not any(c[0] == "assign" for c in whapi.calls)
+    assert 30 in sleeps  # 30s spacing between catalogue requests is kept
 
 
 def test_create_cap_is_10():

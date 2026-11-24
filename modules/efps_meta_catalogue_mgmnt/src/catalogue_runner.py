@@ -110,18 +110,14 @@ def _truthy(value: Any) -> bool:
 
 
 # --- eligibility ---
-# Retired 24 Nov 2026 (Zeid): the "Post to Catalogue" checkbox trigger is
-# removed and the column deleted. Create selection stays DISABLED until his
-# approved four-condition flow (Pipeline Status = Ready To Post + Availability
-# = Available + Meta Catalogue unselected in live at + blank meta_catalog_id)
-# is built. Fail-closed: no row qualifies while the flag is off.
-CREATE_SELECTION_ENABLED = False
-
+# Locked 24 Nov 2026 (Zeid 3:32 PM, build approved): four-condition NEW
+# creation selection. Rows with an old product ID are excluded (relisting is
+# parked). Collection assignment is a separate flow and plays no part here.
 def eligible_create(row: Mapping[str, Any]) -> bool:
-    if not CREATE_SELECTION_ENABLED:
-        return False
     return (
-        str(row.get("Availability") or "") == "Available"
+        str(row.get("Pipeline Status") or "") == "Ready To Post"
+        and str(row.get("Availability") or "") == "Available"
+        and META_CHANNEL not in _live_at(row)
         and not str(row.get("meta_catalog_id") or "").strip()
     )
 
@@ -268,13 +264,34 @@ def _execute(operation: str, run: _Run, row: Mapping[str, Any]) -> None:
 
 
 def _op_create_row(run: _Run, row: Mapping[str, Any]) -> None:
-    listing_id = str(row.get("listing_id") or "")
+    # Pre-checks locked 24 Nov 2026: missing/invalid required details = skip
+    # with the exact reason, no guessing. Collection ID is NOT required -
+    # assignment is a separate flow (Zeid 3:04 PM).
+    listing_id = str(row.get("listing_id") or "").strip()
+    if not listing_id:
+        run.record(row, "", "SKIPPED", "listing_id blank; skipped")
+        return
+    title = str(row.get("catalog_title") or "").strip()
+    if not title:
+        run.record(row, "", "SKIPPED", "catalog_title blank; skipped")
+        return
+    description = str(row.get("catalogue_description") or "").strip()
+    if not description:
+        run.record(row, "", "SKIPPED", "catalogue_description blank; skipped")
+        return
+    try:
+        rent = int(row.get("monthly_rent") or 0)
+    except (TypeError, ValueError):
+        rent = 0
+    if rent <= 0:
+        run.record(row, "", "SKIPPED", "monthly_rent not a positive number; skipped")
+        return
     images = [u for u in str(row.get("cloudinary_image_urls") or "").replace(",", " ").split() if u.strip()][:10]
     if not images:
-        run.record(row, "", "FAILED", "no photos; skipped")
+        run.record(row, "", "SKIPPED", "no photos; skipped")
         return
     if run.dry_run:
-        run.record(row, "", "WOULD", f"create product '{row.get('catalog_title')}' with {len(images)} photos")
+        run.record(row, "", "WOULD", f"create product '{title}' with {len(images)} photos")
         return
 
     # Adoption: never create a duplicate of a product that already exists.
@@ -285,12 +302,6 @@ def _op_create_row(run: _Run, row: Mapping[str, Any]) -> None:
         run.record(row, product_id, "ADOPTED", "product already existed on WhatsApp")
         return
 
-    title = str(row.get("catalog_title") or "").strip()
-    description = str(row.get("whatsapp_post") or "").strip()
-    try:
-        rent = int(row.get("monthly_rent") or 0)
-    except (TypeError, ValueError):
-        rent = 0
     result = _call_with_retry(
         lambda: run.whapi.create_product(
             name=title, description=description, price=rent, currency="INR",
@@ -303,28 +314,32 @@ def _op_create_row(run: _Run, row: Mapping[str, Any]) -> None:
     product_id = str((result or {}).get("id") or (result or {}).get("product_id") or "")
     if not product_id:
         raise RuntimeError(f"WhAPI returned no product ID: {result}")
+    # Verify before writeback (locked order, 24 Nov): read the product back and
+    # confirm it exists with the intended name before touching Notion.
+    run.sleeper(CREATE_ASSIGN_GAP_SECONDS)  # 30s spacing between catalogue requests
+    live_product = _call_with_retry(lambda: run.whapi.get_product(product_id), sleeper=run.sleeper)
+    live_name = str((live_product or {}).get("name") or "").strip()
+    if not live_name:
+        raise RuntimeError(f"created product {product_id} not readable on verification; Notion untouched")
+    if live_name != title:
+        raise RuntimeError(f"created product {product_id} name mismatch ('{live_name}' vs '{title}'); Notion untouched")
     _mark_posted(run, row, product_id)
-    run.record(row, product_id, "OK", "created")
-    # 30s create->assign spacing, then assign through its own gated path.
-    run.sleeper(CREATE_ASSIGN_GAP_SECONDS)
-    try:
-        switches = run.store.read_switches() or {}
-    except Exception:  # noqa: BLE001
-        switches = {}
-    if _truthy(switches.get("ASSIGN")):
-        live = _live_at(row)
-        if META_CHANNEL not in live:
-            live = live + [META_CHANNEL]
-        _op_assign_row(run, {**row, "meta_catalog_id": product_id, "live at": live})
+    run.record(row, product_id, "OK", "created and verified")
+    # Collection assignment is deliberately NOT chained here (Zeid 3:04 PM):
+    # it runs as its own separately-gated flow.
 
 
 def _mark_posted(run: _Run, row: Mapping[str, Any], product_id: str) -> None:
+    # Writeback locked 24 Nov 2026 (Zeid): product ID + Meta Catalogue in
+    # live at + Pipeline Status -> Posted; the run record also appends the
+    # audit line to error_notes. Posted = live on at least one platform.
     live = _live_at(row)
     if META_CHANNEL not in live:
         live = live + [META_CHANNEL]
     run.store.update_listing(str(row.get("page_id") or ""), {
         "meta_catalog_id": product_id,
         "live at": live,
+        "Pipeline Status": "Posted",
     })
 
 
