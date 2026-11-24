@@ -109,12 +109,19 @@ def _truthy(value: Any) -> bool:
     return str(value or "").strip().lower() in {"1", "true", "yes", "on", "ticked", "checked"}
 
 
-# --- eligibility (option B: "Post to Catalogue" checkbox is the operator trigger) ---
+# --- eligibility ---
+# Retired 24 Nov 2026 (Zeid): the "Post to Catalogue" checkbox trigger is
+# removed and the column deleted. Create selection stays DISABLED until his
+# approved four-condition flow (Pipeline Status = Ready To Post + Availability
+# = Available + Meta Catalogue unselected in live at + blank meta_catalog_id)
+# is built. Fail-closed: no row qualifies while the flag is off.
+CREATE_SELECTION_ENABLED = False
 
 def eligible_create(row: Mapping[str, Any]) -> bool:
+    if not CREATE_SELECTION_ENABLED:
+        return False
     return (
-        _truthy(row.get("post_to_catalogue"))
-        and str(row.get("Availability") or "") == "Available"
+        str(row.get("Availability") or "") == "Available"
         and not str(row.get("meta_catalog_id") or "").strip()
     )
 
@@ -131,8 +138,8 @@ def eligible_delete(row: Mapping[str, Any]) -> bool:
     if META_CHANNEL not in _live_at(row):
         return False
     # Locked 21 Nov (Zeid): ONLY Rented Out/On Hold arms deletion. A missing
-    # "Post to Catalogue" tick never qualifies - legacy products predate the
-    # tick system, so unticked is the normal state for live listings.
+    # Legacy "Post to Catalogue" tick never qualifies - legacy products
+    # predate the retired tick system; unticked is the normal live state.
     return str(row.get("Availability") or "") in {"Rented Out", "On Hold"}
 
 

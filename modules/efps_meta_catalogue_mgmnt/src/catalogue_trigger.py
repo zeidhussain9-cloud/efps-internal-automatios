@@ -9,9 +9,10 @@ mechanisms:
    The HTTP handler only verifies and enqueues; the operation itself runs in
    the internal async invocation so long runs never hit API Gateway timeouts.
 
-2. Notion webhook ticks: ticking Run on a Catalogue Control Panel row (or
-   Post to Catalogue on a Housing row) arrives through the existing intake
-   webhook -> worker path, which enqueues the same internal invocation.
+2. Notion webhook ticks: ticking Run on a Catalogue Control Panel row
+   arrives through the existing intake webhook -> worker path, which enqueues
+   the same internal invocation. (The Housing-row "Post to Catalogue" tick
+   path was retired on 24 Nov 2026 with the column's removal.)
 
 Nothing auto-fires: every run traces to an explicit tick or signed call, the
 operation's own switch must be ON, and the two template.yaml masters gate

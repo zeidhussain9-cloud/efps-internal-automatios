@@ -124,7 +124,7 @@ class FakeStore:
 def make_row(**kw):
     row = {
         "page_id": "page-1", "listing_id": "EF-2611-AAAA",
-        "Availability": "Available", "live at": [], "post_to_catalogue": True,
+        "Availability": "Available", "live at": [],
         "meta_catalog_id": "", "meta_catalog_collection_id": "",
         "cloudinary_image_urls": "https://img/1.jpg https://img/2.jpg",
         "monthly_rent": "40000", "catalog_title": "Semi Furnished 2 BHK - Haralur",
@@ -135,8 +135,24 @@ def make_row(**kw):
     return row
 
 
+@pytest.fixture(autouse=True)
+def _enable_create_selection(monkeypatch):
+    # Production default is fail-closed (CREATE_SELECTION_ENABLED=False, 24 Nov
+    # retirement of the Post to Catalogue tick); machinery tests opt in.
+    monkeypatch.setattr(runner, "CREATE_SELECTION_ENABLED", True)
+
+
 def run(op, store, whapi, sleeper=lambda s: None):
     return runner.run_operation(op, store=store, whapi=whapi, masters=MASTERS_ON, sleeper=sleeper)
+
+
+def test_create_selection_is_fail_closed_by_default(monkeypatch):
+    monkeypatch.setattr(runner, "CREATE_SELECTION_ENABLED", False)
+    row = make_row()
+    assert not runner.eligible_create(row)
+    store = FakeStore([row], switches={**ALL_SWITCHES, "ASSIGN": False})
+    result = run("create", store, FakeWhapi())
+    assert result["counts"]["ok"] == 0 and store.updates == []
 
 
 # --- gating ---

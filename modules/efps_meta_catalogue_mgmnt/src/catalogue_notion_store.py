@@ -77,7 +77,6 @@ def listing_row(page: dict) -> dict:
         "meta_catalog_id": text("meta_catalog_id"),
         "meta_catalog_collection_id": _formula_string(props.get("meta_catalog_collection_id")),
         "live at": live,
-        "post_to_catalogue": bool((props.get("Post to Catalogue") or {}).get("checkbox")),
         "error_notes": text("error_notes"),
     }
 
@@ -174,8 +173,6 @@ class NotionCatalogueStore:
             properties["live at"] = {
                 "multi_select": [{"name": str(name)} for name in (updates["live at"] or [])]
             }
-        if "post_to_catalogue" in updates:
-            properties["Post to Catalogue"] = {"checkbox": bool(updates["post_to_catalogue"])}
         if not properties:
             return
         self.request("PATCH", f"pages/{page_id}", payload={"properties": properties})

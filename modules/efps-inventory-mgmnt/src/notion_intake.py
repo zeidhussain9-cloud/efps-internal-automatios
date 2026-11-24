@@ -1039,13 +1039,8 @@ def process_page(
             return {"status": "panel_trigger", "operation": operation, "listing_id": ""}
         return {"status": "ignored", "listing_id": ""}
     if parent_database_id == LISTINGS_DATABASE_ID:
-        if event_type == "page.properties_updated":
-            props = page.get("properties") or {}
-            post_prop_id = str((props.get("Post to Catalogue") or {}).get("id") or "").strip()
-            changed_ids = {str(v).strip() for v in (updated_property_ids or []) if str(v).strip()}
-            if post_prop_id and post_prop_id in changed_ids and bool((props.get("Post to Catalogue") or {}).get("checkbox")):
-                _log_event("catalogue_post_checkbox_ticked", page_id=page_id)
-                return {"status": "catalogue_tick", "operation": "create", "listing_id": ""}
+        # Retired 24 Nov 2026 (Zeid): the "Post to Catalogue" tick branch is
+        # gone - Housing-row edits always take the idempotent listing sync.
         return process_listing_page(page, notion=notion, store=store)
     if parent_database_id != INTAKE_DATABASE_ID:
         if event_type in {"page.moved", "page.undeleted"} and store.find_inventory(page_id).get("found"):
@@ -1549,7 +1544,7 @@ def lambda_handler(event, context):
         _log_event("worker_started", page_id=page_id, event_type=event_type, event_id=event_id, aws_request_id=getattr(context, "aws_request_id", ""))
         try:
             result = process_page(page_id, event_type=event_type, updated_property_ids=updated_property_ids)
-            if str(result.get("status") or "") in {"panel_trigger", "catalogue_tick"}:
+            if str(result.get("status") or "") in {"panel_trigger"}:
                 _enqueue_catalogue_trigger(str(result.get("operation") or ""), context.invoked_function_arn)
                 result = {**result, "status": "queued", "enqueued": str(result.get("operation") or "")}
         except Exception as exc:
