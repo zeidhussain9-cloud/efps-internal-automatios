@@ -122,8 +122,8 @@ def scan(text: str) -> dict[str, str]:
             if n: out["total_floors"] = n.group(1)
 
     patterns = {
-        "bathrooms": r"\b(\d)\s*(?:bath|bathroom|toilet|washroom)s?\b",
-        "balconies": r"\b(\d+(?:\.\d+)?)\s*balcon(?:y|ies)\b",
+        "bathrooms": r"\b(\d)[ \t]*(?:(?!(?:bhk|with|and|no|without|bath|balcon)\w*\b)[A-Za-z-]+[ \t]+){0,2}(?:bath|bathroom|toilet|washroom)s?\b",
+        "balconies": r"\b(\d+(?:\.\d+)?)[ \t]*(?:(?!(?:bhk|with|and|no|without|bath|balcon)\w*\b)[A-Za-z-]+[ \t]+){0,2}balcon(?:y|ies)\b",
         "covered_parking": r"(\d)\s*covered\s*parking",
         "open_parking": r"(\d)\s*open\s*parking",
     }

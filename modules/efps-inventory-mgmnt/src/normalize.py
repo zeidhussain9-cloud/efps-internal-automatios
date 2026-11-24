@@ -50,12 +50,12 @@ def _verified_in_text(value:str,raw_text:str)->bool:
     needle=norm(value); return bool(needle) and needle in norm(raw_text)
 def _usable(value:str)->bool:return bool(str(value or "").strip()) and str(value or "").strip().lower() not in _PLACEHOLDERS
 def _canonical_tenant(value:str)->str:
-    raw=str(value or "").strip().lower()
+    raw=str(value or "").strip(" .,;:!").lower()
     if not raw:return ""
     if raw in {"anyone","anybody","open for all","all","all tenants","everyone","open","open tenant","any"}:return "Open For All"
     if "famil" in raw:return "Family Only"
     if "bachelor" in raw:return "Open For All"
-    return value.strip()
+    return str(value).strip(" .,;:!")
 def _pet_value(raw_text:str)->str:
     text=str(raw_text or "")
     if re.search(r"\b(?:pets?|animals?)\s*(?::|=|-)?\s*(?:are\s*)?(?:not\s*allowed|not\s*permitted|prohibited|banned)\b",text,re.I):return "No"
