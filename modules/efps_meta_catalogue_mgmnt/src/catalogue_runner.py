@@ -46,13 +46,13 @@ SWITCH_BY_OPERATION = {
 # is left. Create is 3 because every created product waits CREATE_ASSIGN_GAP_SECONDS
 # (30s) plus several Whapi calls and one Lambda invocation lasts at most 180s.
 # Deadline guard (create). Worst case of one row with NO Whapi retries (a 429 stops
-# the row): adoption lookup 30s + create_product 30s + 30s gap + verify get_product
-# 30s + 3 Notion calls x 25s = 195s, so a row only STARTS with >=210s left (needs
-# Lambda Timeout 300s). CREATE_TAIL_SECONDS is re-checked immediately before the
-# one irreversible step (create_product): after it, the remaining work is at most
-# 30 + 30 + 75 = 135s, rounded up to 170s of margin.
-CREATE_TAIL_SECONDS = 170
-ROW_TIME_NEEDED_SECONDS = {"create": 210, "update": 60, "delete": 60, "assign": 60, "reconcile": 0}
+# the row): adoption page 30s + checkpoint write 25s + create_product 30s + 30s gap +
+# verify get_product 30s + 3 Notion calls x 25s = 220s, so a row only STARTS with
+# >=240s left (needs Lambda Timeout 300s). CREATE_TAIL_SECONDS is re-checked right
+# before the checkpoint and create: the remaining work is at most 25 + 30 + 30 + 30
+# + 75 = 190s, rounded up to 200s.
+CREATE_TAIL_SECONDS = 200
+ROW_TIME_NEEDED_SECONDS = {"create": 240, "update": 60, "delete": 60, "assign": 60, "reconcile": 0}
 CAPS = {"create": 3, "update": 10, "delete": 3, "assign": 20}
 CREATE_ASSIGN_GAP_SECONDS = 30
 RATE_LIMIT_RETRY_SECONDS = 30
@@ -342,18 +342,21 @@ def _adoption_catalogue(run: "_Run") -> list[dict]:
 
 
 _UNKNOWN = "OUTCOME UNKNOWN"
+_ATTEMPT = "ATTEMPT STARTED"
+_REFUSED = "REFUSED"
 
 
 def _create_outcome_unknown(notes: str) -> bool:
-    """True when the row's log shows a create whose result was never seen and no
-    later OK/ADOPTED line settled it."""
+    """True when the row's durable log shows a create_product attempt that nothing
+    settled. ATTEMPT STARTED is written to Notion BEFORE the call; only a later OK,
+    ADOPTED or REFUSED (Whapi rejected it, nothing created) line settles it."""
     unknown = False
     for line in str(notes or "").splitlines():
         if " CREATE " not in line:
             continue
-        if _UNKNOWN in line:
+        if _ATTEMPT in line or _UNKNOWN in line:
             unknown = True
-        elif " OK " in line or " ADOPTED " in line:
+        elif " OK " in line or " ADOPTED " in line or f" {_REFUSED}" in line:
             unknown = False
     return unknown
 
@@ -428,9 +431,14 @@ def _op_create_row(run: _Run, row: Mapping[str, Any]) -> None:
 
     if run.time_left is not None and run.time_left() < CREATE_TAIL_SECONDS:
         raise DeferredForTime("not enough Lambda time left to create and verify safely; nothing created, next batch continues")
-    if _create_outcome_unknown(str(row.get("error_notes") or "")):
+    if _create_outcome_unknown(str(fresh.get("error_notes") or "")):
         run.record(row, "", "SKIPPED", "an earlier create for this row has an unknown result and no matching product is visible in the catalogue; not creating again until checked in Meta")
         return
+    # Durable checkpoint BEFORE the irreversible call. If the process dies or the
+    # answer is lost, this line is already in Notion, so no later invocation
+    # (chained, async-retried or next night) can re-create this row blindly.
+    run.store.append_activity(str(row.get("page_id") or ""), log_line(
+        "create", listing_id, "", _ATTEMPT, "about to call create_product; settled only by OK, ADOPTED or REFUSED", now=run.now))
     try:
         result = _call_once(
             lambda: run.whapi.create_product(
@@ -438,9 +446,14 @@ def _op_create_row(run: _Run, row: Mapping[str, Any]) -> None:
                 images=images, url=str(row.get("google_maps_url") or ""), product_retailer_id=listing_id,
             ),
         )
-    except RateLimited:
-        raise  # Whapi answered 429: the request was refused, nothing was created
+    except RateLimited as exc:
+        # Whapi answered 429: the request was refused, nothing was created. Settle the checkpoint.
+        run.store.append_activity(str(row.get("page_id") or ""), log_line("create", listing_id, "", _REFUSED, "Whapi 429, nothing created", now=run.now))
+        raise
     except Exception as exc:  # noqa: BLE001 - the request may have reached Meta
+        if str(exc).startswith("WhAPI HTTP 4"):  # a 4xx answer means Whapi rejected the request
+            run.store.append_activity(str(row.get("page_id") or ""), log_line("create", listing_id, "", _REFUSED, f"Whapi rejected the request ({str(exc)[:60]}), nothing created", now=run.now))
+            raise
         run.stop = True
         raise RuntimeError(f"create request failed with no readable answer ({str(exc)[:80]}); {_UNKNOWN}, product may exist; stopped, later runs will not re-create this row until checked") from exc
     if isinstance(result, str):

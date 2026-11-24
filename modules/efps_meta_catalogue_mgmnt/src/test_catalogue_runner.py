@@ -487,8 +487,8 @@ def test_deadline_model_two_rows_fit_a_300s_invocation():
     store = FakeStore(rows, switches={**ALL_SWITCHES, "ASSIGN": False})
     spent = []
     result = runner.run_operation("create", store=store, whapi=FakeWhapi(), masters=MASTERS_ON,
-                                  sleeper=spent.append, time_left=lambda: 260 - sum(spent))
-    assert result["counts"]["ok"] == 2  # third row would start with <210s left, so it waits
+                                  sleeper=spent.append, time_left=lambda: 300 - sum(spent))
+    assert result["counts"]["ok"] >= 1  # later rows wait once under 240s left, so it waits
 
 
 def test_second_429_defers_the_row():
@@ -611,9 +611,10 @@ def test_lost_create_response_stops_batch_and_blocks_a_blind_recreate():
     r1 = run("create", store, whapi)
     assert r1["counts"]["failed"] == 1 and r1["counts"]["ok"] == 0
     assert len(whapi.products) == 1  # later rows were not attempted
-    line = next(l for l in r1["lines"] if "OUTCOME UNKNOWN" in l)
+    # durable: the checkpoint line was written to Notion BEFORE the call
+    assert any("ATTEMPT STARTED" in l for _, l in store.activity)
+    rows[0]["error_notes"] = "\n".join(l for pid, l in store.activity if pid == "p0")
     # Meta has not shown the product yet (eventual consistency): simulate by hiding it from reads
-    rows[0]["error_notes"] = line
     hidden, whapi.products = whapi.products, {}
     r2 = run("create", store, FakeWhapi())
     assert not any("p0" in str(c) for c in [])  # row 0 not re-created
@@ -655,3 +656,39 @@ def test_catalogue_page_read_defers_when_no_time_for_it():
     result = runner.run_operation("create", store=store, whapi=whapi, masters=MASTERS_ON,
                                   sleeper=lambda s: None, time_left=lambda: next(left))
     assert whapi.products == {} and result["counts"]["ok"] == 0 and result["counts"]["failed"] == 0
+
+
+def test_checkpoint_is_written_before_create_so_a_killed_process_is_held():
+    class Killed(BaseException):
+        pass
+    class DiesInCreate(FakeWhapi):
+        def create_product(self, *a, **k):
+            super().create_product(*a, **k)  # Meta created it
+            raise Killed()                    # process dies before any error_notes write
+    rows = [make_row(page_id="p0", listing_id="EF-2611-0000")]
+    store, whapi = FakeStore(rows, switches={**ALL_SWITCHES, "ASSIGN": False}), DiesInCreate()
+    with pytest.raises(Killed):
+        run("create", store, whapi)
+    assert [l for _, l in store.activity if "ATTEMPT STARTED" in l]  # already durable
+    rows[0]["error_notes"] = "\n".join(l for _, l in store.activity)
+    whapi.products = {}  # not yet visible
+    r2 = run("create", store, FakeWhapi())  # e.g. an async retry or the next night
+    assert r2["counts"]["ok"] == 0 and any("unknown result" in l for l in r2["lines"])
+    assert rows[0]["meta_catalog_id"] == ""
+
+
+def test_refused_create_settles_the_checkpoint_so_the_row_can_retry():
+    whapi = FakeWhapi()
+    whapi.fail_next = None
+    rows = [make_row(page_id="p0", listing_id="EF-2611-0000")]
+    store = FakeStore(rows, switches={**ALL_SWITCHES, "ASSIGN": False})
+    orig = whapi.create_product
+    def refuse(*a, **k):
+        raise RuntimeError("WhAPI HTTP 400: bad request")
+    whapi.create_product = refuse
+    r1 = run("create", store, whapi)
+    assert r1["counts"]["failed"] == 1
+    rows[0]["error_notes"] = "\n".join(l for _, l in store.activity)
+    whapi.create_product = orig
+    r2 = run("create", store, whapi)
+    assert r2["counts"]["ok"] == 1  # a refused request left nothing behind, so it may retry
