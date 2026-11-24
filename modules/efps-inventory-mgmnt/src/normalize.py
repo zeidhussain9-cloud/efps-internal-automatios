@@ -160,7 +160,8 @@ def normalize(row:dict,raw_text:str="",*,resolved_internal_property_type:str="")
         if match:out["BHK"]=f"{match.group(1)} BHK"
     original_subtype=out.get("property_subtype","");default_property_subtype(out,raw_text);floor_for_standalone(out)
     if not out.get("balconies") and re.search(r"\b(?:with\s+)?balcony\b",raw_text or "",re.I):out["balconies"]="1"
-    if not out.get("flat_furnishings"):
+    if out.get("furnish_type")=="Unfurnished":out["flat_furnishings"]=""
+    elif not out.get("flat_furnishings"):
         if out.get("furnish_type")=="Semi Furnished":out["flat_furnishings"]=", ".join(SEMI_FURNISHED_DEFAULTS)
         elif out.get("furnish_type")=="Fully Furnished":out["flat_furnishings"]=", ".join(FULLY_FURNISHED_DEFAULTS)
     _carpet=str(out.get("carpet_area","") or "").strip();_built=str(out.get("built_up_area","") or "").strip()

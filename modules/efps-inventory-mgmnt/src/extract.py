@@ -192,6 +192,6 @@ def scan(text: str) -> dict[str, str]:
         unit = (m.group(2) or "").lower()
         out["security_deposit"] = (str(int(float(m.group(1).replace(",", ""))*int(out["monthly_rent"]))) if unit.startswith(("month","mnth")) and out.get("monthly_rent","").isdigit() else _scale(m.group(1),m.group(2)))
 
-    for pat, label in ((r"\bfully\s*furnish", "Fully Furnished"),(r"\bsemi[-\s]*furnish", "Semi Furnished")):
+    for pat, label in ((r"\bfully\s*furnish", "Fully Furnished"),(r"\bsemi[-\s]*furnish", "Semi Furnished"),(r"\b(?:un[-\s]?furnish|not\s+furnish)", "Unfurnished")):
         if re.search(pat, text, re.I): out["furnish_type"] = label; break
     return out

@@ -36,8 +36,14 @@ def test_ground_floor_and_mixed_maintenance_are_normalized():
     raw="""Semi Furnished 2 BHK<br>Rent: 42K<br>Maintenance: 2,777 + Water<br>Deposit: 120000<br>Sqft: 1211<br>Floor: G/4<br>Preferred Tenant: Open For All<br>Pets: Not Allowed<br>Gated Community""";row=pipeline.deterministic(raw,pipeline.initial_row("EF-2609-0026"));assert row["floor_number"]=="0";assert row["total_floors"]=="4";assert row["maintenance"]=="2777 + Water";assert row["security_deposit"]=="120000"
 def test_gated_colon_variant_is_classified_as_gated():
     raw="3 BHK\nRent: 75000\nFloor: 1/14\nGated: Community";row=pipeline.deterministic(raw,pipeline.initial_row("EF-2609-0027"));assert row["internal_property_type"]=="Gated Community";assert row["society_amenities"]=="Club House, Lift, Gym, CCTV, Power Backup, Swimming Pool, Garden, Sports, Kids Area"
-def test_unfurnished_source_does_not_create_non_sheet_furnish_value():
-    raw="2 BHK\nRent: 40000\nUnfurnished apartment";row=pipeline.deterministic(raw,pipeline.initial_row("EF-2609-0028"));assert row["furnish_type"]=="";assert row["flat_furnishings"]==""
+def test_unfurnished_source_creates_unfurnished_with_blank_furnishings():
+    raw="2 BHK\nRent: 40000\nUnfurnished apartment";row=pipeline.deterministic(raw,pipeline.initial_row("EF-2609-0028"));assert row["furnish_type"]=="Unfurnished";assert row["flat_furnishings"]==""
+def test_unfurnished_variants_and_semi_fully_defaults_unchanged():
+    for txt in ("Un-furnished flat","Not furnished","unfurnished"):
+        row=pipeline.deterministic(f"2 BHK\nRent: 40000\n{txt}",pipeline.initial_row("EF-2609-0029"));assert row["furnish_type"]=="Unfurnished";assert row["flat_furnishings"]==""
+    row=pipeline.deterministic("2 BHK\nRent: 40000\nSemi furnished",pipeline.initial_row("EF-2609-0030"));assert row["furnish_type"]=="Semi Furnished";assert row["flat_furnishings"]=="Wardrobe, Modular Kitchen, Geyser, Fan, Light"
+    row=pipeline.deterministic("2 BHK\nRent: 40000\nFully furnished",pipeline.initial_row("EF-2609-0031"));assert row["furnish_type"]=="Fully Furnished";assert row["flat_furnishings"]=="Wardrobe, Modular Kitchen, Geyser, Fan, Light, Fridge, Washing Machine, TV, Sofa, Bed, Dining Table"
+    assert "Unfurnished" in schema.BY_NAME["furnish_type"].allowed_values
 def test_stage_two_maps_integration_accepts_only_verified_resolution():
     raw="""2.5 BHK semi furnished apartment for rent in Harlur.
 Rent 60000 + maintenance.

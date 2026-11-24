@@ -177,3 +177,15 @@ test('audit history supports global and lead-scoped date windows without filteri
  assert.doesNotMatch(calls[0][0],/lead_id IS NULL/);assert.match(calls[0][0],/occurred_at >= \$1/);assert.match(calls[0][0],/OFFSET \$4/);
  assert.match(calls[1][0],/WHERE lead_id=\$1/);assert.match(calls[1][0],/OFFSET \$5/);
 });
+
+test('property matching maps Unfurnished requests to the Unfurnished value only', async()=>{
+ const calls=[];
+ const {createCrmRepository}=await import('../src/crm-repository.mjs');
+ const repo=createCrmRepository({pool:{query:async(sql,params)=>{calls.push({sql,params});return{rows:[]}}}});
+ await repo.matchInventory({furnishing:'Unfurnished',limit:10});
+ await repo.matchInventory({furnishing:'semi furnished',limit:10});
+ await repo.matchInventory({furnishing:'Fully Furnished',limit:10});
+ assert.deepEqual(calls[0].params.find(p=>Array.isArray(p)&&p[0]==='Unfurnished'),['Unfurnished']);
+ assert.deepEqual(calls[1].params.find(p=>Array.isArray(p)&&p[0]==='Semi Furnished'),['Semi Furnished']);
+ assert.deepEqual(calls[2].params.find(p=>Array.isArray(p)&&p[0]==='Fully Furnished'),['Fully Furnished']);
+});

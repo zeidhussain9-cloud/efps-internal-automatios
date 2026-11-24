@@ -45,7 +45,7 @@ _ROWS = [
 ("landmark",PANEL,STAGE_2,(),("locality",),"Explicit source landmark first; supported Maps URLs are never stored as landmarks; locality is the final deterministic fallback."),
 ("pincode",PANEL,STAGE_2,(),("google_maps_url",),"Optional; Maps-owned when verified and non-blocking when unavailable."),
 ("google_maps_url",PANEL,STAGE_2,(),(),"Deterministically extracted from raw source immediately; runtime expansion/resolution is a later verification step."),
-("furnish_type",PANEL,STAGE_2,("Fully Furnished","Semi Furnished"),(),"Exact live Sheet dropdown vocabulary. Unfurnished is represented by blank furnish_type and blank flat_furnishings."),
+("furnish_type",PANEL,STAGE_2,("Fully Furnished","Semi Furnished","Unfurnished"),(),"Notion dropdown vocabulary (Zeid approved 24 Nov 2026). Unfurnished is stored as the word Unfurnished with blank flat_furnishings; a blank furnish_type means not stated."),
 ("BHK",PANEL,STAGE_2,(),(),"Explicit source value, normalized to canonical wording."),
 ("bathrooms",PANEL,STAGE_2,(),(),"Explicit source value."),
 ("balconies",PANEL,STAGE_2,(),(),"Explicit source value."),

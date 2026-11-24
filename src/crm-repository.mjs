@@ -49,7 +49,7 @@ export function createCrmRepository({pool,connectionString=process.env.DATABASE_
    const bhkValues=[...String(bhk).matchAll(/(\d+(?:\.\d+)?)[ -]*(BHK|RK)?/gi)].map(m=>{const n=m[1],kind=(m[2]||'BHK').toUpperCase();return `${n} ${kind}`}).filter((v,i,a)=>a.indexOf(v)===i);
    const localityValues=String(locality).split(/[,;|/]+/).map(v=>v.trim()).filter(v=>v.length>=2).filter((v,i,a)=>a.indexOf(v)===i);
    const furnishingNorm=String(furnishing).toLowerCase().replace(/\s+/g,' ').trim();
-   const furnishingValues=furnishingNorm.includes('semi')?['Semi Furnished']:furnishingNorm.includes('fully')?['Fully Furnished']:[];
+   const furnishingValues=furnishingNorm.includes('semi')?['Semi Furnished']:furnishingNorm.includes('fully')?['Fully Furnished']:/\bun[- ]?furnish|not furnish/.test(furnishingNorm)?['Unfurnished']:[];
    const petNorm=String(petFriendly).toLowerCase().trim();const petValues=petNorm==='yes'||petNorm==='no'?[petNorm[0].toUpperCase()+petNorm.slice(1)]:[];
    const params=['housing_notion','Available'];let where=['source_kind=$1','deleted_at IS NULL','listing_state=$2'];
    if(bhkValues.length){params.push(bhkValues);where.push(`bhk = ANY($${params.length}::text[])`)}
