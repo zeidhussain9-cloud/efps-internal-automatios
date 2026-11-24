@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 from dataclasses import dataclass
 from typing import Any, Mapping
 from urllib import error, parse, request
@@ -124,7 +125,8 @@ class WhApiClient:
         operation=f"{method} {path}"
         verb = method.upper()
         base = path.split("?")[0].rstrip("/")
-        read_paths = (verb == "GET" and (base == "/business/products" or base.startswith("/business/products/") or base == "/business/collections"))
+        read_paths = (verb == "GET" and (base == "/business/products" or base.startswith("/business/products/") or base == "/business/collections"
+                                         or re.fullmatch(r"/business/collections/[0-9]+/products", base) is not None))
         write_paths = (
             (verb == "POST" and base == "/business/products")
             or (verb in {"PATCH", "DELETE"} and base.startswith("/business/products/"))
@@ -274,6 +276,13 @@ class WhApiClient:
     def get_collections(self) -> list[dict]:
         result = self.get("/business/collections")
         return (result or {}).get("collections", [])
+
+    def get_collection_products(self, collection_id: str, *, count: int = 30) -> Any:
+        """Read-only: the products of one collection (numeric id only; the guard enforces the exact path)."""
+        cid = str(collection_id).strip()
+        if not cid.isdigit():
+            raise ValueError("collection_id must be numeric")
+        return self.get(f"/business/collections/{cid}/products?count={int(count)}")
 
     def edit_collection(
         self,

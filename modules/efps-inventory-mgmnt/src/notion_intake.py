@@ -330,6 +330,8 @@ def listing_snapshot(page: dict) -> dict:
     row["live at"] = [str(x.get("name") or "") for x in (properties.get("live at", {}).get("multi_select") or [])]
     for name in ("Property", "WhatsApp Group", "whatsapp_post", "catalogue_description", "WhatsApp Destination"):
         row[name] = _notion_value(properties.get(name) or {})
+    # Notion-only checkbox "assigned to its Meta collection" (Yes/No), mirrored into source_record JSON.
+    row["catalogue_collection_assigment"] = _notion_value(properties.get("catalogue_collection_assigment") or {})
     row["notion_page_id"] = str(page.get("id") or "")
     row["notion_url"] = str(page.get("url") or "")
     row["notion_edited_at"] = str(page.get("last_edited_time") or "")

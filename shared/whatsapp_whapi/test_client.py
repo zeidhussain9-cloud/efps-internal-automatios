@@ -130,3 +130,24 @@ def test_get_products_refuses_a_repeating_page_instead_of_returning_a_partial_ca
     client, _ = _paged_client(monkeypatch, 250, ignore_offset=True)
     with pytest.raises(RuntimeError, match="repeated a page"):
         client.get_products(count=10000)
+
+
+def test_collection_products_read_allows_only_exact_numeric_get(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("EFPS_WHAPI_API_ENABLED", "true")
+    monkeypatch.setenv("EFPS_WHAPI_LIVE", "1")
+    monkeypatch.delenv("EFPS_WHAPI_CATALOG_WRITE_ENABLED", raising=False)
+    seen = []
+    client = WhApiClient(WhApiCredentials("t"), base_url="https://e.test", transport=lambda req: seen.append(req) or {"products": []})
+    assert client.get_collection_products("2585336038575419") == {"products": []}
+    assert len(seen) == 1
+    for bad in ("/business/collections/abc/products", "/business/collections/123/products/extra",
+                "/business/collections/123", "/business/collections/123/other",
+                "/business/collections/../products", "/business/collections//products"):
+        with pytest.raises(WhApiLiveTrafficBlocked, match="outside the catalogue-operation allowlist"):
+            client.get(bad)
+    for verb in ("post", "patch", "delete"):
+        with pytest.raises(WhApiLiveTrafficBlocked):
+            getattr(client, verb)("/business/collections/123/products", {}) if verb != "delete" else client._request("DELETE", "/business/collections/123/products")
+    with pytest.raises(ValueError):
+        client.get_collection_products("12/3")
+    assert len(seen) == 1
