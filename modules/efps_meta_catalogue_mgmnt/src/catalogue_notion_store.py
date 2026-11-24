@@ -97,6 +97,37 @@ def _retry_after_seconds(response) -> float:
     return max(header, body)
 
 
+def _pinned_attempt_index(lines: list[str]) -> int | None:
+    """Index of the newest CREATE line if it is an unsettled ATTEMPT STARTED (the
+    duplicate-protection checkpoint); None when the latest create state is settled."""
+    state = None
+    for i, line in enumerate(lines):
+        if " CREATE " not in line:
+            continue
+        if "ATTEMPT STARTED" in line or "OUTCOME UNKNOWN" in line:
+            state = i
+        elif " OK " in line or " ADOPTED " in line or " REFUSED" in line:
+            state = None
+    return state
+
+
+def _trim_notes(combined: str) -> str:
+    """Fit error_notes into Notion's 2000-char cell. Drop the OLDEST lines first, but
+    never drop an unsettled ATTEMPT STARTED line (it is what stops a re-create). If the
+    pinned line plus the newest line cannot fit, raise: fail closed, never lose it silently."""
+    lines = combined.split("\n")
+    pin = _pinned_attempt_index(lines)
+    # any single line longer than the cell is cut, keeping its start
+    lines = [l if len(l) <= 600 else l[:600] for l in lines]
+    keep = list(range(len(lines)))
+    while len("\n".join(lines[i] for i in keep)) > _ERROR_NOTES_LIMIT:
+        drop = next((i for i in keep if i != pin and i != len(lines) - 1), None)
+        if drop is None:
+            raise CatalogueStoreError("error_notes cannot hold the pending create checkpoint and the new line; stopped rather than lose it")
+        keep.remove(drop)
+    return "\n".join(lines[i] for i in keep)
+
+
 class NotionCatalogueStore:
     def __init__(self, token: str, *, session=None, now=None):
         if not token:
@@ -197,9 +228,7 @@ class NotionCatalogueStore:
         current = _plain(((page.get("properties") or {}).get("error_notes") or {}).get("rich_text"))
         combined = (current + "\n" + str(line)).strip() if current else str(line)
         if len(combined) > _ERROR_NOTES_LIMIT:
-            # Notion rich_text is capped at 2000 chars; keep the newest entries.
-            combined = combined[-_ERROR_NOTES_LIMIT:]
-            combined = combined[combined.index("\n") + 1:] if "\n" in combined else combined
+            combined = _trim_notes(combined)
         self.request(
             "PATCH",
             f"pages/{page_id}",
