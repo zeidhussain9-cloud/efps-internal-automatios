@@ -764,6 +764,7 @@ def test_process_page_persists_one_listing_and_reconciles_intake(monkeypatch):
     result = intake.process_page("intake-page-id", notion=fake_notion, store=fake_store,
                                  cloudinary=object(), maps_client=object())
     assert result["status"] == "Processed" and result["listing_id"] == "EF-TEST-INTAKE"
+    assert fake_notion.saved[0]["onboarded_on"] == "2026-11-13"
     assert fake_notion.saved[0]["whatsapp_post"].startswith("*🏠 Semi Furnished 2 BHK - Harlur*")
     assert "💰 Rent: Rs 50,000" in fake_notion.saved[0]["whatsapp_post"]
     assert fake_notion.updates[-1]["Intake Status"]["status"]["name"] == "Processed"

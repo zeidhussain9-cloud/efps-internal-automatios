@@ -1162,7 +1162,7 @@ def process_page(
             store.set_listing_id(page_id, listing_id)
         notion.update_page(page_id, {"Intake Status": {"status": {"name": "Processing"}}, "Listing ID": _rich(listing_id)})
         existing_listing = notion.find_listing(listing_id)
-        row = pipeline.initial_row(listing_id, raw_text, str(page.get("created_time") or datetime.now(timezone.utc).isoformat()))
+        row = pipeline.initial_row(listing_id, raw_text, str(page.get("created_time") or datetime.now(timezone.utc).isoformat())[:10])
         previous = listing_snapshot(existing_listing) if existing_listing else None
         if previous:
             # The legacy parser remains a pure 48-field extraction boundary. Do not
