@@ -282,7 +282,7 @@ class WhApiClient:
         cid = str(collection_id).strip()
         if not cid.isdigit():
             raise ValueError("collection_id must be numeric")
-        return self.get(f"/business/collections/{cid}/products?count={int(count)}")
+        return self.get(f"/business/collections/{cid}/products?products_count={int(count)}")
 
     def edit_collection(
         self,

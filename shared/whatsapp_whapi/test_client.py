@@ -139,6 +139,7 @@ def test_collection_products_read_allows_only_exact_numeric_get(monkeypatch: pyt
     seen = []
     client = WhApiClient(WhApiCredentials("t"), base_url="https://e.test", transport=lambda req: seen.append(req) or {"products": []})
     assert client.get_collection_products("2585336038575419") == {"products": []}
+    assert "products_count=30" in seen[0].full_url
     assert len(seen) == 1
     for bad in ("/business/collections/abc/products", "/business/collections/123/products/extra",
                 "/business/collections/123", "/business/collections/123/other",
