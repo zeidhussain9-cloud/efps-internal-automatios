@@ -909,7 +909,7 @@ def test_catalogue_description_gated_card_full_rules():
     assert "goo.gl" not in desc
 
 
-def test_catalogue_description_semi_gated_unverified_labels_get_no_ending():
+def test_catalogue_description_semi_gated_stored_society_used_without_raw_check():
     row = {"catalog_title": "Semi Furnished 1 BHK - Haralur", "internal_property_type": "Semi Gated",
            "landmark": "Near Silver County", "society_name": "Some Layout", "locality": "Haralur",
            "floor_number": "2", "preferred_tenant_type": "Open! For All".replace("! "," ")}
@@ -917,27 +917,24 @@ def test_catalogue_description_semi_gated_unverified_labels_get_no_ending():
     assert "Floor 2nd" in desc and "of" not in desc.split("Floor 2nd")[1].split("\n")[0]
     assert "🏘️ Semi gated community" in desc
     assert "👥 Open For All" in desc
-    # Locked 24 Nov: labels absent from the raw source text are unverified, so no
-    # ending renders at all - no society, no landmark, no locality stand-in.
+    # Locked 24 Nov 3:05 PM (Zeid): a stored society name distinct from the
+    # locality is used as-is; no extra corroboration condition. Society beats
+    # landmark when both are present.
+    assert "✨ Some Layout\nhttps://www.google.com/maps/search/?api=1&query=y" in desc
     assert "Near Silver County" not in desc
-    assert "Some Layout" not in desc
-    assert "📍" not in desc
-    assert "✨" not in desc
-    assert "query=y" not in desc
 
 
-def test_catalogue_description_landmark_ending_when_landmark_in_raw():
+def test_catalogue_description_landmark_ending_when_no_society():
     row = {"catalog_title": "Semi Furnished 1 BHK - Kasavanahalli", "internal_property_type": "Semi Gated",
            "landmark": "Bachpan Play School", "society_name": "Kasavanahalli", "locality": "Kasavanahalli"}
-    raw = "Semi furnished 1 BHK near Bachpan Play School, Kasavanahalli"
-    desc = intake.build_catalogue_description(row, raw, resolved_maps_url="https://www.google.com/maps/search/?api=1&query=lm")
+    desc = intake.build_catalogue_description(row, "", resolved_maps_url="https://www.google.com/maps/search/?api=1&query=lm")
     assert "📍 Landmark: Bachpan Play School\nhttps://www.google.com/maps/search/?api=1&query=lm" in desc
 
 
-def test_catalogue_description_society_from_raw_and_verified_landmark_param():
+def test_catalogue_description_stored_society_and_verified_landmark_param():
     row = {"catalog_title": "T", "internal_property_type": "Gated Community",
            "society_name": "SJR Blue Waters", "locality": "Haralur"}
-    desc = intake.build_catalogue_description(row, "2 BHK in SJR Blue Waters, Haralur",
+    desc = intake.build_catalogue_description(row, "",
                                               resolved_maps_url="https://www.google.com/maps/search/?api=1&query=s")
     assert "✨ SJR Blue Waters\nhttps://www.google.com/maps/search/?api=1&query=s" in desc
     # Caller-verified landmark (e.g. Maps pin name) wins when no society qualifies.
@@ -991,6 +988,8 @@ def test_catalogue_description_never_uses_short_map_link():
     assert "goo.gl" not in intake.build_catalogue_description(row, raw)
     row["google_maps_url"] = "https://www.google.com/maps/search/?api=1&query=z"
     assert "https://www.google.com/maps/search/?api=1&query=z" in intake.build_catalogue_description(row, raw)
+    row["google_maps_url"] = "https://www.google.co.in/maps/place/Some+Place/data=xyz"
+    assert "https://www.google.co.in/maps/place/Some+Place/data=xyz" in intake.build_catalogue_description(row, raw)
     # A long link alone is not enough: without a verified society or landmark there is no ending.
     row2 = {"catalog_title": "T", "locality": "Harlur",
             "google_maps_url": "https://www.google.com/maps/search/?api=1&query=z"}
@@ -1040,13 +1039,15 @@ def test_dropdown_edit_refreshes_all_customer_facing_names():
 
 def test_description_direct_call_ignores_stale_title_and_landmark():
     row={'catalog_title':'Semi Furnished 1 BHK - Harlur','locality':'Haralur',
-         'furnish_type':'Semi Furnished','BHK':'1 BHK','landmark':'Harlur',
+         'furnish_type':'Semi Furnished','BHK':'1 BHK','landmark':'Haralur',
          'internal_property_type':'Semi Gated'}
     desc=intake.build_catalogue_description(row,'',resolved_maps_url='https://www.google.com/maps/search/?api=1&query=1,2')
     post=intake.build_whatsapp_post(row,'',maps_verified=True,resolved_maps_url='https://www.google.com/maps/search/?api=1&query=1,2')
     assert desc.startswith('*🏠 Semi Furnished 1 BHK - Haralur*')
-    assert 'Harlur' not in desc and 'Harlur' not in post
-    # Locked 24 Nov: catalogue_description gets no locality stand-in ending when
-    # neither society nor landmark is verified; the WhatsApp caption is unchanged.
+    # Locked 24 Nov 3:05 PM: a stored landmark equal to the locality is the
+    # pipeline fallback, so no ending renders; a distinct stored landmark is used.
     assert '📍' not in desc and '✨' not in desc
+    row_lm=dict(row, landmark='Axis Bank ATM')
+    desc_lm=intake.build_catalogue_description(row_lm,'',resolved_maps_url='https://www.google.com/maps/search/?api=1&query=1,2')
+    assert '📍 Landmark: Axis Bank ATM\nhttps://www.google.com/maps/search/?api=1&query=1,2' in desc_lm
     assert '*📍 Haralur:*' in post

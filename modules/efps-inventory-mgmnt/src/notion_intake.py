@@ -780,13 +780,13 @@ def build_catalogue_description(row: dict, raw_text: str, *, verified_society_na
     Floors use proper ordinals ('3rd of 5th floors', just '3rd' when the
     total is unknown). Maintenance is one of Rs amount / Included / Water
     Charges Additional. Availability is a full future date or 'Ready To
-    Occupy'. Tenant type uses the locked LOV only. Locked 24 Nov (Zeid):
-    named properties close with the society name, unnamed ones with
-    "Landmark: <landmark>", each followed by the map link. A stored society
-    or landmark is used only when Maps-verified by the caller or present in
-    the raw source text; there is no locality stand-in. The map link is
-    always the standardized long google.com/maps link; short links never
-    appear. Lines render only when their data exists.
+    Occupy'. Tenant type uses the locked LOV only. Locked 24 Nov 3:05 PM
+    (Zeid): when the row has a society name, the description closes with
+    it; otherwise with "Landmark: <landmark>", each followed by the map
+    link. A stored value equal to the locality is the pipeline's fallback,
+    not a name - no locality stand-in. The map link is always the
+    standardized long google maps link; short links never appear. Lines
+    render only when their data exists.
     """
     # Rebuild even when called directly on an existing, stale row.
     title = build_catalog_title(row) if row.get("locality") else str(row.get("catalog_title") or row.get("listing_id") or "").strip()
@@ -876,32 +876,27 @@ def build_catalogue_description(row: dict, raw_text: str, *, verified_society_na
     if people:
         sections.append("\n".join(people))
 
-    # Locked 24 Nov (Zeid): the description closes with the society name for
-    # named properties, or "Landmark: <landmark>" for unnamed ones, each followed
-    # by the long map link. Stored labels are used only when Maps-verified by the
-    # caller or present in the raw source text. No locality stand-in: a row with
-    # neither a verified society nor a distinct verified landmark gets no ending.
-    def _squash(value: str) -> str:
-        return re.sub(r"[^a-z0-9]", "", (value or "").lower())
-
-    raw_squashed = _squash(raw)
+    # Locked 24 Nov 3:05 PM (Zeid): the description closes with the society
+    # name when the row has one, otherwise "Landmark: <landmark>", each followed
+    # by the long map link. The pipeline stores the locality itself in
+    # society_name/landmark when no real name was extracted (phase1 location
+    # contract), so a stored value equal to the locality is the fallback, never
+    # a usable name - there is no locality stand-in and no ending for such rows.
     locality = str(row.get("locality") or "").strip()
     society = str(verified_society_name or "").strip()
     if not society:
         candidate_society = str(row.get("society_name") or "").strip()
-        if (candidate_society and candidate_society.lower() != locality.lower()
-                and _squash(candidate_society) in raw_squashed):
+        if candidate_society and candidate_society.lower() != locality.lower():
             society = candidate_society
     landmark = str(verified_landmark_name or "").strip()
     if not landmark:
         candidate_landmark = str(row.get("landmark") or "").strip()
-        if (candidate_landmark and candidate_landmark.lower() != locality.lower()
-                and _squash(candidate_landmark) in raw_squashed):
+        if candidate_landmark and candidate_landmark.lower() != locality.lower():
             landmark = candidate_landmark
     link = str(resolved_maps_url or "").strip()
     if not link:
         candidate = str(row.get("google_maps_url") or "").strip()
-        if candidate.startswith("https://www.google.com/maps") or candidate.startswith("https://maps.google.com"):
+        if re.match(r"https://(?:www|maps)\.google\.[a-z.]+/maps(?:[/?]|$)", candidate):
             link = candidate
     if link and society:
         sections.append(f"✨ {society}\n{link}")
