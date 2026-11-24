@@ -4,16 +4,18 @@ Approved by Zeid 21 Nov 2026 (WhatsApp, 16:37 IST): every Tuesday 9:00 AM IST,
 EventBridge fires step=begin. The flow:
 
   begin    -> catalog-write env flag ON (own function config), DRY_RUN off,
-              then self-invoke the first batch.
+              the DELETE switch ON (like create_begin does for CREATE), then
+              self-invoke the first batch.
   batch    -> runs ONE real delete run (cap 3, per-batch verification lives in
               the runner). ok>0 -> next batch; ok=0 -> finalize success;
               failed>0 / would>0 / exception -> finalize with error. No
               auto-rerun of real faults: stop safe, report, wait for Zeid.
-  finalize -> guaranteed restore: catalog-write flag OFF + DRY_RUN ON, both
-              attempted even if the other fails; Decision Log entry;
+  finalize -> guaranteed restore: catalog-write flag OFF + DRY_RUN ON + CREATE
+              and DELETE switches OFF, every step attempted even if another fails; Decision Log entry;
               structured CloudWatch completion/failure event (the scorecard).
   watchdog -> daily 10:05 IST: if the write flag is ON outside the Tuesday
-              09:00-10:00 IST run window, force restore and raise the alarm.
+              09:00-10:00 IST run window, force restore (flag, DRY_RUN and both
+              switches) and raise the alarm.
 
 A hard process crash breaks the self-invoke chain; the watchdog is the
 guaranteed backstop that locks the gate afterwards.
@@ -194,8 +196,9 @@ def _begin(lam, store, context, *, sleep, now, op="delete") -> dict:
     try:
         _set_catalog_write(lam, fn, True, sleep=sleep)
         _set_dry_run(store, False)
-        if op == "create":
-            _set_switch(store, "CREATE", True)
+        # Each scheduled run opens only its own operation switch (CREATE or DELETE);
+        # finalize and the watchdog close both again, so both stay OFF between runs.
+        _set_switch(store, "CREATE" if op == "create" else "DELETE", True)
     except Exception as exc:  # noqa: BLE001 - never leave a half-open gate
         return _finalize({"run_id": run_id, "op": op,
                           "error": f"begin failed: {type(exc).__name__}: {str(exc)[:200]}"},
@@ -311,7 +314,7 @@ def _finalize(event, lam, store, context, *, sleep, now) -> dict:
         body.append(f"UNFINISHED: {len(unfinished)} eligible row(s) NOT created and still waiting (reasons: " + " | ".join(unfinished[:5]) + "). The run ended because nothing more could be created, not because everything was done.")
     if failures:
         body.append("FAILURES: " + " | ".join(failures[:5]))
-    body.append("SWITCHES RESTORED: catalog-write OFF, DRY_RUN ON" + (", CREATE OFF." if op == "create" else ".") +
+    body.append("SWITCHES RESTORED: catalog-write OFF, DRY_RUN ON, CREATE OFF, DELETE OFF." +
                 ("" if not restore_errors else f" RESTORE PROBLEM: {'; '.join(restore_errors)}"))
     try:
         _append_decision_log(store, [title] + body)
@@ -342,11 +345,13 @@ def _restore(lam, store, fn, *, sleep, create=True) -> list[str]:
         _set_dry_run(store, True)
     except Exception as exc:  # noqa: BLE001
         problems.append(f"DRY_RUN restore failed: {type(exc).__name__} {str(exc)[:200]}")
-    if create:  # harmless when already OFF; never left ON after any run or alarm
+    # Both operation switches are always attempted (harmless when already OFF), so
+    # neither is ever left ON after any run, failure or watchdog alarm.
+    for name in ("CREATE", "DELETE"):
         try:
-            _set_switch(store, "CREATE", False)
+            _set_switch(store, name, False)
         except Exception as exc:  # noqa: BLE001
-            problems.append(f"CREATE restore failed: {type(exc).__name__} {str(exc)[:200]}")
+            problems.append(f"{name} restore failed: {type(exc).__name__} {str(exc)[:200]}")
     return problems
 
 

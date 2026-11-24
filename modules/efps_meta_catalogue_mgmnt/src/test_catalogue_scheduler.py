@@ -40,15 +40,22 @@ class FakeStore:
         self.log_entries = []
         self.requests = []
         self.create_on = False
+        self.delete_on = False
+        self.fail_switch = None  # name of a switch whose write raises
 
     def _query_all(self, db):
         return [{"id": "dryrun-page", "properties": {"Name": {"title": [{"plain_text": "DRY_RUN"}]}}},
-                {"id": "create-page", "properties": {"Name": {"title": [{"plain_text": "CREATE"}]}}}]
+                {"id": "create-page", "properties": {"Name": {"title": [{"plain_text": "CREATE"}]}}},
+                {"id": "delete-page", "properties": {"Name": {"title": [{"plain_text": "DELETE"}]}}}]
 
     def request(self, method, path, payload=None):
         self.requests.append((method, path, payload))
+        if self.fail_switch and path == f"pages/{self.fail_switch.lower()}-page":
+            raise RuntimeError("notion write failed")
         if path == "pages/create-page":
             self.create_on = payload["properties"]["Enabled"]["checkbox"]
+        elif path == "pages/delete-page":
+            self.delete_on = payload["properties"]["Enabled"]["checkbox"]
         elif path.startswith("pages/"):
             self.dry_run = payload["properties"]["Enabled"]["checkbox"]
         if path.startswith("blocks/"):
@@ -83,6 +90,8 @@ class BeginTests(unittest.TestCase):
         self.assertEqual(out["status"], "started")
         self.assertEqual(lam.updates, ["true"])
         self.assertFalse(store.dry_run)
+        self.assertTrue(store.delete_on, "scheduled delete turns DELETE ON itself")
+        self.assertFalse(store.create_on)
         self.assertEqual(lam.invocations[0]["step"], "batch")
         self.assertEqual(lam.invocations[0]["batch"], 1)
         self.assertTrue(lam.invocations[0]["run_id"].startswith("tue-"))
@@ -96,6 +105,20 @@ class BeginTests(unittest.TestCase):
         self.assertEqual(lam.updates, [])
         self.assertEqual(lam.invocations, [])
         self.assertTrue(store.dry_run)
+        self.assertFalse(store.delete_on, "aborted begin must not turn DELETE ON")
+
+    def test_begin_failure_after_gate_open_restores_everything(self):
+        lam, store = FakeLambda("false"), FakeStore()
+        store.fail_switch = "DELETE"  # DELETE switch write raises after flag ON and DRY_RUN off
+        with base_env("false"):
+            out = cs.handle_schedule({"step": "begin"}, Ctx(), notion_token="t",
+                                     lam=lam, store=store, run_delete=lambda: {}, sleep=lambda s: None)
+        self.assertEqual(out["status"], "failed")
+        self.assertIn("begin failed", out["error"])
+        self.assertEqual(lam.flag, "false")
+        self.assertTrue(store.dry_run)
+        self.assertFalse(store.create_on)
+        self.assertEqual(lam.invocations, [], "no batch is chained after a failed begin")
 
 
 class BatchTests(unittest.TestCase):
@@ -128,8 +151,10 @@ class BatchTests(unittest.TestCase):
         self.assertEqual(out["status"], "completed")
         self.assertEqual(lam.updates, ["false"])
         self.assertTrue(store.dry_run)
+        self.assertFalse(store.delete_on, "DELETE switched OFF at finalize")
         self.assertEqual(lam.invocations, [])
         self.assertTrue(store.log_entries, "decision log entry written")
+        self.assertIn("DELETE OFF", str(store.log_entries[0]))
         text = str(store.log_entries[0])
         self.assertIn("COMPLETED", text)
         self.assertIn("EF-1", text)
@@ -189,6 +214,35 @@ class BatchTests(unittest.TestCase):
         self.assertIn("batch cap", out["error"])
         self.assertEqual(lam.invocations, [])
 
+    def test_failed_and_raised_delete_runs_switch_delete_off(self):
+        for res, boom in ((run_delete_result(ok=0, failed=1, lines=["[t] DELETE EF-2 product=p2 FAILED x"]), None),
+                          (None, RuntimeError("whapi down"))):
+            lam, store = FakeLambda("true"), FakeStore(dry_run=False)
+            store.delete_on = True
+            def rd():
+                if boom:
+                    raise boom
+                return res
+            with base_env("true"):
+                out = cs.handle_schedule(self.event(), Ctx(), notion_token="t",
+                                         lam=lam, store=store, run_delete=rd, sleep=lambda s: None)
+            self.assertEqual(out["status"], "failed")
+            self.assertFalse(store.delete_on)
+            self.assertEqual(lam.flag, "false")
+            self.assertTrue(store.dry_run)
+
+    def test_delete_switch_restore_failure_is_reported_not_hidden(self):
+        lam, store = FakeLambda("true"), FakeStore(dry_run=False)
+        store.delete_on = True
+        store.fail_switch = "DELETE"
+        with base_env("true"):
+            out = cs.handle_schedule(self.event(), Ctx(), notion_token="t", lam=lam, store=store,
+                                     run_delete=lambda: run_delete_result(ok=0), sleep=lambda s: None)
+        self.assertEqual(out["status"], "failed")
+        self.assertTrue(any("DELETE restore failed" in e for e in out["restore_errors"]))
+        self.assertEqual(lam.flag, "false", "master write flag still closed even if the switch write failed")
+        self.assertTrue(store.dry_run)
+
     def test_finalize_restores_both_even_if_env_update_fails(self):
         lam, store = FakeLambda("true"), FakeStore(dry_run=False)
         lam.fail_update = True
@@ -212,6 +266,18 @@ class WatchdogTests(unittest.TestCase):
         self.assertEqual(lam.updates, ["false"])
         self.assertTrue(store.dry_run)
         self.assertIn("WATCHDOG ALARM", str(store.log_entries[0]))
+
+    def test_watchdog_after_hard_crash_turns_delete_off_too(self):
+        lam, store = FakeLambda("true"), FakeStore(dry_run=False)
+        store.delete_on = True  # crash left flag ON, DRY_RUN off, DELETE ON
+        with base_env("true"):
+            out = cs.handle_schedule({"step": "watchdog"}, Ctx(), notion_token="t",
+                                     lam=lam, store=store, run_delete=lambda: {}, sleep=lambda s: None,
+                                     now=lambda: WED_AM_IST)
+        self.assertEqual(out["status"], "alarmed")
+        self.assertFalse(store.delete_on)
+        self.assertEqual(lam.flag, "false")
+        self.assertTrue(store.dry_run)
 
     def test_watchdog_quiet_when_flag_off(self):
         lam, store = FakeLambda("false"), FakeStore()
@@ -401,3 +467,52 @@ class CreateFlowTests(unittest.TestCase):
 
     def test_evening_window_counts_for_watchdog(self):
         self.assertTrue(cs._in_run_window(datetime(2026, 11, 25, 15, 45, tzinfo=timezone.utc)))  # 21:15 IST
+
+
+class DeleteEndToEndWithoutWhapi(unittest.TestCase):
+    """Full begin -> batches -> finalize chain, self-invokes executed in order, delete runner stubbed
+    (no Whapi, no product writes). Proves DELETE is ON only while the run is active."""
+
+    def drive(self, results, *, raise_at=None):
+        lam, store = FakeLambda("false"), FakeStore()
+        timeline = []
+        calls = iter(results)
+        def rd():
+            timeline.append(("batch-running", store.delete_on, lam.flag, store.dry_run))
+            if raise_at is not None and len(timeline) == raise_at:
+                raise TimeoutError("lambda about to time out")
+            return next(calls)
+        with base_env("false"):
+            out = cs.handle_schedule({"step": "begin"}, Ctx(), notion_token="t", lam=lam, store=store,
+                                     run_delete=rd, sleep=lambda s: None)
+            while lam.invocations:
+                ev = lam.invocations.pop(0)
+                os.environ[cs.CATALOG_WRITE_FLAG] = lam.flag
+                out = cs.handle_schedule(ev, Ctx(), notion_token="t", lam=lam, store=store,
+                                         run_delete=rd, sleep=lambda s: None)
+        return out, lam, store, timeline
+
+    def test_two_batches_then_clean_finish(self):
+        out, lam, store, tl = self.drive([
+            run_delete_result(ok=3, lines=["[t] DELETE EF-1 product=p1 OK deleted"]),
+            run_delete_result(ok=0, lines=["[t] DELETE - SKIPPED no eligible rows"])])
+        self.assertEqual(out["status"], "completed")
+        self.assertTrue(all(t[1] and t[2] == "true" and not t[3] for t in tl), "ON and gate open while batches run")
+        self.assertFalse(store.delete_on)
+        self.assertEqual(lam.flag, "false")
+        self.assertTrue(store.dry_run)
+        self.assertFalse(store.create_on)
+
+    def test_timeout_in_second_batch_still_ends_off(self):
+        out, lam, store, tl = self.drive([run_delete_result(ok=3, lines=["[t] DELETE EF-1 product=p1 OK deleted"])], raise_at=2)
+        self.assertEqual(out["status"], "failed")
+        self.assertIn("TimeoutError", out["error"])
+        self.assertFalse(store.delete_on)
+        self.assertEqual(lam.flag, "false")
+        self.assertTrue(store.dry_run)
+
+    def test_zero_eligible_week_is_a_clean_noop(self):
+        out, lam, store, tl = self.drive([run_delete_result(ok=0, lines=["[t] DELETE - SKIPPED no eligible rows"])])
+        self.assertEqual(out["status"], "completed")
+        self.assertIn("zero actions", str(store.log_entries[0]))
+        self.assertFalse(store.delete_on)
