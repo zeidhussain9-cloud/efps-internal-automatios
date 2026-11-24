@@ -820,12 +820,11 @@ def build_catalogue_description(row: dict, raw_text: str, *, verified_society_na
     Charges Additional. Availability is a full future date or 'Ready To
     Occupy'. Tenant type uses the locked LOV only. Locked 24 Nov 3:05 PM
     (Zeid): when the row has a society name, the description closes with
-    it; otherwise with "Landmark: <landmark>", each followed by the map
-    link (Zeid 3:09 PM: landmark is used even when it holds the locality
-    fallback value; a society equal to the locality is the pipeline
-    fallback and never renders as a name). The map link is always the
-    exact link from the owner's input (google_maps_url, else the link in the
-    raw text), unmodified. Lines
+    it; otherwise with the bare "*Landmark:*" label. Superseded 24 Nov
+    8:33 PM (Zeid): no Maps link in the description at all (it goes only to
+    the product link field); society ending is "*📍 <society>:*", no-society
+    ending is "*Landmark:*" with no pin. A society equal to the locality is
+    the pipeline fallback and never renders as a name. Lines
     render only when their data exists.
     """
     # Rebuild even when called directly on an existing, stale row.
@@ -940,17 +939,14 @@ def build_catalogue_description(row: dict, raw_text: str, *, verified_society_na
     landmark = str(verified_landmark_name or "").strip()
     if not landmark:
         landmark = str(row.get("landmark") or "").strip()
-    # Zeid 24 Nov 4:40 PM: the description carries the EXACT Maps link the
-    # owner supplied, character for character. Never expanded, reduced to a
-    # search URL, or rebuilt from a resolved/caption link (resolved_maps_url is
-    # accepted for call compatibility and deliberately ignored here).
-    link = str(row.get("google_maps_url") or "").strip()
-    if not re.match(r"https?://\S+$", link):
-        link = MapsLinks.extract_url(raw)
-    if link and society:
-        sections.append(f"*📍{society}:* {link}")
-    elif link:
-        sections.append(f"*📍Landmark:*\n{link}")
+    # Zeid 24 Nov 8:33 PM: the description carries NO Maps link. The link
+    # reaches the catalogue only through the product's separate link field
+    # (google_maps_url). The ending is the label alone: with a society,
+    # "*📍 <society>:*"; otherwise "*Landmark:*" (no pin).
+    if society:
+        sections.append(f"*📍 {society}:*")
+    else:
+        sections.append("*Landmark:*")
     return "\n\n".join(sections)
 
 

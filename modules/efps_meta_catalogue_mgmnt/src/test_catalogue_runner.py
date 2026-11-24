@@ -692,3 +692,122 @@ def test_refused_create_settles_the_checkpoint_so_the_row_can_retry():
     whapi.create_product = orig
     r2 = run("create", store, whapi)
     assert r2["counts"]["ok"] == 1  # a refused request left nothing behind, so it may retry
+
+
+# --- 24 Nov 2026 fixes: photo identity, stop on verification failure, recovery hold, verified write-back ---
+
+SW_CREATE = {**ALL_SWITCHES, "ASSIGN": False}
+
+
+class PreviewWhapi(FakeWhapi):
+    """Returns every photo twice, as Whapi does: full link plus a 100x100 preview of the same image."""
+    def get_product(self, product_id):
+        p = dict(super().get_product(product_id))
+        imgs = []
+        for u in p.get("images") or []:
+            imgs.append(u + "?ccb=1")
+            imgs.append(u + "?stp=dst-jpg_p100x100&ccb=1")
+        p["images"] = imgs
+        return p
+
+
+def test_photo_and_its_preview_count_as_one_photo():
+    store, whapi = FakeStore([make_row()], switches=SW_CREATE), PreviewWhapi()
+    result = run("create", store, whapi)
+    assert result["counts"]["ok"] == 1 and result["counts"]["failed"] == 0
+    assert store.updates[0][1]["Pipeline Status"] == "Posted"
+
+
+def test_photo_identity_still_catches_missing_extra_and_distinct_photos():
+    mm = runner._content_mismatch
+    args = ("T", "D", 1)
+    live = lambda imgs: {"name": "T", "description": "D", "price": 1, "images": imgs}
+    two = ["https://cdn/a.jpg", "https://cdn/b.jpg"]
+    assert mm(live(["https://cdn/a.jpg?x=1", "https://cdn/a.jpg?stp=dst-jpg_p100x100&x=1",
+                    "https://cdn/b.jpg?x=1", "https://cdn/b.jpg?stp=dst-jpg_p100x100&x=1"]), *args, two) == ""
+    assert "photos (1 live vs 2 intended)" in mm(live(["https://cdn/a.jpg?x=1", "https://cdn/a.jpg?stp=p100x100"]), *args, two)
+    assert "photos (3 live vs 2 intended)" in mm(live(["https://cdn/a.jpg", "https://cdn/b.jpg", "https://cdn/c.jpg"]), *args, two)
+    # two different photos are never merged; dict-shaped entries are handled
+    assert mm(live([{"link": "https://cdn/a.jpg?q=1"}, {"link": "https://cdn/b.jpg?q=1"}]), *args, two) == ""
+    # a preview whose full photo is missing still counts as one photo, so a wrong count is caught
+    assert "photos" in mm(live(["https://cdn/a.jpg?stp=dst-jpg_p100x100"]), *args, two)
+
+
+class WrongTextWhapi(FakeWhapi):
+    def get_product(self, product_id):
+        p = dict(super().get_product(product_id))
+        p["description"] = "something else"
+        return p
+
+
+def test_verification_failure_stops_the_batch_and_keeps_the_created_id():
+    rows = [make_row(page_id=f"p{i}", listing_id=f"EF-2611-{i:04d}") for i in range(3)]
+    store, whapi = FakeStore(rows, switches=SW_CREATE), WrongTextWhapi()
+    result = run("create", store, whapi)
+    assert len([c for c in whapi.calls if c[0] == "create"]) == 1  # rows 2 and 3 never attempted
+    assert result["counts"]["failed"] == 1 and result["counts"]["ok"] == 0
+    assert store.updates == []  # Notion not marked posted
+    note = "\n".join(l for pid, l in store.activity if pid == "p0")
+    assert "created product 101" in note and "FAILED" in note
+
+
+def test_recovery_hold_skips_a_created_but_unreconciled_row_without_slot_or_calls():
+    held_note = ("[t] CREATE EF-2611-0000 ATTEMPT STARTED about to call create_product\n"
+                 "[t] CREATE EF-2611-0000 FAILED created product 29403526879280307 content mismatch (photos (14 live vs 7 intended)); Notion untouched")
+    rows = [make_row(page_id="p0", listing_id="EF-2611-0000", error_notes=held_note)]
+    rows += [make_row(page_id=f"p{i}", listing_id=f"EF-2611-{i:04d}") for i in range(1, 5)]
+    store, whapi = FakeStore(rows, switches=SW_CREATE), FakeWhapi()
+    result = run("create", store, whapi)
+    created = [c[1] for c in whapi.calls if c[0] == "create"]
+    assert created == ["EF-2611-0001", "EF-2611-0002", "EF-2611-0003"]  # a full batch of 3, held row took no slot
+    assert not any(c[0] == "get" and c[1] == "29403526879280307" for c in whapi.calls)
+    assert not any(pid == "p0" for pid, _ in store.activity)  # no repeated note on the held row
+    assert any("recovery hold" in l and "EF-2611-0000" in l for l in result["lines"])
+    assert rows[0]["meta_catalog_id"] == ""  # not adopted, no Pipeline change
+
+
+def test_recovery_hold_clears_after_an_ok_or_adopted_line():
+    notes = ("[t] CREATE EF-2611-0000 FAILED created product 123456789 content mismatch\n"
+             "[t] CREATE EF-2611-0000 product=123456789 ADOPTED product already existed")
+    assert runner.created_unreconciled_product(notes) == ""
+    assert runner.created_unreconciled_product("[t] CREATE EF-2611-0000 FAILED created product 123456789 x") == "123456789"
+    assert runner.created_unreconciled_product("[t] CREATE EF-2611-0000 FAILED Whapi rejected (400)") == ""
+
+
+def test_notion_write_failure_after_create_stops_batch_and_holds_the_row():
+    rows = [make_row(page_id=f"p{i}", listing_id=f"EF-2611-{i:04d}") for i in range(3)]
+    store, whapi = FakeStore(rows, switches=SW_CREATE), FakeWhapi()
+    def boom(page_id, props): raise RuntimeError("Notion API PATCH failed (500)")
+    store.update_listing = boom
+    result = run("create", store, whapi)
+    assert len([c for c in whapi.calls if c[0] == "create"]) == 1
+    assert result["counts"]["failed"] == 1 and result["counts"]["ok"] == 0
+    note = "\n".join(l for pid, l in store.activity if pid == "p0")
+    assert "created product 101" in note and "write-back failed" in note
+    assert runner.created_unreconciled_product(note) == "101"  # next run holds it, no duplicate
+
+
+def test_partial_notion_write_is_caught_by_the_read_back():
+    rows = [make_row(page_id="p0", listing_id="EF-2611-0000"), make_row(page_id="p1", listing_id="EF-2611-0001")]
+    store, whapi = FakeStore(rows, switches=SW_CREATE), FakeWhapi()
+    orig = store.update_listing
+    def partial(page_id, props):  # Pipeline Status silently does not save
+        orig(page_id, {k: v for k, v in props.items() if k != "Pipeline Status"})
+    store.update_listing = partial
+    result = run("create", store, whapi)
+    assert result["counts"]["ok"] == 0 and result["counts"]["failed"] == 1
+    assert len([c for c in whapi.calls if c[0] == "create"]) == 1  # stopped
+    assert "not confirmed on read-back (Pipeline Status)" in str(result["lines"])
+
+
+def test_confirmed_write_back_reports_ok_only_with_all_three_columns():
+    store, whapi = FakeStore([make_row(**{"live at": ["Other"]})], switches=SW_CREATE), FakeWhapi()
+    result = run("create", store, whapi)
+    row = store.rows[0]
+    assert result["counts"]["ok"] == 1
+    assert row["meta_catalog_id"] == "101" and row["Pipeline Status"] == "Posted"
+    assert row["live at"] == ["Other", "Meta Catalogue"]
+
+
+def test_batch_cap_and_timing_constants_are_unchanged():
+    assert runner.CAPS["create"] == 3

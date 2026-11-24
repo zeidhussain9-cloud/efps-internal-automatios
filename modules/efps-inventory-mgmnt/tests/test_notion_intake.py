@@ -604,7 +604,7 @@ def test_processed_notion_page_repairs_a_missing_inventory_projection():
     assert store.listing_ids == [(page_id, "EF-2611-ABCD")]
     assert notion.updates == [
         (page_id, {"listing_id": intake._rich("EF-2611-ABCD")}),
-        (page_id, {"catalogue_description": intake._rich("*🏠 EF-2611-ABCD*")}),
+        (page_id, {"catalogue_description": intake._rich("*🏠 EF-2611-ABCD*\n\n*Landmark:*")}),
     ]
     assert store.finished[0][0] == "processed"
 
@@ -628,7 +628,7 @@ def test_duplicate_notion_page_restore_reactivates_soft_deleted_projection():
     assert store.listing_ids == [(page_id, "EF-2611-ABCD")]
     assert notion.updates == [
         (page_id, {"listing_id": intake._rich("EF-2611-ABCD")}),
-        (page_id, {"catalogue_description": intake._rich("*🏠 EF-2611-ABCD*")}),
+        (page_id, {"catalogue_description": intake._rich("*🏠 EF-2611-ABCD*\n\n*Landmark:*")}),
     ]
 
 
@@ -953,7 +953,7 @@ def test_catalogue_description_gated_card_full_rules():
     assert "👨‍👩‍👧 Family Only" in desc
     assert "🐾 Pets: Not Allowed" in desc
     assert "🏢 Gated community" in desc
-    assert "*📍Adarsh Palm Retreat:* https://www.google.com/maps/search/?api=1&query=x" in desc
+    assert "*📍 Adarsh Palm Retreat:*" in desc and "http" not in desc
     assert "goo.gl" not in desc
 
 
@@ -968,7 +968,7 @@ def test_catalogue_description_semi_gated_stored_society_used_without_raw_check(
     # Locked 24 Nov 3:05 PM (Zeid): a stored society name distinct from the
     # locality is used as-is; no extra corroboration condition. Society beats
     # landmark when both are present.
-    assert "*📍Some Layout:* https://www.google.com/maps/search/?api=1&query=y" in desc
+    assert "*📍 Some Layout:*" in desc and "http" not in desc
     assert "Near Silver County" not in desc
 
 
@@ -976,20 +976,20 @@ def test_catalogue_description_landmark_ending_when_no_society():
     row = {"google_maps_url": "https://www.google.com/maps/search/?api=1&query=lm", "catalog_title": "Semi Furnished 1 BHK - Kasavanahalli", "internal_property_type": "Semi Gated",
            "landmark": "Bachpan Play School", "society_name": "Kasavanahalli", "locality": "Kasavanahalli"}
     desc = intake.build_catalogue_description(row, "")
-    assert "*📍Landmark:*\nhttps://www.google.com/maps/search/?api=1&query=lm" in desc
+    assert desc.endswith("*Landmark:*") and "http" not in desc
 
 
 def test_catalogue_description_stored_society_and_verified_landmark_param():
     row = {"google_maps_url": "https://www.google.com/maps/search/?api=1&query=s", "catalog_title": "T", "internal_property_type": "Gated Community",
            "society_name": "SJR Blue Waters", "locality": "Haralur"}
     desc = intake.build_catalogue_description(row, "")
-    assert "*📍SJR Blue Waters:* https://www.google.com/maps/search/?api=1&query=s" in desc
+    assert "*📍 SJR Blue Waters:*" in desc and "http" not in desc
     # Caller-verified landmark (e.g. Maps pin name) wins when no society qualifies.
     row2 = {"google_maps_url": "https://www.google.com/maps/search/?api=1&query=r", "catalog_title": "T", "locality": "Sarjapur Road", "landmark": "Rainbow Drive",
             "society_name": "Sarjapur Road"}
     desc2 = intake.build_catalogue_description(row2, "villa on sarjapur road",
                                                verified_landmark_name="Rainbow Drive")
-    assert "*📍Landmark:*\nhttps://www.google.com/maps/search/?api=1&query=r" in desc2
+    assert desc2.endswith("*Landmark:*") and "http" not in desc2
 
 
 def test_catalogue_description_locality_fallback_rows_use_landmark_ending():
@@ -999,7 +999,7 @@ def test_catalogue_description_locality_fallback_rows_use_landmark_ending():
            "landmark": "Kasavanahalli"}
     desc = intake.build_catalogue_description(row, "1 bhk kasavanahalli")
     assert "✨" not in desc and "Kasavanahalli:" not in desc
-    assert "*📍Landmark:*\nhttps://www.google.com/maps/search/?api=1&query=k" in desc
+    assert desc.endswith("*Landmark:*") and "http" not in desc
 
 
 def test_catalogue_description_standalone_has_no_community_line():
@@ -1029,22 +1029,24 @@ def test_catalogue_description_maintenance_three_clean_values():
     assert "💰 Rent: Rs 30,000 (maintenance included)" in desc and "🧾" not in desc
 
 
-def test_catalogue_description_keeps_exact_input_map_link():
+def test_catalogue_description_has_no_maps_link_and_keeps_label_only_ending():
+    # Zeid 24 Nov 8:33 PM: the Maps link goes only to the product link field
+    # (google_maps_url); the description ends with the bold label alone.
     short = "https://maps.app.goo.gl/dboRan3J7RmoYnYc7?g_st=ic"
     row = {"catalog_title": "T", "locality": "Harlur", "society_name": "Palm Greens", "google_maps_url": short}
-    # A resolved/caption search link must never replace the owner's link.
     d = intake.build_catalogue_description(row, "x", resolved_maps_url="https://www.google.com/maps/search/?api=1&query=z")
-    assert d.endswith(" " + short) and "query=z" not in d
-    # Falls back to the link in the raw text, still unmodified.
+    assert d.endswith("*📍 Palm Greens:*") and "http" not in d and "query=z" not in d
+    # A link in the raw text is not copied into the description either.
     row2 = {"catalog_title": "T", "locality": "Harlur", "society_name": "Palm Greens"}
-    assert intake.build_catalogue_description(row2, "1 bhk " + short).endswith(short)
-    # Long input links are also kept as given.
-    long_ = "https://www.google.co.in/maps/place/Some+Place/data=xyz"
-    row["google_maps_url"] = long_
-    assert intake.build_catalogue_description(row, "").endswith(long_)
-    # No input link: no link invented.
-    row3 = {"catalog_title": "T", "locality": "Harlur", "society_name": "Palm Greens"}
-    assert "http" not in intake.build_catalogue_description(row3, "")
+    d2 = intake.build_catalogue_description(row2, "1 bhk " + short)
+    assert d2.endswith("*📍 Palm Greens:*") and "http" not in d2
+    # No society: bare Landmark label, no pin, with or without a link.
+    row3 = {"catalog_title": "T", "locality": "Harlur", "google_maps_url": short}
+    d3 = intake.build_catalogue_description(row3, "")
+    assert d3.endswith("*Landmark:*") and "📍" not in d3.split("\n\n")[-1] and "http" not in d3
+    assert intake.build_catalogue_description({"catalog_title": "T", "locality": "Harlur"}, "").endswith("*Landmark:*")
+    # The link field itself is untouched by the description builder.
+    assert row["google_maps_url"] == short
 
 
 def test_catalogue_description_ordinals():
@@ -1097,10 +1099,10 @@ def test_description_direct_call_ignores_stale_title_and_landmark():
     assert desc.startswith('*🏠 Semi Furnished 1 BHK - Haralur*')
     # Locked 24 Nov 3:09 PM: landmark renders as-is, including the locality
     # fallback value; a distinct stored landmark is used the same way.
-    assert "*📍Landmark:*\nhttps://www.google.com/maps/search/?api=1&query=1,2" in desc
+    assert desc.endswith("*Landmark:*") and "http" not in desc
     row_lm=dict(row, landmark='Axis Bank ATM')
     desc_lm=intake.build_catalogue_description(row_lm,'')
-    assert "*📍Landmark:*\nhttps://www.google.com/maps/search/?api=1&query=1,2" in desc_lm
+    assert desc_lm.endswith("*Landmark:*") and "http" not in desc_lm
     assert '*📍 Haralur:*' in post
 
 
@@ -1108,8 +1110,8 @@ def test_description_direct_call_ignores_stale_title_and_landmark():
 def test_catalogue_description_respelled_locality_fallback_is_landmark_not_society():
     link = "https://maps.app.goo.gl/ZzSynth0002?g_st=ic"
     row = {"google_maps_url": link, "catalog_title": "T", "locality": "Haralur", "society_name": "Harlur", "landmark": "Harlur"}
-    assert intake.build_catalogue_description(row, "").endswith("*📍Landmark:*\n" + link)
+    assert intake.build_catalogue_description(row, "").endswith("*Landmark:*") and link not in intake.build_catalogue_description(row, "")
     real = dict(row, society_name="Ambalipura, Harlur", landmark="Ambalipura, Harlur")
-    assert intake.build_catalogue_description(real, "").endswith("*📍Ambalipura, Harlur:* " + link)
+    assert intake.build_catalogue_description(real, "").endswith("*📍 Ambalipura, Harlur:*")
     real2 = dict(row, society_name="Shubh Enclave", landmark="Harlur")
-    assert intake.build_catalogue_description(real2, "").endswith("*📍Shubh Enclave:* " + link)
+    assert intake.build_catalogue_description(real2, "").endswith("*📍 Shubh Enclave:*")

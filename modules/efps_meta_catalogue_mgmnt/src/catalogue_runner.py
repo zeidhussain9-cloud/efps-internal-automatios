@@ -30,6 +30,7 @@ The store and client are dependency-injected; tests use fakes.
 
 from __future__ import annotations
 
+import re
 import time
 from datetime import datetime, timezone
 from typing import Any, Callable, Mapping
@@ -272,6 +273,15 @@ def run_operation(operation: str, *, store: Any, whapi: Any, masters: Mapping[st
             # reported but must not take batch slots from creatable rows.
             creatable = []
             for row in eligible:
+                held_id = created_unreconciled_product(str(row.get("error_notes") or ""))
+                if held_id:
+                    # Recovery hold: product already exists on Meta, awaiting an explicit
+                    # adoption. No Whapi call, no batch slot, no note written (the row
+                    # already says so), so a repeat run does not pile up log lines.
+                    run.lines.append(log_line(operation, str(row.get("listing_id") or "?"), held_id, "SKIPPED",
+                                              "recovery hold: product already created, awaiting explicit adoption; not re-created, not counted in this batch", now=now))
+                    run.counts["skipped"] += 1
+                    continue
                 problem, _images = create_precheck(row)
                 if problem:
                     run.record(row, "", "SKIPPED", problem)
@@ -359,6 +369,26 @@ def _create_outcome_unknown(notes: str) -> bool:
         elif " OK " in line or " ADOPTED " in line or f" {_REFUSED}" in line:
             unknown = False
     return unknown
+
+
+_CREATED_PRODUCT = re.compile(r"created product (\d+)")
+
+
+def created_unreconciled_product(notes: str) -> str:
+    """Product ID of an earlier create that made a product on Meta but never reached
+    Notion (verification or write-back failed), or "" when the row has none.
+    A later OK or ADOPTED line settles it. Such a row is held: a create batch must
+    neither re-create it nor adopt it silently; adoption is its own explicit step."""
+    held = ""
+    for line in str(notes or "").splitlines():
+        if " CREATE " not in line:
+            continue
+        found = _CREATED_PRODUCT.search(line)
+        if " FAILED " in line and found:
+            held = found.group(1)
+        elif " OK " in line or " ADOPTED " in line:
+            held = ""
+    return held
 
 
 def create_precheck(row: Mapping[str, Any]) -> tuple[str, list[str]]:
@@ -468,9 +498,11 @@ def _op_create_row(run: _Run, row: Mapping[str, Any]) -> None:
     run.sleeper(CREATE_ASSIGN_GAP_SECONDS)  # 30s spacing between catalogue requests
     live_product = _call_once(lambda: run.whapi.get_product(product_id))
     if not str((live_product or {}).get("name") or "").strip():
+        run.stop = True  # a product exists that could not be verified: no further creates this batch
         raise RuntimeError(f"created product {product_id} not readable on verification; Notion untouched")
     mismatch = _content_mismatch(live_product, title, description, rent, images, str(row.get("google_maps_url") or ""))
     if mismatch:
+        run.stop = True  # never keep creating after a verification failure
         raise RuntimeError(f"created product {product_id} content mismatch ({mismatch}); Notion untouched")
     if run.catalogue_cache is not None:
         run.catalogue_cache.append({"id": product_id, "product_retailer_id": listing_id})
@@ -478,6 +510,12 @@ def _op_create_row(run: _Run, row: Mapping[str, Any]) -> None:
     run.record(row, product_id, "OK", "created and verified")
     # Collection assignment is deliberately NOT chained here (Zeid 3:04 PM):
     # it runs as its own separately-gated flow.
+
+
+def _photo_identity(item: Any) -> str:
+    """Provider identity of one live photo entry: its link without the query string."""
+    link = str(item.get("link") if isinstance(item, dict) else item or "").strip()
+    return link.split("?", 1)[0]
 
 
 def _content_mismatch(product: Mapping[str, Any] | None, title: str, description: str, rent: int,
@@ -499,7 +537,12 @@ def _content_mismatch(product: Mapping[str, Any] | None, title: str, description
     if images is not None:
         # Meta may re-host photo links, so compare the COUNT of photos, and exact
         # links only when the product returns links that look like our originals.
-        live_images = [str(i.get("link") if isinstance(i, dict) else i) for i in (p.get("images") or [])]
+        # Whapi returns each photo twice: the full-size link and a 100x100
+        # preview of the same image (same path, different query string). Count
+        # distinct photo identities (the link without its query string), so a
+        # photo and its preview are one photo, and two different photos stay two.
+        live_images = {_photo_identity(i) for i in (p.get("images") or [])}
+        live_images.discard("")
         if len(live_images) != len(images):
             bad.append(f"photos ({len(live_images)} live vs {len(images)} intended)")
     if url and p.get("url") is not None and norm(p.get("url")) != norm(url):
@@ -511,14 +554,32 @@ def _mark_posted(run: _Run, row: Mapping[str, Any], product_id: str) -> None:
     # Writeback locked 24 Nov 2026 (Zeid): product ID + Meta Catalogue in
     # live at + Pipeline Status -> Posted; the run record also appends the
     # audit line to error_notes. Posted = live on at least one platform.
+    # The row is read back afterwards: success is only claimed when all three
+    # columns are confirmed in Notion.
     live = _live_at(row)
     if META_CHANNEL not in live:
         live = live + [META_CHANNEL]
-    run.store.update_listing(str(row.get("page_id") or ""), {
-        "meta_catalog_id": product_id,
-        "live at": live,
-        "Pipeline Status": "Posted",
-    })
+    page_id = str(row.get("page_id") or "")
+    try:
+        run.store.update_listing(page_id, {
+            "meta_catalog_id": product_id,
+            "live at": live,
+            "Pipeline Status": "Posted",
+        })
+        saved = run.store.read_listing(page_id)
+    except Exception as exc:  # noqa: BLE001
+        run.stop = True
+        raise RuntimeError(f"created product {product_id} but Notion write-back failed ({str(exc)[:120]}); recovery hold, nothing more created") from exc
+    problems = []
+    if str(saved.get("meta_catalog_id") or "").strip() != product_id:
+        problems.append("meta_catalog_id")
+    if META_CHANNEL not in _live_at(saved):
+        problems.append("live at")
+    if str(saved.get("Pipeline Status") or "") != "Posted":
+        problems.append("Pipeline Status")
+    if problems:
+        run.stop = True
+        raise RuntimeError(f"created product {product_id} but Notion write-back not confirmed on read-back ({', '.join(problems)}); recovery hold, nothing more created")
 
 
 def _op_update_row(run: _Run, row: Mapping[str, Any]) -> None:
