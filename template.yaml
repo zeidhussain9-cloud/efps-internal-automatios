@@ -116,6 +116,14 @@ Resources:
             Schedule: cron(30 3 ? * TUE *)
             Input: '{"_efps_catalogue_schedule": true, "step": "begin"}'
             Enabled: true
+        # Daily 9 PM IST creation-only run (built 24 Nov; Zeid: build only, do not run).
+        # DISABLED until Zeid explicitly approves enabling it.
+        CatalogueDailyCreation:
+          Type: Schedule
+          Properties:
+            Schedule: cron(30 15 * * ? *)
+            Input: '{"_efps_catalogue_schedule": true, "step": "create_begin"}'
+            Enabled: false
         # Daily 10:05 IST watchdog: forces the catalog-write gate back OFF
         # (and DRY_RUN back ON) if it is ever found open outside the run window.
         CatalogueGateWatchdog:
