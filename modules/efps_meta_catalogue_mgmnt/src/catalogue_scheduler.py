@@ -30,6 +30,7 @@ from typing import Any, Mapping
 
 SCHEDULE_EVENT = "_efps_catalogue_schedule"
 CATALOG_WRITE_FLAG = "EFPS_WHAPI_CATALOG_WRITE_ENABLED"
+MAX_BATCHES_CREATE = 200  # runaway guard only; the real limit for create is the nightly window
 MAX_BATCHES = 40  # 120 deletions per session is far beyond realistic; beyond that, stop and report.
 
 # Decision Log (Notion): session entries go newest-first, right after the intro block.
@@ -207,6 +208,9 @@ def _batch(event, lam, store, context, *, run_delete, sleep, now) -> dict:
     if not _truthy(os.environ.get(CATALOG_WRITE_FLAG)):
         return _finalize({**event, "error": "catalog-write flag OFF mid-run; stopping safe"},
                          lam, store, context, sleep=sleep, now=now)
+    if op == "create" and not _in_run_window(now()):
+        return _finalize({**event, "error": "creation window (9-11 PM IST) closed; stopping safe, remaining rows continue at the next scheduled run"},
+                         lam, store, context, sleep=sleep, now=now)
     try:
         result = (run_delete(op) if op == "create" else run_delete()) or {}
     except Exception as exc:  # real fault: stop safe, report, no auto-rerun
@@ -248,9 +252,9 @@ def _batch(event, lam, store, context, *, run_delete, sleep, now) -> dict:
                           "error": f"batch {batch} had {failed} failed deletion(s); no auto-rerun"},
                          lam, store, context, sleep=sleep, now=now)
     if ok > 0:
-        if batch >= MAX_BATCHES:
+        if batch >= (MAX_BATCHES_CREATE if op == "create" else MAX_BATCHES):
             return _finalize({**event, "totals": totals, "deleted": deleted, "failures": failures,
-                              "error": f"batch cap {MAX_BATCHES} reached; remaining rows wait for the next scheduled run"},
+                              "error": f"batch cap {MAX_BATCHES_CREATE if op == 'create' else MAX_BATCHES} reached; remaining rows wait for the next scheduled run"},
                              lam, store, context, sleep=sleep, now=now)
         _self_invoke(lam, fn, {"step": "batch", "run_id": run_id, "op": op, "batch": batch + 1,
                                "totals": totals, "deleted": deleted, "failures": failures})

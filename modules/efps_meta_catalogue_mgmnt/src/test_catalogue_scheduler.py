@@ -65,6 +65,7 @@ def run_delete_result(ok=0, failed=0, skipped=0, would=0, dry=False, lines=None)
             "dry_run": dry, "lines": lines or []}
 
 
+TUE_PM_IST = datetime(2026, 11, 24, 16, 0, tzinfo=timezone.utc)  # 9:30 PM IST, inside the creation window
 TUE_AM_IST = datetime(2026, 11, 24, 3, 45, tzinfo=timezone.utc)  # Tuesday 9:15 IST
 WED_AM_IST = datetime(2026, 11, 25, 4, 35, tzinfo=timezone.utc)  # Wednesday 10:05 IST
 
@@ -269,7 +270,7 @@ class CreateFlowTests(unittest.TestCase):
         ev = {"step": "batch", "op": "create", "run_id": "create-x", "batch": 1, "totals": {}, "deleted": [], "failures": []}
         with base_env("true"):
             out = cs.handle_schedule(ev, Ctx(), notion_token="t", lam=lam, store=store,
-                                     run_delete=run, sleep=lambda s: None)
+                                     run_delete=run, sleep=lambda s: None, now=lambda: TUE_PM_IST)
         self.assertEqual(seen, ["create"])
         self.assertEqual(out["status"], "completed")
         self.assertEqual(lam.flag, "false")
@@ -285,17 +286,41 @@ class CreateFlowTests(unittest.TestCase):
         ev = {"step": "batch", "op": "create", "run_id": "create-x", "batch": 1, "totals": {}, "deleted": [], "failures": []}
         with base_env("true"):
             out = cs.handle_schedule(ev, Ctx(), notion_token="t", lam=lam, store=store,
-                                     run_delete=lambda op="delete": res, sleep=lambda s: None)
+                                     run_delete=lambda op="delete": res, sleep=lambda s: None, now=lambda: TUE_PM_IST)
         self.assertEqual(out["status"], "chained")
         self.assertEqual(lam.invocations[0]["op"], "create")
         self.assertEqual(lam.invocations[0]["deleted"], ["EF-1", "EF-2"])
         bad = run_delete_result(ok=0, failed=1, lines=["[t] CREATE EF-3 FAILED boom"])
         with base_env("true"):
             out = cs.handle_schedule(ev, Ctx(), notion_token="t", lam=lam, store=store,
-                                     run_delete=lambda op="delete": bad, sleep=lambda s: None)
+                                     run_delete=lambda op="delete": bad, sleep=lambda s: None, now=lambda: TUE_PM_IST)
         self.assertEqual(out["status"], "failed")
         self.assertFalse(store.create_on)
         self.assertEqual(lam.flag, "false")
+
+    def test_create_chain_stops_safe_when_the_window_has_closed(self):
+        lam, store = FakeLambda("true"), FakeStore(dry_run=False)
+        store.create_on = True
+        seen = []
+        ev = {"step": "batch", "op": "create", "run_id": "create-x", "batch": 5, "totals": {}, "deleted": [], "failures": []}
+        late = datetime(2026, 11, 24, 18, 0, tzinfo=timezone.utc)  # 11:30 PM IST
+        with base_env("true"):
+            out = cs.handle_schedule(ev, Ctx(), notion_token="t", lam=lam, store=store,
+                                     run_delete=lambda op="delete": seen.append(op), sleep=lambda s: None, now=lambda: late)
+        self.assertEqual(seen, [])  # nothing run after the window
+        self.assertEqual(out["status"], "failed")
+        self.assertIn("window", out["error"])
+        self.assertEqual(lam.flag, "false")
+        self.assertFalse(store.create_on)
+
+    def test_create_chain_is_not_limited_to_40_batches(self):
+        lam, store = FakeLambda("true"), FakeStore(dry_run=False)
+        res = run_delete_result(ok=3, lines=["[t] CREATE EF-9 product=p9 OK created"])
+        ev = {"step": "batch", "op": "create", "run_id": "create-x", "batch": cs.MAX_BATCHES + 5, "totals": {}, "deleted": [], "failures": []}
+        with base_env("true"):
+            out = cs.handle_schedule(ev, Ctx(), notion_token="t", lam=lam, store=store,
+                                     run_delete=lambda op="delete": res, sleep=lambda s: None, now=lambda: TUE_PM_IST)
+        self.assertEqual(out["status"], "chained")
 
     def test_evening_window_counts_for_watchdog(self):
         self.assertTrue(cs._in_run_window(datetime(2026, 11, 25, 15, 45, tzinfo=timezone.utc)))  # 21:15 IST

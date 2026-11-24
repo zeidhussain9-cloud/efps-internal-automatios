@@ -597,3 +597,61 @@ def test_adoption_rejects_wrong_photo_count_or_link():
     whapi = FakeWhapi(); whapi.products["55"] = dict(base)
     store = FakeStore([dict(row)], switches={**ALL_SWITCHES, "ASSIGN": False})
     assert "ADOPTED" in run("create", store, whapi)["lines"][0]
+
+
+# --- lost create response, shared catalogue read, deadline-bound calls ---
+
+def test_lost_create_response_stops_batch_and_blocks_a_blind_recreate():
+    class LostWhapi(FakeWhapi):
+        def create_product(self, *a, **k):
+            super().create_product(*a, **k)  # Meta created it ...
+            raise RuntimeError("WhAPI network error: timed out")  # ... but the answer was lost
+    rows = [make_row(page_id=f"p{i}", listing_id=f"EF-2611-{i:04d}") for i in range(3)]
+    store, whapi = FakeStore(rows, switches={**ALL_SWITCHES, "ASSIGN": False}), LostWhapi()
+    r1 = run("create", store, whapi)
+    assert r1["counts"]["failed"] == 1 and r1["counts"]["ok"] == 0
+    assert len(whapi.products) == 1  # later rows were not attempted
+    line = next(l for l in r1["lines"] if "OUTCOME UNKNOWN" in l)
+    # Meta has not shown the product yet (eventual consistency): simulate by hiding it from reads
+    rows[0]["error_notes"] = line
+    hidden, whapi.products = whapi.products, {}
+    r2 = run("create", store, FakeWhapi())
+    assert not any("p0" in str(c) for c in [])  # row 0 not re-created
+    assert rows[0]["meta_catalog_id"] == "" and "Posted" != rows[0].get("Pipeline Status")
+    assert any("unknown result" in l for l in r2["lines"])
+    assert r2["counts"]["ok"] == 2  # the other rows still proceed
+
+
+def test_lost_create_is_adopted_once_the_product_becomes_visible():
+    rows = [make_row(page_id="p0", listing_id="EF-2611-0000")]
+    whapi = FakeWhapi()
+    store = FakeStore(rows, switches={**ALL_SWITCHES, "ASSIGN": False})
+    run("create", store, whapi)  # creates it normally to get a matching live product
+    rows[0].update({"meta_catalog_id": "", "Pipeline Status": "Ready To Post", "live at": [],
+                    "error_notes": "[t] CREATE EF-2611-0000 FAILED create request failed ...; OUTCOME UNKNOWN, product may exist"})
+    r2 = run("create", store, whapi)
+    assert r2["counts"]["ok"] == 1 and len(whapi.products) == 1  # adopted, no duplicate
+    assert rows[0]["meta_catalog_id"]
+
+
+def test_catalogue_is_read_once_per_batch_and_stays_fresh():
+    rows = [make_row(page_id=f"p{i}", listing_id=f"EF-2611-{i:04d}") for i in range(3)]
+    store, whapi = FakeStore(rows, switches={**ALL_SWITCHES, "ASSIGN": False}), FakeWhapi()
+    reads = []
+    orig = whapi.get_products
+    whapi.get_products = lambda count=100, before_page=None: (reads.append(1), orig(count))[1]
+    run("create", store, whapi)
+    assert len(reads) == 1
+
+
+def test_catalogue_page_read_defers_when_no_time_for_it():
+    rows = [make_row(page_id="p0", listing_id="EF-2611-0000")]
+    store, whapi = FakeStore(rows, switches={**ALL_SWITCHES, "ASSIGN": False}), FakeWhapi()
+    def pages(count=100, before_page=None):
+        before_page()
+        return []
+    whapi.get_products = pages
+    left = iter([300.0, 150.0] + [150.0] * 5)  # row starts, but the catalogue page has no room
+    result = runner.run_operation("create", store=store, whapi=whapi, masters=MASTERS_ON,
+                                  sleeper=lambda s: None, time_left=lambda: next(left))
+    assert whapi.products == {} and result["counts"]["ok"] == 0 and result["counts"]["failed"] == 0

@@ -103,6 +103,7 @@ class NotionCatalogueStore:
             raise CatalogueStoreError("Notion token is not configured")
         self.session = session or requests.Session()
         self.token = token
+        self.time_left = None  # optional callable: seconds left in this Lambda invocation
         self._now = now or (lambda: datetime.now(timezone.utc))
 
     # --- low level ------------------------------------------------------
@@ -124,7 +125,11 @@ class NotionCatalogueStore:
             if response.status_code != 429:
                 break
             # Notion rate limit: honor retry-after, bounded exponential backoff.
-            time.sleep(min(max(_retry_after_seconds(response), delay), 30.0))
+            wait = min(max(_retry_after_seconds(response), delay), 30.0)
+            if self.time_left is not None and self.time_left() < wait + 25 + 10:
+                # Never sleep past the invocation: stop with a clear error instead.
+                raise CatalogueStoreError(f"Notion API {method} {path} rate limited and not enough invocation time left to wait; stopped")
+            time.sleep(wait)
             delay = min(delay * 2, 30.0)
         if not response.ok:
             raise CatalogueStoreError(

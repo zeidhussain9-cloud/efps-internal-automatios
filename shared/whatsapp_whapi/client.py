@@ -229,7 +229,7 @@ class WhApiClient:
         payload["availability"] = availability
         return self.post("/business/products", payload)
 
-    def get_products(self, count: int = 100) -> list[dict]:
+    def get_products(self, count: int = 100, before_page=None) -> list[dict]:
         """Read up to `count` products. Whapi documents count (1 to 500, default 100)
         and offset (>= 0) for GET /business/products
         (https://whapi.readme.io/reference/getproducts); pages of 100 are read with
@@ -240,6 +240,8 @@ class WhApiClient:
         seen: set[str] = set()
         offset = 0
         while len(all_products) < count:
+            if before_page is not None:
+                before_page()  # lets a caller with a deadline stop before each page
             result = self.get("/business/products", {"count": page_size, "offset": offset})
             page = (result or {}).get("products", []) if isinstance(result, dict) else []
             if not page:

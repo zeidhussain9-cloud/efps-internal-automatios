@@ -198,6 +198,7 @@ class _Run:
         self.counts = {"ok": 0, "skipped": 0, "failed": 0, "would": 0}
         self.time_left: Callable[[], float] | None = None
         self.stop = False
+        self.catalogue_cache: list[dict] | None = None
 
     def record(self, row: Mapping[str, Any], product_id: str, outcome: str, reason: str = "") -> str:
         line = log_line(self.operation, str(row.get("listing_id") or "?"), product_id, outcome, reason, now=self.now)
@@ -237,6 +238,11 @@ def run_operation(operation: str, *, store: Any, whapi: Any, masters: Mapping[st
     dry_run = states["DRY_RUN"]
     run = _Run(operation, store, whapi, dry_run=dry_run, now=now, sleeper=sleeper)
     run.time_left = time_left
+    if time_left is not None:
+        try:
+            store.time_left = time_left  # bounds the Notion store's own 429 sleeps
+        except Exception:  # noqa: BLE001 - fakes without the attribute
+            pass
 
     if operation != "reconcile":
         if not (states["EFPS_WHAPI_LIVE"] and states["EFPS_WHAPI_API_ENABLED"]):
@@ -319,6 +325,39 @@ def _execute(operation: str, run: _Run, row: Mapping[str, Any]) -> None:
         run.record(row, str(row.get("meta_catalog_id") or ""), "FAILED", str(exc)[:200])
 
 
+def _adoption_catalogue(run: "_Run") -> list[dict]:
+    """The catalogue for the duplicate check, read ONCE per batch (pages of 100, each
+    page one attempt, no retry) and kept fresh by appending what this batch creates.
+    Before every page the deadline must leave room for that page (30s) plus the
+    create tail, otherwise the row is deferred with nothing created."""
+    if run.catalogue_cache is None:
+        def before_page() -> None:
+            if run.time_left is not None and run.time_left() < 30 + CREATE_TAIL_SECONDS:
+                raise DeferredForTime("not enough Lambda time left to read the catalogue safely; nothing created, next batch continues")
+        try:
+            run.catalogue_cache = list(_call_once(lambda: run.whapi.get_products(count=10000, before_page=before_page)) or [])
+        except TypeError:  # test fakes that do not take the hook
+            run.catalogue_cache = list(_call_once(lambda: run.whapi.get_products(count=10000)) or [])
+    return run.catalogue_cache
+
+
+_UNKNOWN = "OUTCOME UNKNOWN"
+
+
+def _create_outcome_unknown(notes: str) -> bool:
+    """True when the row's log shows a create whose result was never seen and no
+    later OK/ADOPTED line settled it."""
+    unknown = False
+    for line in str(notes or "").splitlines():
+        if " CREATE " not in line:
+            continue
+        if _UNKNOWN in line:
+            unknown = True
+        elif " OK " in line or " ADOPTED " in line:
+            unknown = False
+    return unknown
+
+
 def create_precheck(row: Mapping[str, Any]) -> tuple[str, list[str]]:
     """Return (problem, images). problem is "" when the row can be created."""
     if not str(row.get("listing_id") or "").strip():
@@ -371,7 +410,7 @@ def _op_create_row(run: _Run, row: Mapping[str, Any]) -> None:
 
     # Adoption: never create a duplicate, and never adopt on existence alone:
     # the existing product must match the intended content before Notion is written.
-    catalogue = _call_once(lambda: run.whapi.get_products(count=10000)) or []
+    catalogue = _adoption_catalogue(run)
     matches = [p for p in catalogue if str(p.get("product_retailer_id") or "") == listing_id]
     if len(matches) > 1:
         ids = ", ".join(str(m.get("id")) for m in matches)
@@ -389,17 +428,28 @@ def _op_create_row(run: _Run, row: Mapping[str, Any]) -> None:
 
     if run.time_left is not None and run.time_left() < CREATE_TAIL_SECONDS:
         raise DeferredForTime("not enough Lambda time left to create and verify safely; nothing created, next batch continues")
-    result = _call_once(
-        lambda: run.whapi.create_product(
-            name=title, description=description, price=rent, currency="INR",
-            images=images, url=str(row.get("google_maps_url") or ""), product_retailer_id=listing_id,
-        ),
-    )
+    if _create_outcome_unknown(str(row.get("error_notes") or "")):
+        run.record(row, "", "SKIPPED", "an earlier create for this row has an unknown result and no matching product is visible in the catalogue; not creating again until checked in Meta")
+        return
+    try:
+        result = _call_once(
+            lambda: run.whapi.create_product(
+                name=title, description=description, price=rent, currency="INR",
+                images=images, url=str(row.get("google_maps_url") or ""), product_retailer_id=listing_id,
+            ),
+        )
+    except RateLimited:
+        raise  # Whapi answered 429: the request was refused, nothing was created
+    except Exception as exc:  # noqa: BLE001 - the request may have reached Meta
+        run.stop = True
+        raise RuntimeError(f"create request failed with no readable answer ({str(exc)[:80]}); {_UNKNOWN}, product may exist; stopped, later runs will not re-create this row until checked") from exc
     if isinstance(result, str):
-        raise RuntimeError(f"WhAPI error response: {result}")
+        run.stop = True
+        raise RuntimeError(f"WhAPI error response ({result[:80]}); {_UNKNOWN}, product may exist; stopped")
     product_id = str((result or {}).get("id") or (result or {}).get("product_id") or "")
     if not product_id:
-        raise RuntimeError(f"WhAPI returned no product ID: {result}")
+        run.stop = True
+        raise RuntimeError(f"WhAPI returned no product ID ({str(result)[:80]}); {_UNKNOWN}, product may exist; stopped")
     # Verify before writeback (locked order, 24 Nov): read the product back and
     # confirm it exists with the intended name before touching Notion.
     run.sleeper(CREATE_ASSIGN_GAP_SECONDS)  # 30s spacing between catalogue requests
@@ -409,6 +459,8 @@ def _op_create_row(run: _Run, row: Mapping[str, Any]) -> None:
     mismatch = _content_mismatch(live_product, title, description, rent, images, str(row.get("google_maps_url") or ""))
     if mismatch:
         raise RuntimeError(f"created product {product_id} content mismatch ({mismatch}); Notion untouched")
+    if run.catalogue_cache is not None:
+        run.catalogue_cache.append({"id": product_id, "product_retailer_id": listing_id})
     _mark_posted(run, row, product_id)
     run.record(row, product_id, "OK", "created and verified")
     # Collection assignment is deliberately NOT chained here (Zeid 3:04 PM):
