@@ -822,8 +822,8 @@ def build_catalogue_description(row: dict, raw_text: str, *, verified_society_na
     (Zeid): when the row has a society name, the description closes with
     it; otherwise with the bare "*Landmark:*" label. Superseded 24 Nov
     8:33 PM (Zeid): no Maps link in the description at all (it goes only to
-    the product link field); society ending is "*📍 <society>:*", no-society
-    ending is "*Landmark:*" with no pin. A society equal to the locality is
+    the product link field); society ending is "*📍<society>:*", no-society
+    ending is "*📍Landmark:*" (corrected 8:53 PM: pin, no space). A society equal to the locality is
     the pipeline fallback and never renders as a name. Lines
     render only when their data exists.
     """
@@ -942,11 +942,12 @@ def build_catalogue_description(row: dict, raw_text: str, *, verified_society_na
     # Zeid 24 Nov 8:33 PM: the description carries NO Maps link. The link
     # reaches the catalogue only through the product's separate link field
     # (google_maps_url). The ending is the label alone: with a society,
-    # "*📍 <society>:*"; otherwise "*Landmark:*" (no pin).
+    # "*📍<society>:*"; otherwise "*📍Landmark:*" (pin, no space; corrected
+    # by Zeid 24 Nov 8:53 PM, the missing pin was his own miss).
     if society:
-        sections.append(f"*📍 {society}:*")
+        sections.append(f"*📍{society}:*")
     else:
-        sections.append("*Landmark:*")
+        sections.append("*📍Landmark:*")
     return "\n\n".join(sections)
 
 
