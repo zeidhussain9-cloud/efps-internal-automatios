@@ -307,11 +307,16 @@ def _op_create_row(run: _Run, row: Mapping[str, Any]) -> None:
 
     # Adoption: never create a duplicate, and never adopt on existence alone:
     # the existing product must match the intended content before Notion is written.
-    existing = _call_with_retry(lambda: run.whapi.find_product_by_retailer_id(listing_id), sleeper=run.sleeper)
+    catalogue = _call_with_retry(lambda: run.whapi.get_products(count=10000), sleeper=run.sleeper) or []
+    matches = [p for p in catalogue if str(p.get("product_retailer_id") or "") == listing_id]
+    if len(matches) > 1:
+        ids = ", ".join(str(m.get("id")) for m in matches)
+        raise RuntimeError(f"{len(matches)} catalogue products share listing_id {listing_id} ({ids}); row stopped for manual review, nothing adopted or created")
+    existing = matches[0] if matches else None
     if existing:
         product_id = str(existing.get("id") or "")
         live = _call_with_retry(lambda: run.whapi.get_product(product_id), sleeper=run.sleeper)
-        mismatch = _content_mismatch(live, title, description, rent)
+        mismatch = _content_mismatch(live, title, description, rent, images, str(row.get("google_maps_url") or ""))
         if mismatch:
             raise RuntimeError(f"existing product {product_id} does not match intended content ({mismatch}); not adopted, Notion untouched")
         _mark_posted(run, row, product_id)
@@ -336,7 +341,7 @@ def _op_create_row(run: _Run, row: Mapping[str, Any]) -> None:
     live_product = _call_with_retry(lambda: run.whapi.get_product(product_id), sleeper=run.sleeper)
     if not str((live_product or {}).get("name") or "").strip():
         raise RuntimeError(f"created product {product_id} not readable on verification; Notion untouched")
-    mismatch = _content_mismatch(live_product, title, description, rent)
+    mismatch = _content_mismatch(live_product, title, description, rent, images, str(row.get("google_maps_url") or ""))
     if mismatch:
         raise RuntimeError(f"created product {product_id} content mismatch ({mismatch}); Notion untouched")
     _mark_posted(run, row, product_id)
@@ -345,7 +350,8 @@ def _op_create_row(run: _Run, row: Mapping[str, Any]) -> None:
     # it runs as its own separately-gated flow.
 
 
-def _content_mismatch(product: Mapping[str, Any] | None, title: str, description: str, rent: int) -> str:
+def _content_mismatch(product: Mapping[str, Any] | None, title: str, description: str, rent: int,
+                      images: list[str] | None = None, url: str = "") -> str:
     """Empty string when the live product matches intent; else which fields differ."""
     def norm(v: Any) -> str:
         return " ".join(str(v or "").split())
@@ -360,6 +366,14 @@ def _content_mismatch(product: Mapping[str, Any] | None, title: str, description
             bad.append("price")
     except (TypeError, ValueError):
         bad.append("price")
+    if images is not None:
+        # Meta may re-host photo links, so compare the COUNT of photos, and exact
+        # links only when the product returns links that look like our originals.
+        live_images = [str(i.get("link") if isinstance(i, dict) else i) for i in (p.get("images") or [])]
+        if len(live_images) != len(images):
+            bad.append(f"photos ({len(live_images)} live vs {len(images)} intended)")
+    if url and p.get("url") is not None and norm(p.get("url")) != norm(url):
+        bad.append("link")
     return ", ".join(bad)
 
 

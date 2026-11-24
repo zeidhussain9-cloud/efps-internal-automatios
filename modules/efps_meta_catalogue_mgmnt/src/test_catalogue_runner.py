@@ -227,7 +227,7 @@ def test_create_adopts_existing_product_instead_of_duplicating():
     row = make_row()
     whapi.products["55"] = {"id": "55", "product_retailer_id": "EF-2611-AAAA", "collection_ids": [],
                             "name": row["catalog_title"], "description": row["catalogue_description"],
-                            "price": row["monthly_rent"]}
+                            "price": row["monthly_rent"], "images": row["cloudinary_image_urls"].split()}
     store = FakeStore([row], switches={**ALL_SWITCHES, "ASSIGN": False})
     result = run("create", store, whapi)
     assert not any(c[0] == "create" for c in whapi.calls)
@@ -257,7 +257,7 @@ def test_create_rechecks_row_just_before_acting():
     store = Drifting([make_row()], switches={**ALL_SWITCHES, "ASSIGN": False})
     result = run("create", store, whapi)
     assert "no longer eligible" in result["lines"][0]
-    assert not any(c[0] in ("create", "find") for c in whapi.calls)
+    assert not any(c[0] == "create" for c in whapi.calls)
     assert store.updates == []
 
 
@@ -441,7 +441,7 @@ def test_second_429_defers_the_row():
     store = FakeStore([make_row()], switches={**ALL_SWITCHES, "ASSIGN": False})
     def always_429(*a, **k):
         raise RuntimeError("WhAPI HTTP 429")
-    whapi.find_product_by_retailer_id = always_429
+    whapi.get_products = always_429
     result = run("create", store, whapi, sleeper=lambda s: None)
     assert result["counts"]["failed"] == 1
     assert "429" in result["lines"][0]
@@ -492,7 +492,8 @@ def test_queued_decisions_execute_before_the_normal_pass():
     whapi = FakeWhapi()
     _r = make_row(page_id="q-page", listing_id="EF-2611-AAAA")
     whapi.products["88"] = {"id": "88", "product_retailer_id": "EF-2611-AAAA", "name": _r["catalog_title"],
-                            "description": _r["catalogue_description"], "price": _r["monthly_rent"]}
+                            "description": _r["catalogue_description"], "price": _r["monthly_rent"],
+                            "images": _r["cloudinary_image_urls"].split()}
     store = FakeStore([make_row(), _r], switches={**ALL_SWITCHES, "ASSIGN": False})
     store.decisions = [{"id": "q1", "operation": "create", "decision": "Reprocess",
                         "row": make_row(page_id="q-page", listing_id="EF-2611-AAAA")}]
@@ -515,3 +516,28 @@ def test_create_preserves_other_live_at_selections():
     store = FakeStore([make_row(**{"live at": ["99acres"]})], switches={**ALL_SWITCHES, "ASSIGN": False})
     run("create", store, whapi)
     assert store.updates[0][1]["live at"] == ["99acres", "Meta Catalogue"]
+
+
+def test_create_stops_on_duplicate_listing_id_matches():
+    whapi = FakeWhapi()
+    for pid in ("55", "56"):
+        whapi.products[pid] = {"id": pid, "product_retailer_id": "EF-2611-AAAA"}
+    store = FakeStore([make_row()], switches={**ALL_SWITCHES, "ASSIGN": False})
+    result = run("create", store, whapi)
+    assert result["counts"]["failed"] == 1 and "share listing_id" in str(result["lines"])
+    assert store.updates == [] and not any(c[0] == "create" for c in whapi.calls)
+
+
+def test_adoption_rejects_wrong_photo_count_or_link():
+    row = make_row(google_maps_url="https://maps/x")
+    base = {"id": "55", "product_retailer_id": "EF-2611-AAAA", "name": row["catalog_title"],
+            "description": row["catalogue_description"], "price": row["monthly_rent"],
+            "images": row["cloudinary_image_urls"].split(), "url": "https://maps/x"}
+    for bad in ({"images": ["only-one"]}, {"url": "https://maps/other"}):
+        whapi = FakeWhapi(); whapi.products["55"] = {**base, **bad}
+        store = FakeStore([dict(row)], switches={**ALL_SWITCHES, "ASSIGN": False})
+        result = run("create", store, whapi)
+        assert result["counts"]["failed"] == 1 and store.updates == []
+    whapi = FakeWhapi(); whapi.products["55"] = dict(base)
+    store = FakeStore([dict(row)], switches={**ALL_SWITCHES, "ASSIGN": False})
+    assert "ADOPTED" in run("create", store, whapi)["lines"][0]
