@@ -261,7 +261,7 @@ def generate_description(row: Mapping[str, Any]) -> tuple[str, str]:
         lines.append("• " + " • ".join(line1_parts))
 
     # Line 2: • Area Sq.Ft • Floor
-    area = row.get("built_up_area")
+    area = row.get("carpet_area") or row.get("built_up_area")
     floor_num = str(row.get("floor_number") or "").strip()
     total_floors = str(row.get("total_floors") or "").strip()
     if area and floor_num and total_floors:

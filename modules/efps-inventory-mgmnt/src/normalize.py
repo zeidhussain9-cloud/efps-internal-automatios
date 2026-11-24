@@ -6,7 +6,7 @@ FIXED={"transaction_type":"Rent","city":"Bengaluru","whatsapp_contact_link":"htt
 NUMERIC_FIELDS={"pincode","built_up_area","carpet_area","age_of_property_years","total_floors","bathrooms","balconies","open_parking","monthly_rent","security_deposit"}
 SEMI_FURNISHED_DEFAULTS=("Wardrobe","Modular Kitchen","Geyser","Fan","Light")
 FULLY_FURNISHED_DEFAULTS=SEMI_FURNISHED_DEFAULTS+("Fridge","Washing Machine","TV","Sofa","Bed","Dining Table")
-CARPET_RATIO=0.90
+AREA_BUFFER_SQFT=90  # Zeid 15 Nov 2026 "Take 90": built-up = carpet + 90, both directions
 PORTAL_SUBTYPE_MAP={"Triplex Villa":"Villa","Complex Villa":"Villa","Villa Complex":"Villa","Duplex Villa":"Duplex","Penthouse":"Apartment","Triplex":"Independent House","Builder Floor":"Independent Floor","Independent Building":"Independent House"}
 NO_FLOOR_SUBTYPES={"Villa","Independent House","Duplex"}
 _RK_RE=re.compile(r"\b(\d)\s*rk\b",re.I)
@@ -163,7 +163,9 @@ def normalize(row:dict,raw_text:str="",*,resolved_internal_property_type:str="")
     if not out.get("flat_furnishings"):
         if out.get("furnish_type")=="Semi Furnished":out["flat_furnishings"]=", ".join(SEMI_FURNISHED_DEFAULTS)
         elif out.get("furnish_type")=="Fully Furnished":out["flat_furnishings"]=", ".join(FULLY_FURNISHED_DEFAULTS)
-    if not out.get("carpet_area") and out.get("built_up_area","").isdigit():out["carpet_area"]=str(int(round(int(out["built_up_area"])*CARPET_RATIO)))
+    _carpet=str(out.get("carpet_area","") or "").strip();_built=str(out.get("built_up_area","") or "").strip()
+    if _carpet.isdigit() and not _built:out["built_up_area"]=str(int(_carpet)+AREA_BUFFER_SQFT)
+    elif _built.isdigit() and not _carpet and int(_built)>AREA_BUFFER_SQFT:out["carpet_area"]=str(int(_built)-AREA_BUFFER_SQFT)
     if not out.get("servant_room"):out["servant_room"]="No"
     if resolved_internal_property_type not in {"Gated Community","Semi Gated","Standalone",""}:raise ValueError("normalize requires canonical resolved_internal_property_type")
     out["internal_property_type"]=resolved_internal_property_type

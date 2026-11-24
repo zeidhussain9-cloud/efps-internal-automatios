@@ -96,12 +96,16 @@ def scan(text: str) -> dict[str, str]:
         v = _scale(m.group(1), m.group(2) if m.lastindex and m.lastindex > 1 else "")
         if 3000 <= int(v) <= 100000000: out["monthly_rent"] = v
 
-    for key, pat in (("carpet_area", r"carpet\s*area\D{0,5}(\d{3,5})"),("built_up_area", r"built-?up\s*area\D{0,5}(\d{3,5})")):
+    # Area (Zeid, 24 Nov 2026 6:57 PM and 7:03 PM): a labelled carpet or built-up
+    # value goes to its own column; an unlabelled "Sqft" figure is the CARPET area.
+    _unit = r"(?:\(?\s*(?:sq\.?\s*ft\.?|sqft|sft)\s*\)?)?"
+    for key, pat in (("carpet_area", r"\bcarpet(?:[\s\-]*area)?\s*" + _unit + r"\s*[:\-=]*\s*(\d{3,5})"),
+                     ("built_up_area", r"(?<!super\s)(?<!super-)\bbuilt[\s\-]*up(?:[\s\-]*area)?\s*" + _unit + r"\s*[:\-=]*\s*(\d{3,5})")):
         m = re.search(pat, text, re.I)
         if m: out[key] = m.group(1)
-    if "built_up_area" not in out:
-        m = re.search(r"sqft\s*[:\-]\s*(\d{3,5})", text, re.I) or re.search(r"\b(\d{3,5})\s*(?:sq\.?\s*ft|sqft|sft)\b", text, re.I)
-        if m: out["built_up_area"] = m.group(1)
+    if "carpet_area" not in out and "built_up_area" not in out:
+        m = re.search(r"sq\.?\s*ft\.?\s*[:\-]\s*(\d{3,5})|sqft\s*[:\-]\s*(\d{3,5})", text, re.I) or re.search(r"\b(\d{3,5})\s*(?:sq\.?\s*ft|sqft|sft)\b", text, re.I)
+        if m: out["carpet_area"] = next(g for g in m.groups() if g)
 
     m = re.search(r"floor\s*[:\-]\s*(g|ground|\d{1,2})\s*(?:/|of)\s*(\d{1,2})", text, re.I)
     if m:

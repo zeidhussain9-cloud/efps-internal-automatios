@@ -704,7 +704,7 @@ def build_whatsapp_post(row: dict, raw_text: str, *, maps_verified: bool, verifi
         sections.append("\n".join(money))
 
     specs = []
-    sqft = str(row.get("built_up_area") or "").strip()
+    sqft = str(row.get("carpet_area") or row.get("built_up_area") or "").strip()  # advertised sqft = carpet (Zeid 24 Nov 2026)
     floor = str(row.get("floor_number") or "").strip()
     total_floors = str(row.get("total_floors") or "").strip()
     if floor and total_floors and "/" not in floor and floor.lower() not in {"villa", "independent house", "duplex"}:
@@ -848,7 +848,7 @@ def build_catalogue_description(row: dict, raw_text: str, *, verified_society_na
 
     specs = []
     spec_parts = []
-    sqft = str(row.get("built_up_area") or "").strip()
+    sqft = str(row.get("carpet_area") or row.get("built_up_area") or "").strip()  # advertised sqft = carpet (Zeid 24 Nov 2026)
     if sqft:
         spec_parts.append(f"{sqft} sqft")
     floor = str(row.get("floor_number") or "").strip()
