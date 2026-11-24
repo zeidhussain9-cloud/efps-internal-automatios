@@ -1259,14 +1259,14 @@ def process_listing_page(page: dict, *, notion: NotionClient, store: SupabaseInt
                     notion.update_page(page_id, {"catalog_title": _rich(title), "Property": {"title": [{"text": {"content": title}}]}})
                     row["catalog_title"] = title
                 existing_post = str(row.get("whatsapp_post") or "")
-                post_link = re.search(r"https://(?:www\.)?google\.com/maps\S+", existing_post)
+                post_link = re.search(r"https://(?:www\.|maps\.)?google\.[a-z.]+/maps\S+", existing_post)
                 post = build_whatsapp_post(row, str(row.get("raw_message_text") or ""), maps_verified=False,
                     resolved_maps_url=post_link.group(0) if post_link else "")
                 if post and post != existing_post:
                     notion.update_page(page_id, {"whatsapp_post": _rich(post)})
                     row["whatsapp_post"] = post
             existing_desc = str(row.get("catalogue_description") or "")
-            carry = re.search(r"https://(?:www\.)?google\.com/maps\S+", existing_desc)
+            carry = re.search(r"https://(?:www\.|maps\.)?google\.[a-z.]+/maps\S+", existing_desc)
             rebuilt = build_catalogue_description(
                 row, str(row.get("raw_message_text") or ""),
                 resolved_maps_url=carry.group(0) if carry else "",
