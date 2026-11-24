@@ -41,7 +41,7 @@ IST = timezone(timedelta(hours=5, minutes=30))
 RUN_WINDOW_WEEKDAY = 1  # Tuesday
 RUN_WINDOW_START_HOUR = 9  # 09:00 IST inclusive
 RUN_WINDOW_END_HOUR = 10  # 10:00 IST exclusive
-CREATE_WINDOW_START_HOUR = 21  # daily creation run, 9:00 PM IST (approved 24 Nov, build only)
+CREATE_WINDOW_START_HOUR = 21  # create window opens 9:00 PM IST; the daily run fires at 22:30 IST (EventBridge, template.yaml)
 CREATE_WINDOW_END_HOUR = 23  # the 9-11 PM span is only where the watchdog needs no heartbeat; it does NOT stop a run
 # Zeid (24 Nov, 5:15 PM): creation keeps going until every eligible property is processed.
 # Safety stops instead of a clock cutoff: any failure/429, the 200-batch runaway guard, and
