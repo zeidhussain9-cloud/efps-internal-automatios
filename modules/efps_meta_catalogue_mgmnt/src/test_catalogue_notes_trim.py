@@ -65,3 +65,11 @@ def test_trim_raises_if_pin_and_newest_could_not_fit(monkeypatch):
     monkeypatch.setattr(cns, "_ERROR_NOTES_LIMIT", 100)
     with pytest.raises(cns.CatalogueStoreError):
         cns._trim_notes("[t] CREATE EF-1 ATTEMPT STARTED " + "a" * 80 + "\n[t] UPDATE EF-1 OK " + "b" * 80)
+
+
+def test_last_run_at_reads_the_panel_heartbeat(monkeypatch):
+    st = cns.NotionCatalogueStore("t", session=object())
+    monkeypatch.setattr(st, "_panel_row", lambda op: {"properties": {"Last Run At": {"date": {"start": "2026-11-24T19:30:00+00:00"}}}})
+    assert st.last_run_at("create").isoformat() == "2026-11-24T19:30:00+00:00"
+    monkeypatch.setattr(st, "_panel_row", lambda op: None)
+    assert st.last_run_at("create") is None

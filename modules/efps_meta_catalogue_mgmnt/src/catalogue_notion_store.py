@@ -277,6 +277,16 @@ class NotionCatalogueStore:
             },
         )
 
+    def last_run_at(self, operation: str):
+        """When the control-panel row's Last Run At was last written (a batch finished); None if never."""
+        row = self._panel_row(operation)
+        start = (((row or {}).get("properties") or {}).get("Last Run At") or {}).get("date") or {}
+        value = start.get("start")
+        if not value:
+            return None
+        parsed = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+        return parsed if parsed.tzinfo else parsed.replace(tzinfo=timezone.utc)
+
     def _panel_row(self, operation: str) -> dict | None:
         for page in self._query_all(PANEL_DATABASE_ID):
             props = page.get("properties") or {}

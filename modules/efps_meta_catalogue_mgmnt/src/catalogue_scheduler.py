@@ -42,7 +42,13 @@ RUN_WINDOW_WEEKDAY = 1  # Tuesday
 RUN_WINDOW_START_HOUR = 9  # 09:00 IST inclusive
 RUN_WINDOW_END_HOUR = 10  # 10:00 IST exclusive
 CREATE_WINDOW_START_HOUR = 21  # daily creation run, 9:00 PM IST (approved 24 Nov, build only)
-CREATE_WINDOW_END_HOUR = 23  # run window 9-11 PM; the 11:05 PM watchdog closes any crash leftovers
+CREATE_WINDOW_END_HOUR = 23  # the 9-11 PM span is only where the watchdog needs no heartbeat; it does NOT stop a run
+# Zeid (24 Nov, 5:15 PM): creation keeps going until every eligible property is processed.
+# Safety stops instead of a clock cutoff: any failure/429, the 200-batch runaway guard, and
+# the overnight stop below, which keeps a long run from reaching the Tuesday 9 AM delete run.
+CREATE_OVERNIGHT_STOP_HOUR = 8
+CREATE_OVERNIGHT_STOP_MINUTE = 30
+CREATE_HEARTBEAT_MAX_AGE_SECONDS = 20 * 60  # a live chain writes the panel's Last Run At after every batch
 OPS = ("delete", "create")
 
 
@@ -52,6 +58,13 @@ def _log(event: str, **fields: Any) -> None:
 
 def _truthy(value: Any) -> bool:
     return str(value or "").strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _past_overnight_stop(now_utc: datetime) -> bool:
+    """True from 8:30 AM until the 9 PM start (IST): a create chain must not run by day."""
+    ist = now_utc.astimezone(IST)
+    minutes = ist.hour * 60 + ist.minute
+    return CREATE_OVERNIGHT_STOP_HOUR * 60 + CREATE_OVERNIGHT_STOP_MINUTE <= minutes < CREATE_WINDOW_START_HOUR * 60
 
 
 def _in_run_window(now_utc: datetime) -> bool:
@@ -208,8 +221,8 @@ def _batch(event, lam, store, context, *, run_delete, sleep, now) -> dict:
     if not _truthy(os.environ.get(CATALOG_WRITE_FLAG)):
         return _finalize({**event, "error": "catalog-write flag OFF mid-run; stopping safe"},
                          lam, store, context, sleep=sleep, now=now)
-    if op == "create" and not _in_run_window(now()):
-        return _finalize({**event, "error": "creation window (9-11 PM IST) closed; stopping safe, remaining rows continue at the next scheduled run"},
+    if op == "create" and _past_overnight_stop(now()):
+        return _finalize({**event, "error": "overnight safety stop (8:30 AM IST, before the Tuesday 9 AM delete run) reached with creation unfinished; remaining eligible rows are NOT created, they continue at the next scheduled run"},
                          lam, store, context, sleep=sleep, now=now)
     try:
         result = (run_delete(op) if op == "create" else run_delete()) or {}
@@ -259,7 +272,10 @@ def _batch(event, lam, store, context, *, run_delete, sleep, now) -> dict:
         _self_invoke(lam, fn, {"step": "batch", "run_id": run_id, "op": op, "batch": batch + 1,
                                "totals": totals, "deleted": deleted, "failures": failures})
         return {"status": "chained", "run_id": run_id, "next_batch": batch + 1}
-    return _finalize({**event, "totals": totals, "deleted": deleted, "failures": failures},
+    unfinished = []
+    if op == "create":
+        unfinished = [l[:200] for l in lines if " SKIPPED " in l and "no eligible rows" not in l]
+    return _finalize({**event, "totals": totals, "deleted": deleted, "failures": failures, "unfinished": unfinished},
                      lam, store, context, sleep=sleep, now=now)
 
 
@@ -290,6 +306,9 @@ def _finalize(event, lam, store, context, *, sleep, now) -> dict:
     ]
     if error:
         body.append(f"ERROR: {error} - gate restored, no auto-rerun; waits for Zeid's decision.")
+    unfinished = list(event.get("unfinished") or [])
+    if unfinished:
+        body.append(f"UNFINISHED: {len(unfinished)} eligible row(s) NOT created and still waiting (reasons: " + " | ".join(unfinished[:5]) + "). The run ended because nothing more could be created, not because everything was done.")
     if failures:
         body.append("FAILURES: " + " | ".join(failures[:5]))
     body.append("SWITCHES RESTORED: catalog-write OFF, DRY_RUN ON" + (", CREATE OFF." if op == "create" else ".") +
@@ -341,6 +360,14 @@ def _watchdog(lam, store, context, *, sleep, now) -> dict:
     if _in_run_window(now()):
         _log("catalogue_watchdog_ok", detail="flag ON inside the Tuesday run window")
         return {"status": "ok", "detail": "run window"}
+    beat = None
+    try:
+        beat = store.last_run_at("create") if hasattr(store, "last_run_at") else None
+    except Exception as exc:  # noqa: BLE001 - unreadable heartbeat = treat the run as not alive
+        _log("catalogue_watchdog_heartbeat_unreadable", error=str(exc)[:200])
+    if beat is not None and 0 <= (now() - beat).total_seconds() <= CREATE_HEARTBEAT_MAX_AGE_SECONDS:
+        _log("catalogue_watchdog_ok", detail="flag ON outside the window but a creation batch finished within 20 minutes; run is alive")
+        return {"status": "ok", "detail": "creation chain alive"}
     problems = _restore(lam, store, fn, sleep=sleep)
     _log("catalogue_watchdog_alarm",
          detail="catalog-write flag was ON outside the run window; forced restore",

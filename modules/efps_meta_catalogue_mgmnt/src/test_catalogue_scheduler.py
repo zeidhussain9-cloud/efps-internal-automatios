@@ -230,6 +230,36 @@ class WatchdogTests(unittest.TestCase):
         self.assertEqual(out["status"], "ok")
         self.assertEqual(lam.updates, [])
 
+    def test_watchdog_leaves_a_live_creation_chain_alone_at_night(self):
+        lam, store = FakeLambda("true"), FakeStore(dry_run=False)
+        night = datetime(2026, 11, 24, 19, 35, tzinfo=timezone.utc)  # 1:05 AM IST Wednesday
+        store.last_run_at = lambda op: datetime(2026, 11, 24, 19, 30, tzinfo=timezone.utc)  # batch finished 5 min ago
+        with base_env("true"):
+            out = cs.handle_schedule({"step": "watchdog"}, Ctx(), notion_token="t", lam=lam, store=store,
+                                     run_delete=lambda: {}, sleep=lambda s: None, now=lambda: night)
+        self.assertEqual(out["status"], "ok")
+        self.assertEqual(lam.updates, [])
+
+    def test_watchdog_restores_a_stale_creation_run_at_night(self):
+        lam, store = FakeLambda("true"), FakeStore(dry_run=False)
+        night = datetime(2026, 11, 24, 19, 35, tzinfo=timezone.utc)
+        store.last_run_at = lambda op: datetime(2026, 11, 24, 19, 0, tzinfo=timezone.utc)  # 35 min ago: crashed
+        with base_env("true"):
+            out = cs.handle_schedule({"step": "watchdog"}, Ctx(), notion_token="t", lam=lam, store=store,
+                                     run_delete=lambda: {}, sleep=lambda s: None, now=lambda: night)
+        self.assertEqual(out["status"], "alarmed")
+        self.assertEqual(lam.updates, ["false"])
+
+    def test_watchdog_restores_when_heartbeat_unreadable_or_missing(self):
+        for beat in (lambda op: None, lambda op: (_ for _ in ()).throw(RuntimeError("notion down"))):
+            lam, store = FakeLambda("true"), FakeStore(dry_run=False)
+            store.last_run_at = beat
+            with base_env("true"):
+                out = cs.handle_schedule({"step": "watchdog"}, Ctx(), notion_token="t", lam=lam, store=store,
+                                         run_delete=lambda: {}, sleep=lambda s: None,
+                                         now=lambda: datetime(2026, 11, 24, 19, 35, tzinfo=timezone.utc))
+            self.assertEqual(out["status"], "alarmed")
+
     def test_unknown_step_raises(self):
         with self.assertRaises(cs.ScheduleError):
             cs.handle_schedule({"step": "nope"}, Ctx(), notion_token="t",
@@ -298,20 +328,44 @@ class CreateFlowTests(unittest.TestCase):
         self.assertFalse(store.create_on)
         self.assertEqual(lam.flag, "false")
 
-    def test_create_chain_stops_safe_when_the_window_has_closed(self):
+    def test_create_chain_keeps_going_after_11pm(self):
+        lam, store = FakeLambda("true"), FakeStore(dry_run=False)
+        res = run_delete_result(ok=3, lines=["[t] CREATE EF-9 product=p9 OK created"])
+        ev = {"step": "batch", "op": "create", "run_id": "create-x", "batch": 5, "totals": {}, "deleted": [], "failures": []}
+        late = datetime(2026, 11, 24, 18, 0, tzinfo=timezone.utc)  # 11:30 PM IST: no clock cutoff any more
+        with base_env("true"):
+            out = cs.handle_schedule(ev, Ctx(), notion_token="t", lam=lam, store=store,
+                                     run_delete=lambda op="delete": res, sleep=lambda s: None, now=lambda: late)
+        self.assertEqual(out["status"], "chained")
+
+    def test_create_chain_stops_loudly_at_the_overnight_safety_stop(self):
         lam, store = FakeLambda("true"), FakeStore(dry_run=False)
         store.create_on = True
         seen = []
-        ev = {"step": "batch", "op": "create", "run_id": "create-x", "batch": 5, "totals": {}, "deleted": [], "failures": []}
-        late = datetime(2026, 11, 24, 18, 0, tzinfo=timezone.utc)  # 11:30 PM IST
+        ev = {"step": "batch", "op": "create", "run_id": "create-x", "batch": 50, "totals": {"ok": 30}, "deleted": ["EF-1"], "failures": []}
+        morning = datetime(2026, 11, 25, 3, 5, tzinfo=timezone.utc)  # 8:35 AM IST
         with base_env("true"):
             out = cs.handle_schedule(ev, Ctx(), notion_token="t", lam=lam, store=store,
-                                     run_delete=lambda op="delete": seen.append(op), sleep=lambda s: None, now=lambda: late)
-        self.assertEqual(seen, [])  # nothing run after the window
-        self.assertEqual(out["status"], "failed")
-        self.assertIn("window", out["error"])
+                                     run_delete=lambda op="delete": seen.append(op), sleep=lambda s: None, now=lambda: morning)
+        self.assertEqual(seen, [])
+        self.assertEqual(out["status"], "failed")  # never a silent normal completion
+        self.assertIn("overnight safety stop", out["error"])
+        self.assertIn("NOT created", out["error"])
         self.assertEqual(lam.flag, "false")
         self.assertFalse(store.create_on)
+
+    def test_chain_ending_with_skipped_rows_reports_them_as_unfinished(self):
+        lam, store = FakeLambda("true"), FakeStore(dry_run=False)
+        store.create_on = True
+        res = run_delete_result(ok=0, skipped=2, lines=["[t] CREATE EF-7 SKIPPED no photos; skipped",
+                                                        "[t] CREATE EF-8 SKIPPED unknown result, not creating again until checked in Meta"])
+        ev = {"step": "batch", "op": "create", "run_id": "create-x", "batch": 3, "totals": {}, "deleted": [], "failures": []}
+        with base_env("true"):
+            out = cs.handle_schedule(ev, Ctx(), notion_token="t", lam=lam, store=store,
+                                     run_delete=lambda op="delete": res, sleep=lambda s: None, now=lambda: TUE_PM_IST)
+        text = str(store.log_entries)
+        self.assertIn("UNFINISHED: 2", text)
+        self.assertIn("not because everything was done", text)
 
     def test_create_chain_is_not_limited_to_40_batches(self):
         lam, store = FakeLambda("true"), FakeStore(dry_run=False)
