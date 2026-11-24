@@ -78,7 +78,7 @@ def masters_from_environment() -> dict:
     }
 
 
-def run_catalogue_operation(operation: str, *, notion_token: str, store=None, whapi=None) -> dict:
+def run_catalogue_operation(operation: str, *, notion_token: str, store=None, whapi=None, time_left=None) -> dict:
     """Execute one gated operation against live Notion + Whapi.
 
     store/whapi are injectable for tests; production builds them from the
@@ -108,4 +108,4 @@ def run_catalogue_operation(operation: str, *, notion_token: str, store=None, wh
         whapi = WhApiClient(credentials=WhApiCredentials(token=token))
     from catalogue_runner import run_operation
 
-    return run_operation(operation, store=store, whapi=whapi, masters=masters_from_environment())
+    return run_operation(operation, store=store, whapi=whapi, masters=masters_from_environment(), time_left=time_left)

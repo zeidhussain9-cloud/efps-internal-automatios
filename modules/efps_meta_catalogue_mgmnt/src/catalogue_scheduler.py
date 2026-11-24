@@ -148,7 +148,10 @@ def handle_schedule(event: Mapping[str, Any], context: Any, *, notion_token: str
     if run_delete is None:
         def run_delete(op="delete"):
             import catalogue_trigger
-            return catalogue_trigger.run_catalogue_operation(op, notion_token=notion_token)
+            left = None
+            if context is not None and hasattr(context, "get_remaining_time_in_millis"):
+                left = lambda: context.get_remaining_time_in_millis() / 1000.0
+            return catalogue_trigger.run_catalogue_operation(op, notion_token=notion_token, time_left=left)
     now = now or (lambda: datetime.now(timezone.utc))
     step = str(event.get("step") or "").strip().lower()
 

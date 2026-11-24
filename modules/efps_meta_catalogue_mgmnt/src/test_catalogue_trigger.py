@@ -54,7 +54,7 @@ def test_run_catalogue_operation_uses_injected_store_and_whapi(monkeypatch):
 
     seen = {}
 
-    def fake_run(operation, *, store, whapi, masters):
+    def fake_run(operation, *, store, whapi, masters, time_left=None):
         seen.update(operation=operation, store=store, whapi=whapi, masters=masters)
         return {"counts": {"ok": 1}}
 

@@ -42,7 +42,13 @@ SWITCH_BY_OPERATION = {
     "assign": "ASSIGN",
     "reconcile": "RECONCILE",
 }
-CAPS = {"create": 10, "update": 10, "delete": 3, "assign": 20}
+# Per-BATCH sizes, not nightly totals: the scheduler chains batches until nothing
+# is left. Create is 3 because every created product waits CREATE_ASSIGN_GAP_SECONDS
+# (30s) plus several Whapi calls and one Lambda invocation lasts at most 180s.
+# Worst-case seconds one row can take (no 429): create = 30s gap + 3 calls x 30s
+# timeout + Notion writes (25s timeout x ~3). Used only by the deadline guard.
+ROW_TIME_NEEDED_SECONDS = {"create": 120, "update": 60, "delete": 60, "assign": 60, "reconcile": 0}
+CAPS = {"create": 3, "update": 10, "delete": 3, "assign": 20}
 CREATE_ASSIGN_GAP_SECONDS = 30
 RATE_LIMIT_RETRY_SECONDS = 30
 KNOWN_COLLECTION_IDS = frozenset({
@@ -186,7 +192,7 @@ class _Run:
         }
 
 
-def run_operation(operation: str, *, store: Any, whapi: Any, masters: Mapping[str, bool], now: datetime | None = None, sleeper: Callable[[float], None] = time.sleep) -> dict[str, Any]:
+def run_operation(operation: str, *, store: Any, whapi: Any, masters: Mapping[str, bool], now: datetime | None = None, sleeper: Callable[[float], None] = time.sleep, time_left: Callable[[], float] | None = None) -> dict[str, Any]:
     """Run one gated operation. `store`/`whapi` are injected (fakes in tests).
 
     masters: {"EFPS_WHAPI_LIVE": bool, "EFPS_WHAPI_API_ENABLED": bool} — the two
@@ -228,7 +234,24 @@ def run_operation(operation: str, *, store: Any, whapi: Any, masters: Mapping[st
         if not eligible:
             run.lines.append(log_line(operation, "-", "", "SKIPPED", "no eligible rows", now=now))
         cap = CAPS[operation]
+        if operation == "create":
+            # Rows that can never be created this run (missing details) are
+            # reported but must not take batch slots from creatable rows.
+            creatable = []
+            for row in eligible:
+                problem, _images = create_precheck(row)
+                if problem:
+                    run.record(row, "", "SKIPPED", problem)
+                else:
+                    creatable.append(row)
+            eligible = creatable
         for row in eligible[:cap]:
+            # Deadline guard: one create row is at most ~30s gap + 3 Whapi calls of
+            # up to 30s each, plus one 429 wait+retry per call. Never START a row
+            # without that much Lambda time left; the chain resumes in a new
+            # invocation (the row is untouched, re-read fresh, adoption-checked).
+            if time_left is not None and time_left() < ROW_TIME_NEEDED_SECONDS[operation]:
+                break
             _execute(operation, run, row)
         over_cap = eligible[cap:]
         if run.dry_run:
@@ -263,32 +286,40 @@ def _execute(operation: str, run: _Run, row: Mapping[str, Any]) -> None:
         run.record(row, str(row.get("meta_catalog_id") or ""), "FAILED", str(exc)[:200])
 
 
-def _op_create_row(run: _Run, row: Mapping[str, Any]) -> None:
-    # Pre-checks locked 24 Nov 2026: missing/invalid required details = skip
-    # with the exact reason, no guessing. Collection ID is NOT required -
-    # assignment is a separate flow (Zeid 3:04 PM).
-    listing_id = str(row.get("listing_id") or "").strip()
-    if not listing_id:
-        run.record(row, "", "SKIPPED", "listing_id blank; skipped")
-        return
-    title = str(row.get("catalog_title") or "").strip()
-    if not title:
-        run.record(row, "", "SKIPPED", "catalog_title blank; skipped")
-        return
-    description = str(row.get("catalogue_description") or "").strip()
-    if not description:
-        run.record(row, "", "SKIPPED", "catalogue_description blank; skipped")
-        return
+def create_precheck(row: Mapping[str, Any]) -> tuple[str, list[str]]:
+    """Return (problem, images). problem is "" when the row can be created."""
+    if not str(row.get("listing_id") or "").strip():
+        return "listing_id blank; skipped", []
+    if not str(row.get("catalog_title") or "").strip():
+        return "catalog_title blank; skipped", []
+    if not str(row.get("catalogue_description") or "").strip():
+        return "catalogue_description blank; skipped", []
     try:
         rent = int(row.get("monthly_rent") or 0)
     except (TypeError, ValueError):
         rent = 0
     if rent <= 0:
-        run.record(row, "", "SKIPPED", "monthly_rent not a positive number; skipped")
-        return
+        return "monthly_rent not a positive number; skipped", []
     images = [u for u in str(row.get("cloudinary_image_urls") or "").replace(",", " ").split() if u.strip()][:10]
     if not images:
-        run.record(row, "", "SKIPPED", "no photos; skipped")
+        return "no photos; skipped", []
+    return "", images
+
+
+def _op_create_row(run: _Run, row: Mapping[str, Any]) -> None:
+    # Pre-checks locked 24 Nov 2026: missing/invalid required details = skip
+    # with the exact reason, no guessing. Collection ID is NOT required -
+    # assignment is a separate flow (Zeid 3:04 PM).
+    problem, images = create_precheck(row)
+    title = str(row.get("catalog_title") or "").strip()
+    description = str(row.get("catalogue_description") or "").strip()
+    listing_id = str(row.get("listing_id") or "").strip()
+    try:
+        rent = int(row.get("monthly_rent") or 0)
+    except (TypeError, ValueError):
+        rent = 0
+    if problem:
+        run.record(row, "", "SKIPPED", problem)
         return
     if run.dry_run:
         run.record(row, "", "WOULD", f"create product '{title}' with {len(images)} photos")

@@ -278,24 +278,68 @@ def test_create_never_chains_assignment():
     assert 30 in sleeps  # 30s spacing between catalogue requests is kept
 
 
-def test_create_cap_is_10():
-    rows = [make_row(page_id=f"p{i}", listing_id=f"EF-2611-{i:04d}") for i in range(12)]
+def test_create_batch_size_is_3_and_fits_lambda_timeout():
+    rows = [make_row(page_id=f"p{i}", listing_id=f"EF-2611-{i:04d}") for i in range(5)]
     store = FakeStore(rows, switches={**ALL_SWITCHES, "ASSIGN": False})
     result = run("create", store, FakeWhapi())
-    assert result["counts"]["ok"] == 10
-    # Real runs: no per-row skip notes (approved 21 Nov, Notion 429 fix), count still tracked.
+    assert runner.CAPS["create"] == 3
+    assert result["counts"]["ok"] == 3
     assert result["counts"]["skipped"] == 2
-    assert sum(1 for l in result["lines"] if "cap 10 reached" in l) == 0
-    assert not any("cap 10 reached" in line for _, line in store.activity)
+    assert not any("cap 3 reached" in line for _, line in store.activity)
 
 
 def test_cap_skip_lines_only_in_dry_run():
-    rows = [make_row(page_id=f"p{i}", listing_id=f"EF-2611-{i:04d}") for i in range(12)]
+    rows = [make_row(page_id=f"p{i}", listing_id=f"EF-2611-{i:04d}") for i in range(5)]
     store = FakeStore(rows, switches={**ALL_SWITCHES, "ASSIGN": False, "DRY_RUN": True})
     result = run("create", store, FakeWhapi())
-    assert result["counts"]["would"] == 10
+    assert result["counts"]["would"] == 3
     assert result["counts"]["skipped"] == 2
-    assert sum(1 for l in result["lines"] if "cap 10 reached" in l) == 2
+    assert sum(1 for l in result["lines"] if "cap 3 reached" in l) == 2
+
+
+def test_unfit_rows_never_take_batch_slots():
+    bad = [make_row(page_id=f"b{i}", listing_id=f"EF-2611-B{i:03d}", cloudinary_image_urls="") for i in range(5)]
+    good = [make_row(page_id=f"g{i}", listing_id=f"EF-2611-G{i:03d}") for i in range(3)]
+    store = FakeStore(bad + good, switches={**ALL_SWITCHES, "ASSIGN": False})
+    result = run("create", store, FakeWhapi())
+    assert result["counts"]["ok"] == 3  # bad rows listed first did not starve the good ones
+
+
+def test_full_chain_creates_every_eligible_row_in_batches():
+    rows = [make_row(page_id=f"p{i}", listing_id=f"EF-2611-{i:04d}") for i in range(25)]
+    store, whapi = FakeStore(rows, switches={**ALL_SWITCHES, "ASSIGN": False}), FakeWhapi()
+    batches = []
+    while True:  # what catalogue_scheduler._batch does: chain while ok > 0, stop on 0 or any failure
+        r = run("create", store, whapi)
+        batches.append(r["counts"]["ok"])
+        assert r["counts"]["failed"] == 0
+        if r["counts"]["ok"] == 0:
+            break
+    assert batches == [3] * 8 + [1, 0]
+    assert len(whapi.products) == 25
+    assert len({p["product_retailer_id"] for p in whapi.products.values()}) == 25  # no duplicates
+
+
+def test_deadline_guard_stops_before_starting_a_row_without_time():
+    rows = [make_row(page_id=f"p{i}", listing_id=f"EF-2611-{i:04d}") for i in range(3)]
+    store = FakeStore(rows, switches={**ALL_SWITCHES, "ASSIGN": False})
+    left = iter([170.0, 119.0, 50.0])
+    result = runner.run_operation("create", store=store, whapi=FakeWhapi(), masters=MASTERS_ON,
+                                  sleeper=lambda s: None, time_left=lambda: next(left))
+    assert result["counts"]["ok"] == 1  # second row would have started with <120s left
+    assert [r["Pipeline Status"] for r in rows].count("Posted") == 1
+
+
+def test_second_429_stops_the_row_and_fails_the_batch():
+    rows = [make_row(page_id=f"p{i}", listing_id=f"EF-2611-{i:04d}") for i in range(2)]
+    store, whapi = FakeStore(rows, switches={**ALL_SWITCHES, "ASSIGN": False}), FakeWhapi()
+    orig = whapi.get_products
+    def always_429(count=100):
+        raise RuntimeError("WhAPI HTTP 429: Too many requests")
+    whapi.get_products = always_429
+    result = run("create", store, whapi)
+    assert result["counts"]["failed"] >= 1 and result["counts"]["ok"] == 0
+    assert whapi.products == {}  # nothing created after a double 429
 
 
 # --- UPDATE ---
