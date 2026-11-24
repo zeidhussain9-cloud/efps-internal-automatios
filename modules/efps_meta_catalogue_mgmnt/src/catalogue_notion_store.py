@@ -165,6 +165,10 @@ class NotionCatalogueStore:
     def query_listings(self) -> list[dict]:
         return [listing_row(p) for p in self._query_all(LISTINGS_DATABASE_ID)]
 
+    def read_listing(self, page_id: str) -> dict:
+        """Fresh single-row read, used to re-check eligibility right before a write."""
+        return listing_row(self.request("GET", f"pages/{page_id}"))
+
     def update_listing(self, page_id: str, updates: dict) -> None:
         properties = {}
         if "meta_catalog_id" in updates:

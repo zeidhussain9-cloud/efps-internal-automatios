@@ -294,10 +294,26 @@ def _op_create_row(run: _Run, row: Mapping[str, Any]) -> None:
         run.record(row, "", "WOULD", f"create product '{title}' with {len(images)} photos")
         return
 
-    # Adoption: never create a duplicate of a product that already exists.
+    # Re-read the row immediately before acting: Notion may have changed since the
+    # batch snapshot. Anything no longer eligible is skipped, never created.
+    fresh = run.store.read_listing(str(row.get("page_id") or ""))
+    if not eligible_create(fresh) or str(fresh.get("listing_id") or "").strip() != listing_id:
+        run.record(row, "", "SKIPPED", "no longer eligible when re-checked just before creation; skipped")
+        return
+    for field in ("catalog_title", "catalogue_description", "monthly_rent", "cloudinary_image_urls"):
+        if str(fresh.get(field) or "").strip() != str(row.get(field) or "").strip():
+            run.record(row, "", "SKIPPED", f"{field} changed since the batch read; skipped, next run re-evaluates")
+            return
+
+    # Adoption: never create a duplicate, and never adopt on existence alone:
+    # the existing product must match the intended content before Notion is written.
     existing = _call_with_retry(lambda: run.whapi.find_product_by_retailer_id(listing_id), sleeper=run.sleeper)
     if existing:
         product_id = str(existing.get("id") or "")
+        live = _call_with_retry(lambda: run.whapi.get_product(product_id), sleeper=run.sleeper)
+        mismatch = _content_mismatch(live, title, description, rent)
+        if mismatch:
+            raise RuntimeError(f"existing product {product_id} does not match intended content ({mismatch}); not adopted, Notion untouched")
         _mark_posted(run, row, product_id)
         run.record(row, product_id, "ADOPTED", "product already existed on WhatsApp")
         return
@@ -318,15 +334,33 @@ def _op_create_row(run: _Run, row: Mapping[str, Any]) -> None:
     # confirm it exists with the intended name before touching Notion.
     run.sleeper(CREATE_ASSIGN_GAP_SECONDS)  # 30s spacing between catalogue requests
     live_product = _call_with_retry(lambda: run.whapi.get_product(product_id), sleeper=run.sleeper)
-    live_name = str((live_product or {}).get("name") or "").strip()
-    if not live_name:
+    if not str((live_product or {}).get("name") or "").strip():
         raise RuntimeError(f"created product {product_id} not readable on verification; Notion untouched")
-    if live_name != title:
-        raise RuntimeError(f"created product {product_id} name mismatch ('{live_name}' vs '{title}'); Notion untouched")
+    mismatch = _content_mismatch(live_product, title, description, rent)
+    if mismatch:
+        raise RuntimeError(f"created product {product_id} content mismatch ({mismatch}); Notion untouched")
     _mark_posted(run, row, product_id)
     run.record(row, product_id, "OK", "created and verified")
     # Collection assignment is deliberately NOT chained here (Zeid 3:04 PM):
     # it runs as its own separately-gated flow.
+
+
+def _content_mismatch(product: Mapping[str, Any] | None, title: str, description: str, rent: int) -> str:
+    """Empty string when the live product matches intent; else which fields differ."""
+    def norm(v: Any) -> str:
+        return " ".join(str(v or "").split())
+    p = product or {}
+    bad = []
+    if norm(p.get("name")) != norm(title):
+        bad.append("name")
+    if norm(p.get("description")) != norm(description):
+        bad.append("description")
+    try:
+        if int(float(p.get("price"))) != int(rent):
+            bad.append("price")
+    except (TypeError, ValueError):
+        bad.append("price")
+    return ", ".join(bad)
 
 
 def _mark_posted(run: _Run, row: Mapping[str, Any], product_id: str) -> None:

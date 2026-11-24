@@ -41,7 +41,7 @@ RUN_WINDOW_WEEKDAY = 1  # Tuesday
 RUN_WINDOW_START_HOUR = 9  # 09:00 IST inclusive
 RUN_WINDOW_END_HOUR = 10  # 10:00 IST exclusive
 CREATE_WINDOW_START_HOUR = 21  # daily creation run, 9:00 PM IST (approved 24 Nov, build only)
-CREATE_WINDOW_END_HOUR = 22
+CREATE_WINDOW_END_HOUR = 23  # run window 9-11 PM; the 11:05 PM watchdog closes any crash leftovers
 OPS = ("delete", "create")
 
 

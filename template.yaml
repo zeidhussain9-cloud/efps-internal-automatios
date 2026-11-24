@@ -132,6 +132,14 @@ Resources:
             Schedule: cron(35 4 * * ? *)
             Input: '{"_efps_catalogue_schedule": true, "step": "watchdog"}'
             Enabled: true
+        # Daily 11:05 PM IST watchdog: closes the creation window. If the 9 PM creation
+        # run crashed and left the gate open, this forces everything back to safe.
+        CatalogueCreateWatchdog:
+          Type: Schedule
+          Properties:
+            Schedule: cron(35 17 * * ? *)
+            Input: '{"_efps_catalogue_schedule": true, "step": "watchdog"}'
+            Enabled: true
       Policies:
         - Statement:
             - Effect: Allow

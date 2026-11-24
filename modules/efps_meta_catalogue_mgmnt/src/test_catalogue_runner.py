@@ -96,6 +96,12 @@ class FakeStore:
     def query_listings(self):
         return list(self.rows)
 
+    def read_listing(self, page_id):
+        for row in self.rows:
+            if row.get("page_id") == page_id:
+                return dict(row)
+        raise RuntimeError("row not found")
+
     def update_listing(self, page_id, props):
         self.updates.append((page_id, props))
         for row in self.rows:
@@ -218,12 +224,41 @@ def test_create_writes_product_id_and_meta_channel_only_after_success():
 
 def test_create_adopts_existing_product_instead_of_duplicating():
     whapi = FakeWhapi()
-    whapi.products["55"] = {"id": "55", "product_retailer_id": "EF-2611-AAAA", "collection_ids": []}
-    store = FakeStore([make_row()], switches={**ALL_SWITCHES, "ASSIGN": False})
+    row = make_row()
+    whapi.products["55"] = {"id": "55", "product_retailer_id": "EF-2611-AAAA", "collection_ids": [],
+                            "name": row["catalog_title"], "description": row["catalogue_description"],
+                            "price": row["monthly_rent"]}
+    store = FakeStore([row], switches={**ALL_SWITCHES, "ASSIGN": False})
     result = run("create", store, whapi)
     assert not any(c[0] == "create" for c in whapi.calls)
     assert "ADOPTED" in result["lines"][0]
     assert store.updates[0][1]["meta_catalog_id"] == "55"
+
+
+def test_create_does_not_adopt_a_product_with_different_content():
+    whapi = FakeWhapi()
+    whapi.products["55"] = {"id": "55", "product_retailer_id": "EF-2611-AAAA", "name": "Something else",
+                            "description": "other", "price": 1, "collection_ids": []}
+    store = FakeStore([make_row()], switches={**ALL_SWITCHES, "ASSIGN": False})
+    result = run("create", store, whapi)
+    assert result["counts"]["failed"] == 1
+    assert "not adopted" in str(result["lines"])
+    assert store.updates == []
+    assert not any(c[0] == "create" for c in whapi.calls)
+
+
+def test_create_rechecks_row_just_before_acting():
+    class Drifting(FakeStore):
+        def read_listing(self, page_id):
+            r = super().read_listing(page_id)
+            r["Availability"] = "Rented Out"   # changed after the batch snapshot
+            return r
+    whapi = FakeWhapi()
+    store = Drifting([make_row()], switches={**ALL_SWITCHES, "ASSIGN": False})
+    result = run("create", store, whapi)
+    assert "no longer eligible" in result["lines"][0]
+    assert not any(c[0] in ("create", "find") for c in whapi.calls)
+    assert store.updates == []
 
 
 def test_create_requires_photos():
@@ -455,8 +490,10 @@ def test_reconcile_reports_drift_and_orphans_without_touching_anything():
 
 def test_queued_decisions_execute_before_the_normal_pass():
     whapi = FakeWhapi()
-    whapi.products["88"] = {"id": "88", "product_retailer_id": "EF-2611-AAAA"}
-    store = FakeStore([make_row()], switches={**ALL_SWITCHES, "ASSIGN": False})
+    _r = make_row(page_id="q-page", listing_id="EF-2611-AAAA")
+    whapi.products["88"] = {"id": "88", "product_retailer_id": "EF-2611-AAAA", "name": _r["catalog_title"],
+                            "description": _r["catalogue_description"], "price": _r["monthly_rent"]}
+    store = FakeStore([make_row(), _r], switches={**ALL_SWITCHES, "ASSIGN": False})
     store.decisions = [{"id": "q1", "operation": "create", "decision": "Reprocess",
                         "row": make_row(page_id="q-page", listing_id="EF-2611-AAAA")}]
     result = run("create", store, whapi)
@@ -471,3 +508,10 @@ def test_reconcile_dry_run_queues_nothing():
     result = run("reconcile", store, whapi)
     assert any("would queue for review" in l for l in result["lines"])
     assert store.review_entries == [] and store.updates == [] and store.activity == [] and store.panel == []
+
+
+def test_create_preserves_other_live_at_selections():
+    whapi = FakeWhapi()
+    store = FakeStore([make_row(**{"live at": ["99acres"]})], switches={**ALL_SWITCHES, "ASSIGN": False})
+    run("create", store, whapi)
+    assert store.updates[0][1]["live at"] == ["99acres", "Meta Catalogue"]
