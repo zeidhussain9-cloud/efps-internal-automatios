@@ -40,6 +40,9 @@ IST = timezone(timedelta(hours=5, minutes=30))
 RUN_WINDOW_WEEKDAY = 1  # Tuesday
 RUN_WINDOW_START_HOUR = 9  # 09:00 IST inclusive
 RUN_WINDOW_END_HOUR = 10  # 10:00 IST exclusive
+CREATE_WINDOW_START_HOUR = 21  # daily creation run, 9:00 PM IST (approved 24 Nov, build only)
+CREATE_WINDOW_END_HOUR = 22
+OPS = ("delete", "create")
 
 
 def _log(event: str, **fields: Any) -> None:
@@ -52,6 +55,8 @@ def _truthy(value: Any) -> bool:
 
 def _in_run_window(now_utc: datetime) -> bool:
     ist = now_utc.astimezone(IST)
+    if CREATE_WINDOW_START_HOUR <= ist.hour < CREATE_WINDOW_END_HOUR:
+        return True  # daily creation window, 9-10 PM IST
     return (
         ist.weekday() == RUN_WINDOW_WEEKDAY
         and RUN_WINDOW_START_HOUR <= ist.hour < RUN_WINDOW_END_HOUR
@@ -99,16 +104,20 @@ def _self_invoke(lam: Any, fn: str, payload: Mapping[str, Any]) -> None:
 
 # --- Notion side ----------------------------------------------------------
 
-def _set_dry_run(store: Any, enabled: bool) -> None:
+def _set_switch(store: Any, name: str, enabled: bool) -> None:
     from catalogue_notion_store import SWITCHES_DATABASE_ID
     for page in store._query_all(SWITCHES_DATABASE_ID):
         props = page.get("properties") or {}
         title = "".join(t.get("plain_text", "") for t in ((props.get("Name") or {}).get("title")) or [])
-        if title.strip() == "DRY_RUN":
+        if title.strip() == name:
             store.request("PATCH", f"pages/{page['id']}",
                           payload={"properties": {"Enabled": {"checkbox": bool(enabled)}}})
             return
-    raise ScheduleError("DRY_RUN switch page not found in the switches database")
+    raise ScheduleError(f"{name} switch page not found in the switches database")
+
+
+def _set_dry_run(store: Any, enabled: bool) -> None:
+    _set_switch(store, "DRY_RUN", enabled)
 
 
 def _append_decision_log(store: Any, lines: list[str]) -> None:
@@ -137,9 +146,9 @@ def handle_schedule(event: Mapping[str, Any], context: Any, *, notion_token: str
         from catalogue_notion_store import NotionCatalogueStore
         store = NotionCatalogueStore(notion_token)
     if run_delete is None:
-        def run_delete():
+        def run_delete(op="delete"):
             import catalogue_trigger
-            return catalogue_trigger.run_catalogue_operation("delete", notion_token=notion_token)
+            return catalogue_trigger.run_catalogue_operation(op, notion_token=notion_token)
     now = now or (lambda: datetime.now(timezone.utc))
     step = str(event.get("step") or "").strip().lower()
 
@@ -147,6 +156,8 @@ def handle_schedule(event: Mapping[str, Any], context: Any, *, notion_token: str
         return _watchdog(lam, store, context, sleep=sleep, now=now)
     if step == "begin":
         return _begin(lam, store, context, sleep=sleep, now=now)
+    if step == "create_begin":
+        return _begin(lam, store, context, sleep=sleep, now=now, op="create")
     if step == "batch":
         return _batch(event, lam, store, context, run_delete=run_delete, sleep=sleep, now=now)
     if step == "finalize":
@@ -154,18 +165,26 @@ def handle_schedule(event: Mapping[str, Any], context: Any, *, notion_token: str
     raise ScheduleError(f"unknown schedule step: {step!r}")
 
 
-def _begin(lam, store, context, *, sleep, now) -> dict:
+def _begin(lam, store, context, *, sleep, now, op="delete") -> dict:
     fn = _function_name(context)
     if _truthy(os.environ.get(CATALOG_WRITE_FLAG)):
         # The gate should be locked at start. Refuse to run on an open gate -
         # the watchdog owns restoring it, and this abort is the alarm.
         _log("catalogue_schedule_aborted", reason="catalog-write flag already ON at begin; not running")
         return {"status": "aborted", "reason": "flag already on"}
-    run_id = now().astimezone(IST).strftime("tue-%Y-%m-%d-") + uuid.uuid4().hex[:6]
-    _set_catalog_write(lam, fn, True, sleep=sleep)
-    _set_dry_run(store, False)
-    _log("catalogue_schedule_started", run_id=run_id)
-    _self_invoke(lam, fn, {"step": "batch", "run_id": run_id, "batch": 1,
+    prefix = "create-" if op == "create" else "tue-"
+    run_id = now().astimezone(IST).strftime(prefix + "%Y-%m-%d-") + uuid.uuid4().hex[:6]
+    try:
+        _set_catalog_write(lam, fn, True, sleep=sleep)
+        _set_dry_run(store, False)
+        if op == "create":
+            _set_switch(store, "CREATE", True)
+    except Exception as exc:  # noqa: BLE001 - never leave a half-open gate
+        return _finalize({"run_id": run_id, "op": op,
+                          "error": f"begin failed: {type(exc).__name__}: {str(exc)[:200]}"},
+                         lam, store, context, sleep=sleep, now=now)
+    _log("catalogue_schedule_started", run_id=run_id, op=op)
+    _self_invoke(lam, fn, {"step": "batch", "run_id": run_id, "op": op, "batch": 1,
                            "totals": {"ok": 0, "failed": 0, "skipped": 0},
                            "deleted": [], "failures": []})
     return {"status": "started", "run_id": run_id}
@@ -173,6 +192,9 @@ def _begin(lam, store, context, *, sleep, now) -> dict:
 
 def _batch(event, lam, store, context, *, run_delete, sleep, now) -> dict:
     fn = _function_name(context)
+    op = str(event.get("op") or "delete")
+    if op not in OPS:
+        return _finalize({**event, "error": f"unknown op {op!r}"}, lam, store, context, sleep=sleep, now=now)
     run_id = str(event.get("run_id") or "")
     batch = int(event.get("batch") or 1)
     totals = dict(event.get("totals") or {})
@@ -183,7 +205,7 @@ def _batch(event, lam, store, context, *, run_delete, sleep, now) -> dict:
         return _finalize({**event, "error": "catalog-write flag OFF mid-run; stopping safe"},
                          lam, store, context, sleep=sleep, now=now)
     try:
-        result = run_delete() or {}
+        result = (run_delete(op) if op == "create" else run_delete()) or {}
     except Exception as exc:  # real fault: stop safe, report, no auto-rerun
         return _finalize({**event, "error": f"batch {batch} raised {type(exc).__name__}: {str(exc)[:300]}"},
                          lam, store, context, sleep=sleep, now=now)
@@ -199,9 +221,9 @@ def _batch(event, lam, store, context, *, run_delete, sleep, now) -> dict:
         # Format: "[<ts>] DELETE <listing_id> [product=<id>] OK|FAILED <reason>"
         # (the timestamp itself contains a space - anchor on the DELETE token)
         parts = line.split()
-        if "DELETE" not in parts:
+        if op.upper() not in parts:
             continue
-        i = parts.index("DELETE")
+        i = parts.index(op.upper())
         rest = parts[i + 1:]
         if len(rest) < 2:
             continue
@@ -227,7 +249,7 @@ def _batch(event, lam, store, context, *, run_delete, sleep, now) -> dict:
             return _finalize({**event, "totals": totals, "deleted": deleted, "failures": failures,
                               "error": f"batch cap {MAX_BATCHES} reached; remaining rows wait for next Tuesday"},
                              lam, store, context, sleep=sleep, now=now)
-        _self_invoke(lam, fn, {"step": "batch", "run_id": run_id, "batch": batch + 1,
+        _self_invoke(lam, fn, {"step": "batch", "run_id": run_id, "op": op, "batch": batch + 1,
                                "totals": totals, "deleted": deleted, "failures": failures})
         return {"status": "chained", "run_id": run_id, "next_batch": batch + 1}
     return _finalize({**event, "totals": totals, "deleted": deleted, "failures": failures},
@@ -241,21 +263,29 @@ def _finalize(event, lam, store, context, *, sleep, now) -> dict:
     deleted = list(event.get("deleted") or [])
     failures = list(event.get("failures") or [])
     error = str(event.get("error") or "")
-    restore_errors = _restore(lam, store, fn, sleep=sleep)
+    op = str(event.get("op") or "delete")
+    restore_errors = _restore(lam, store, fn, sleep=sleep, create=(op == "create"))
 
     status = "failed" if (error or restore_errors) else "completed"
     stamp = now().astimezone(IST).strftime("%d %b %Y, %I:%M %p IST")
-    title = f"{stamp} - Scheduled catalogue cleanup ({run_id or 'manual'}): {status.upper()}"
+    if op == "create":
+        title = f"{stamp} - Scheduled catalogue creation ({run_id or 'manual'}): {status.upper()}"
+        what = f"WHAT: daily 9 PM IST creation-only run ({run_id}); no update, delete or assign."
+        verb = "created"
+    else:
+        title = f"{stamp} - Scheduled catalogue cleanup ({run_id or 'manual'}): {status.upper()}"
+        what = f"WHAT: weekly Tuesday scheduled delete run ({run_id})."
+        verb = "deleted"
     body = [
-        f"WHAT: weekly Tuesday scheduled delete run ({run_id}).",
-        f"RESULT: deleted {len(deleted)} product(s){': ' + ', '.join(deleted) if deleted else ''}.",
+        what,
+        f"RESULT: {verb} {len(deleted)} product(s){': ' + ', '.join(deleted) if deleted else ' (zero actions)'}.",
         f"TOTALS: ok={int(totals.get('ok') or 0)}, skipped={int(totals.get('skipped') or 0)}, failed={int(totals.get('failed') or 0)}.",
     ]
     if error:
         body.append(f"ERROR: {error} - gate restored, no auto-rerun; waits for Zeid's decision.")
     if failures:
         body.append("FAILURES: " + " | ".join(failures[:5]))
-    body.append("SWITCHES RESTORED: catalog-write OFF, DRY_RUN ON." +
+    body.append("SWITCHES RESTORED: catalog-write OFF, DRY_RUN ON" + (", CREATE OFF." if op == "create" else ".") +
                 ("" if not restore_errors else f" RESTORE PROBLEM: {'; '.join(restore_errors)}"))
     try:
         _append_decision_log(store, [title] + body)
@@ -275,7 +305,7 @@ def _finalize(event, lam, store, context, *, sleep, now) -> dict:
             "restore_errors": restore_errors}
 
 
-def _restore(lam, store, fn, *, sleep) -> list[str]:
+def _restore(lam, store, fn, *, sleep, create=True) -> list[str]:
     """Best-effort guaranteed restore; both steps attempted no matter what."""
     problems = []
     try:
@@ -286,6 +316,11 @@ def _restore(lam, store, fn, *, sleep) -> list[str]:
         _set_dry_run(store, True)
     except Exception as exc:  # noqa: BLE001
         problems.append(f"DRY_RUN restore failed: {type(exc).__name__} {str(exc)[:200]}")
+    if create:  # harmless when already OFF; never left ON after any run or alarm
+        try:
+            _set_switch(store, "CREATE", False)
+        except Exception as exc:  # noqa: BLE001
+            problems.append(f"CREATE restore failed: {type(exc).__name__} {str(exc)[:200]}")
     return problems
 
 

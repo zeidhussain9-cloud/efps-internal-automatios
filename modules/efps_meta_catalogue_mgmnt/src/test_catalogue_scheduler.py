@@ -39,13 +39,17 @@ class FakeStore:
         self.dry_run = dry_run
         self.log_entries = []
         self.requests = []
+        self.create_on = False
 
     def _query_all(self, db):
-        return [{"id": "dryrun-page", "properties": {"Name": {"title": [{"plain_text": "DRY_RUN"}]}}}]
+        return [{"id": "dryrun-page", "properties": {"Name": {"title": [{"plain_text": "DRY_RUN"}]}}},
+                {"id": "create-page", "properties": {"Name": {"title": [{"plain_text": "CREATE"}]}}}]
 
     def request(self, method, path, payload=None):
         self.requests.append((method, path, payload))
-        if path.startswith("pages/"):
+        if path == "pages/create-page":
+            self.create_on = payload["properties"]["Enabled"]["checkbox"]
+        elif path.startswith("pages/"):
             self.dry_run = payload["properties"]["Enabled"]["checkbox"]
         if path.startswith("blocks/"):
             self.log_entries.append(payload)
@@ -233,3 +237,65 @@ class WatchdogTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class CreateFlowTests(unittest.TestCase):
+    def test_create_begin_opens_gate_and_chains_create_batch(self):
+        lam, store = FakeLambda("false"), FakeStore()
+        with base_env("false"):
+            out = cs.handle_schedule({"step": "create_begin"}, Ctx(), notion_token="t",
+                                     lam=lam, store=store, run_delete=lambda op="delete": {}, sleep=lambda s: None)
+        self.assertEqual(out["status"], "started")
+        self.assertTrue(store.create_on)
+        self.assertFalse(store.dry_run)
+        self.assertEqual(lam.invocations[0]["op"], "create")
+        self.assertTrue(lam.invocations[0]["run_id"].startswith("create-"))
+
+    def test_create_begin_aborts_on_open_gate(self):
+        lam, store = FakeLambda("true"), FakeStore()
+        with base_env("true"):
+            out = cs.handle_schedule({"step": "create_begin"}, Ctx(), notion_token="t",
+                                     lam=lam, store=store, run_delete=lambda op="delete": {}, sleep=lambda s: None)
+        self.assertEqual(out["status"], "aborted")
+        self.assertFalse(store.create_on)
+
+    def test_zero_eligible_create_restores_all_and_reports(self):
+        lam, store = FakeLambda("true"), FakeStore(dry_run=False)
+        store.create_on = True
+        seen = []
+        def run(op="delete"):
+            seen.append(op)
+            return run_delete_result(ok=0, lines=["[t] CREATE - SKIPPED no eligible rows"])
+        ev = {"step": "batch", "op": "create", "run_id": "create-x", "batch": 1, "totals": {}, "deleted": [], "failures": []}
+        with base_env("true"):
+            out = cs.handle_schedule(ev, Ctx(), notion_token="t", lam=lam, store=store,
+                                     run_delete=run, sleep=lambda s: None)
+        self.assertEqual(seen, ["create"])
+        self.assertEqual(out["status"], "completed")
+        self.assertEqual(lam.flag, "false")
+        self.assertTrue(store.dry_run)
+        self.assertFalse(store.create_on)
+        self.assertEqual(len(store.log_entries), 1)
+        self.assertIn("zero actions", str(store.log_entries[0]))
+
+    def test_create_ok_chains_then_failure_stops_and_restores(self):
+        lam, store = FakeLambda("true"), FakeStore(dry_run=False)
+        store.create_on = True
+        res = run_delete_result(ok=2, lines=["[t] CREATE EF-1 product=p1 OK created", "[t] CREATE EF-2 product=p2 OK created"])
+        ev = {"step": "batch", "op": "create", "run_id": "create-x", "batch": 1, "totals": {}, "deleted": [], "failures": []}
+        with base_env("true"):
+            out = cs.handle_schedule(ev, Ctx(), notion_token="t", lam=lam, store=store,
+                                     run_delete=lambda op="delete": res, sleep=lambda s: None)
+        self.assertEqual(out["status"], "chained")
+        self.assertEqual(lam.invocations[0]["op"], "create")
+        self.assertEqual(lam.invocations[0]["deleted"], ["EF-1", "EF-2"])
+        bad = run_delete_result(ok=0, failed=1, lines=["[t] CREATE EF-3 FAILED boom"])
+        with base_env("true"):
+            out = cs.handle_schedule(ev, Ctx(), notion_token="t", lam=lam, store=store,
+                                     run_delete=lambda op="delete": bad, sleep=lambda s: None)
+        self.assertEqual(out["status"], "failed")
+        self.assertFalse(store.create_on)
+        self.assertEqual(lam.flag, "false")
+
+    def test_evening_window_counts_for_watchdog(self):
+        self.assertTrue(cs._in_run_window(datetime(2026, 11, 25, 15, 45, tzinfo=timezone.utc)))  # 21:15 IST
