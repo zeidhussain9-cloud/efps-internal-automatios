@@ -262,7 +262,7 @@ def _batch(event, lam, store, context, *, run_delete, sleep, now) -> dict:
                          lam, store, context, sleep=sleep, now=now)
     if failed > 0:
         return _finalize({**event, "totals": totals, "deleted": deleted, "failures": failures,
-                          "error": f"batch {batch} had {failed} failed deletion(s); no auto-rerun"},
+                          "error": f"batch {batch} had {failed} failed {'creation' if op == 'create' else 'deletion'}(s); no auto-rerun"},
                          lam, store, context, sleep=sleep, now=now)
     if ok > 0:
         if batch >= (MAX_BATCHES_CREATE if op == "create" else MAX_BATCHES):
@@ -293,7 +293,7 @@ def _finalize(event, lam, store, context, *, sleep, now) -> dict:
     stamp = now().astimezone(IST).strftime("%d %b %Y, %I:%M %p IST")
     if op == "create":
         title = f"{stamp} - Scheduled catalogue creation ({run_id or 'manual'}): {status.upper()}"
-        what = f"WHAT: daily 9 PM IST creation-only run ({run_id}); no update, delete or assign."
+        what = f"WHAT: daily 10:30 PM IST creation-only run ({run_id}); no update, delete or assign."
         verb = "created"
     else:
         title = f"{stamp} - Scheduled catalogue cleanup ({run_id or 'manual'}): {status.upper()}"
@@ -324,7 +324,7 @@ def _finalize(event, lam, store, context, *, sleep, now) -> dict:
 
 
     _log("catalogue_schedule_completed" if status == "completed" else "catalogue_schedule_failed",
-         run_id=run_id, status=status, totals=totals, deleted=deleted,
+         run_id=run_id, status=status, totals=totals, deleted=deleted, processed=deleted,
          failures=failures, error=error, restore_errors=restore_errors)
     return {"status": status, "run_id": run_id, "totals": totals,
             "deleted": deleted, "failures": failures, "error": error,

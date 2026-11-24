@@ -328,6 +328,29 @@ class CreateFlowTests(unittest.TestCase):
         self.assertFalse(store.create_on)
         self.assertEqual(lam.flag, "false")
 
+    def test_create_failure_and_log_wording_says_creation_and_1030(self):
+        lam, store = FakeLambda("true"), FakeStore(dry_run=False)
+        store.create_on = True
+        ev = {"step": "batch", "op": "create", "run_id": "create-x", "batch": 1, "totals": {}, "deleted": [], "failures": []}
+        bad = run_delete_result(ok=0, failed=1, lines=["[t] CREATE EF-3 FAILED boom"])
+        with base_env("true"):
+            out = cs.handle_schedule(ev, Ctx(), notion_token="t", lam=lam, store=store,
+                                     run_delete=lambda op="delete": bad, sleep=lambda s: None, now=lambda: TUE_PM_IST)
+        self.assertIn("failed creation(s)", out["error"])
+        self.assertNotIn("deletion", out["error"])
+        entry = str(store.log_entries[0])
+        self.assertIn("daily 10:30 PM IST creation-only run", entry)
+        self.assertNotIn("9 PM", entry)
+
+    def test_delete_failure_wording_still_says_deletion(self):
+        lam, store = FakeLambda("true"), FakeStore(dry_run=False)
+        res = run_delete_result(ok=0, failed=1, lines=["[2026-11-24 03:30:00Z] DELETE EF-2 product=p2 FAILED boom"])
+        ev = {"step": "batch", "op": "delete", "run_id": "del-x", "batch": 1, "totals": {}, "deleted": [], "failures": []}
+        with base_env("true"):
+            out = cs.handle_schedule(ev, Ctx(), notion_token="t",
+                                     lam=lam, store=store, run_delete=lambda: res, sleep=lambda s: None)
+        self.assertIn("failed deletion(s)", out["error"])
+
     def test_create_chain_keeps_going_after_11pm(self):
         lam, store = FakeLambda("true"), FakeStore(dry_run=False)
         res = run_delete_result(ok=3, lines=["[t] CREATE EF-9 product=p9 OK created"])
