@@ -230,19 +230,29 @@ class WhApiClient:
         return self.post("/business/products", payload)
 
     def get_products(self, count: int = 100) -> list[dict]:
+        """Read up to `count` products. Whapi documents count (1 to 500, default 100)
+        and offset (>= 0) for GET /business/products
+        (https://whapi.readme.io/reference/getproducts); pages of 100 are read with
+        offset until a short page. A repeated page raises rather than returning a
+        partial catalogue that a duplicate check would trust."""
+        page_size = 100
         all_products: list[dict] = []
-        params: dict[str, Any] = {"count": min(count, 100)}
-        while True:
-            result = self.get("/business/products", params)
-            page = (result or {}).get("products", [])
+        seen: set[str] = set()
+        offset = 0
+        while len(all_products) < count:
+            result = self.get("/business/products", {"count": page_size, "offset": offset})
+            page = (result or {}).get("products", []) if isinstance(result, dict) else []
+            if not page:
+                break
+            ids = [str(p.get("id") or "") for p in page]
+            if ids and all(i and i in seen for i in ids):
+                raise RuntimeError("WhAPI products pagination repeated a page; catalogue read is incomplete")
+            seen.update(i for i in ids if i)
             all_products.extend(page)
-            if len(all_products) >= count or len(page) < params["count"]:
+            if len(page) < page_size:
                 break
-            cursor = (result or {}).get("paging", {}).get("cursors", {}).get("after")
-            if not cursor:
-                break
-            params["after"] = cursor
-        return all_products
+            offset += len(page)
+        return all_products[:count]
 
     def find_product_by_retailer_id(self, retailer_id: str) -> dict | None:
         for p in self.get_products(count=10000):

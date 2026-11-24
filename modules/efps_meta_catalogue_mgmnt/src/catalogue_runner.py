@@ -45,9 +45,14 @@ SWITCH_BY_OPERATION = {
 # Per-BATCH sizes, not nightly totals: the scheduler chains batches until nothing
 # is left. Create is 3 because every created product waits CREATE_ASSIGN_GAP_SECONDS
 # (30s) plus several Whapi calls and one Lambda invocation lasts at most 180s.
-# Worst-case seconds one row can take (no 429): create = 30s gap + 3 calls x 30s
-# timeout + Notion writes (25s timeout x ~3). Used only by the deadline guard.
-ROW_TIME_NEEDED_SECONDS = {"create": 120, "update": 60, "delete": 60, "assign": 60, "reconcile": 0}
+# Deadline guard (create). Worst case of one row with NO Whapi retries (a 429 stops
+# the row): adoption lookup 30s + create_product 30s + 30s gap + verify get_product
+# 30s + 3 Notion calls x 25s = 195s, so a row only STARTS with >=210s left (needs
+# Lambda Timeout 300s). CREATE_TAIL_SECONDS is re-checked immediately before the
+# one irreversible step (create_product): after it, the remaining work is at most
+# 30 + 30 + 75 = 135s, rounded up to 170s of margin.
+CREATE_TAIL_SECONDS = 170
+ROW_TIME_NEEDED_SECONDS = {"create": 210, "update": 60, "delete": 60, "assign": 60, "reconcile": 0}
 CAPS = {"create": 3, "update": 10, "delete": 3, "assign": 20}
 CREATE_ASSIGN_GAP_SECONDS = 30
 RATE_LIMIT_RETRY_SECONDS = 30
@@ -89,6 +94,25 @@ class CatalogueRunError(RuntimeError):
 def _is_rate_limited(exc: BaseException) -> bool:
     text = str(exc)
     return "429" in text or "Rate-limited" in text or "Too many requests" in text
+
+
+class RateLimited(RuntimeError):
+    """Whapi answered 429. Per Whapi's soft-ban guidance the number must rest: no retry."""
+
+
+class DeferredForTime(RuntimeError):
+    """Not enough Lambda time left to finish a row safely; nothing was created."""
+
+
+def _call_once(fn: Callable[[], Any]) -> Any:
+    """Create-flow Whapi call: ONE attempt. A 429 stops the whole batch (no retry,
+    no further writes) so the number is left to rest, as Whapi's 429 soft-ban page advises."""
+    try:
+        return fn()
+    except Exception as exc:  # noqa: BLE001
+        if _is_rate_limited(exc):
+            raise RateLimited(f"Whapi 429 rate limit; stopped to let the number rest, no retry: {str(exc)[:120]}") from exc
+        raise
 
 
 def _call_with_retry(fn: Callable[[], Any], *, sleeper: Callable[[float], None] = time.sleep) -> Any:
@@ -172,6 +196,8 @@ class _Run:
         self.sleeper = sleeper
         self.lines: list[str] = []
         self.counts = {"ok": 0, "skipped": 0, "failed": 0, "would": 0}
+        self.time_left: Callable[[], float] | None = None
+        self.stop = False
 
     def record(self, row: Mapping[str, Any], product_id: str, outcome: str, reason: str = "") -> str:
         line = log_line(self.operation, str(row.get("listing_id") or "?"), product_id, outcome, reason, now=self.now)
@@ -210,6 +236,7 @@ def run_operation(operation: str, *, store: Any, whapi: Any, masters: Mapping[st
     states = switch_states(switches, masters=masters)
     dry_run = states["DRY_RUN"]
     run = _Run(operation, store, whapi, dry_run=dry_run, now=now, sleeper=sleeper)
+    run.time_left = time_left
 
     if operation != "reconcile":
         if not (states["EFPS_WHAPI_LIVE"] and states["EFPS_WHAPI_API_ENABLED"]):
@@ -250,7 +277,7 @@ def run_operation(operation: str, *, store: Any, whapi: Any, masters: Mapping[st
             # up to 30s each, plus one 429 wait+retry per call. Never START a row
             # without that much Lambda time left; the chain resumes in a new
             # invocation (the row is untouched, re-read fresh, adoption-checked).
-            if time_left is not None and time_left() < ROW_TIME_NEEDED_SECONDS[operation]:
+            if run.stop or (time_left is not None and time_left() < ROW_TIME_NEEDED_SECONDS[operation]):
                 break
             _execute(operation, run, row)
         over_cap = eligible[cap:]
@@ -282,6 +309,12 @@ def _execute(operation: str, run: _Run, row: Mapping[str, Any]) -> None:
             _op_delete_row(run, row)
         elif operation == "assign":
             _op_assign_row(run, row)
+    except DeferredForTime as exc:
+        run.stop = True
+        run.record(row, "", "SKIPPED", str(exc)[:200])
+    except RateLimited as exc:
+        run.stop = True  # no further Whapi writes this batch; the scheduler also stops the chain (failed>0)
+        run.record(row, str(row.get("meta_catalog_id") or ""), "FAILED", str(exc)[:200])
     except Exception as exc:  # noqa: BLE001 - any failure is logged, row stays for next run
         run.record(row, str(row.get("meta_catalog_id") or ""), "FAILED", str(exc)[:200])
 
@@ -338,7 +371,7 @@ def _op_create_row(run: _Run, row: Mapping[str, Any]) -> None:
 
     # Adoption: never create a duplicate, and never adopt on existence alone:
     # the existing product must match the intended content before Notion is written.
-    catalogue = _call_with_retry(lambda: run.whapi.get_products(count=10000), sleeper=run.sleeper) or []
+    catalogue = _call_once(lambda: run.whapi.get_products(count=10000)) or []
     matches = [p for p in catalogue if str(p.get("product_retailer_id") or "") == listing_id]
     if len(matches) > 1:
         ids = ", ".join(str(m.get("id")) for m in matches)
@@ -346,7 +379,7 @@ def _op_create_row(run: _Run, row: Mapping[str, Any]) -> None:
     existing = matches[0] if matches else None
     if existing:
         product_id = str(existing.get("id") or "")
-        live = _call_with_retry(lambda: run.whapi.get_product(product_id), sleeper=run.sleeper)
+        live = _call_once(lambda: run.whapi.get_product(product_id))
         mismatch = _content_mismatch(live, title, description, rent, images, str(row.get("google_maps_url") or ""))
         if mismatch:
             raise RuntimeError(f"existing product {product_id} does not match intended content ({mismatch}); not adopted, Notion untouched")
@@ -354,12 +387,13 @@ def _op_create_row(run: _Run, row: Mapping[str, Any]) -> None:
         run.record(row, product_id, "ADOPTED", "product already existed on WhatsApp")
         return
 
-    result = _call_with_retry(
+    if run.time_left is not None and run.time_left() < CREATE_TAIL_SECONDS:
+        raise DeferredForTime("not enough Lambda time left to create and verify safely; nothing created, next batch continues")
+    result = _call_once(
         lambda: run.whapi.create_product(
             name=title, description=description, price=rent, currency="INR",
             images=images, url=str(row.get("google_maps_url") or ""), product_retailer_id=listing_id,
         ),
-        sleeper=run.sleeper,
     )
     if isinstance(result, str):
         raise RuntimeError(f"WhAPI error response: {result}")
@@ -369,7 +403,7 @@ def _op_create_row(run: _Run, row: Mapping[str, Any]) -> None:
     # Verify before writeback (locked order, 24 Nov): read the product back and
     # confirm it exists with the intended name before touching Notion.
     run.sleeper(CREATE_ASSIGN_GAP_SECONDS)  # 30s spacing between catalogue requests
-    live_product = _call_with_retry(lambda: run.whapi.get_product(product_id), sleeper=run.sleeper)
+    live_product = _call_once(lambda: run.whapi.get_product(product_id))
     if not str((live_product or {}).get("name") or "").strip():
         raise RuntimeError(f"created product {product_id} not readable on verification; Notion untouched")
     mismatch = _content_mismatch(live_product, title, description, rent, images, str(row.get("google_maps_url") or ""))

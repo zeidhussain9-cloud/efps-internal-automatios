@@ -320,16 +320,6 @@ def test_full_chain_creates_every_eligible_row_in_batches():
     assert len({p["product_retailer_id"] for p in whapi.products.values()}) == 25  # no duplicates
 
 
-def test_deadline_guard_stops_before_starting_a_row_without_time():
-    rows = [make_row(page_id=f"p{i}", listing_id=f"EF-2611-{i:04d}") for i in range(3)]
-    store = FakeStore(rows, switches={**ALL_SWITCHES, "ASSIGN": False})
-    left = iter([170.0, 119.0, 50.0])
-    result = runner.run_operation("create", store=store, whapi=FakeWhapi(), masters=MASTERS_ON,
-                                  sleeper=lambda s: None, time_left=lambda: next(left))
-    assert result["counts"]["ok"] == 1  # second row would have started with <120s left
-    assert [r["Pipeline Status"] for r in rows].count("Posted") == 1
-
-
 def test_second_429_stops_the_row_and_fails_the_batch():
     rows = [make_row(page_id=f"p{i}", listing_id=f"EF-2611-{i:04d}") for i in range(2)]
     store, whapi = FakeStore(rows, switches={**ALL_SWITCHES, "ASSIGN": False}), FakeWhapi()
@@ -469,14 +459,36 @@ def test_assign_skips_unmapped_bhk_without_guessing():
 
 # --- 429 handling ---
 
-def test_one_429_retries_once_then_succeeds():
+def test_create_429_is_never_retried_and_stops_the_batch():
     sleeps = []
     whapi = FakeWhapi()
     whapi.fail_next = RuntimeError("WhAPI HTTP 429: Too many requests")
-    store = FakeStore([make_row()], switches={**ALL_SWITCHES, "ASSIGN": False})
+    rows = [make_row(page_id=f"p{i}", listing_id=f"EF-2611-{i:04d}") for i in range(3)]
+    store = FakeStore(rows, switches={**ALL_SWITCHES, "ASSIGN": False})
     result = run("create", store, whapi, sleeper=sleeps.append)
-    assert 30 in sleeps
-    assert result["counts"]["ok"] == 1
+    assert 30 not in sleeps  # no 429 retry wait, the number is left to rest
+    assert result["counts"]["failed"] == 1 and result["counts"]["ok"] == 0
+    assert whapi.products == {}  # later rows in the batch were not attempted either
+    assert any("rest" in l for l in result["lines"])
+
+
+def test_create_checkpoint_defers_before_the_irreversible_step():
+    rows = [make_row(page_id="p0", listing_id="EF-2611-0000"), make_row(page_id="p1", listing_id="EF-2611-0001")]
+    store, whapi = FakeStore(rows, switches={**ALL_SWITCHES, "ASSIGN": False}), FakeWhapi()
+    left = iter([300.0, 100.0] + [100.0] * 5)  # row may start, but not enough time left to create
+    result = runner.run_operation("create", store=store, whapi=whapi, masters=MASTERS_ON,
+                                  sleeper=lambda s: None, time_left=lambda: next(left))
+    assert whapi.products == {} and result["counts"]["ok"] == 0
+    assert result["counts"]["failed"] == 0 and result["counts"]["skipped"] == 1  # second row not touched
+
+
+def test_deadline_model_two_rows_fit_a_300s_invocation():
+    rows = [make_row(page_id=f"p{i}", listing_id=f"EF-2611-{i:04d}") for i in range(3)]
+    store = FakeStore(rows, switches={**ALL_SWITCHES, "ASSIGN": False})
+    spent = []
+    result = runner.run_operation("create", store=store, whapi=FakeWhapi(), masters=MASTERS_ON,
+                                  sleeper=spent.append, time_left=lambda: 260 - sum(spent))
+    assert result["counts"]["ok"] == 2  # third row would start with <210s left, so it waits
 
 
 def test_second_429_defers_the_row():

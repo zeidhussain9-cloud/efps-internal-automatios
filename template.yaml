@@ -85,7 +85,7 @@ Resources:
     Condition: HasNotionSecret
     Properties:
       FunctionName: !Sub '${AWS::StackName}-EFPSNotionIntake'
-      Timeout: 180
+      Timeout: 300
       MemorySize: 512
       EventInvokeConfig:
         MaximumEventAgeInSeconds: 3600

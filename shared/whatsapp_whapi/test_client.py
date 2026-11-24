@@ -95,3 +95,38 @@ def test_requests_send_a_browser_user_agent(monkeypatch: pytest.MonkeyPatch) -> 
     assert seen["ua"] is not None
     assert seen["ua"].startswith("Mozilla/5.0")
     assert "node-fetch" not in seen["ua"]
+
+
+def _paged_client(monkeypatch, total, ignore_offset=False):
+    from urllib.parse import urlparse, parse_qs
+    monkeypatch.setenv("EFPS_WHAPI_API_ENABLED", "true")
+    monkeypatch.setenv("EFPS_WHAPI_LIVE", "1")
+    calls = []
+
+    def transport(req):
+        q = parse_qs(urlparse(req.full_url).query)
+        count, offset = int(q["count"][0]), int(q.get("offset", ["0"])[0])
+        calls.append((count, offset))
+        if ignore_offset:
+            offset = 0
+        return {"products": [{"id": f"p{i}"} for i in range(offset, min(offset + count, total))]}
+
+    return WhApiClient(WhApiCredentials("t"), base_url="https://e.test", transport=transport), calls
+
+
+def test_get_products_reads_every_page_with_documented_count_and_offset(monkeypatch):
+    client, calls = _paged_client(monkeypatch, 250)
+    products = client.get_products(count=10000)
+    assert len(products) == 250 and len({p["id"] for p in products}) == 250
+    assert calls == [(100, 0), (100, 100), (100, 200)]  # count within 1..500, offset-based
+
+
+def test_get_products_exact_multiple_of_page_size(monkeypatch):
+    client, calls = _paged_client(monkeypatch, 200)
+    assert len(client.get_products(count=10000)) == 200
+
+
+def test_get_products_refuses_a_repeating_page_instead_of_returning_a_partial_catalogue(monkeypatch):
+    client, _ = _paged_client(monkeypatch, 250, ignore_offset=True)
+    with pytest.raises(RuntimeError, match="repeated a page"):
+        client.get_products(count=10000)

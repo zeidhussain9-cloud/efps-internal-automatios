@@ -250,7 +250,7 @@ def _batch(event, lam, store, context, *, run_delete, sleep, now) -> dict:
     if ok > 0:
         if batch >= MAX_BATCHES:
             return _finalize({**event, "totals": totals, "deleted": deleted, "failures": failures,
-                              "error": f"batch cap {MAX_BATCHES} reached; remaining rows wait for next Tuesday"},
+                              "error": f"batch cap {MAX_BATCHES} reached; remaining rows wait for the next scheduled run"},
                              lam, store, context, sleep=sleep, now=now)
         _self_invoke(lam, fn, {"step": "batch", "run_id": run_id, "op": op, "batch": batch + 1,
                                "totals": totals, "deleted": deleted, "failures": failures})
