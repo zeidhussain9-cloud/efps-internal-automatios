@@ -783,8 +783,9 @@ def build_catalogue_description(row: dict, raw_text: str, *, verified_society_na
     Occupy'. Tenant type uses the locked LOV only. Locked 24 Nov 3:05 PM
     (Zeid): when the row has a society name, the description closes with
     it; otherwise with "Landmark: <landmark>", each followed by the map
-    link. A stored value equal to the locality is the pipeline's fallback,
-    not a name - no locality stand-in. The map link is always the
+    link (Zeid 3:09 PM: landmark is used even when it holds the locality
+    fallback value; a society equal to the locality is the pipeline
+    fallback and never renders as a name). The map link is always the
     standardized long google maps link; short links never appear. Lines
     render only when their data exists.
     """
@@ -876,12 +877,13 @@ def build_catalogue_description(row: dict, raw_text: str, *, verified_society_na
     if people:
         sections.append("\n".join(people))
 
-    # Locked 24 Nov 3:05 PM (Zeid): the description closes with the society
-    # name when the row has one, otherwise "Landmark: <landmark>", each followed
+    # Locked 24 Nov (Zeid): the description closes with the society name when
+    # the row has a real one, otherwise "Landmark: <landmark>", each followed
     # by the long map link. The pipeline stores the locality itself in
     # society_name/landmark when no real name was extracted (phase1 location
-    # contract), so a stored value equal to the locality is the fallback, never
-    # a usable name - there is no locality stand-in and no ending for such rows.
+    # contract). Zeid 3:09 PM: society_name equal to the locality is that
+    # fallback, never a real society - skip it; landmark is always used as-is
+    # for the ending, including when it holds the locality fallback value.
     locality = str(row.get("locality") or "").strip()
     society = str(verified_society_name or "").strip()
     if not society:
@@ -890,9 +892,7 @@ def build_catalogue_description(row: dict, raw_text: str, *, verified_society_na
             society = candidate_society
     landmark = str(verified_landmark_name or "").strip()
     if not landmark:
-        candidate_landmark = str(row.get("landmark") or "").strip()
-        if candidate_landmark and candidate_landmark.lower() != locality.lower():
-            landmark = candidate_landmark
+        landmark = str(row.get("landmark") or "").strip()
     link = str(resolved_maps_url or "").strip()
     if not link:
         candidate = str(row.get("google_maps_url") or "").strip()

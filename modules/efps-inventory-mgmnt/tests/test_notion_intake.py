@@ -946,12 +946,15 @@ def test_catalogue_description_stored_society_and_verified_landmark_param():
     assert "📍 Landmark: Rainbow Drive\nhttps://www.google.com/maps/search/?api=1&query=r" in desc2
 
 
-def test_catalogue_description_locality_fallback_society_is_not_named():
+def test_catalogue_description_locality_fallback_rows_use_landmark_ending():
+    # Zeid 3:09 PM: when society_name is just the locality fallback, use the
+    # Landmark line before the map link - even when landmark holds the locality too.
     row = {"catalog_title": "T", "locality": "Kasavanahalli", "society_name": "Kasavanahalli",
            "landmark": "Kasavanahalli"}
     desc = intake.build_catalogue_description(row, "1 bhk kasavanahalli",
                                               resolved_maps_url="https://www.google.com/maps/search/?api=1&query=k")
-    assert "📍" not in desc and "✨" not in desc and "query=k" not in desc
+    assert "✨" not in desc
+    assert "📍 Landmark: Kasavanahalli\nhttps://www.google.com/maps/search/?api=1&query=k" in desc
 
 
 def test_catalogue_description_standalone_has_no_community_line():
@@ -1044,9 +1047,9 @@ def test_description_direct_call_ignores_stale_title_and_landmark():
     desc=intake.build_catalogue_description(row,'',resolved_maps_url='https://www.google.com/maps/search/?api=1&query=1,2')
     post=intake.build_whatsapp_post(row,'',maps_verified=True,resolved_maps_url='https://www.google.com/maps/search/?api=1&query=1,2')
     assert desc.startswith('*🏠 Semi Furnished 1 BHK - Haralur*')
-    # Locked 24 Nov 3:05 PM: a stored landmark equal to the locality is the
-    # pipeline fallback, so no ending renders; a distinct stored landmark is used.
-    assert '📍' not in desc and '✨' not in desc
+    # Locked 24 Nov 3:09 PM: landmark renders as-is, including the locality
+    # fallback value; a distinct stored landmark is used the same way.
+    assert '📍 Landmark: Haralur\nhttps://www.google.com/maps/search/?api=1&query=1,2' in desc
     row_lm=dict(row, landmark='Axis Bank ATM')
     desc_lm=intake.build_catalogue_description(row_lm,'',resolved_maps_url='https://www.google.com/maps/search/?api=1&query=1,2')
     assert '📍 Landmark: Axis Bank ATM\nhttps://www.google.com/maps/search/?api=1&query=1,2' in desc_lm
