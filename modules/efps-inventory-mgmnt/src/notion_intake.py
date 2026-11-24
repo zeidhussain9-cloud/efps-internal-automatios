@@ -1,6 +1,7 @@
 """Idempotent Notion property intake adapter over the canonical Inventory pipeline."""
 from __future__ import annotations
 
+import difflib
 import hashlib
 import hmac
 import json
@@ -139,6 +140,22 @@ class NotionClient:
             if not cursor:
                 raise IntakeError("Notion Housing Listings pagination returned no cursor")
 
+    def upload_file(self, data: bytes, filename: str, content_type: str = "image/jpeg") -> str:
+        """Create a Notion file upload, send the bytes, return the upload id."""
+        created = self.request("POST", "file_uploads", payload={"filename": filename, "content_type": content_type})
+        upload_id = str(created.get("id") or "")
+        if not upload_id:
+            raise IntakeError("Notion file upload was not created")
+        response = self.session.post(
+            f"https://api.notion.com/v1/file_uploads/{upload_id}/send",
+            headers={"Authorization": f"Bearer {self.token}", "Notion-Version": NOTION_VERSION},
+            files={"file": (filename, data, content_type)},
+            timeout=60,
+        )
+        if not response.ok or str(response.json().get("status") or "") != "uploaded":
+            raise IntakeError(f"Notion file upload failed ({response.status_code})")
+        return upload_id
+
     def save_listing(self, row: dict):
         # Read and validate the live Notion schema before constructing any write payload.
         # The serializer uses the actual property type, so a Select conversion cannot
@@ -154,6 +171,14 @@ class NotionClient:
             if row.get("Pipeline Status") != "Needs Review" and latest.get("Pipeline Status") in {"Posted", "Removed"}:
                 row["Pipeline Status"] = latest["Pipeline Status"]
         properties = listing_notion_properties(row, schema=schema)
+        # Native Photos column: Notion-hosted copies of the intake photos (same as the
+        # manual native uploads), attached only when this run uploaded a fresh set.
+        upload_ids = [x for x in (row.get("_native_photo_upload_ids") or []) if x]
+        if upload_ids and (schema.get("Photos") or {}).get("type") == "files":
+            slug = str(row.get("listing_id") or "photo")
+            properties["Photos"] = {"files": [
+                {"name": f"{slug}-{i:02d}.jpg", "type": "file_upload", "file_upload": {"id": fid}}
+                for i, fid in enumerate(upload_ids, start=1)]}
         validate_listing_properties(schema, properties)
         enforce_select_vocabulary(schema, properties)
         if existing:
@@ -892,6 +917,14 @@ def build_catalogue_description(row: dict, raw_text: str, *, verified_society_na
         candidate_society = str(row.get("society_name") or "").strip()
         if candidate_society and candidate_society.lower() != locality.lower():
             society = candidate_society
+            # The locality dropdown normalisation can respell the locality ("Harlur" ->
+            # "Haralur") while the stored fallback keeps the raw spelling. A society that
+            # equals the landmark and is a near-identical spelling of the locality is that
+            # same fallback, not a real society name.
+            if (candidate_society.lower() == str(row.get("landmark") or "").strip().lower()
+                    and locality
+                    and difflib.SequenceMatcher(None, candidate_society.lower(), locality.lower()).ratio() >= 0.85):
+                society = ""
     landmark = str(verified_landmark_name or "").strip()
     if not landmark:
         landmark = str(row.get("landmark") or "").strip()
@@ -903,9 +936,9 @@ def build_catalogue_description(row: dict, raw_text: str, *, verified_society_na
     if not re.match(r"https?://\S+$", link):
         link = MapsLinks.extract_url(raw)
     if link and society:
-        sections.append(f"✨ {society}\n{link}")
-    elif link and landmark:
-        sections.append(f"📍 Landmark: {landmark}\n{link}")
+        sections.append(f"*📍{society}:* {link}")
+    elif link:
+        sections.append(f"*📍Landmark:*\n{link}")
     return "\n\n".join(sections)
 
 
@@ -929,6 +962,29 @@ def _upload_photos(page: dict, listing_id: str, row: dict, cloudinary: Cloudinar
     # Only publish a complete ordered photo set. On partial failure, deterministic
     # Cloudinary IDs allow a later retry to overwrite the same files safely.
     return (urls if not issues else existing), issues
+
+
+def _native_photo_ids(notion, photos: list, listing_id: str, existing_listing, *, fresh_upload: bool):
+    """Notion-hosted copies of the intake photos for the Housing "Photos" column.
+
+    Runs when this intake run uploaded a fresh photo set, or when the Housing page has
+    no native photos yet. A text-only edit on a page that already has its photos leaves
+    the column untouched. Returns (upload ids, issues); an empty list means no change.
+    """
+    if not photos or len(photos) > MAX_IMAGES:
+        return [], []
+    has_native = bool(existing_listing and ((existing_listing.get("properties") or {}).get("Photos") or {}).get("files"))
+    if has_native and not fresh_upload:
+        return [], []
+    ids, issues = [], []
+    for index, item in enumerate(photos, start=1):
+        try:
+            blob = _download_image(_file_url(item))
+            kind = "image/png" if blob[:8] == b"\x89PNG\r\n\x1a\n" else "image/webp" if blob[8:12] == b"WEBP" else "image/jpeg"
+            ids.append(notion.upload_file(blob, f"{listing_id}-{index:02d}.jpg", kind))
+        except Exception as exc:
+            issues.append(f"Native photo {index} upload failed: {str(exc)[:200]}")
+    return ([] if issues else ids), issues
 
 
 def _aws_secret_value(environment_name: str) -> str:
@@ -1107,6 +1163,7 @@ def process_page(
         for key in protected:
             row[key] = ""
 
+        previous_urls = row.get("cloudinary_image_urls")
         urls, photo_issues = _upload_photos(page, listing_id, row, cloudinary)
         if urls:
             row["cloudinary_image_urls"] = catalog_urls([Upload(url=u, public_id="", index=i) for i, u in enumerate(urls, start=1)])
@@ -1168,6 +1225,15 @@ def process_page(
         # No old Housing lifecycle keys enter the persistence payload.
         processed = {k: v for k, v in processed.items() if k not in notion_lifecycle.LEGACY_STATUS_FIELDS}
         processed.update(lifecycle)
+        native_ids, native_issues = _native_photo_ids(
+            notion, photos, listing_id, existing_listing,
+            fresh_upload=bool(urls) and urls != [x.strip() for x in str(previous_urls or "").split(",") if x.strip()],
+        )
+        if native_ids:
+            processed["_native_photo_upload_ids"] = native_ids
+        if native_issues:
+            issues.extend(native_issues)
+            final_state = "Needs Review"
         listing_page_id = notion.save_listing(processed)
         note = "; ".join(issues) if issues else "Processed through the canonical EFPS inventory pipeline."
         combined_notes = _append_processing_notes(notion, page_id, note)

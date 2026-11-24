@@ -306,9 +306,9 @@ def generate_description(row: Mapping[str, Any]) -> tuple[str, str]:
 
     # Footer: show society name or "📍 Landmark:"
     if real_society:
-        lines.append(f"✨ {real_society}")
+        lines.append(f"*📍{real_society}:*")
     else:
-        lines.append("📍 Landmark:")
+        lines.append("*📍Landmark:*")
 
     body = "\n".join(lines)
 
