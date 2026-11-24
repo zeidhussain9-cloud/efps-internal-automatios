@@ -888,14 +888,14 @@ def test_runtime_maps_client_does_not_block_when_secret_is_missing(monkeypatch):
 from datetime import date
 
 def test_catalogue_description_gated_card_full_rules():
-    row = {"catalog_title": "Semi Furnished 2 BHK - Kasavanahalli", "furnish_type": "Semi Furnished", "BHK": "2 BHK", "monthly_rent": "50000",
+    row = {"google_maps_url": "https://www.google.com/maps/search/?api=1&query=x", "catalog_title": "Semi Furnished 2 BHK - Kasavanahalli", "furnish_type": "Semi Furnished", "BHK": "2 BHK", "monthly_rent": "50000",
            "security_deposit": "125000", "maintenance": "3000", "built_up_area": "1200",
            "floor_number": "3", "total_floors": "5", "preferred_tenant_type": "Family",
            "internal_property_type": "Gated Community", "locality": "Kasavanahalli",
            "bathrooms": "2", "balconies": "1", "society_name": "Adarsh Palm Retreat",
-           "google_maps_url": "https://maps.app.goo.gl/short"}
+           }
     raw = "Pets not allowed\nAvailability: Ready to Occupy\nUtility"
-    desc = intake.build_catalogue_description(row, raw, verified_society_name="Adarsh Palm Retreat", resolved_maps_url="https://www.google.com/maps/search/?api=1&query=x")
+    desc = intake.build_catalogue_description(row, raw, verified_society_name="Adarsh Palm Retreat")
     assert desc.startswith("*🏠 Semi Furnished 2 BHK - Kasavanahalli*")
     assert "💰 Rent: Rs 50,000" in desc
     assert "🧾 Maintenance: Rs 3,000" in desc
@@ -910,10 +910,10 @@ def test_catalogue_description_gated_card_full_rules():
 
 
 def test_catalogue_description_semi_gated_stored_society_used_without_raw_check():
-    row = {"catalog_title": "Semi Furnished 1 BHK - Haralur", "internal_property_type": "Semi Gated",
+    row = {"google_maps_url": "https://www.google.com/maps/search/?api=1&query=y", "catalog_title": "Semi Furnished 1 BHK - Haralur", "internal_property_type": "Semi Gated",
            "landmark": "Near Silver County", "society_name": "Some Layout", "locality": "Haralur",
            "floor_number": "2", "preferred_tenant_type": "Open! For All".replace("! "," ")}
-    desc = intake.build_catalogue_description(row, "", resolved_maps_url="https://www.google.com/maps/search/?api=1&query=y")
+    desc = intake.build_catalogue_description(row, "")
     assert "Floor 2nd" in desc and "of" not in desc.split("Floor 2nd")[1].split("\n")[0]
     assert "🏘️ Semi gated community" in desc
     assert "👥 Open For All" in desc
@@ -925,34 +925,31 @@ def test_catalogue_description_semi_gated_stored_society_used_without_raw_check(
 
 
 def test_catalogue_description_landmark_ending_when_no_society():
-    row = {"catalog_title": "Semi Furnished 1 BHK - Kasavanahalli", "internal_property_type": "Semi Gated",
+    row = {"google_maps_url": "https://www.google.com/maps/search/?api=1&query=lm", "catalog_title": "Semi Furnished 1 BHK - Kasavanahalli", "internal_property_type": "Semi Gated",
            "landmark": "Bachpan Play School", "society_name": "Kasavanahalli", "locality": "Kasavanahalli"}
-    desc = intake.build_catalogue_description(row, "", resolved_maps_url="https://www.google.com/maps/search/?api=1&query=lm")
+    desc = intake.build_catalogue_description(row, "")
     assert "📍 Landmark: Bachpan Play School\nhttps://www.google.com/maps/search/?api=1&query=lm" in desc
 
 
 def test_catalogue_description_stored_society_and_verified_landmark_param():
-    row = {"catalog_title": "T", "internal_property_type": "Gated Community",
+    row = {"google_maps_url": "https://www.google.com/maps/search/?api=1&query=s", "catalog_title": "T", "internal_property_type": "Gated Community",
            "society_name": "SJR Blue Waters", "locality": "Haralur"}
-    desc = intake.build_catalogue_description(row, "",
-                                              resolved_maps_url="https://www.google.com/maps/search/?api=1&query=s")
+    desc = intake.build_catalogue_description(row, "")
     assert "✨ SJR Blue Waters\nhttps://www.google.com/maps/search/?api=1&query=s" in desc
     # Caller-verified landmark (e.g. Maps pin name) wins when no society qualifies.
-    row2 = {"catalog_title": "T", "locality": "Sarjapur Road", "landmark": "Rainbow Drive",
+    row2 = {"google_maps_url": "https://www.google.com/maps/search/?api=1&query=r", "catalog_title": "T", "locality": "Sarjapur Road", "landmark": "Rainbow Drive",
             "society_name": "Sarjapur Road"}
     desc2 = intake.build_catalogue_description(row2, "villa on sarjapur road",
-                                               verified_landmark_name="Rainbow Drive",
-                                               resolved_maps_url="https://www.google.com/maps/search/?api=1&query=r")
+                                               verified_landmark_name="Rainbow Drive")
     assert "📍 Landmark: Rainbow Drive\nhttps://www.google.com/maps/search/?api=1&query=r" in desc2
 
 
 def test_catalogue_description_locality_fallback_rows_use_landmark_ending():
     # Zeid 3:09 PM: when society_name is just the locality fallback, use the
     # Landmark line before the map link - even when landmark holds the locality too.
-    row = {"catalog_title": "T", "locality": "Kasavanahalli", "society_name": "Kasavanahalli",
+    row = {"google_maps_url": "https://www.google.com/maps/search/?api=1&query=k", "catalog_title": "T", "locality": "Kasavanahalli", "society_name": "Kasavanahalli",
            "landmark": "Kasavanahalli"}
-    desc = intake.build_catalogue_description(row, "1 bhk kasavanahalli",
-                                              resolved_maps_url="https://www.google.com/maps/search/?api=1&query=k")
+    desc = intake.build_catalogue_description(row, "1 bhk kasavanahalli")
     assert "✨" not in desc
     assert "📍 Landmark: Kasavanahalli\nhttps://www.google.com/maps/search/?api=1&query=k" in desc
 
@@ -984,19 +981,22 @@ def test_catalogue_description_maintenance_three_clean_values():
     assert "💰 Rent: Rs 30,000 (maintenance included)" in desc and "🧾" not in desc
 
 
-def test_catalogue_description_never_uses_short_map_link():
-    row = {"catalog_title": "T", "locality": "Harlur", "society_name": "Palm Greens",
-           "google_maps_url": "https://maps.app.goo.gl/abc"}
-    raw = "1 bhk in Palm Greens, Harlur"
-    assert "goo.gl" not in intake.build_catalogue_description(row, raw)
-    row["google_maps_url"] = "https://www.google.com/maps/search/?api=1&query=z"
-    assert "https://www.google.com/maps/search/?api=1&query=z" in intake.build_catalogue_description(row, raw)
-    row["google_maps_url"] = "https://www.google.co.in/maps/place/Some+Place/data=xyz"
-    assert "https://www.google.co.in/maps/place/Some+Place/data=xyz" in intake.build_catalogue_description(row, raw)
-    # A long link alone is not enough: without a verified society or landmark there is no ending.
-    row2 = {"catalog_title": "T", "locality": "Harlur",
-            "google_maps_url": "https://www.google.com/maps/search/?api=1&query=z"}
-    assert "query=z" not in intake.build_catalogue_description(row2, "")
+def test_catalogue_description_keeps_exact_input_map_link():
+    short = "https://maps.app.goo.gl/dboRan3J7RmoYnYc7?g_st=ic"
+    row = {"catalog_title": "T", "locality": "Harlur", "society_name": "Palm Greens", "google_maps_url": short}
+    # A resolved/caption search link must never replace the owner's link.
+    d = intake.build_catalogue_description(row, "x", resolved_maps_url="https://www.google.com/maps/search/?api=1&query=z")
+    assert d.endswith("\n" + short) and "query=z" not in d
+    # Falls back to the link in the raw text, still unmodified.
+    row2 = {"catalog_title": "T", "locality": "Harlur", "society_name": "Palm Greens"}
+    assert intake.build_catalogue_description(row2, "1 bhk " + short).endswith(short)
+    # Long input links are also kept as given.
+    long_ = "https://www.google.co.in/maps/place/Some+Place/data=xyz"
+    row["google_maps_url"] = long_
+    assert intake.build_catalogue_description(row, "").endswith(long_)
+    # No input link: no link invented.
+    row3 = {"catalog_title": "T", "locality": "Harlur", "society_name": "Palm Greens"}
+    assert "http" not in intake.build_catalogue_description(row3, "")
 
 
 def test_catalogue_description_ordinals():
@@ -1041,16 +1041,16 @@ def test_dropdown_edit_refreshes_all_customer_facing_names():
 
 
 def test_description_direct_call_ignores_stale_title_and_landmark():
-    row={'catalog_title':'Semi Furnished 1 BHK - Harlur','locality':'Haralur',
+    row={'google_maps_url':'https://www.google.com/maps/search/?api=1&query=1,2','catalog_title':'Semi Furnished 1 BHK - Harlur','locality':'Haralur',
          'furnish_type':'Semi Furnished','BHK':'1 BHK','landmark':'Haralur',
          'internal_property_type':'Semi Gated'}
-    desc=intake.build_catalogue_description(row,'',resolved_maps_url='https://www.google.com/maps/search/?api=1&query=1,2')
+    desc=intake.build_catalogue_description(row,'')
     post=intake.build_whatsapp_post(row,'',maps_verified=True,resolved_maps_url='https://www.google.com/maps/search/?api=1&query=1,2')
     assert desc.startswith('*🏠 Semi Furnished 1 BHK - Haralur*')
     # Locked 24 Nov 3:09 PM: landmark renders as-is, including the locality
     # fallback value; a distinct stored landmark is used the same way.
     assert '📍 Landmark: Haralur\nhttps://www.google.com/maps/search/?api=1&query=1,2' in desc
     row_lm=dict(row, landmark='Axis Bank ATM')
-    desc_lm=intake.build_catalogue_description(row_lm,'',resolved_maps_url='https://www.google.com/maps/search/?api=1&query=1,2')
+    desc_lm=intake.build_catalogue_description(row_lm,'')
     assert '📍 Landmark: Axis Bank ATM\nhttps://www.google.com/maps/search/?api=1&query=1,2' in desc_lm
     assert '*📍 Haralur:*' in post

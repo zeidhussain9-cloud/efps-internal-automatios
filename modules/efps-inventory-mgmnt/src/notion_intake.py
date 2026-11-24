@@ -15,6 +15,7 @@ import requests
 
 from shared.cloudinary.client import CloudinaryClient, CloudinaryCredentials
 from shared.cloudinary.media import Upload, upload_property_images, catalog_urls
+from shared.ola_maps.links import MapsLinks
 from shared.ola_maps.inventory import OlaInventoryMaps
 from shared.google_sheets import schema
 from shared.ola_maps import OlaMapsClient
@@ -786,7 +787,8 @@ def build_catalogue_description(row: dict, raw_text: str, *, verified_society_na
     link (Zeid 3:09 PM: landmark is used even when it holds the locality
     fallback value; a society equal to the locality is the pipeline
     fallback and never renders as a name). The map link is always the
-    standardized long google maps link; short links never appear. Lines
+    exact link from the owner's input (google_maps_url, else the link in the
+    raw text), unmodified. Lines
     render only when their data exists.
     """
     # Rebuild even when called directly on an existing, stale row.
@@ -893,11 +895,13 @@ def build_catalogue_description(row: dict, raw_text: str, *, verified_society_na
     landmark = str(verified_landmark_name or "").strip()
     if not landmark:
         landmark = str(row.get("landmark") or "").strip()
-    link = str(resolved_maps_url or "").strip()
-    if not link:
-        candidate = str(row.get("google_maps_url") or "").strip()
-        if re.match(r"https://(?:www|maps)\.google\.[a-z.]+/maps(?:[/?]|$)", candidate):
-            link = candidate
+    # Zeid 24 Nov 4:40 PM: the description carries the EXACT Maps link the
+    # owner supplied, character for character. Never expanded, reduced to a
+    # search URL, or rebuilt from a resolved/caption link (resolved_maps_url is
+    # accepted for call compatibility and deliberately ignored here).
+    link = str(row.get("google_maps_url") or "").strip()
+    if not re.match(r"https?://\S+$", link):
+        link = MapsLinks.extract_url(raw)
     if link and society:
         sections.append(f"✨ {society}\n{link}")
     elif link and landmark:
@@ -1157,7 +1161,6 @@ def process_page(
         processed["catalogue_description"] = build_catalogue_description(
             processed, raw_text,
             verified_society_name=verified_society,
-            resolved_maps_url=caption_maps_url,
         )
         final_state = "Needs Review" if processed.get("status") == "Needs Review" else "Processed"
         lifecycle = notion_lifecycle.finish_processing(processed, previous)
@@ -1245,9 +1248,8 @@ def process_listing_page(page: dict, *, notion: NotionClient, store: SupabaseInt
             # Stamped 21 Nov: every Housing row edit refreshes the catalogue
             # description. Deterministic rebuild; written only when it changed,
             # which keeps the webhook loop finite (next event sees equality).
-            # The standardized long Maps link is carried over from the existing
-            # description when this path has no fresh resolved link, so an
-            # unrelated edit never silently drops the verified link.
+            # The Maps link in the description is always the owner's exact
+            # input link (google_maps_url); nothing is carried over.
             if str(row.get("locality") or "").strip():
                 title = build_catalog_title(row)
                 if title != str(row.get("catalog_title") or ""):
@@ -1261,10 +1263,8 @@ def process_listing_page(page: dict, *, notion: NotionClient, store: SupabaseInt
                     notion.update_page(page_id, {"whatsapp_post": _rich(post)})
                     row["whatsapp_post"] = post
             existing_desc = str(row.get("catalogue_description") or "")
-            carry = re.search(r"https://(?:www\.|maps\.)?google\.[a-z.]+/maps\S+", existing_desc)
             rebuilt = build_catalogue_description(
                 row, str(row.get("raw_message_text") or ""),
-                resolved_maps_url=carry.group(0) if carry else "",
             )
             if rebuilt and rebuilt != existing_desc.strip():
                 notion.update_page(page_id, {"catalogue_description": _rich(rebuilt)})
