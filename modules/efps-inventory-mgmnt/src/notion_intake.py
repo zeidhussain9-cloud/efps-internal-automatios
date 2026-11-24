@@ -22,11 +22,12 @@ from shared.google_sheets import schema
 from shared.ola_maps import OlaMapsClient
 
 try:
-    from . import pipeline, notion_lifecycle
+    from . import pipeline, notion_lifecycle, extract as area_extract
     from .location_match import normalize_locality
     from .normalize import build_catalog_title
 except ImportError:
     import pipeline, notion_lifecycle
+    import extract as area_extract
     from location_match import normalize_locality
     from normalize import build_catalog_title
 
@@ -633,6 +634,17 @@ def _rupee_amount(value: object) -> str:
     return ",".join(groups) + "," + tail
 
 
+def _advertised_sqft(row: dict, raw_text: str = "") -> str:
+    """The area figure the ad itself gave: a labelled built-up value when the ad labelled one,
+    otherwise the carpet figure (labelled carpet or plain Sqft)."""
+    carpet = str(row.get("carpet_area") or "").strip()
+    built = str(row.get("built_up_area") or "").strip()
+    basis = area_extract.area_basis(raw_text or str(row.get("raw_message_text") or ""))
+    if basis == "built_up" and built:
+        return built
+    return carpet or built
+
+
 def build_whatsapp_post(row: dict, raw_text: str, *, maps_verified: bool, verified_society_name: str = "", allow_unverified_source_map: bool = False, resolved_maps_url: str = "") -> str:
     """Build the card-style catalogue caption from explicit facts.
 
@@ -704,7 +716,7 @@ def build_whatsapp_post(row: dict, raw_text: str, *, maps_verified: bool, verifi
         sections.append("\n".join(money))
 
     specs = []
-    sqft = str(row.get("carpet_area") or row.get("built_up_area") or "").strip()  # advertised sqft = carpet (Zeid 24 Nov 2026)
+    sqft = _advertised_sqft(row, raw_text)
     floor = str(row.get("floor_number") or "").strip()
     total_floors = str(row.get("total_floors") or "").strip()
     if floor and total_floors and "/" not in floor and floor.lower() not in {"villa", "independent house", "duplex"}:
@@ -848,7 +860,7 @@ def build_catalogue_description(row: dict, raw_text: str, *, verified_society_na
 
     specs = []
     spec_parts = []
-    sqft = str(row.get("carpet_area") or row.get("built_up_area") or "").strip()  # advertised sqft = carpet (Zeid 24 Nov 2026)
+    sqft = _advertised_sqft(row, raw_text)
     if sqft:
         spec_parts.append(f"{sqft} sqft")
     floor = str(row.get("floor_number") or "").strip()
@@ -1195,6 +1207,10 @@ def process_page(
                     "(checked the list and Ola Maps). Pick the right locality from the dropdown; "
                     "the original Location stays in Raw Property Data."
                 )
+        area_note = area_extract.unsupported_area_note(raw_text, processed)
+        if area_note:
+            issues.append(area_note)
+            processed["status"] = "Needs Review"
         # Dropdown locality wins everywhere (owner rule, 21 Nov): rebuild the
         # card title AFTER locality normalization so the canonical value lands.
         processed["catalog_title"] = build_catalog_title(processed)

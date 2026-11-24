@@ -7,6 +7,20 @@ from source_segments import split_source_messages
 from field_resolution import resolve_bhk, resolve_internal_property_type, resolve_maintenance, resolve_property_subtype
 
 
+SUPER_AREA_RE = re.compile(r"super[\s\-]*(?:built[\s\-]*up|area)", re.I)
+_BUILT_LABEL_RE = re.compile(r"(?<!super\s)(?<!super-)\bbuilt[\s\-]*up(?:[\s\-]*area)?\s*(?:\(?\s*(?:sq\.?\s*ft\.?|sqft|sft)\s*\)?)?\s*[:\-=]*\s*\d{3,5}", re.I)
+
+def area_basis(text: str) -> str:
+    """Which area the ad advertised: 'built_up' when a built-up value is labelled in the
+    ad, otherwise 'carpet' (labelled carpet or an unlabelled sqft figure)."""
+    return "built_up" if _BUILT_LABEL_RE.search(text or "") else "carpet"
+
+def unsupported_area_note(text: str, row: dict) -> str:
+    """Note for an ad whose area is stated only as a super built-up figure (not supported)."""
+    if SUPER_AREA_RE.search(text or "") and not (str(row.get("carpet_area") or "").strip() or str(row.get("built_up_area") or "").strip()):
+        return "Area is stated as super built-up, which is not supported; carpet and built-up area left blank. Fill the area by hand."
+    return ""
+
 def _scale(n: str, s: str = "") -> str:
     v = float(n.replace(",", ""))
     s = (s or "").lower()
@@ -103,7 +117,7 @@ def scan(text: str) -> dict[str, str]:
                      ("built_up_area", r"(?<!super\s)(?<!super-)\bbuilt[\s\-]*up(?:[\s\-]*area)?\s*" + _unit + r"\s*[:\-=]*\s*(\d{3,5})")):
         m = re.search(pat, text, re.I)
         if m: out[key] = m.group(1)
-    if "carpet_area" not in out and "built_up_area" not in out:
+    if "carpet_area" not in out and "built_up_area" not in out and not SUPER_AREA_RE.search(text):
         m = re.search(r"sq\.?\s*ft\.?\s*[:\-]\s*(\d{3,5})|sqft\s*[:\-]\s*(\d{3,5})", text, re.I) or re.search(r"\b(\d{3,5})\s*(?:sq\.?\s*ft|sqft|sft)\b", text, re.I)
         if m: out["carpet_area"] = next(g for g in m.groups() if g)
 

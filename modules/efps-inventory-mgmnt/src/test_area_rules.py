@@ -24,7 +24,7 @@ def test_labelled_built_up_not_overwritten_by_generic_sqft():
     r=_row("Built-up area: 1100\nSqft: 1100");assert (r["built_up_area"],r["carpet_area"])==("1100","1010")
 
 def test_super_built_up_is_not_treated_as_built_up():
-    r=_row("Super built-up area: 1500");assert r.get("built_up_area","")=="" and r.get("carpet_area","")==""
+    r=_row("Super built-up area: 1500 sqft");assert r.get("built_up_area","")=="" and r.get("carpet_area","")==""
 
 def test_no_area_stays_blank():
     r=_row("");assert r.get("built_up_area","")=="" and r.get("carpet_area","")==""
