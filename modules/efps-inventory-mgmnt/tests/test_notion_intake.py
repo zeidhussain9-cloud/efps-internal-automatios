@@ -1124,3 +1124,37 @@ def test_listing_snapshot_no_longer_mirrors_collection_assignment_checkbox():
     assert "catalogue_collection_assigment" not in intake.listing_snapshot(on)
     assert "catalogue_collection_assigment" not in intake.listing_snapshot(base)
 
+
+
+def _panel_page(name, run):
+    return {"id": "b" * 32, "archived": False, "in_trash": False,
+            "parent": {"database_id": intake_panel_id()},
+            "properties": {"Name": {"type": "title", "title": [{"plain_text": name}]},
+                           "Run": {"type": "checkbox", "checkbox": run}}}
+
+
+def intake_panel_id():
+    from src import notion_intake as intake
+    return intake.CATALOGUE_PANEL_DATABASE_ID
+
+
+def test_panel_tick_on_a_stale_assign_row_is_ignored_while_real_operations_still_trigger():
+    import pathlib, sys
+    sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[2] / "efps_meta_catalogue_mgmnt" / "src"))
+    from src import notion_intake as intake
+
+    class FakeNotion:
+        def __init__(self, page):
+            self.page = page
+
+        def get_page(self, page_id):
+            return self.page
+
+    class NoStore:
+        def __getattr__(self, name):
+            raise AssertionError("store must not be touched: " + name)
+
+    ignored = intake.process_page("b" * 32, notion=FakeNotion(_panel_page("ASSIGN", True)), store=NoStore())
+    assert ignored["status"] == "ignored"
+    triggered = intake.process_page("b" * 32, notion=FakeNotion(_panel_page("CREATE", True)), store=NoStore())
+    assert triggered["status"] == "panel_trigger" and triggered["operation"] == "create"
