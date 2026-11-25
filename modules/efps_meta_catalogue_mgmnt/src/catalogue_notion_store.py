@@ -46,12 +46,6 @@ def _select_name(prop) -> str:
     return str(select.get("name") or "")
 
 
-def _formula_string(prop) -> str:
-    formula = (prop or {}).get("formula") or {}
-    value = formula.get("string")
-    return "" if value is None else str(value)
-
-
 def listing_row(page: dict) -> dict:
     """Project a Housing Listings Notion page into the runner's row shape."""
     props = page.get("properties") or {}
@@ -77,7 +71,6 @@ def listing_row(page: dict) -> dict:
         "cloudinary_image_urls": text("cloudinary_image_urls"),
         "google_maps_url": str((props.get("google_maps_url") or {}).get("url") or ""),
         "meta_catalog_id": text("meta_catalog_id"),
-        "meta_catalog_collection_id": _formula_string(props.get("meta_catalog_collection_id")),
         "live at": live,
         "error_notes": text("error_notes"),
     }

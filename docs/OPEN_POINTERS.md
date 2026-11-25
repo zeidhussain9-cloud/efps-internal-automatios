@@ -1,3 +1,10 @@
+## Legacy cleanup checklist (parked, NOT approved to execute) - 2026-11-25
+
+- Collection assignment was removed from the current repo, the efps-notion-intake Lambda, Notion and Supabase on 2026-11-25 (user decision: collection assignment is never automated).
+- Remaining by design: the Nov 15 deployed packages of the older Lambdas EFPSInteractive and EFPSLeadWorker still contain old copies of `modules/efps_meta_catalogue_mgmnt/src/generator.py` (assign_to_collection, publish_and_assign), its `__init__` export and an older Whapi client with edit_collection. Their handlers do not import them (static check, 2026-11-25).
+- Cleanup, only when the user approves and when those Lambdas are next redeployed for another reason: redeploy them from the current repo so the dormant copies disappear, then verify.
+- The live Slack app configuration (usage hint for `assign`) was not inspected; the repo manifest and docs no longer list it. Check the live Slack app settings separately.
+
 ## Current Maps fallback correction
 
 Maps API verification is optional for raw property intake. Missing/unreadable credentials, billing/quota/authorization denials, and request/transport failures preserve the submitted supported short Maps URL as not verified and do not independently create a `Needs Review` state. Source-derived locality remains authoritative; unverified Maps results never enrich location fields. Partial/mismatched results, unsupported links, and genuine property validation issues remain review conditions. See `docs/DEPLOYMENT.md` and `docs/NOTION_PROPERTY_INTAKE.md` for the deployed release evidence.

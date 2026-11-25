@@ -1,26 +1,12 @@
 """Meta catalogue description generator and WhAPI publisher."""
 from __future__ import annotations
 import re
-import time
 from datetime import datetime, date
 from typing import Any, Mapping
 from shared.whatsapp_whapi.client import WhApiClient
 
 # Google Sheets persistence is retired (Notion is canonical). Callers record
 # publish results themselves; pass recorder(product_id) to publish_product.
-
-# Minimum seconds to wait between product creation and collection assignment.
-# WhAPI returns 429 if the assignment call follows the create call too quickly.
-_COLLECTION_ASSIGN_COOLDOWN_SECONDS = 30
-
-# BHK-to-collection mapping.  Keys are canonical internal keys;
-# values must be substrings of the live WhatsApp collection names.
-COLLECTION_NAMES = {
-    "1RK_1BHK": "1RK & 1BHK",
-    "2BHK": "2BHK",
-    "3BHK": "3BHK",
-    "4plus_BHK": "4+ BHK",
-}
 
 
 def _indian_currency(value: Any) -> str:
@@ -65,171 +51,6 @@ def get_image_urls(row: Mapping[str, Any], limit: int = 10) -> list[str]:
     if not urls_str:
         return []
     return [u.strip() for u in urls_str.replace(",", " ").split() if u.strip()][:limit]
-
-
-def _bhk_to_collection_key(bhk: str) -> str:
-    """Map a BHK string to one of the four canonical collection keys."""
-    try:
-        bhk_num = float(str(bhk or "").strip().split()[0])
-        if bhk_num <= 1.5:
-            return "1RK_1BHK"
-        elif bhk_num <= 2.5:
-            return "2BHK"
-        elif bhk_num <= 3.5:
-            return "3BHK"
-        else:
-            return "4plus_BHK"
-    except (ValueError, IndexError, AttributeError):
-        return "4plus_BHK"
-
-
-def _resolve_collection(client: WhApiClient, key: str) -> tuple[str, str] | None:
-    """Fetch live collections and match by name substring.
-
-    Returns (collection_id, collection_name) or None when the collection
-    cannot be found.  Uses substring matching so the emoji prefix in live
-    collection names ("🏠 1RK & 1BHK") does not prevent matching.
-    """
-    target = COLLECTION_NAMES[key]
-    for coll in client.get_collections():
-        if target.lower() in coll.get("name", "").lower():
-            return coll["id"], coll["name"]
-    return None
-
-
-def assign_to_collection(
-    product_id: str,
-    bhk: str,
-    *,
-    whapi: WhApiClient | None = None,
-) -> tuple[bool, str]:
-    """Add a product to its BHK collection.
-
-    Returns (success: bool, message: str).
-
-    Root-cause fix: the PATCH /business/collections/{id} response returns
-    the updated collection object — it does NOT return {"status": "APPROVED"}.
-    We therefore check that the response is a non-error dict rather than
-    looking for a specific status key.
-
-    NOTE: WhAPI enforces a rate limit between product creation and collection
-    assignment.  Always wait at least _COLLECTION_ASSIGN_COOLDOWN_SECONDS
-    after calling publish_product() before calling this function, or use
-    publish_and_assign() which handles the wait automatically.
-    """
-    client = whapi or WhApiClient()
-    key = _bhk_to_collection_key(bhk)
-
-    match = _resolve_collection(client, key)
-    if not match:
-        error = f"Collection for BHK key '{key}' not found in live catalogue"
-        print(f"⚠️  Collection: {error}")
-        return False, error
-
-    collection_id, collection_name = match
-
-    _429_retry_delay = 10  # seconds to wait before the single 429 retry
-
-    for attempt in range(2):  # attempt 0 = first try, attempt 1 = one retry
-        try:
-            result = client.edit_collection(collection_id, add_products=[product_id])
-
-            # edit_collection() does a PATCH which returns the updated collection
-            # object on success, or raises RuntimeError on HTTP error.  A non-None
-            # dict that lacks an explicit "error" key means success.
-            if isinstance(result, dict) and "error" not in result:
-                msg = f"Product {product_id} added to '{collection_name}'"
-                print(f"✅ Collection: {msg}")
-                return True, msg
-
-            # WhAPI returns operation_timeout as a 200 with {"error": "operation_timeout"}
-            # when its backend cannot complete the assignment in time.  Treat this as a
-            # transient failure and retry once, the same way we handle 429.
-            whapi_err = str(result.get("error", "")) if isinstance(result, dict) else ""
-            if whapi_err == "operation_timeout" and attempt == 0:
-                print(
-                    f"⚠️  Collection: WhAPI operation_timeout for {product_id} — "
-                    f"retrying in {_429_retry_delay}s"
-                )
-                time.sleep(_429_retry_delay)
-                continue
-
-            # Any other unexpected shape — surface the raw response
-            error = f"Unexpected WhAPI response: {str(result)[:150]}"
-            print(f"⚠️  Collection: {error}")
-            return False, error
-
-        except RuntimeError as e:
-            raw = str(e)
-            if "429" in raw or "Too Many Requests" in raw.lower():
-                if attempt == 0:
-                    # One automatic retry after a short backoff
-                    print(
-                        f"⚠️  Collection: rate-limited (429) for {product_id} — "
-                        f"retrying in {_429_retry_delay}s"
-                    )
-                    time.sleep(_429_retry_delay)
-                    continue
-                # Second attempt also 429 — give up and let caller decide
-                error = (
-                    f"Rate-limited (429) after retry — "
-                    f"wait {_COLLECTION_ASSIGN_COOLDOWN_SECONDS}s and run `/efps assign`"
-                )
-                print(f"⚠️  Collection: {error}")
-                return False, error
-            error = f"Collection API error: {raw}"
-            print(f"⚠️  Collection: {error}")
-            return False, error
-        except Exception as e:
-            error = f"Collection API error: {str(e)}"
-            print(f"⚠️  Collection: {error}")
-            return False, error
-
-    # Unreachable — loop always returns — but satisfies type checkers
-    return False, "assign_to_collection: unexpected loop exit"
-
-
-def publish_and_assign(
-    row: Mapping[str, Any],
-    *,
-    whapi: WhApiClient | None = None,
-    recorder=None,
-) -> tuple[dict, bool, str]:
-    """Create/reconcile a WhatsApp product and assign it to its BHK collection.
-
-    Handles the mandatory cooldown between creation and assignment automatically.
-
-    Returns: (publish_result, assign_ok, assign_message)
-    Raises ValueError or RuntimeError on unrecoverable publish failure.
-    """
-    result = publish_product(row, whapi=whapi, recorder=recorder)
-    product_id = result["product_id"]
-    bhk = str(row.get("BHK") or "").strip()
-
-    # Only wait for newly created products, not already-existing ones.
-    if result.get("status") == "created":
-        print(
-            f"ℹ️  publish_and_assign: waiting {_COLLECTION_ASSIGN_COOLDOWN_SECONDS}s "
-            f"before collection assignment for {result.get('listing_id')}"
-        )
-        time.sleep(_COLLECTION_ASSIGN_COOLDOWN_SECONDS)
-
-    assign_ok, assign_msg = assign_to_collection(product_id, bhk, whapi=whapi)
-
-    # One retry: WhAPI can still 429 even after the initial cooldown when the
-    # platform is under load.  This covers the known orphaned-product cases
-    # (EF-2609-NNWN, EF-2609-9176).  A second consecutive 429 is surfaced to
-    # the caller as a normal (False, msg) result — the operator can use
-    # `/efps assign <listing_id>` to retry manually.
-    if not assign_ok and ("429" in assign_msg or "Rate-limited" in assign_msg):
-        print(
-            f"ℹ️  publish_and_assign: 429 on first assignment attempt for "
-            f"{result.get('listing_id')} — retrying after {_COLLECTION_ASSIGN_COOLDOWN_SECONDS}s"
-        )
-        time.sleep(_COLLECTION_ASSIGN_COOLDOWN_SECONDS)
-        assign_ok, assign_msg = assign_to_collection(product_id, bhk, whapi=whapi)
-
-    return result, assign_ok, assign_msg
 
 
 def generate_description(row: Mapping[str, Any]) -> tuple[str, str]:

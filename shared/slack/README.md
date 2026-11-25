@@ -64,7 +64,6 @@ Current command families:
 - `add-property` — start property entry session
 - `photos start` — start photo collection workflow
 - `catalogue start|update` — manage WhatsApp catalogues
-- `assign <listing_id>` — retry collection assignment
 - `status` — show pipeline stage counts
 - `show <listing_id>` — display property details
 - `run` — force-run lead ingestion worker

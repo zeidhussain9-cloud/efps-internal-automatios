@@ -11,8 +11,7 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import catalogue_runner as runner  # noqa: E402
 
 MASTERS_ON = {"EFPS_WHAPI_LIVE": True, "EFPS_WHAPI_API_ENABLED": True}
-ALL_SWITCHES = {"CREATE": True, "UPDATE": True, "DELETE": True, "ASSIGN": True, "RECONCILE": True, "DRY_RUN": False}
-COLLECTION = "2370295543377765"
+ALL_SWITCHES = {"CREATE": True, "UPDATE": True, "DELETE": True, "RECONCILE": True, "DRY_RUN": False}
 
 
 class FakeWhapi:
@@ -64,13 +63,6 @@ class FakeWhapi:
         if product_id not in self.products:
             raise RuntimeError("WhAPI HTTP 404: not found")
         del self.products[product_id]
-        return {"ok": True}
-
-    def edit_collection(self, collection_id, *, add_products=None, remove_products=None):
-        self._maybe_fail()
-        self.calls.append(("assign", collection_id, tuple(add_products or ())))
-        for pid in add_products or []:
-            self.products[pid].setdefault("collection_ids", []).append(collection_id)
         return {"ok": True}
 
     def get_products(self, count=100):
@@ -131,7 +123,7 @@ def make_row(**kw):
     row = {
         "page_id": "page-1", "listing_id": "EF-2611-AAAA",
         "Availability": "Available", "Pipeline Status": "Ready To Post", "live at": [],
-        "meta_catalog_id": "", "meta_catalog_collection_id": "",
+        "meta_catalog_id": "",
         "cloudinary_image_urls": "https://img/1.jpg https://img/2.jpg",
         "monthly_rent": "40000", "catalog_title": "Semi Furnished 2 BHK - Haralur",
         "catalogue_description": "desc text",
@@ -167,7 +159,7 @@ def test_create_prechecks_skip_with_reason():
         ({"monthly_rent": "0"}, "monthly_rent"),
         ({"cloudinary_image_urls": ""}, "no photos"),
     ]:
-        store = FakeStore([make_row(**kw)], switches={**ALL_SWITCHES, "ASSIGN": False})
+        store = FakeStore([make_row(**kw)], switches={**ALL_SWITCHES})
         result = run("create", store, FakeWhapi())
         assert reason in result["lines"][0], (kw, result["lines"])
         assert store.updates == []
@@ -175,10 +167,10 @@ def test_create_prechecks_skip_with_reason():
 
 # --- gating ---
 
-def test_all_eight_states_logged_at_run_start():
+def test_all_seven_states_logged_at_run_start():
     store = FakeStore([])
     result = run("create", store, FakeWhapi())
-    assert set(result["states"]) == {"EFPS_WHAPI_LIVE", "EFPS_WHAPI_API_ENABLED", "CREATE", "UPDATE", "DELETE", "ASSIGN", "RECONCILE", "DRY_RUN"}
+    assert set(result["states"]) == {"EFPS_WHAPI_LIVE", "EFPS_WHAPI_API_ENABLED", "CREATE", "UPDATE", "DELETE", "RECONCILE", "DRY_RUN"}
 
 
 def test_unreadable_switches_table_aborts_everything():
@@ -207,7 +199,7 @@ def test_operation_switch_off_means_nothing_runs():
 # --- CREATE ---
 
 def test_create_writes_product_id_and_meta_channel_only_after_success():
-    whapi, store = FakeWhapi(), FakeStore([make_row()], switches={**ALL_SWITCHES, "ASSIGN": False})
+    whapi, store = FakeWhapi(), FakeStore([make_row()], switches={**ALL_SWITCHES})
     result = run("create", store, whapi)
     assert result["counts"]["ok"] == 1
     page_id, props = store.updates[0]
@@ -228,7 +220,7 @@ def test_create_adopts_existing_product_instead_of_duplicating():
     whapi.products["55"] = {"id": "55", "product_retailer_id": "EF-2611-AAAA", "collection_ids": [],
                             "name": row["catalog_title"], "description": row["catalogue_description"],
                             "price": row["monthly_rent"], "images": row["cloudinary_image_urls"].split()}
-    store = FakeStore([row], switches={**ALL_SWITCHES, "ASSIGN": False})
+    store = FakeStore([row], switches={**ALL_SWITCHES})
     result = run("create", store, whapi)
     assert not any(c[0] == "create" for c in whapi.calls)
     assert "ADOPTED" in result["lines"][0]
@@ -239,7 +231,7 @@ def test_create_does_not_adopt_a_product_with_different_content():
     whapi = FakeWhapi()
     whapi.products["55"] = {"id": "55", "product_retailer_id": "EF-2611-AAAA", "name": "Something else",
                             "description": "other", "price": 1, "collection_ids": []}
-    store = FakeStore([make_row()], switches={**ALL_SWITCHES, "ASSIGN": False})
+    store = FakeStore([make_row()], switches={**ALL_SWITCHES})
     result = run("create", store, whapi)
     assert result["counts"]["failed"] == 1
     assert "not adopted" in str(result["lines"])
@@ -254,7 +246,7 @@ def test_create_rechecks_row_just_before_acting():
             r["Availability"] = "Rented Out"   # changed after the batch snapshot
             return r
     whapi = FakeWhapi()
-    store = Drifting([make_row()], switches={**ALL_SWITCHES, "ASSIGN": False})
+    store = Drifting([make_row()], switches={**ALL_SWITCHES})
     result = run("create", store, whapi)
     assert "no longer eligible" in result["lines"][0]
     assert not any(c[0] == "create" for c in whapi.calls)
@@ -262,25 +254,28 @@ def test_create_rechecks_row_just_before_acting():
 
 
 def test_create_requires_photos():
-    store = FakeStore([make_row(cloudinary_image_urls="")], switches={**ALL_SWITCHES, "ASSIGN": False})
+    store = FakeStore([make_row(cloudinary_image_urls="")], switches={**ALL_SWITCHES})
     result = run("create", store, FakeWhapi())
     assert "no photos" in result["lines"][0]
     assert store.updates == []
 
 
 def test_create_never_chains_assignment():
-    # Zeid 24 Nov 3:04 PM: collection assignment is a separate flow; a create
-    # run must not assign, even when ASSIGN is on and a collection is mapped.
+    # Collection assignment does not exist: a create run makes no collection call
+    # of any kind (the fake has no collection method, so any attempt would fail the row).
     sleeps = []
-    whapi, store = FakeWhapi(), FakeStore([make_row(meta_catalog_collection_id=COLLECTION)])
-    run("create", store, whapi, sleeper=sleeps.append)
-    assert not any(c[0] == "assign" for c in whapi.calls)
+    whapi, store = FakeWhapi(), FakeStore([make_row()])
+    result = run("create", store, whapi, sleeper=sleeps.append)
+    assert result["counts"]["failed"] == 0 and "created and verified" in result["lines"][0]
+    assert not any("assign" in str(c[0]) or "collection" in str(c[0]) for c in whapi.calls)
+    assert not hasattr(whapi, "edit_collection")
     assert 30 in sleeps  # 30s spacing between catalogue requests is kept
+    assert runner.CREATE_SPACING_SECONDS == 30
 
 
 def test_create_batch_size_is_3_and_fits_lambda_timeout():
     rows = [make_row(page_id=f"p{i}", listing_id=f"EF-2611-{i:04d}") for i in range(5)]
-    store = FakeStore(rows, switches={**ALL_SWITCHES, "ASSIGN": False})
+    store = FakeStore(rows, switches={**ALL_SWITCHES})
     result = run("create", store, FakeWhapi())
     assert runner.CAPS["create"] == 3
     assert result["counts"]["ok"] == 3
@@ -290,7 +285,7 @@ def test_create_batch_size_is_3_and_fits_lambda_timeout():
 
 def test_cap_skip_lines_only_in_dry_run():
     rows = [make_row(page_id=f"p{i}", listing_id=f"EF-2611-{i:04d}") for i in range(5)]
-    store = FakeStore(rows, switches={**ALL_SWITCHES, "ASSIGN": False, "DRY_RUN": True})
+    store = FakeStore(rows, switches={**ALL_SWITCHES, "DRY_RUN": True})
     result = run("create", store, FakeWhapi())
     assert result["counts"]["would"] == 3
     assert result["counts"]["skipped"] == 2
@@ -300,14 +295,14 @@ def test_cap_skip_lines_only_in_dry_run():
 def test_unfit_rows_never_take_batch_slots():
     bad = [make_row(page_id=f"b{i}", listing_id=f"EF-2611-B{i:03d}", cloudinary_image_urls="") for i in range(5)]
     good = [make_row(page_id=f"g{i}", listing_id=f"EF-2611-G{i:03d}") for i in range(3)]
-    store = FakeStore(bad + good, switches={**ALL_SWITCHES, "ASSIGN": False})
+    store = FakeStore(bad + good, switches={**ALL_SWITCHES})
     result = run("create", store, FakeWhapi())
     assert result["counts"]["ok"] == 3  # bad rows listed first did not starve the good ones
 
 
 def test_full_chain_creates_every_eligible_row_in_batches():
     rows = [make_row(page_id=f"p{i}", listing_id=f"EF-2611-{i:04d}") for i in range(25)]
-    store, whapi = FakeStore(rows, switches={**ALL_SWITCHES, "ASSIGN": False}), FakeWhapi()
+    store, whapi = FakeStore(rows, switches={**ALL_SWITCHES}), FakeWhapi()
     batches = []
     while True:  # what catalogue_scheduler._batch does: chain while ok > 0, stop on 0 or any failure
         r = run("create", store, whapi)
@@ -322,7 +317,7 @@ def test_full_chain_creates_every_eligible_row_in_batches():
 
 def test_second_429_stops_the_row_and_fails_the_batch():
     rows = [make_row(page_id=f"p{i}", listing_id=f"EF-2611-{i:04d}") for i in range(2)]
-    store, whapi = FakeStore(rows, switches={**ALL_SWITCHES, "ASSIGN": False}), FakeWhapi()
+    store, whapi = FakeStore(rows, switches={**ALL_SWITCHES}), FakeWhapi()
     orig = whapi.get_products
     def always_429(count=100):
         raise RuntimeError("WhAPI HTTP 429: Too many requests")
@@ -431,30 +426,23 @@ def test_delete_404_is_a_correction_not_a_failure():
     assert result["counts"]["failed"] == 0
 
 
-# --- ASSIGN ---
+# --- ASSIGN is gone ---
 
-def test_assign_uses_formula_id_and_checks_membership_live():
-    whapi = FakeWhapi()
-    whapi.products["31"] = {"id": "31", "collection_ids": [COLLECTION]}
-    row = make_row(meta_catalog_id="31", meta_catalog_collection_id=COLLECTION, **{"live at": ["Meta Catalogue"]})
-    result = run("assign", FakeStore([row]), whapi)
-    assert "already in collection" in result["lines"][0]
-    assert not any(c[0] == "assign" for c in whapi.calls)
-
-
-def test_assign_hard_stops_on_unknown_collection_id():
-    whapi = FakeWhapi()
-    whapi.products["31"] = {"id": "31", "collection_ids": []}
-    row = make_row(meta_catalog_id="31", meta_catalog_collection_id="999999", **{"live at": ["Meta Catalogue"]})
-    result = run("assign", FakeStore([row]), whapi)
-    assert "not one of the 4 known IDs" in result["lines"][0]
-    assert not any(c[0] == "assign" for c in whapi.calls)
+def test_assign_operation_is_rejected_and_touches_nothing():
+    whapi, store = FakeWhapi(), FakeStore([make_row(meta_catalog_id="31", **{"live at": ["Meta Catalogue"]})])
+    with pytest.raises(ValueError, match="unknown operation"):
+        run("assign", store, whapi)
+    assert whapi.calls == [] and store.updates == []
+    assert "assign" not in runner.OPERATIONS and "assign" not in runner.CAPS
+    assert "assign" not in runner.ELIGIBLE and "ASSIGN" not in runner.SWITCH_BY_OPERATION.values()
+    assert not hasattr(runner, "_op_assign_row") and not hasattr(runner, "KNOWN_COLLECTION_IDS")
 
 
-def test_assign_skips_unmapped_bhk_without_guessing():
-    row = make_row(meta_catalog_id="31", meta_catalog_collection_id="", **{"live at": ["Meta Catalogue"]})
-    result = run("assign", FakeStore([row]), FakeWhapi())
-    assert "unmapped BHK" in result["lines"][0]
+def test_removed_collection_columns_are_not_needed():
+    # Rows carry neither removed column; every operation still selects and runs.
+    row = make_row()
+    assert "meta_catalog_collection_id" not in row
+    assert runner.eligible_create(row)
 
 
 # --- 429 handling ---
@@ -464,7 +452,7 @@ def test_create_429_is_never_retried_and_stops_the_batch():
     whapi = FakeWhapi()
     whapi.fail_next = RuntimeError("WhAPI HTTP 429: Too many requests")
     rows = [make_row(page_id=f"p{i}", listing_id=f"EF-2611-{i:04d}") for i in range(3)]
-    store = FakeStore(rows, switches={**ALL_SWITCHES, "ASSIGN": False})
+    store = FakeStore(rows, switches={**ALL_SWITCHES})
     result = run("create", store, whapi, sleeper=sleeps.append)
     assert 30 not in sleeps  # no 429 retry wait, the number is left to rest
     assert result["counts"]["failed"] == 1 and result["counts"]["ok"] == 0
@@ -474,7 +462,7 @@ def test_create_429_is_never_retried_and_stops_the_batch():
 
 def test_create_checkpoint_defers_before_the_irreversible_step():
     rows = [make_row(page_id="p0", listing_id="EF-2611-0000"), make_row(page_id="p1", listing_id="EF-2611-0001")]
-    store, whapi = FakeStore(rows, switches={**ALL_SWITCHES, "ASSIGN": False}), FakeWhapi()
+    store, whapi = FakeStore(rows, switches={**ALL_SWITCHES}), FakeWhapi()
     left = iter([300.0, 100.0] + [100.0] * 5)  # row may start, but not enough time left to create
     result = runner.run_operation("create", store=store, whapi=whapi, masters=MASTERS_ON,
                                   sleeper=lambda s: None, time_left=lambda: next(left))
@@ -484,7 +472,7 @@ def test_create_checkpoint_defers_before_the_irreversible_step():
 
 def test_deadline_model_two_rows_fit_a_300s_invocation():
     rows = [make_row(page_id=f"p{i}", listing_id=f"EF-2611-{i:04d}") for i in range(3)]
-    store = FakeStore(rows, switches={**ALL_SWITCHES, "ASSIGN": False})
+    store = FakeStore(rows, switches={**ALL_SWITCHES})
     spent = []
     result = runner.run_operation("create", store=store, whapi=FakeWhapi(), masters=MASTERS_ON,
                                   sleeper=spent.append, time_left=lambda: 300 - sum(spent))
@@ -494,7 +482,7 @@ def test_deadline_model_two_rows_fit_a_300s_invocation():
 def test_second_429_defers_the_row():
     whapi = FakeWhapi()
     whapi.fail_next = RuntimeError("WhAPI HTTP 429")
-    store = FakeStore([make_row()], switches={**ALL_SWITCHES, "ASSIGN": False})
+    store = FakeStore([make_row()], switches={**ALL_SWITCHES})
     def always_429(*a, **k):
         raise RuntimeError("WhAPI HTTP 429")
     whapi.get_products = always_429
@@ -539,7 +527,7 @@ def test_reconcile_reports_drift_and_orphans_without_touching_anything():
     assert "leftover product for a Rented Out/On Hold row" in text
     assert "orphan on WhatsApp" in text
     assert store.review_entries and store.review_entries[0]["type"] == "Orphan product"
-    assert store.updates == [] and not any(c[0] in {"create", "delete", "update", "assign"} for c in whapi.calls)
+    assert store.updates == [] and not any(c[0] in {"create", "delete", "update"} for c in whapi.calls)
 
 
 # --- review queue decisions execute first ---
@@ -550,7 +538,7 @@ def test_queued_decisions_execute_before_the_normal_pass():
     whapi.products["88"] = {"id": "88", "product_retailer_id": "EF-2611-AAAA", "name": _r["catalog_title"],
                             "description": _r["catalogue_description"], "price": _r["monthly_rent"],
                             "images": _r["cloudinary_image_urls"].split()}
-    store = FakeStore([make_row(), _r], switches={**ALL_SWITCHES, "ASSIGN": False})
+    store = FakeStore([make_row(), _r], switches={**ALL_SWITCHES})
     store.decisions = [{"id": "q1", "operation": "create", "decision": "Reprocess",
                         "row": make_row(page_id="q-page", listing_id="EF-2611-AAAA")}]
     result = run("create", store, whapi)
@@ -569,7 +557,7 @@ def test_reconcile_dry_run_queues_nothing():
 
 def test_create_preserves_other_live_at_selections():
     whapi = FakeWhapi()
-    store = FakeStore([make_row(**{"live at": ["99acres"]})], switches={**ALL_SWITCHES, "ASSIGN": False})
+    store = FakeStore([make_row(**{"live at": ["99acres"]})], switches={**ALL_SWITCHES})
     run("create", store, whapi)
     assert store.updates[0][1]["live at"] == ["99acres", "Meta Catalogue"]
 
@@ -578,7 +566,7 @@ def test_create_stops_on_duplicate_listing_id_matches():
     whapi = FakeWhapi()
     for pid in ("55", "56"):
         whapi.products[pid] = {"id": pid, "product_retailer_id": "EF-2611-AAAA"}
-    store = FakeStore([make_row()], switches={**ALL_SWITCHES, "ASSIGN": False})
+    store = FakeStore([make_row()], switches={**ALL_SWITCHES})
     result = run("create", store, whapi)
     assert result["counts"]["failed"] == 1 and "share listing_id" in str(result["lines"])
     assert store.updates == [] and not any(c[0] == "create" for c in whapi.calls)
@@ -591,11 +579,11 @@ def test_adoption_rejects_wrong_photo_count_or_link():
             "images": row["cloudinary_image_urls"].split(), "url": "https://maps/x"}
     for bad in ({"images": ["only-one"]}, {"url": "https://maps/other"}):
         whapi = FakeWhapi(); whapi.products["55"] = {**base, **bad}
-        store = FakeStore([dict(row)], switches={**ALL_SWITCHES, "ASSIGN": False})
+        store = FakeStore([dict(row)], switches={**ALL_SWITCHES})
         result = run("create", store, whapi)
         assert result["counts"]["failed"] == 1 and store.updates == []
     whapi = FakeWhapi(); whapi.products["55"] = dict(base)
-    store = FakeStore([dict(row)], switches={**ALL_SWITCHES, "ASSIGN": False})
+    store = FakeStore([dict(row)], switches={**ALL_SWITCHES})
     assert "ADOPTED" in run("create", store, whapi)["lines"][0]
 
 
@@ -607,7 +595,7 @@ def test_lost_create_response_stops_batch_and_blocks_a_blind_recreate():
             super().create_product(*a, **k)  # Meta created it ...
             raise RuntimeError("WhAPI network error: timed out")  # ... but the answer was lost
     rows = [make_row(page_id=f"p{i}", listing_id=f"EF-2611-{i:04d}") for i in range(3)]
-    store, whapi = FakeStore(rows, switches={**ALL_SWITCHES, "ASSIGN": False}), LostWhapi()
+    store, whapi = FakeStore(rows, switches={**ALL_SWITCHES}), LostWhapi()
     r1 = run("create", store, whapi)
     assert r1["counts"]["failed"] == 1 and r1["counts"]["ok"] == 0
     assert len(whapi.products) == 1  # later rows were not attempted
@@ -626,7 +614,7 @@ def test_lost_create_response_stops_batch_and_blocks_a_blind_recreate():
 def test_lost_create_is_adopted_once_the_product_becomes_visible():
     rows = [make_row(page_id="p0", listing_id="EF-2611-0000")]
     whapi = FakeWhapi()
-    store = FakeStore(rows, switches={**ALL_SWITCHES, "ASSIGN": False})
+    store = FakeStore(rows, switches={**ALL_SWITCHES})
     run("create", store, whapi)  # creates it normally to get a matching live product
     rows[0].update({"meta_catalog_id": "", "Pipeline Status": "Ready To Post", "live at": [],
                     "error_notes": "[t] CREATE EF-2611-0000 FAILED create request failed ...; OUTCOME UNKNOWN, product may exist"})
@@ -637,7 +625,7 @@ def test_lost_create_is_adopted_once_the_product_becomes_visible():
 
 def test_catalogue_is_read_once_per_batch_and_stays_fresh():
     rows = [make_row(page_id=f"p{i}", listing_id=f"EF-2611-{i:04d}") for i in range(3)]
-    store, whapi = FakeStore(rows, switches={**ALL_SWITCHES, "ASSIGN": False}), FakeWhapi()
+    store, whapi = FakeStore(rows, switches={**ALL_SWITCHES}), FakeWhapi()
     reads = []
     orig = whapi.get_products
     whapi.get_products = lambda count=100, before_page=None: (reads.append(1), orig(count))[1]
@@ -647,7 +635,7 @@ def test_catalogue_is_read_once_per_batch_and_stays_fresh():
 
 def test_catalogue_page_read_defers_when_no_time_for_it():
     rows = [make_row(page_id="p0", listing_id="EF-2611-0000")]
-    store, whapi = FakeStore(rows, switches={**ALL_SWITCHES, "ASSIGN": False}), FakeWhapi()
+    store, whapi = FakeStore(rows, switches={**ALL_SWITCHES}), FakeWhapi()
     def pages(count=100, before_page=None):
         before_page()
         return []
@@ -666,7 +654,7 @@ def test_checkpoint_is_written_before_create_so_a_killed_process_is_held():
             super().create_product(*a, **k)  # Meta created it
             raise Killed()                    # process dies before any error_notes write
     rows = [make_row(page_id="p0", listing_id="EF-2611-0000")]
-    store, whapi = FakeStore(rows, switches={**ALL_SWITCHES, "ASSIGN": False}), DiesInCreate()
+    store, whapi = FakeStore(rows, switches={**ALL_SWITCHES}), DiesInCreate()
     with pytest.raises(Killed):
         run("create", store, whapi)
     assert [l for _, l in store.activity if "ATTEMPT STARTED" in l]  # already durable
@@ -681,7 +669,7 @@ def test_refused_create_settles_the_checkpoint_so_the_row_can_retry():
     whapi = FakeWhapi()
     whapi.fail_next = None
     rows = [make_row(page_id="p0", listing_id="EF-2611-0000")]
-    store = FakeStore(rows, switches={**ALL_SWITCHES, "ASSIGN": False})
+    store = FakeStore(rows, switches={**ALL_SWITCHES})
     orig = whapi.create_product
     def refuse(*a, **k):
         raise RuntimeError("WhAPI HTTP 400: bad request")
@@ -696,7 +684,7 @@ def test_refused_create_settles_the_checkpoint_so_the_row_can_retry():
 
 # --- 24 Nov 2026 fixes: photo identity, stop on verification failure, recovery hold, verified write-back ---
 
-SW_CREATE = {**ALL_SWITCHES, "ASSIGN": False}
+SW_CREATE = {**ALL_SWITCHES}
 
 
 class PreviewWhapi(FakeWhapi):

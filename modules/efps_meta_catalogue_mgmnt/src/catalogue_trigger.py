@@ -27,7 +27,7 @@ import json
 import os
 import time
 
-OPERATIONS = ("create", "update", "delete", "assign", "reconcile")
+OPERATIONS = ("create", "update", "delete", "reconcile")
 
 SIGNATURE_HEADER = "x-efps-inventory-signature"
 TIMESTAMP_HEADER = "x-efps-inventory-timestamp"

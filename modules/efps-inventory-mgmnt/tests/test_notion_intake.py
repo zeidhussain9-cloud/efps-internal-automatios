@@ -1117,11 +1117,10 @@ def test_catalogue_description_respelled_locality_fallback_is_landmark_not_socie
     assert intake.build_catalogue_description(real2, "").endswith("*📍Shubh Enclave:*")
 
 
-def test_listing_snapshot_carries_collection_assignment_checkbox():
+def test_listing_snapshot_no_longer_mirrors_collection_assignment_checkbox():
     from src import notion_intake as intake
     base = {"id": "a" * 32, "properties": {"listing_id": {"type": "rich_text", "rich_text": [{"plain_text": "EF-1"}]}}}
     on = {**base, "properties": {**base["properties"], "catalogue_collection_assigment": {"type": "checkbox", "checkbox": True}}}
-    off = {**base, "properties": {**base["properties"], "catalogue_collection_assigment": {"type": "checkbox", "checkbox": False}}}
-    assert intake.listing_snapshot(on)["catalogue_collection_assigment"] == "Yes"
-    assert intake.listing_snapshot(off)["catalogue_collection_assigment"] == "No"
-    assert intake.listing_snapshot(base)["catalogue_collection_assigment"] == ""
+    assert "catalogue_collection_assigment" not in intake.listing_snapshot(on)
+    assert "catalogue_collection_assigment" not in intake.listing_snapshot(base)
+

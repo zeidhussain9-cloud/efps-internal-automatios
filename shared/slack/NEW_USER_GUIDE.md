@@ -55,7 +55,6 @@ The EFPS application routes the subcommand.
 /efps photos start
 /efps catalogue start
 /efps catalogue update
-/efps assign <listing_id>
 ```
 
 Thread controls (plain words, no slash):

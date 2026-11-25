@@ -39,8 +39,8 @@ def test_catalogue_writes_require_the_write_flag(monkeypatch: pytest.MonkeyPatch
     monkeypatch.setenv("EFPS_WHAPI_LIVE", "1")
     monkeypatch.delenv("EFPS_WHAPI_CATALOG_WRITE_ENABLED", raising=False)
     client = WhApiClient(WhApiCredentials("test-token"), base_url="https://example.test", transport=lambda req: {"ok": True})
-    with pytest.raises(WhApiLiveTrafficBlocked, match="non-approved WhAPI operation"):
-        client.edit_collection("c1", add_products=["p1"])
+    with pytest.raises(WhApiLiveTrafficBlocked, match="outside the catalogue-operation allowlist"):
+        client.patch("/business/collections/1", {"add_products": ["p1"]})
     with pytest.raises(WhApiLiveTrafficBlocked, match="non-approved WhAPI operation"):
         client.delete_product("p1")
     with pytest.raises(WhApiLiveTrafficBlocked, match="non-approved WhAPI operation"):
@@ -132,23 +132,17 @@ def test_get_products_refuses_a_repeating_page_instead_of_returning_a_partial_ca
         client.get_products(count=10000)
 
 
-def test_collection_products_read_allows_only_exact_numeric_get(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_collections_have_no_client_method_and_every_collection_path_is_blocked(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("EFPS_WHAPI_API_ENABLED", "true")
     monkeypatch.setenv("EFPS_WHAPI_LIVE", "1")
-    monkeypatch.delenv("EFPS_WHAPI_CATALOG_WRITE_ENABLED", raising=False)
+    monkeypatch.setenv("EFPS_WHAPI_CATALOG_WRITE_ENABLED", "true")
     seen = []
-    client = WhApiClient(WhApiCredentials("t"), base_url="https://e.test", transport=lambda req: seen.append(req) or {"products": []})
-    assert client.get_collection_products("2585336038575419") == {"products": []}
-    assert "products_count=30" in seen[0].full_url
-    assert len(seen) == 1
-    for bad in ("/business/collections/abc/products", "/business/collections/123/products/extra",
-                "/business/collections/123", "/business/collections/123/other",
-                "/business/collections/../products", "/business/collections//products"):
-        with pytest.raises(WhApiLiveTrafficBlocked, match="outside the catalogue-operation allowlist"):
-            client.get(bad)
-    for verb in ("post", "patch", "delete"):
-        with pytest.raises(WhApiLiveTrafficBlocked):
-            getattr(client, verb)("/business/collections/123/products", {}) if verb != "delete" else client._request("DELETE", "/business/collections/123/products")
-    with pytest.raises(ValueError):
-        client.get_collection_products("12/3")
-    assert len(seen) == 1
+    client = WhApiClient(WhApiCredentials("t"), base_url="https://e.test", transport=lambda req: seen.append(req) or {})
+    for name in ("edit_collection", "get_collections", "get_collection_products"):
+        assert not hasattr(client, name)
+    for path in ("/business/collections", "/business/collections/123", "/business/collections/123/products"):
+        for verb in ("GET", "POST", "PATCH", "DELETE"):
+            with pytest.raises(WhApiLiveTrafficBlocked):
+                client._request(verb, path, {})
+    assert seen == []
+

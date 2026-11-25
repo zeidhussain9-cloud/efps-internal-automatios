@@ -296,7 +296,7 @@ def _finalize(event, lam, store, context, *, sleep, now) -> dict:
     stamp = now().astimezone(IST).strftime("%d %b %Y, %I:%M %p IST")
     if op == "create":
         title = f"{stamp} - Scheduled catalogue creation ({run_id or 'manual'}): {status.upper()}"
-        what = f"WHAT: daily 10:30 PM IST creation-only run ({run_id}); no update, delete or assign."
+        what = f"WHAT: daily 10:30 PM IST creation-only run ({run_id}); no update or delete."
         verb = "created"
     else:
         title = f"{stamp} - Scheduled catalogue cleanup ({run_id or 'manual'}): {status.upper()}"

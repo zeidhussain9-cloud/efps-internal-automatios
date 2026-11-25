@@ -29,7 +29,6 @@ The new Phase-1 operational surface is the one top-level `/efps` command with th
 - `add-property`
 - `photos start`
 - `catalogue start|update`
-- `assign <listing_id>`
 
 **Removed commands** (no longer part of implementation):
 - `run` — removed; lead ingestion is fully automated on schedule with no manual trigger

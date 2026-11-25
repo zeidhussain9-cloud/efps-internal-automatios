@@ -13,7 +13,6 @@ Canonical command surface for EFPS Inventory Management. There is one Slack slas
 | `/efps photos start` | Start the no-photo property queue. |
 | `/efps catalogue start` | Start Meta catalogue creation for ready properties. |
 | `/efps catalogue update` | Delete catalogues for rented-out properties. |
-| `/efps assign <listing_id>` | Retry collection assignment for a property. |
 
 ## Lead channel — `#efps-leads`
 

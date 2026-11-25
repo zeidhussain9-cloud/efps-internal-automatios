@@ -1,20 +1,21 @@
 """Gated catalogue operations runner — owner-locked design, 21 Nov 2026.
 
-The 5 operations (CREATE, UPDATE, DELETE, ASSIGN, RECONCILE) run ONLY when
+The 4 operations (CREATE, UPDATE, DELETE, RECONCILE) run ONLY when
 explicitly triggered from the Catalogue Control Panel. Nothing auto-fires:
 a ticked "Post to Catalogue" checkbox only marks a row eligible; a run
 happens only when the operator triggers the operation.
 
 Safety contract (locked):
-- At every run start all 8 switch states are read and logged:
+- At every run start all 7 switch states are read and logged:
   2 template.yaml masters (EFPS_WHAPI_LIVE, EFPS_WHAPI_API_ENABLED) and
-  6 Notion checkboxes (CREATE, UPDATE, DELETE, ASSIGN, RECONCILE, DRY_RUN).
+  5 Notion checkboxes (CREATE, UPDATE, DELETE, RECONCILE, DRY_RUN).
   An unreadable switches table = everything off = the run does nothing
   (fail-closed).
 - Strictly sequential calls, never parallel.
-- 30s pause between a successful create and its assign.
+- 30s pause between catalogue requests of a create (CREATE_SPACING_SECONDS).
+- Collection assignment does not exist in this code: it is never automated.
 - One 429 retry after 30s; a second 429 defers the row to the next run.
-- Per-run caps: 10 creates, 10 updates, 3 deletes, 20 assigns.
+- Per-run caps: 10 creates, 10 updates, 3 deletes.
 - DELETE removes by the exact stored product ID, never by searching.
   After delete the product ID stays in meta_catalog_id for history and is
   rewritten in red; "Meta Catalogue" is removed from `live at`.
@@ -35,16 +36,15 @@ import time
 from datetime import datetime, timezone
 from typing import Any, Callable, Mapping
 
-OPERATIONS = ("create", "update", "delete", "assign", "reconcile")
+OPERATIONS = ("create", "update", "delete", "reconcile")
 SWITCH_BY_OPERATION = {
     "create": "CREATE",
     "update": "UPDATE",
     "delete": "DELETE",
-    "assign": "ASSIGN",
     "reconcile": "RECONCILE",
 }
 # Per-BATCH sizes, not nightly totals: the scheduler chains batches until nothing
-# is left. Create is 3 because every created product waits CREATE_ASSIGN_GAP_SECONDS
+# is left. Create is 3 because every created product waits CREATE_SPACING_SECONDS
 # (30s) plus several Whapi calls and one Lambda invocation lasts at most 180s.
 # Deadline guard (create). Worst case of one row with NO Whapi retries (a 429 stops
 # the row): adoption page 30s + checkpoint write 25s + create_product 30s + 30s gap +
@@ -53,16 +53,10 @@ SWITCH_BY_OPERATION = {
 # before the checkpoint and create: the remaining work is at most 25 + 30 + 30 + 30
 # + 75 = 190s, rounded up to 200s.
 CREATE_TAIL_SECONDS = 200
-ROW_TIME_NEEDED_SECONDS = {"create": 240, "update": 60, "delete": 60, "assign": 60, "reconcile": 0}
-CAPS = {"create": 3, "update": 10, "delete": 3, "assign": 20}
-CREATE_ASSIGN_GAP_SECONDS = 30
+ROW_TIME_NEEDED_SECONDS = {"create": 240, "update": 60, "delete": 60, "reconcile": 0}
+CAPS = {"create": 3, "update": 10, "delete": 3}
+CREATE_SPACING_SECONDS = 30
 RATE_LIMIT_RETRY_SECONDS = 30
-KNOWN_COLLECTION_IDS = frozenset({
-    "1076581028327869",
-    "2280178899499736",
-    "2370295543377765",
-    "2585336038575419",
-})
 META_CHANNEL = "Meta Catalogue"
 
 
@@ -143,7 +137,7 @@ def _truthy(value: Any) -> bool:
 # --- eligibility ---
 # Locked 24 Nov 2026 (Zeid 3:32 PM, build approved): four-condition NEW
 # creation selection. Rows with an old product ID are excluded (relisting is
-# parked). Collection assignment is a separate flow and plays no part here.
+# parked). Collection assignment does not exist in this code.
 def eligible_create(row: Mapping[str, Any]) -> bool:
     return (
         str(row.get("Pipeline Status") or "") == "Ready To Post"
@@ -170,20 +164,10 @@ def eligible_delete(row: Mapping[str, Any]) -> bool:
     return str(row.get("Availability") or "") in {"Rented Out", "On Hold"}
 
 
-def eligible_assign(row: Mapping[str, Any]) -> bool:
-    # An empty formula (unmapped BHK) stays eligible so the run logs the skip
-    # instead of silently ignoring the row.
-    return (
-        bool(str(row.get("meta_catalog_id") or "").strip())
-        and META_CHANNEL in _live_at(row)
-    )
-
-
 ELIGIBLE = {
     "create": eligible_create,
     "update": eligible_update,
     "delete": eligible_delete,
-    "assign": eligible_assign,
 }
 
 
@@ -323,8 +307,6 @@ def _execute(operation: str, run: _Run, row: Mapping[str, Any]) -> None:
             _op_update_row(run, row)
         elif operation == "delete":
             _op_delete_row(run, row)
-        elif operation == "assign":
-            _op_assign_row(run, row)
     except DeferredForTime as exc:
         run.stop = True
         run.record(row, "", "SKIPPED", str(exc)[:200])
@@ -413,8 +395,7 @@ def create_precheck(row: Mapping[str, Any]) -> tuple[str, list[str]]:
 
 def _op_create_row(run: _Run, row: Mapping[str, Any]) -> None:
     # Pre-checks locked 24 Nov 2026: missing/invalid required details = skip
-    # with the exact reason, no guessing. Collection ID is NOT required -
-    # assignment is a separate flow (Zeid 3:04 PM).
+    # with the exact reason, no guessing.
     problem, images = create_precheck(row)
     title = str(row.get("catalog_title") or "").strip()
     description = str(row.get("catalogue_description") or "").strip()
@@ -495,7 +476,7 @@ def _op_create_row(run: _Run, row: Mapping[str, Any]) -> None:
         raise RuntimeError(f"WhAPI returned no product ID ({str(result)[:80]}); {_UNKNOWN}, product may exist; stopped")
     # Verify before writeback (locked order, 24 Nov): read the product back and
     # confirm it exists with the intended name before touching Notion.
-    run.sleeper(CREATE_ASSIGN_GAP_SECONDS)  # 30s spacing between catalogue requests
+    run.sleeper(CREATE_SPACING_SECONDS)  # 30s spacing between catalogue requests
     live_product = _call_once(lambda: run.whapi.get_product(product_id))
     if not str((live_product or {}).get("name") or "").strip():
         run.stop = True  # a product exists that could not be verified: no further creates this batch
@@ -508,8 +489,7 @@ def _op_create_row(run: _Run, row: Mapping[str, Any]) -> None:
         run.catalogue_cache.append({"id": product_id, "product_retailer_id": listing_id})
     _mark_posted(run, row, product_id)
     run.record(row, product_id, "OK", "created and verified")
-    # Collection assignment is deliberately NOT chained here (Zeid 3:04 PM):
-    # it runs as its own separately-gated flow.
+    # Create never assigns a collection; collection assignment does not exist in this code.
 
 
 def _photo_identity(item: Any) -> str:
@@ -641,27 +621,6 @@ def _op_delete_row(run: _Run, row: Mapping[str, Any]) -> None:
     # The product ID stays in meta_catalog_id for history, rewritten in red.
     run.store.mark_product_id_removed(str(row.get("page_id") or ""), product_id)
     run.record(row, product_id, "OK", note)
-
-
-def _op_assign_row(run: _Run, row: Mapping[str, Any]) -> None:
-    product_id = str(row.get("meta_catalog_id") or "").strip()
-    collection_id = str(row.get("meta_catalog_collection_id") or "").strip()
-    if not collection_id:
-        run.record(row, product_id, "SKIPPED", "unmapped BHK (formula empty); never guesses")
-        return
-    if collection_id not in KNOWN_COLLECTION_IDS:
-        run.record(row, product_id, "FAILED", f"collection {collection_id} is not one of the 4 known IDs; hard stop for this row")
-        return
-    if run.dry_run:
-        run.record(row, product_id, "WOULD", f"add to collection {collection_id} if not already a member")
-        return
-    product = _call_with_retry(lambda: run.whapi.get_product(product_id), sleeper=run.sleeper)
-    memberships = {str(c) for c in (product or {}).get("collection_ids") or (product or {}).get("collections") or []}
-    if collection_id in memberships:
-        run.record(row, product_id, "OK", "already in collection")
-        return
-    _call_with_retry(lambda: run.whapi.edit_collection(collection_id, add_products=[product_id]), sleeper=run.sleeper)
-    run.record(row, product_id, "OK", f"added to collection {collection_id}")
 
 
 def _op_reconcile(run: _Run, rows: list[Mapping[str, Any]]) -> None:
