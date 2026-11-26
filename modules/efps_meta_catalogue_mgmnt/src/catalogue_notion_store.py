@@ -65,7 +65,7 @@ def listing_row(page: dict) -> dict:
         "Pipeline Status": _select_name(props.get("Pipeline Status")),
         "BHK": text("BHK"),
         "catalog_title": text("catalog_title"),
-        "whatsapp_catalogue_description": text("whatsapp_catalogue_description") or text("catalogue_description"),
+        "whatsapp_catalogue_description": text("whatsapp_catalogue_description"),
         "monthly_rent": (props.get("monthly_rent") or {}).get("number") or 0,
         "cloudinary_image_urls": text("cloudinary_image_urls"),
         "google_maps_url": str((props.get("google_maps_url") or {}).get("url") or ""),

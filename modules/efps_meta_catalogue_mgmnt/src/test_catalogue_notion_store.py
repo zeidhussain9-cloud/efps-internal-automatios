@@ -31,3 +31,18 @@ def test_listing_row_works_without_the_removed_collection_columns_and_never_read
     row = cns.listing_row(page)
     assert row["listing_id"] == "EF-1" and row["Availability"] == "Available"
     assert "meta_catalog_collection_id" not in row
+
+
+def test_listing_row_ignores_legacy_catalogue_description():
+    import catalogue_notion_store as cns
+    page = {"id": "p2", "properties": {
+        "whatsapp_catalogue_description": {"type": "rich_text", "rich_text": [{"plain_text": "new description"}]},
+        "catalogue_description": {"type": "rich_text", "rich_text": [{"plain_text": "stale legacy description"}]},
+    }}
+    row = cns.listing_row(page)
+    assert row["whatsapp_catalogue_description"] == "new description"
+
+    legacy_only = {"id": "p3", "properties": {
+        "catalogue_description": {"type": "rich_text", "rich_text": [{"plain_text": "legacy only"}]},
+    }}
+    assert cns.listing_row(legacy_only)["whatsapp_catalogue_description"] == ""

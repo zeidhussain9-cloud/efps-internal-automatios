@@ -126,7 +126,8 @@ def make_row(**kw):
         "meta_catalog_id": "",
         "cloudinary_image_urls": "https://img/1.jpg https://img/2.jpg",
         "monthly_rent": "40000", "catalog_title": "Semi Furnished 2 BHK - Haralur",
-        "catalogue_description": "desc text",
+        "whatsapp_catalogue_description": "desc text",
+        "catalogue_description": "legacy text must be ignored",
         "whatsapp_post": "post text", "google_maps_url": "https://www.google.com/maps/search/?api=1&query=x",
         "BHK": "2 BHK",
     }
@@ -155,7 +156,7 @@ def test_create_prechecks_skip_with_reason():
     for kw, reason in [
         ({"listing_id": ""}, "listing_id blank"),
         ({"catalog_title": ""}, "catalog_title blank"),
-        ({"catalogue_description": ""}, "catalogue_description blank"),
+        ({"whatsapp_catalogue_description": ""}, "whatsapp_catalogue_description blank"),
         ({"monthly_rent": "0"}, "monthly_rent"),
         ({"cloudinary_image_urls": ""}, "no photos"),
     ]:
@@ -218,7 +219,7 @@ def test_create_adopts_existing_product_instead_of_duplicating():
     whapi = FakeWhapi()
     row = make_row()
     whapi.products["55"] = {"id": "55", "product_retailer_id": "EF-2611-AAAA", "collection_ids": [],
-                            "name": row["catalog_title"], "description": row["catalogue_description"],
+                            "name": row["catalog_title"], "description": row["whatsapp_catalogue_description"],
                             "price": row["monthly_rent"], "images": row["cloudinary_image_urls"].split()}
     store = FakeStore([row], switches={**ALL_SWITCHES})
     result = run("create", store, whapi)
@@ -514,7 +515,7 @@ def test_queued_decisions_execute_before_the_normal_pass():
     whapi = FakeWhapi()
     _r = make_row(page_id="q-page", listing_id="EF-2611-AAAA")
     whapi.products["88"] = {"id": "88", "product_retailer_id": "EF-2611-AAAA", "name": _r["catalog_title"],
-                            "description": _r["catalogue_description"], "price": _r["monthly_rent"],
+                            "description": _r["whatsapp_catalogue_description"], "price": _r["monthly_rent"],
                             "images": _r["cloudinary_image_urls"].split()}
     store = FakeStore([make_row(), _r], switches={**ALL_SWITCHES})
     store.decisions = [{"id": "q1", "operation": "create", "decision": "Reprocess",
@@ -553,7 +554,7 @@ def test_create_stops_on_duplicate_listing_id_matches():
 def test_adoption_rejects_wrong_photo_count_or_link():
     row = make_row(google_maps_url="https://maps/x")
     base = {"id": "55", "product_retailer_id": "EF-2611-AAAA", "name": row["catalog_title"],
-            "description": row["catalogue_description"], "price": row["monthly_rent"],
+            "description": row["whatsapp_catalogue_description"], "price": row["monthly_rent"],
             "images": row["cloudinary_image_urls"].split(), "url": "https://maps/x"}
     for bad in ({"images": ["only-one"]}, {"url": "https://maps/other"}):
         whapi = FakeWhapi(); whapi.products["55"] = {**base, **bad}

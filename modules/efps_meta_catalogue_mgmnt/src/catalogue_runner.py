@@ -370,7 +370,7 @@ def create_precheck(row: Mapping[str, Any]) -> tuple[str, list[str]]:
         return "listing_id blank; skipped", []
     if not str(row.get("catalog_title") or "").strip():
         return "catalog_title blank; skipped", []
-    if not str(row.get("whatsapp_catalogue_description") or row.get("catalogue_description") or "").strip():
+    if not str(row.get("whatsapp_catalogue_description") or "").strip():
         return "whatsapp_catalogue_description blank; skipped", []
     try:
         rent = int(row.get("monthly_rent") or 0)
@@ -389,7 +389,7 @@ def _op_create_row(run: _Run, row: Mapping[str, Any]) -> None:
     # with the exact reason, no guessing.
     problem, images = create_precheck(row)
     title = str(row.get("catalog_title") or "").strip()
-    description = str(row.get("whatsapp_catalogue_description") or row.get("catalogue_description") or "").strip()
+    description = str(row.get("whatsapp_catalogue_description") or "").strip()
     listing_id = str(row.get("listing_id") or "").strip()
     try:
         rent = int(row.get("monthly_rent") or 0)

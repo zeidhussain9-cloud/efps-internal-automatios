@@ -1360,7 +1360,7 @@ def process_listing_page(page: dict, *, notion: NotionClient, store: SupabaseInt
                     notion.update_page(page_id, {"catalog_title": _rich(title), "Property": {"title": [{"text": {"content": title}}]}})
                     row["catalog_title"] = title
                 raw_text = str(row.get("raw_message_text") or "")
-                existing_group = str(row.get("whatsapp_group_description") or row.get("whatsapp_post") or "")
+                existing_group = str(row.get("whatsapp_group_description") or "")
                 raw_urls = re.findall(r"https?://[^\s<>]+", raw_text, flags=re.I)
                 short_link = next((url.rstrip(".,);]") for url in raw_urls
                                    if _short_mobile_maps_url(url.rstrip(".,);]"))), "")
@@ -1386,7 +1386,7 @@ def process_listing_page(page: dict, *, notion: NotionClient, store: SupabaseInt
                 if group_issues:
                     _log_event("description_review_required", listing_id=listing_id, issues=group_issues)
             raw_text = str(row.get("raw_message_text") or "")
-            existing_desc = str(row.get("whatsapp_catalogue_description") or row.get("catalogue_description") or "")
+            existing_desc = str(row.get("whatsapp_catalogue_description") or "")
             rebuilt = build_catalogue_description(row, raw_text)
             if rebuilt and rebuilt != existing_desc.strip():
                 notion.update_page(page_id, {
