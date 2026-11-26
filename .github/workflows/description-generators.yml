@@ -1,0 +1,43 @@
+name: Description Generators
+
+on:
+  push:
+    branches:
+      - integration/description-generators-crm
+      - feature/description-generators-v1
+      - crm-ui-dashboard
+    paths:
+      - "modules/efps-inventory-mgmnt/src/description_generators.py"
+      - "modules/efps-inventory-mgmnt/src/notion_intake.py"
+      - "modules/efps-inventory-mgmnt/src/test_description_generators.py"
+      - "modules/efps-inventory-mgmnt/tests/test_notion_intake.py"
+      - "modules/efps_meta_catalogue_mgmnt/src/catalogue_*.py"
+  pull_request:
+    paths:
+      - "modules/efps-inventory-mgmnt/src/description_generators.py"
+      - "modules/efps-inventory-mgmnt/src/notion_intake.py"
+      - "modules/efps-inventory-mgmnt/src/test_description_generators.py"
+      - "modules/efps-inventory-mgmnt/tests/test_notion_intake.py"
+      - "modules/efps_meta_catalogue_mgmnt/src/catalogue_*.py"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install test dependencies
+        run: python -m pip install --upgrade pip pytest -r requirements.txt
+      - name: Compile changed Python packages
+        run: python -m compileall -q modules/efps-inventory-mgmnt modules/efps_meta_catalogue_mgmnt shared
+      - name: Run description, intake and Catalogue regression tests
+        env:
+          PYTHONPATH: .:modules/efps-inventory-mgmnt:modules/efps-inventory-mgmnt/src
+        run: |
+          python -m pytest -q \
+            modules/efps-inventory-mgmnt/src/test_description_generators.py \
+            modules/efps-inventory-mgmnt/tests/test_notion_intake.py \
+            modules/efps_meta_catalogue_mgmnt/src/test_catalogue_runner.py \
+            modules/efps_meta_catalogue_mgmnt/src/test_catalogue_trigger.py
