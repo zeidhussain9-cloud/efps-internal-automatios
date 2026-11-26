@@ -152,7 +152,10 @@ def run_backfill(*, apply: bool = False, expected_count: int | None = None) -> d
             saved = listing_snapshot(notion.get_page(page_id))
             mismatches = [
                 field for field in payload
-                if str(saved.get(field) or "") != str(payload[field]["rich_text"][0]["text"]["content"])
+                if str(saved.get(field) or "") != "".join(
+                    part.get("text", {}).get("content", "")
+                    for part in payload[field].get("rich_text", [])
+                )
             ]
             if mismatches:
                 raise RuntimeError(
