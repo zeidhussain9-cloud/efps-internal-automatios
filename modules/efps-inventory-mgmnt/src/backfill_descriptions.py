@@ -85,7 +85,7 @@ def generate_descriptions(page: dict) -> tuple[dict, list[str]]:
 
     # Catalogue formatter is approved unchanged. Existing Catalogue descriptions
     # are copied byte-for-byte; only rows without the old value are rebuilt.
-    catalogue = str(row.get("catalogue_description") or "").strip()
+    catalogue = str(row.get("catalogue_description") or "")
     if not catalogue:
         catalogue = build_catalogue_description(row, raw_text)
 
