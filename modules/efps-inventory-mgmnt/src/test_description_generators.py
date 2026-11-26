@@ -90,7 +90,7 @@ def test_group_gated_title_includes_supplied_bathroom_and_balcony_details():
         bathrooms=2,
         balconies=1,
     )
-    raw = "2 bathrooms and 1 balcony. Pets allowed."
+    raw = "2 bathrooms and 1 balcony. Pets allowed. https://maps.app.goo.gl/AbCdEf123"
     text = build_whatsapp_group_description(
         row, raw, verified_society_name="Sumo Sonet", maps_verified=True
     )
