@@ -47,8 +47,11 @@ NEW_FIELDS = (
 def _maps_verification_evidence(raw_text: str, existing_group: str):
     raw_urls = re.findall(r"https?://[^\s<>]+", str(raw_text or ""), flags=re.I)
     short_link = next(
-        (url.rstrip(".,);]") for url in raw_urls
-         if _short_mobile_maps_url(url.rstrip(".,);]")),
+        (
+            url.rstrip(".,);]")
+            for url in raw_urls
+            if _short_mobile_maps_url(url.rstrip(".,);]"))
+        ),
         "",
     )
     prior_label = re.search(
