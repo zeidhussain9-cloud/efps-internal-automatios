@@ -25,11 +25,13 @@ try:
     from . import pipeline, notion_lifecycle, extract as area_extract
     from .location_match import normalize_locality
     from .normalize import build_catalog_title
+    from .description_generators import build_whatsapp_group_description, build_facebook_marketplace_description
 except ImportError:
     import pipeline, notion_lifecycle
     import extract as area_extract
     from location_match import normalize_locality
     from normalize import build_catalog_title
+    from description_generators import build_whatsapp_group_description, build_facebook_marketplace_description
 
 NOTION_VERSION = "2022-06-28"
 INTAKE_DATABASE_ID = "89dad7a3990849ca9dc23e5bcb3fa99f"
@@ -328,7 +330,9 @@ def listing_snapshot(page: dict) -> dict:
     for name in notion_lifecycle.CANONICAL_FIELDS:
         row[name] = _notion_value(properties.get(name) or {})
     row["live at"] = [str(x.get("name") or "") for x in (properties.get("live at", {}).get("multi_select") or [])]
-    for name in ("Property", "WhatsApp Group", "whatsapp_post", "catalogue_description", "WhatsApp Destination"):
+    for name in ("Property", "WhatsApp Group", "whatsapp_post", "catalogue_description",
+                 "whatsapp_group_description", "whatsapp_catalogue_description",
+                 "facebook_marketplace_description", "WhatsApp Destination"):
         row[name] = _notion_value(properties.get(name) or {})
     row["notion_page_id"] = str(page.get("id") or "")
     row["notion_url"] = str(page.get("url") or "")
@@ -425,7 +429,8 @@ def _bhk_group(bhk: str):
 
 
 TEXT_FIELDS = {
-    "BHK", "catalog_title", "catalogue_description", "city", "cloudinary_image_urls",
+    "BHK", "catalog_title", "catalogue_description", "whatsapp_group_description",
+    "whatsapp_catalogue_description", "facebook_marketplace_description", "city", "cloudinary_image_urls",
     "error_notes", "flat_furnishings", "floor_number", "furnish_type", "intake_status",
     "internal_property_type", "landmark", "listing_id", "locality",
     "maintenance", "meta_catalog_id", "meta_catalog_status", "onboarded_on", "open_parking",
@@ -1225,12 +1230,28 @@ def process_page(
         if not caption:
             issues.append("WhatsApp caption not generated because a verified locality or Maps verification is missing.")
             processed["status"] = "Needs Review"
-        processed["whatsapp_post"] = caption
-        # Stamped 21 Nov: catalogue_description regenerates on every intake
-        # processing so the catalogue field never drifts from the row.
-        processed["catalogue_description"] = build_catalogue_description(
+        processed["whatsapp_post"] = caption  # legacy compatibility field
+        group_issues = []
+        processed["whatsapp_group_description"] = build_whatsapp_group_description(
+            processed, raw_text, verified_society_name=verified_society,
+            # A URL alone is not proof of verification. The pipeline's
+            # caption_maps_url is populated only when the Maps check produced
+            # an accepted source link; otherwise the formatter uses Raw
+            # Property Data as the explicitly requested fallback.
+            maps_verified=bool(caption_maps_url) and not maps_failed, issues=group_issues,
+        )
+        if group_issues:
+            issues.extend(group_issues)
+            processed["status"] = "Needs Review"
+        # Preserve the existing Catalogue formatter output exactly.
+        catalogue_text = build_catalogue_description(
             processed, raw_text,
             verified_society_name=verified_society,
+        )
+        processed["catalogue_description"] = catalogue_text  # legacy compatibility field
+        processed["whatsapp_catalogue_description"] = catalogue_text
+        processed["facebook_marketplace_description"] = build_facebook_marketplace_description(
+            processed, raw_text,
         )
         final_state = "Needs Review" if processed.get("status") == "Needs Review" else "Processed"
         lifecycle = notion_lifecycle.finish_processing(processed, previous)
@@ -1334,20 +1355,46 @@ def process_listing_page(page: dict, *, notion: NotionClient, store: SupabaseInt
                 if title != str(row.get("catalog_title") or ""):
                     notion.update_page(page_id, {"catalog_title": _rich(title), "Property": {"title": [{"text": {"content": title}}]}})
                     row["catalog_title"] = title
-                existing_post = str(row.get("whatsapp_post") or "")
-                post_link = re.search(r"https://(?:www\.|maps\.)?google\.[a-z.]+/maps\S+", existing_post)
-                post = build_whatsapp_post(row, str(row.get("raw_message_text") or ""), maps_verified=False,
-                    resolved_maps_url=post_link.group(0) if post_link else "")
-                if post and post != existing_post:
-                    notion.update_page(page_id, {"whatsapp_post": _rich(post)})
-                    row["whatsapp_post"] = post
-            existing_desc = str(row.get("catalogue_description") or "")
-            rebuilt = build_catalogue_description(
-                row, str(row.get("raw_message_text") or ""),
-            )
+                raw_text = str(row.get("raw_message_text") or "")
+                existing_group = str(row.get("whatsapp_group_description") or row.get("whatsapp_post") or "")
+                raw_urls = re.findall(r"https?://[^\\s<>]+", raw_text, flags=re.I)
+                short_link = next((url.rstrip(".,);]") for url in raw_urls
+                                   if _short_mobile_maps_url(url.rstrip(".,);]"))), "")
+                # An edit is not a fresh Maps verification. Reuse the existing
+                # verified map label only when the prior caption already carried
+                # a map label and the original short URL is still in raw intake.
+                prior_label = re.search(r"\\*📍\\s*([^*]+):\\*\\s*\\n(https://[^\\s]+)", existing_group)
+                prior_map_verified = bool(short_link and prior_label)
+                verified_label = prior_label.group(1).strip() if prior_map_verified else ""
+                if verified_label.casefold() == str(row.get("locality") or "").strip().casefold():
+                    verified_label = ""
+                group_issues = []
+                group_text = build_whatsapp_group_description(
+                    row, raw_text, verified_society_name=verified_label,
+                    maps_verified=prior_map_verified, issues=group_issues,
+                )
+                if group_text and group_text != str(row.get("whatsapp_group_description") or ""):
+                    notion.update_page(page_id, {"whatsapp_group_description": _rich(group_text)})
+                    row["whatsapp_group_description"] = group_text
+                if group_text and group_text != str(row.get("whatsapp_post") or ""):
+                    notion.update_page(page_id, {"whatsapp_post": _rich(group_text)})
+                    row["whatsapp_post"] = group_text
+                if group_issues:
+                    _log_event("description_review_required", listing_id=listing_id, issues=group_issues)
+            raw_text = str(row.get("raw_message_text") or "")
+            existing_desc = str(row.get("whatsapp_catalogue_description") or row.get("catalogue_description") or "")
+            rebuilt = build_catalogue_description(row, raw_text)
             if rebuilt and rebuilt != existing_desc.strip():
-                notion.update_page(page_id, {"catalogue_description": _rich(rebuilt)})
+                notion.update_page(page_id, {
+                    "whatsapp_catalogue_description": _rich(rebuilt),
+                    "catalogue_description": _rich(rebuilt),
+                })
+                row["whatsapp_catalogue_description"] = rebuilt
                 row["catalogue_description"] = rebuilt
+            facebook_text = build_facebook_marketplace_description(row, raw_text)
+            if facebook_text and facebook_text != str(row.get("facebook_marketplace_description") or ""):
+                notion.update_page(page_id, {"facebook_marketplace_description": _rich(facebook_text)})
+                row["facebook_marketplace_description"] = facebook_text
         store.sync_inventory(page_id, row, deleted=deleted)
         note = "Synced from canonical Notion Housing Listings."
         store.finish(page_id, "processed", listing_page_id=page_id, note=note)
