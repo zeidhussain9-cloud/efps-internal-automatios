@@ -1,6 +1,6 @@
 """Gated catalogue operations runner — owner-locked design, 21 Nov 2026.
 
-The 4 operations (CREATE, UPDATE, DELETE, RECONCILE) run ONLY when
+The 3 operations (CREATE, DELETE, RECONCILE) run ONLY when
 explicitly triggered from the Catalogue Control Panel. Nothing auto-fires:
 a ticked "Post to Catalogue" checkbox only marks a row eligible; a run
 happens only when the operator triggers the operation.
@@ -8,14 +8,14 @@ happens only when the operator triggers the operation.
 Safety contract (locked):
 - At every run start all 7 switch states are read and logged:
   2 template.yaml masters (EFPS_WHAPI_LIVE, EFPS_WHAPI_API_ENABLED) and
-  5 Notion checkboxes (CREATE, UPDATE, DELETE, RECONCILE, DRY_RUN).
+  4 Notion checkboxes (CREATE, DELETE, RECONCILE, DRY_RUN).
   An unreadable switches table = everything off = the run does nothing
   (fail-closed).
 - Strictly sequential calls, never parallel.
 - 30s pause between catalogue requests of a create (CREATE_SPACING_SECONDS).
 - Collection assignment does not exist in this code: it is never automated.
 - One 429 retry after 30s; a second 429 defers the row to the next run.
-- Per-run caps: 10 creates, 10 updates, 3 deletes.
+- Per-run caps: 3 creates and 3 deletes.
 - DELETE removes by the exact stored product ID, never by searching.
   After delete the product ID stays in meta_catalog_id for history and is
   rewritten in red; "Meta Catalogue" is removed from `live at`.
@@ -36,10 +36,9 @@ import time
 from datetime import datetime, timezone
 from typing import Any, Callable, Mapping
 
-OPERATIONS = ("create", "update", "delete", "reconcile")
+OPERATIONS = ("create", "delete", "reconcile")
 SWITCH_BY_OPERATION = {
     "create": "CREATE",
-    "update": "UPDATE",
     "delete": "DELETE",
     "reconcile": "RECONCILE",
 }
@@ -53,8 +52,8 @@ SWITCH_BY_OPERATION = {
 # before the checkpoint and create: the remaining work is at most 25 + 30 + 30 + 30
 # + 75 = 190s, rounded up to 200s.
 CREATE_TAIL_SECONDS = 200
-ROW_TIME_NEEDED_SECONDS = {"create": 240, "update": 60, "delete": 60, "reconcile": 0}
-CAPS = {"create": 3, "update": 10, "delete": 3}
+ROW_TIME_NEEDED_SECONDS = {"create": 240, "delete": 60, "reconcile": 0}
+CAPS = {"create": 3, "delete": 3}
 CREATE_SPACING_SECONDS = 30
 RATE_LIMIT_RETRY_SECONDS = 30
 META_CHANNEL = "Meta Catalogue"
@@ -147,11 +146,6 @@ def eligible_create(row: Mapping[str, Any]) -> bool:
     )
 
 
-def eligible_update(row: Mapping[str, Any]) -> bool:
-    # "Posted" state = Meta Catalogue membership in live at + a product ID.
-    return META_CHANNEL in _live_at(row) and bool(str(row.get("meta_catalog_id") or "").strip())
-
-
 def eligible_delete(row: Mapping[str, Any]) -> bool:
     if not str(row.get("meta_catalog_id") or "").strip():
         return False
@@ -166,7 +160,6 @@ def eligible_delete(row: Mapping[str, Any]) -> bool:
 
 ELIGIBLE = {
     "create": eligible_create,
-    "update": eligible_update,
     "delete": eligible_delete,
 }
 
@@ -303,8 +296,6 @@ def _execute(operation: str, run: _Run, row: Mapping[str, Any]) -> None:
     try:
         if operation == "create":
             _op_create_row(run, row)
-        elif operation == "update":
-            _op_update_row(run, row)
         elif operation == "delete":
             _op_delete_row(run, row)
     except DeferredForTime as exc:
@@ -379,8 +370,8 @@ def create_precheck(row: Mapping[str, Any]) -> tuple[str, list[str]]:
         return "listing_id blank; skipped", []
     if not str(row.get("catalog_title") or "").strip():
         return "catalog_title blank; skipped", []
-    if not str(row.get("catalogue_description") or "").strip():
-        return "catalogue_description blank; skipped", []
+    if not str(row.get("whatsapp_catalogue_description") or row.get("catalogue_description") or "").strip():
+        return "whatsapp_catalogue_description blank; skipped", []
     try:
         rent = int(row.get("monthly_rent") or 0)
     except (TypeError, ValueError):
@@ -398,7 +389,7 @@ def _op_create_row(run: _Run, row: Mapping[str, Any]) -> None:
     # with the exact reason, no guessing.
     problem, images = create_precheck(row)
     title = str(row.get("catalog_title") or "").strip()
-    description = str(row.get("catalogue_description") or "").strip()
+    description = str(row.get("whatsapp_catalogue_description") or row.get("catalogue_description") or "").strip()
     listing_id = str(row.get("listing_id") or "").strip()
     try:
         rent = int(row.get("monthly_rent") or 0)
@@ -417,7 +408,7 @@ def _op_create_row(run: _Run, row: Mapping[str, Any]) -> None:
     if not eligible_create(fresh) or str(fresh.get("listing_id") or "").strip() != listing_id:
         run.record(row, "", "SKIPPED", "no longer eligible when re-checked just before creation; skipped")
         return
-    for field in ("catalog_title", "catalogue_description", "monthly_rent", "cloudinary_image_urls"):
+    for field in ("catalog_title", "whatsapp_catalogue_description", "monthly_rent", "cloudinary_image_urls"):
         if str(fresh.get(field) or "").strip() != str(row.get(field) or "").strip():
             run.record(row, "", "SKIPPED", f"{field} changed since the batch read; skipped, next run re-evaluates")
             return
@@ -560,44 +551,6 @@ def _mark_posted(run: _Run, row: Mapping[str, Any], product_id: str) -> None:
     if problems:
         run.stop = True
         raise RuntimeError(f"created product {product_id} but Notion write-back not confirmed on read-back ({', '.join(problems)}); recovery hold, nothing more created")
-
-
-def _op_update_row(run: _Run, row: Mapping[str, Any]) -> None:
-    product_id = str(row.get("meta_catalog_id") or "").strip()
-    if run.dry_run:
-        run.record(row, product_id, "WOULD", "fetch live product, compare with current Notion fields, patch if different")
-        return
-    try:
-        product = _call_with_retry(lambda: run.whapi.get_product(product_id), sleeper=run.sleeper)
-    except Exception as exc:  # noqa: BLE001
-        if "404" in str(exc):
-            live = [c for c in _live_at(row) if c != META_CHANNEL]
-            run.store.update_listing(str(row.get("page_id") or ""), {"live at": live})
-            run.record(row, product_id, "OK", "product 404 on WhatsApp; removed Meta Catalogue from live at")
-            return
-        raise
-    title = str(row.get("catalog_title") or "").strip()
-    description = str(row.get("whatsapp_post") or "").strip()
-    try:
-        rent = int(row.get("monthly_rent") or 0)
-    except (TypeError, ValueError):
-        rent = 0
-    images = [u for u in str(row.get("cloudinary_image_urls") or "").replace(",", " ").split() if u.strip()][:10]
-    wanted = {"name": title, "description": description, "price": rent, "currency": "INR", "images": images}
-    current = {
-        "name": str((product or {}).get("name") or ""),
-        "description": str((product or {}).get("description") or ""),
-        "price": (product or {}).get("price"),
-        "currency": str((product or {}).get("currency") or "INR"),
-        "images": [str(i.get("link") if isinstance(i, dict) else i) for i in (product or {}).get("images") or []],
-    }
-    changed = {k for k in wanted if str(wanted[k]) != str(current.get(k)) and wanted[k] != current.get(k)}
-    if not changed:
-        run.record(row, product_id, "OK", "already in sync")
-        return
-    # WhAPI requires the full photo list on every update.
-    _call_with_retry(lambda: run.whapi.update_product(product_id, wanted), sleeper=run.sleeper)
-    run.record(row, product_id, "OK", f"updated: {', '.join(sorted(changed))}")
 
 
 def _op_delete_row(run: _Run, row: Mapping[str, Any]) -> None:
