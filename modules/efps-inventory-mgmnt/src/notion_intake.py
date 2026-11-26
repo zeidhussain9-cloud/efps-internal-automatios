@@ -1242,7 +1242,11 @@ def process_page(
         )
         if group_issues:
             issues.extend(group_issues)
-            processed["status"] = "Needs Review"
+            # A temporary Maps API outage is not a source-data conflict. Keep
+            # the intake's existing status when the original Raw Property
+            # Data URL has been retained as the explicitly requested fallback.
+            if not maps_api_unavailable:
+                processed["status"] = "Needs Review"
         # Preserve the existing Catalogue formatter output exactly.
         catalogue_text = build_catalogue_description(
             processed, raw_text,
