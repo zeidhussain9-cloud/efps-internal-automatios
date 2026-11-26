@@ -1357,13 +1357,13 @@ def process_listing_page(page: dict, *, notion: NotionClient, store: SupabaseInt
                     row["catalog_title"] = title
                 raw_text = str(row.get("raw_message_text") or "")
                 existing_group = str(row.get("whatsapp_group_description") or row.get("whatsapp_post") or "")
-                raw_urls = re.findall(r"https?://[^\\s<>]+", raw_text, flags=re.I)
+                raw_urls = re.findall(r"https?://[^\s<>]+", raw_text, flags=re.I)
                 short_link = next((url.rstrip(".,);]") for url in raw_urls
                                    if _short_mobile_maps_url(url.rstrip(".,);]"))), "")
                 # An edit is not a fresh Maps verification. Reuse the existing
                 # verified map label only when the prior caption already carried
                 # a map label and the original short URL is still in raw intake.
-                prior_label = re.search(r"\\*📍\\s*([^*]+):\\*\\s*\\n(https://[^\\s]+)", existing_group)
+                prior_label = re.search(r"\*📍\s*([^*]+):\*\s*\n(https://[^\s]+)", existing_group)
                 prior_map_verified = bool(short_link and prior_label)
                 verified_label = prior_label.group(1).strip() if prior_map_verified else ""
                 if verified_label.casefold() == str(row.get("locality") or "").strip().casefold():
