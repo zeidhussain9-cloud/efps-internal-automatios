@@ -37,7 +37,10 @@ jobs:
           PYTHONPATH: .:modules/efps-inventory-mgmnt:modules/efps-inventory-mgmnt/src
         run: |
           python -m pytest -q \
+            shared/google_sheets/test_schema.py \
+            modules/efps-inventory-mgmnt/tests \
             modules/efps-inventory-mgmnt/src/test_description_generators.py \
-            modules/efps-inventory-mgmnt/tests/test_notion_intake.py \
-            modules/efps_meta_catalogue_mgmnt/src/test_catalogue_runner.py \
-            modules/efps_meta_catalogue_mgmnt/src/test_catalogue_trigger.py
+            modules/efps-inventory-mgmnt/src/test_inventory_pipeline.py \
+            modules/efps_meta_catalogue_mgmnt/src/test_catalogue_*.py \
+            tools/test_deterministic_edge_cases.py
+          python tools/projection_regression_check.py
