@@ -41,5 +41,5 @@ jobs:
             modules/efps-inventory-mgmnt/tests \
             modules/efps-inventory-mgmnt/src/test_description_generators.py \
             modules/efps-inventory-mgmnt/src/test_inventory_pipeline.py \
-            modules/efps_meta_catalogue_mgmnt/src/test_catalogue_*.py \
+            modules/efps_meta_catalogue_mgmnt/src/test_catalogue_*.py
           python tools/projection_regression_check.py
