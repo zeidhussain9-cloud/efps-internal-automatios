@@ -20,6 +20,8 @@ on:
       - "modules/efps-inventory-mgmnt/src/description_generators.py"
       - "modules/efps-inventory-mgmnt/src/notion_intake.py"
       - "modules/efps-inventory-mgmnt/src/test_description_generators.py"
+      - "modules/efps-inventory-mgmnt/src/backfill_descriptions.py"
+      - "modules/efps-inventory-mgmnt/src/test_backfill_descriptions.py"
       - "modules/efps-inventory-mgmnt/tests/test_notion_intake.py"
       - "modules/efps_meta_catalogue_mgmnt/src/catalogue_*.py"
 
@@ -42,6 +44,7 @@ jobs:
           python -m pytest -q \
             modules/efps-inventory-mgmnt/tests \
             modules/efps-inventory-mgmnt/src/test_description_generators.py \
+            modules/efps-inventory-mgmnt/src/test_backfill_descriptions.py \
             modules/efps-inventory-mgmnt/src/test_inventory_pipeline.py \
             modules/efps_meta_catalogue_mgmnt/src/test_catalogue_*.py
           python tools/projection_regression_check.py
