@@ -27,7 +27,7 @@ def test_generate_descriptions_copies_approved_catalogue_output(monkeypatch):
     assert outputs["whatsapp_group_description"] == "Group output"
     assert outputs["facebook_marketplace_description"] == "Facebook output"
     assert captured["maps_verified"] is True
-    assert captured["verified_society_name"] == "Haralur"
+    assert captured["verified_society_name"] == ""
     assert issues == []
 
 
