@@ -11,7 +11,7 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import catalogue_runner as runner  # noqa: E402
 
 MASTERS_ON = {"EFPS_WHAPI_LIVE": True, "EFPS_WHAPI_API_ENABLED": True}
-ALL_SWITCHES = {"CREATE": True, "UPDATE": True, "DELETE": True, "RECONCILE": True, "DRY_RUN": False}
+ALL_SWITCHES = {"CREATE": True, "DELETE": True, "RECONCILE": True, "DRY_RUN": False}
 
 
 class FakeWhapi:
@@ -170,7 +170,7 @@ def test_create_prechecks_skip_with_reason():
 def test_all_seven_states_logged_at_run_start():
     store = FakeStore([])
     result = run("create", store, FakeWhapi())
-    assert set(result["states"]) == {"EFPS_WHAPI_LIVE", "EFPS_WHAPI_API_ENABLED", "CREATE", "UPDATE", "DELETE", "RECONCILE", "DRY_RUN"}
+    assert set(result["states"]) == {"EFPS_WHAPI_LIVE", "EFPS_WHAPI_API_ENABLED", "CREATE", "DELETE", "RECONCILE", "DRY_RUN"}
 
 
 def test_unreadable_switches_table_aborts_everything():
@@ -327,36 +327,14 @@ def test_second_429_stops_the_row_and_fails_the_batch():
     assert whapi.products == {}  # nothing created after a double 429
 
 
-# --- UPDATE ---
-
-def test_update_patches_only_when_content_differs():
-    whapi = FakeWhapi()
-    whapi.products["9"] = {"id": "9", "product_retailer_id": "EF-2611-AAAA", "name": "old title",
-                           "description": "post text", "price": 40000, "currency": "INR", "images": []}
-    row = make_row(**{"live at": ["Meta Catalogue"]}, meta_catalog_id="9")
-    result = run("update", FakeStore([row]), whapi)
-    assert ("update", "9") in whapi.calls
-    assert "updated:" in result["lines"][-1] and "name" in result["lines"][-1]
-
-
-def test_update_in_sync_logs_and_skips_patch():
-    whapi = FakeWhapi()
-    whapi.products["9"] = {"id": "9", "product_retailer_id": "EF-2611-AAAA", "name": "Semi Furnished 2 BHK - Haralur",
-                           "description": "post text", "price": 40000, "currency": "INR",
-                           "images": ["https://img/1.jpg", "https://img/2.jpg"]}
-    row = make_row(**{"live at": ["Meta Catalogue"]}, meta_catalog_id="9")
-    result = run("update", FakeStore([row]), whapi)
-    assert "already in sync" in result["lines"][0]
-    assert not any(c[0] == "update" for c in whapi.calls)
-
-
-def test_update_404_corrects_status():
-    whapi = FakeWhapi()
-    row = make_row(**{"live at": ["Meta Catalogue"]}, meta_catalog_id="ghost")
-    store = FakeStore([row])
-    result = run("update", store, whapi)
-    assert "removed Meta Catalogue from live at" in result["lines"][0]
-    assert store.rows[0]["live at"] == []
+# --- UPDATE is intentionally retired ---
+def test_update_operation_is_rejected_without_any_side_effects():
+    store, whapi = FakeStore([make_row()]), FakeWhapi()
+    with pytest.raises(ValueError, match="unknown operation"):
+        run("update", store, whapi)
+    assert whapi.calls == []
+    assert store.updates == []
+    assert store.activity == []
 
 
 # --- DELETE ---
@@ -527,7 +505,7 @@ def test_reconcile_reports_drift_and_orphans_without_touching_anything():
     assert "leftover product for a Rented Out/On Hold row" in text
     assert "orphan on WhatsApp" in text
     assert store.review_entries and store.review_entries[0]["type"] == "Orphan product"
-    assert store.updates == [] and not any(c[0] in {"create", "delete", "update"} for c in whapi.calls)
+    assert store.updates == [] and not any(c[0] in {"create", "delete"} for c in whapi.calls)
 
 
 # --- review queue decisions execute first ---
