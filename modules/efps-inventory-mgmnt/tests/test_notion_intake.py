@@ -604,7 +604,10 @@ def test_processed_notion_page_repairs_a_missing_inventory_projection():
     assert store.listing_ids == [(page_id, "EF-2611-ABCD")]
     assert notion.updates == [
         (page_id, {"listing_id": intake._rich("EF-2611-ABCD")}),
-        (page_id, {"catalogue_description": intake._rich("*🏠 EF-2611-ABCD*\n\n*📍Landmark:*")}),
+        (page_id, {
+            "whatsapp_catalogue_description": intake._rich("*🏠 EF-2611-ABCD*\n\n*📍Landmark:*"),
+            "catalogue_description": intake._rich("*🏠 EF-2611-ABCD*\n\n*📍Landmark:*"),
+        }),
     ]
     assert store.finished[0][0] == "processed"
 
@@ -628,7 +631,10 @@ def test_duplicate_notion_page_restore_reactivates_soft_deleted_projection():
     assert store.listing_ids == [(page_id, "EF-2611-ABCD")]
     assert notion.updates == [
         (page_id, {"listing_id": intake._rich("EF-2611-ABCD")}),
-        (page_id, {"catalogue_description": intake._rich("*🏠 EF-2611-ABCD*\n\n*📍Landmark:*")}),
+        (page_id, {
+            "whatsapp_catalogue_description": intake._rich("*🏠 EF-2611-ABCD*\n\n*📍Landmark:*"),
+            "catalogue_description": intake._rich("*🏠 EF-2611-ABCD*\n\n*📍Landmark:*"),
+        }),
     ]
 
 
@@ -1083,7 +1089,7 @@ def test_dropdown_edit_refreshes_all_customer_facing_names():
     store,notion=Store(),Notion()
     intake.process_listing_page(page,notion=notion,store=store)
     merged={k:v for update in notion.updates for k,v in update.items()}
-    assert set(merged)=={'Property','catalog_title','catalogue_description','whatsapp_post'}
+    assert set(merged)=={'Property','catalog_title','catalogue_description','whatsapp_post','whatsapp_group_description','whatsapp_catalogue_description'}
     for value in merged.values():
         text=str(value)
         assert 'Haralur' in text and 'Harlur' not in text

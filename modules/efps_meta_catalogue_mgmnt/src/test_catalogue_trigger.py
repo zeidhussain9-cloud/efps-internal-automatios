@@ -39,7 +39,7 @@ def test_header_names_are_case_insensitive():
     assert catalogue_trigger.verify_signature({"x-efps-inventory-timestamp": ts, "x-efps-inventory-signature": sig}, secret=SECRET, now=1000.0)
 
 
-def test_parse_operation_accepts_the_four_operations_only():
+def test_parse_operation_accepts_only_remaining_operations():
     for op in catalogue_trigger.OPERATIONS:
         assert catalogue_trigger.parse_operation('{"operation": "%s"}' % op) == op
     assert catalogue_trigger.parse_operation('{"operation": " CREATE "}') == "create"
@@ -50,6 +50,9 @@ def test_parse_operation_accepts_the_four_operations_only():
     with pytest.raises(CatalogueTriggerError):
         catalogue_trigger.parse_operation('{"operation": "assign"}')
     assert "assign" not in catalogue_trigger.OPERATIONS
+    with pytest.raises(CatalogueTriggerError, match="operation must be one of"):
+        catalogue_trigger.parse_operation('{"operation": "update"}')
+    assert "update" not in catalogue_trigger.OPERATIONS
 
 
 def test_run_catalogue_operation_uses_injected_store_and_whapi(monkeypatch):
