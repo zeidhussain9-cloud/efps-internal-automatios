@@ -12,6 +12,7 @@ on:
       - "modules/efps-inventory-mgmnt/src/test_description_generators.py"
       - "modules/efps-inventory-mgmnt/tests/test_notion_intake.py"
       - "modules/efps_meta_catalogue_mgmnt/src/catalogue_*.py"
+      - ".github/workflows/description-generators.yml"
   pull_request:
     paths:
       - "modules/efps-inventory-mgmnt/src/description_generators.py"
